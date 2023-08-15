@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import argparse
 import os
@@ -141,8 +141,6 @@ def build_command_tree(
     # later with interaction.followup.send. But this makes two messages appear in
     # chat, so we'll do that later if needed.
 
-    # TODO: Add tests through these functions, as they're the public API.
-
     @tree.command()
     @app_commands.describe(
         player='Runescape username to compute clan score for.')
@@ -155,21 +153,9 @@ def build_command_tree(
                             timeout=15)
         # Omit the first line of the response, which is total level & xp.
         lines = resp.text.split('\n')[1:]
-        # Compute skills first.
-        points_by_skill = skill_score(lines)
-        skill_points = 0
-        for _, v in points_by_skill.items():
-            skill_points += v
-
-        # Then add activity scores to the total
-        points_by_activity = activity_score(lines)
-        activity_points = 0
-        for _, v in points_by_activity.items():
-            activity_points += v
 
         # TODO: Include emoji icon from computeIconID in response.
-        await interaction.response.send_message(
-            content='{player} has {points} points\nPoints from skills: {skillPoints}\nPoints from minigames & bossing: {activityPoints}'.format(player=player, points=skill_points+activity_points, skillPoints=skill_points, activityPoints=activity_points))
+        await interaction.response.send_message(do_score(player, lines))
 
 
     @tree.command()
@@ -184,33 +170,7 @@ def build_command_tree(
         # Omit the first line of the response, which is total level & xp.
         lines = resp.text.split('\n')[1:]
 
-        points_by_skill = skill_score(lines)
-        skill_points = 0
-        for _, v in points_by_skill.items():
-            skill_points += v
-
-        points_by_activity = activity_score(lines)
-        activity_points = 0
-        for _, v in points_by_activity.items():
-            activity_points += v
-
-        total_points = skill_points + activity_points
-
-        output = "---Points from Skills---\n"
-        for i in point_values.skills():
-            if points_by_skill.get(i, 0) > 0:
-                output += "{}: {}\n".format(i, points_by_skill.get(i))
-        output += "Total Skill Points: {} ({}% of total)\n\n".format(
-            skill_points, (skill_points / total_points) * 100)
-
-        output += "---Points from Minigames & Bossing---\n"
-        for i in point_values.activities():
-            if points_by_activity.get(i, 0) > 0:
-                output += "{}: {}\n".format(i, points_by_activity.get(i))
-        output += (
-            "Total Minigame & Bossing Points: {} ({}% of total)\n\n".format(
-                activity_points, (activity_points / total_points) * 100))
-        output += "Total Points: {}\n".format(total_points)
+        message, output = do_breakdown(player, lines)
         # Now we have all of the data that we need for a full point breakdown.
         # If we write a single file though, there is a potential race
         # condition if multiple users try to run breakdown at once.
@@ -223,11 +183,89 @@ def build_command_tree(
         with open(path, 'rb') as f:
             discord_file = discord.File(f, filename='breakdown.txt')
             await interaction.response.send_message(
-                '\n\nTotal Points for {}: {}'.format(
-                    player, total_points), file=discord_file)
+                message, file=discord_file)
 
 
     return tree
+
+
+def do_score(player: str, hiscores: List[str]) -> str:
+    """Compute score for a Runescape player name.
+
+    Returns string, rather than values, to ensure output
+    stability in response to score slashcommand.
+
+    Arguments:
+        player: Runescape username.
+        hiscores: Response from hiscores already split by
+            newlines without total level row.
+
+    Returns:
+        Message to respond to Discord with.
+    """
+    points_by_skill = skill_score(hiscores)
+    skill_points = 0
+    for _, v in points_by_skill.items():
+        skill_points += v
+
+    points_by_activity = activity_score(hiscores)
+    activity_points = 0
+    for _, v in points_by_activity.items():
+        activity_points += v
+
+    points = skill_points + activity_points
+
+    content=f"""{player} has {points}
+Points from skills: {skill_points}
+Points from minigames & bossing: {activity_points}"""
+
+    return content
+
+
+def do_breakdown(player: str, hiscores: List[str]) -> Tuple[str, str]:
+    """Compute score for a Runescape player with full attribution.
+
+    Returns string, rather than values, to ensure output
+    stability in response to breakdown slashcommand.
+
+    Arguments:
+        player: Runescape username.
+        hiscores: Response from hiscores already split by
+            newlines without total level row.
+
+    Returns:
+        Message to use in response to Discord;
+        Output to be written to txt file & included in
+            Discord response.
+    """
+    points_by_skill = skill_score(hiscores)
+    skill_points = 0
+    for _, v in points_by_skill.items():
+        skill_points += v
+
+    points_by_activity = activity_score(hiscores)
+    activity_points = 0
+    for _, v in points_by_activity.items():
+        activity_points += v
+
+    total_points = skill_points + activity_points
+
+    output = "---Points from Skills---\n"
+    for i in point_values.skills():
+        if points_by_skill.get(i, 0) > 0:
+            output += "{}: {}\n".format(i, points_by_skill.get(i))
+    output += "Total Skill Points: {} ({}% of total)\n\n".format(
+        skill_points, round((skill_points / total_points) * 100, 2))
+    output += "---Points from Minigames & Bossing---\n"
+    for i in point_values.activities():
+        if points_by_activity.get(i, 0) > 0:
+            output += "{}: {}\n".format(i, points_by_activity.get(i))
+    output += (
+        "Total Minigame & Bossing Points: {} ({}% of total)\n\n".format(
+            activity_points, round((activity_points / total_points) * 100, 2)))
+    output += "Total Points: {}\n".format(total_points)
+
+    return f"Total Points for {player}: {total_points}\n", output
 
 
 def skill_score(hiscores: List[str]) -> Dict[str, int]:
