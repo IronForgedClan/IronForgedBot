@@ -162,3 +162,6 @@ cython_debug/
 # Project-specific
 # breakdown_tmp/ holds breakdown txt files before uploading to discord.
 breakdown_tmp/
+# Credentials file for Google Sheets API
+credentials.json
+service.json

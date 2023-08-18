@@ -20,10 +20,14 @@ Main dependencies:
 *  python3 pip (`sudo apt-get install python3-pip`)
 *  The Rapptz/discord.py library (`python3 -m pip install -U discord.py`)
 *  Parameterized for testing (`python3 -m pip install parameterized`)
+*  Libraries for connecting to Google Sheets API (`pip install --upgrade
+   google-api-python-client google-auth-httplib2 google-auth-oauthlib`)
+
 
 Secrets & tokens are written manually to ".env" in the base app directory.
 These are written as key:value pairs separated by "=". Required secrets:
 
+*  SHEETID: Unique ID for sheet to connect to.
 *  GUILDID: The integer of the Discord server the bot will join.
 *  BOT_TOKEN: The unique token for your application bot from the Discord
 Developer Portal.
