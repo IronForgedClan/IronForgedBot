@@ -258,7 +258,17 @@ Total Points: 1626
             'kennylogs has 0 ingots')
 
     def test_addingots(self):
+        role_payload = {
+            'id': 0,
+            'name': "Leadership",
+        }
+        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
+
+        member = MagicMock()
+        member.roles = [role]
+
         mock_interaction = AsyncMock()
+        mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
         sheets_read_response = {'values': [
@@ -285,7 +295,17 @@ Total Points: 1626
             'Added 5 ingots to johnnycache')
 
     def test_addingots_player_not_found(self):
+        role_payload = {
+            'id': 0,
+            'name': "Leadership",
+        }
+        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
+
+        member = MagicMock()
+        member.roles = [role]
+
         mock_interaction = AsyncMock()
+        mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
         sheets_read_response = {'values': [
@@ -302,8 +322,38 @@ Total Points: 1626
         mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs wasn\'t found.')
 
-    def test_updateingots(self):
+    def test_addingots_permission_denied(self):
+        role_payload = {
+            'id': 0,
+            'name': 'blorp',
+        }
+        role = discord.Role(guild=Mock(), state=Mock(), data=role_payload)
+
+        member = MagicMock()
+        member.name = 'johnnycache'
+
         mock_interaction = AsyncMock()
+        mock_interaction.user = member
+        mock_interaction.response = AsyncMock()
+
+        self.loop.run_until_complete(main.addingots(
+            mock_interaction, 'kennylogs', 5, Mock(), ''))
+
+        mock_interaction.response.send_message.assert_called_once_with(
+            'PERMISSION_DENIED: johnnycache is not in a leadership role.')
+
+    def test_updateingots(self):
+        role_payload = {
+            'id': 0,
+            'name': 'Leadership',
+        }
+        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
+
+        member = MagicMock()
+        member.roles = [role]
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
         sheets_read_response = {'values': [
@@ -327,7 +377,17 @@ Total Points: 1626
             'Set ingot count to 400 for johnnycache')
 
     def test_updateingots_player_not_found(self):
+        role_payload = {
+            'id': 0,
+            'name': "Leadership",
+        }
+        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
+
+        member = MagicMock()
+        member.roles = [role]
+
         mock_interaction = AsyncMock()
+        mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
         sheets_read_response = {'values': [
@@ -343,3 +403,23 @@ Total Points: 1626
 
         mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs wasn\'t found.')
+
+    def test_updateingots_permission_denied(self):
+        role_payload = {
+            'id': 0,
+            'name': 'blorp',
+        }
+        role = discord.Role(guild=Mock(), state=Mock(), data=role_payload)
+
+        member = MagicMock()
+        member.name = 'johnnycache'
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = member
+        mock_interaction.response = AsyncMock()
+
+        self.loop.run_until_complete(main.updateingots(
+            mock_interaction, 'kennylogs', 5, Mock(), ''))
+
+        mock_interaction.response.send_message.assert_called_once_with(
+            'PERMISSION_DENIED: johnnycache is not in a leadership role.')

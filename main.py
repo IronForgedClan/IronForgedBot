@@ -68,6 +68,16 @@ def compute_clan_icon(points: int):
     return "Iron"
 
 
+def is_admin(member: discord.Member) -> bool:
+    """Check if a member has a leadership role."""
+    roles = member.roles
+    for role in roles:
+        if role.name == "Leadership":
+            return True
+
+    return False
+
+
 class DiscordClient(discord.Client):
     """Client class for bot to handle slashcommands.
 
@@ -257,6 +267,18 @@ async def addingots(
         sheets_client: Sheets API Resource object.
         sheet_id: ID of sheet to interact with.
     """
+    # interaction.user can be a User or Member, but we can only
+    # rely on permission checking for a Member.
+    member = interaction.user
+    if isinstance(member, discord.User):
+        await interaction.response.send_message(
+            f'PERMISSION_DENIED: {member.name} is not in this guild.')
+        return
+
+    if not is_admin(member):
+        await interaction.response.send_message(
+            f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+        return
 
     result = {}
 
@@ -316,6 +338,19 @@ async def updateingots(
         sheets_client: Sheets API Resource object.
         sheet_id: ID of sheet to interact with.
     """
+    # interaction.user can be a User or Member, but we can only
+    # rely on permission checking for a Member.
+    member = interaction.user
+    if isinstance(member, discord.User):
+        await interaction.response.send_message(
+            f'PERMISSION_DENIED: {member.name} is not in this guild.')
+        return
+
+    if not is_admin(member):
+        await interaction.response.send_message(
+            f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+        return
+
 
     result = {}
 
