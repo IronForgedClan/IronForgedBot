@@ -166,7 +166,8 @@ class TestIronForgedBot(unittest.TestCase):
         response._content = bytes(hiscores_raw_response(), 'utf-8')
 
         with patch.object(requests, 'get', return_value=response):
-            self.loop.run_until_complete(main.score(self.mock_interaction, 'johnnycache'))
+            self.loop.run_until_complete(main.score(
+                self.mock_interaction, MagicMock(), 'johnnycache'))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
             """johnnycache has 1,626
@@ -182,7 +183,7 @@ Points from minigames & bossing: 370""")
         with patch.object(requests, 'get', return_value=response):
             with patch('builtins.open', mo):
                 self.loop.run_until_complete(
-                    main.breakdown(self.mock_interaction, 'johnnycache', '/'))
+                    main.breakdown(self.mock_interaction, MagicMock(), 'johnnycache', '/'))
 
         self.mock_interaction.response.send_message.assert_called_once()
         mo().write.assert_called_once_with(
@@ -243,7 +244,7 @@ Total Points: 1,626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.ingots(
-            self.mock_interaction, 'johnnycache', sheets_client,
+            self.mock_interaction, MagicMock(), 'johnnycache', sheets_client,
             'bloop'))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
@@ -260,7 +261,7 @@ Total Points: 1,626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.ingots(
-            self.mock_interaction, 'kennylogs', sheets_client,
+            self.mock_interaction, MagicMock(), 'kennylogs', sheets_client,
             'bloop'))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
@@ -284,7 +285,7 @@ Total Points: 1,626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, 'johnnycache', 5000, sheets_client, ''))
+            self.mock_interaction, MagicMock(), 'johnnycache', 5000, sheets_client, ''))
 
         # Ideally we could read the written file to assert data present.
         # But this is sheets, not a database, so asserting the value in
@@ -309,7 +310,7 @@ Total Points: 1,626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, 'kennylogs', 5, sheets_client, ''))
+            self.mock_interaction, MagicMock(), 'kennylogs', 5, sheets_client, ''))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs wasn\'t found.')
@@ -324,7 +325,7 @@ Total Points: 1,626
         mock_interaction.response = AsyncMock()
 
         self.loop.run_until_complete(main.addingots(
-            mock_interaction, 'kennylogs', 5, Mock(), ''))
+            mock_interaction, MagicMock(), 'kennylogs', 5, Mock(), ''))
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
@@ -347,7 +348,7 @@ Total Points: 1,626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, 'johnnycache', 4000, sheets_client, ''))
+            self.mock_interaction, MagicMock(), 'johnnycache', 4000, sheets_client, ''))
 
         self.assertEqual(
             http.request_sequence[1][2],
@@ -371,7 +372,7 @@ Total Points: 1,626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, 'kennylogs', 400, sheets_client, ''))
+            self.mock_interaction, MagicMock(), 'kennylogs', 400, sheets_client, ''))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs wasn\'t found.')
@@ -386,7 +387,7 @@ Total Points: 1,626
         mock_interaction.response = AsyncMock()
 
         self.loop.run_until_complete(main.updateingots(
-            mock_interaction, 'kennylogs', 5, Mock(), ''))
+            mock_interaction, MagicMock(), 'kennylogs', 5, Mock(), ''))
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')

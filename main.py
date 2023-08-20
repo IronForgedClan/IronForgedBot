@@ -55,7 +55,7 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
 
 
 def compute_clan_icon(points: int):
-    """Determine Icon ID to include in response."""
+    """Determine Icon name to include in response."""
     if points >= 13000:
         return "Myth"
     if points >= 9000:
@@ -166,11 +166,14 @@ class DiscordClient(discord.Client):
 # For stronger assertions on time-based data.
 
 async def score(
-    interaction: discord.Interaction, player: str):
+    interaction: discord.Interaction,
+    discord_client: discord.Client,
+    player: str):
     """Compute clan score for a Runescape player name.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
+        discord_client: Client to use for reading Guild & Emojis.
         player: Runescape playername to look up score for.
     """
     # TODO: Fail early if the player is not found.
@@ -192,20 +195,31 @@ async def score(
 
     points = skill_points + activity_points
 
-    content=f"""{player} has {points:,}
+    emoji_name = compute_clan_icon(points)
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == emoji_name:
+            icon = emoji
+            break
+    content=f"""{player} has {points:,}{icon}
 Points from skills: {skill_points:,}
 Points from minigames & bossing: {activity_points:,}"""
 
-    # TODO: Include emoji icon from computeIconID in response.
     await interaction.response.send_message(content)
 
 
-async def breakdown(interaction: discord.Interaction, player: str, breakdown_dir_path: str):
+async def breakdown(
+    interaction: discord.Interaction,
+    discord_client: discord.Client,
+    player: str,
+    breakdown_dir_path: str):
     """Compute player score with complete source enumeration.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
+        discord_client: Discord client for finding Guild & Emojis.
         player: Runescape username to break down clan score for.
+        breakdown_dir_path: Path to write breakdown tmp files.
     """
     # TODO: Fail early if the player is not found.
     # TODO: Fail early if username is longer than 12 chars.
@@ -250,15 +264,24 @@ async def breakdown(interaction: discord.Interaction, player: str, breakdown_dir
     with open(path, 'w') as f:
         f.write(output)
 
+    emoji_name = compute_clan_icon(total_points)
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == emoji_name:
+            icon = emoji
+            break
+
+
     with open(path, 'rb') as f:
         discord_file = discord.File(f, filename='breakdown.txt')
         await interaction.response.send_message(
-            f'Total Points for {player}: {total_points}\n',
+            f'Total Points for {player}: {total_points}{icon}\n',
             file=discord_file)
 
 
 async def ingots(
-    interaction: discord.Interaction, player: str,
+    interaction: discord.Interaction,
+    discord_client: discord.Client, player: str,
     sheets_client: Resource, sheet_id: str):
     """View ingots for a Runescape playername.
 
@@ -287,17 +310,18 @@ async def ingots(
     for i in values:
         ingots_by_player[i[0]] = i[1]
 
-    ingots = ingots_by_player.get(player, 0)
-    # TODO: Include ingot emoji in response.
+    ingots = int(ingots_by_player.get(player, 0))
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == 'Ingot':
+            icon = emoji
     await interaction.response.send_message(
-        f'{player} has {ingots:,} ingots')
+        f'{player} has {ingots:,} ingots{icon}')
 
-
-# TODO: Ingots mutations should log the change to the
-# changeLog spreadsheet.
 
 async def addingots(
-    interaction: discord.Interaction, player: str, ingots: int,
+    interaction: discord.Interaction,
+    discord_client: discord.Client, player: str, ingots: int,
     sheets_client: Resource, sheet_id: str):
     """Add ingots to a Runescape alias.
 
@@ -365,8 +389,12 @@ async def addingots(
             f'Encountered error writing to sheets: {e}')
         return
 
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == 'Ingot':
+            icon = emoji
     await interaction.response.send_message(
-        f'Added {ingots:,} ingots to {player}')
+        f'Added {ingots:,} ingots to {player}{icon}')
 
     tz = timezone('EST')
     dt = datetime.now(tz)
@@ -381,12 +409,14 @@ async def addingots(
 
 
 async def updateingots(
-    interaction: discord.Interaction, player: str, ingots: int,
+    interaction: discord.Interaction,
+    discord_client: discord.Client, player: str, ingots: int,
     sheets_client: Resource, sheet_id: str):
     """Set ingots for a Runescape alias.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
+        discord_client: Discord client for reading Guilds & Emojis.
         player: Runescape username to view ingot count for.
         ingots: New ingot count for this user.
         sheets_client: Sheets API Resource object.
@@ -448,8 +478,12 @@ async def updateingots(
             f'Encountered error writing to sheets: {e}')
         return
 
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == 'Ingot':
+            icon = emoji
     await interaction.response.send_message(
-        f'Set ingot count to {ingots:,} for {player}')
+        f'Set ingot count to {ingots:,} for {player}{icon}')
 
     tz = timezone('EST')
     dt = datetime.now(tz)
@@ -613,10 +647,13 @@ def add_commands_to_tree(
 
 
     # TODO: Make description not look silly.
+    async def score_wrap(interaction: discord.Interaction, player: str):
+        await score(interaction, client, player)
+
     score_command = app_commands.Command(
         name="score",
         description="player=Runescape playername to look up score for.",
-        callback=score,
+        callback=score_wrap,
         nsfw=False,
         parent=None,
         auto_locale_strings=True,
@@ -625,7 +662,7 @@ def add_commands_to_tree(
 
 
     async def breakdown_wrap(interaction: discord.Interaction, player: str):
-        await breakdown(interaction, player, breakdown_dir_path)
+        await breakdown(interaction, client, player, breakdown_dir_path)
 
 
     breakdown_command = app_commands.Command(
@@ -643,7 +680,7 @@ def add_commands_to_tree(
 
 
     async def ingots_wrap(interaction: discord.Interaction, player: str):
-        await ingots(interaction, player, sheets_client, sheet_id)
+        await ingots(interaction, client, player, sheets_client, sheet_id)
 
 
     ingots_command = app_commands.Command(
@@ -659,7 +696,7 @@ def add_commands_to_tree(
 
     async def addingots_wrap(
         interaction: discord.Interaction, player: str, ingots: int):
-        await addingots(interaction, player, ingots, sheets_client, sheet_id)
+        await addingots(interaction, client, player, ingots, sheets_client, sheet_id)
 
 
     addingots_command = app_commands.Command(
@@ -677,7 +714,7 @@ ingots: Number of ingots to add.""",
     async def updateingots_wrap(
         interaction: discord.Interaction, player: str, ingots: int):
         await updateingots(
-            interaction, player, ingots, sheets_client, sheet_id)
+            interaction, client, player, ingots, sheets_client, sheet_id)
 
 
     updateingots_command = app_commands.Command(
