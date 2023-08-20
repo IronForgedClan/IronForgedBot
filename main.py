@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import argparse
 from datetime import datetime
@@ -25,6 +25,7 @@ SHEETS_SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # Skip header in read.
 SHEET_RANGE = 'ClanIngots!A2:B'
 SHEET_RANGE_WITH_DISCORD_IDS = 'ClanIngots!A2:C'
+CHANGELOG_RANGE = 'ChangeLog!A2:F'
 # pylint: enable=line-too-long
 
 
@@ -81,6 +82,37 @@ def is_admin(member: discord.Member) -> bool:
     return False
 
 
+def log_change(
+        changes: List[List[Union[str, int]]],
+        sheets_client: Resource,
+        sheet_id: str):
+    """Log change to ChangeLog sheet.
+
+    Arguments:
+        changes: Values to prepend to current changelog. Expected
+            format: [user, timestamp, old value, new value, mutator, note]
+        sheets_client: Client to use for interacting with Google Sheets.
+        sheet_id: ID of sheet to update.
+
+    Raises:
+        HttpError: Any error is encountered interacting with sheets.
+    """
+    changelog_response = sheets_client.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=CHANGELOG_RANGE).execute()
+
+    # We want newest changes first
+    changelog_values = changelog_response.get('values', [])
+    changes.extend(changelog_values)
+
+    change_range = f'ChangeLog!A2:F{2 + len(changes)}'
+    body = {'values': changes}
+
+    _ = sheets_client.spreadsheets().values().update(
+        spreadsheetId=sheet_id, range=change_range,
+        valueInputOption="RAW", body=body).execute()
+
+
 class DiscordClient(discord.Client):
     """Client class for bot to handle slashcommands.
 
@@ -129,6 +161,10 @@ class DiscordClient(discord.Client):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
         print('------')
 
+
+# TODO: Move public functions to be members of a class.
+# This way, we can use a fake clock as a class attribute
+# For stronger assertions on time-based data.
 
 async def score(
     interaction: discord.Interaction, player: str):
@@ -302,9 +338,11 @@ async def addingots(
     rowIndex = 2
     found = False
     newValue = 0
+    old_value = 0
     for i in values:
         if i[0] == player:
             found = True
+            old_value = int(i[1])
             newValue = int(i[1]) + ingots
             break
         rowIndex += 1
@@ -330,6 +368,17 @@ async def addingots(
 
     await interaction.response.send_message(
         f'Added {ingots} ingots to {player}')
+
+    tz = timezone('EST')
+    dt = datetime.now(tz)
+    modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+    change = [[player, modification_timestamp, old_value, newValue, interaction.user.nick, '']]
+
+    try:
+        log_change(change, sheets_client, sheet_id)
+    except HttpError as e:
+        await interaction.followup.send(
+            f'Encountered error in logging changes: {e}')
 
 
 async def updateingots(
@@ -373,9 +422,11 @@ async def updateingots(
     # Start at 2 since we skip header
     rowIndex = 2
     found = False
+    old_value = 0
     for i in values:
         if i[0] == player:
             found = True
+            old_value = i[1]
             break
         rowIndex += 1
 
@@ -401,6 +452,17 @@ async def updateingots(
     await interaction.response.send_message(
         f'Set ingot count to {ingots} for {player}')
 
+    tz = timezone('EST')
+    dt = datetime.now(tz)
+    modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+    change = [[player, modification_timestamp, old_value, ingots, interaction.user.nick, '']]
+
+    try:
+        log_change(change, sheets_client, sheet_id)
+    except HttpError as e:
+        await interaction.followup.send(
+            f'Encountered error in logging changes: {e}')
+
 
 # TODO: This takes a long time; if we want messages sent to calling user,
 # send an initial one followed by a followup webhook with real info.
@@ -421,6 +483,8 @@ async def syncmembers(
             f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
         return
 
+    await interaction.response.send_message(
+        'This command is pretty slow; this might take a moment.')
     # Perform a cross join between current Discord members and
     # entries in the sheet.
     # First, read all members from Discord.
@@ -436,7 +500,7 @@ async def syncmembers(
             spreadsheetId=sheet_id,
             range=SHEET_RANGE_WITH_DISCORD_IDS).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error reading ClanIngots from sheets: {e}')
         return
 
@@ -447,7 +511,6 @@ async def syncmembers(
     modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
 
     values = result.get('values', [])
-    print(f'original values: {values}')
     # Used in determining if we need to buffer response with empty rows.
     original_length = len(values)
     written_ids = [value[2] for value in values]
@@ -460,17 +523,16 @@ async def syncmembers(
     for member in members:
         if str(member.id) not in written_ids:
             if member.nick is None:
-                print(f'{member.name} has not had their nickname updated, moving on.')
                 continue
             values.append([member.nick, 0, str(member.id)])
 
-            changes.append([member.nick, modification_timestamp, 0, 0, 'User Joined Server'])
+            changes.append([member.nick, modification_timestamp, 0, 0, 'User Joined Server', ''])
 
     new_values = []
     # Okay, now for all the users who have left.
     for value in values:
         if value[2] not in member_ids:
-            changes.append([value[0], modification_timestamp, value[1], 0, 'User Left Server'])
+            changes.append([value[0], modification_timestamp, value[1], 0, 'User Left Server', ''])
             continue
 
         new_values.append([value[0], int(value[1]), value[2]])
@@ -481,7 +543,7 @@ async def syncmembers(
         for value in new_values:
             if str(member.id) == value[2]:
                 if member.nick != value[0]:
-                    changes.append([value[0], modification_timestamp, value[0], member.nick, 'Name Change'])
+                    changes.append([value[0], modification_timestamp, value[0], member.nick, 'Name Change', ''])
 
                     value[0] = member.nick
 
@@ -501,9 +563,21 @@ async def syncmembers(
             spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error writing to sheets: {e}')
         return
+
+    try:
+        log_change(changes, sheets_client, sheet_id)
+    except HttpError as e:
+        await interaction.followup.send(
+            f'Encountered error in logging changes: {e}')
+        return
+
+    await interaction.followup.send(
+        'Successfully synced ingots storage with current members!')
+
+
 
 
 def add_commands_to_tree(
