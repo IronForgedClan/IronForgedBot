@@ -54,6 +54,12 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
     return True
 
 
+def validate_player_name(player: str) -> bool:
+    if len(player) > 12:
+        return False
+    return True
+
+
 def compute_clan_icon(points: int):
     """Determine Icon name to include in response."""
     if points >= 13000:
@@ -176,10 +182,16 @@ async def score(
         discord_client: Client to use for reading Guild & Emojis.
         player: Runescape playername to look up score for.
     """
-    # TODO: Fail early if the player is not found.
-    # TODO: Fail early if username is longer than 12 chars.
+    if not validate_player_name(player):
+        await interaction.response.send_message(
+            f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+        return
     resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
                         timeout=15)
+    if resp.status_code != 200:
+        await interaction.response.send_message(
+            f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
+        return
     # Omit the first line of the response, which is total level & xp.
     lines = resp.text.split('\n')[1:]
 
@@ -221,10 +233,17 @@ async def breakdown(
         player: Runescape username to break down clan score for.
         breakdown_dir_path: Path to write breakdown tmp files.
     """
-    # TODO: Fail early if the player is not found.
-    # TODO: Fail early if username is longer than 12 chars.
+    if not validate_player_name(player):
+        await interaction.response.send_message(
+            f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+        return
+
     resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
                         timeout=15)
+    if resp.status_code != 200:
+        await interaction.response.send_message(
+            f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
+        return
     # Omit the first line of the response, which is total level & xp.
     lines = resp.text.split('\n')[1:]
 
@@ -291,6 +310,11 @@ async def ingots(
         sheets_client: Sheets API Resource object.
         sheet_id: ID of sheet to interact with.
     """
+    if not validate_player_name(player):
+        await interaction.response.send_message(
+            f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+        return
+
     result = {}
 
     try:
@@ -344,6 +368,12 @@ async def addingots(
         await interaction.response.send_message(
             f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
         return
+
+    if not validate_player_name(player):
+        await interaction.response.send_message(
+            f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+        return
+
 
     result = {}
 
@@ -435,6 +465,10 @@ async def updateingots(
             f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
         return
 
+    if not validate_player_name(player):
+        await interaction.response.send_message(
+            f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+        return
 
     result = {}
 
