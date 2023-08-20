@@ -500,7 +500,7 @@ async def updateingots(
 async def syncmembers(
     interaction: discord.Interaction, client: discord.Client,
     sheets_client: Resource, sheet_id: str):
-    guild = await client.fetch_guild(client.guild.id)
+#    guild = await client.fetch_guild(client.guild.id)
 
     mutator = interaction.user
     if isinstance(mutator, discord.User):
@@ -520,7 +520,8 @@ async def syncmembers(
     # First, read all members from Discord.
     members = []
     member_ids = []
-    async for member in guild.fetch_members(limit=None):
+    for member in client.get_guild(client.guild.id).members:
+#    async for member in guild.fetch_members(limit=None):
         members.append(member)
         member_ids.append(str(member.id))
 

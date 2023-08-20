@@ -394,9 +394,9 @@ Total Points: 1,626
 
     def test_syncmembers(self):
         """Test that sheet can be updated to only members in Discord."""
-        mock_discord_client = AsyncMock()
+        mock_discord_client = MagicMock()
         mock_guild = MagicMock()
-        mock_discord_client.fetch_guild.return_value = mock_guild
+        mock_discord_client.get_guild.return_value = mock_guild
 
         member1 = MagicMock()
         member1.id = 1
@@ -413,22 +413,7 @@ Total Points: 1,626
         member3.name = "member3"
         member3.nick = "member3"
 
-        class AsyncMemberFetcher:
-            def __init__(self):
-                self.items = [member1, member2, member3]
-
-            def __aiter__(self):
-                return self
-
-            async def __anext__(self):
-                try:
-                    return self.items.pop()
-                except IndexError:
-                    pass
-
-                raise StopAsyncIteration
-
-        mock_guild.fetch_members.return_value = AsyncMemberFetcher()
+        mock_guild.members = [member1, member2, member3]
 
         sheets_read_response = {'values': [
             ['member1', '200', '1'],
