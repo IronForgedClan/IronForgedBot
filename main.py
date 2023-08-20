@@ -1,19 +1,18 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 import argparse
 from datetime import datetime
 import os
-from pytz import timezone
 import sys
+from pytz import timezone
 
 import discord
 from discord import app_commands
 import requests
-from common import point_values
-
 from google.oauth2 import service_account
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
+from common import point_values
 
 
 # Don't care about line length for URLs & constants.
@@ -56,7 +55,7 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
 
 
 def compute_clan_icon(points: int):
-    """Determine Icon ID to include in response."""
+    """Determine Icon name to include in response."""
     if points >= 13000:
         return "Myth"
     if points >= 9000:
@@ -167,11 +166,14 @@ class DiscordClient(discord.Client):
 # For stronger assertions on time-based data.
 
 async def score(
-    interaction: discord.Interaction, player: str):
+    interaction: discord.Interaction,
+    discord_client: discord.Client,
+    player: str):
     """Compute clan score for a Runescape player name.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
+        discord_client: Client to use for reading Guild & Emojis.
         player: Runescape playername to look up score for.
     """
     # TODO: Fail early if the player is not found.
@@ -193,20 +195,31 @@ async def score(
 
     points = skill_points + activity_points
 
-    content=f"""{player} has {points}
-Points from skills: {skill_points}
-Points from minigames & bossing: {activity_points}"""
+    emoji_name = compute_clan_icon(points)
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == emoji_name:
+            icon = emoji
+            break
+    content=f"""{player} has {points:,}{icon}
+Points from skills: {skill_points:,}
+Points from minigames & bossing: {activity_points:,}"""
 
-    # TODO: Include emoji icon from computeIconID in response.
     await interaction.response.send_message(content)
 
 
-async def breakdown(interaction: discord.Interaction, player: str, breakdown_dir_path: str):
+async def breakdown(
+    interaction: discord.Interaction,
+    discord_client: discord.Client,
+    player: str,
+    breakdown_dir_path: str):
     """Compute player score with complete source enumeration.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
+        discord_client: Discord client for finding Guild & Emojis.
         player: Runescape username to break down clan score for.
+        breakdown_dir_path: Path to write breakdown tmp files.
     """
     # TODO: Fail early if the player is not found.
     # TODO: Fail early if username is longer than 12 chars.
@@ -227,39 +240,48 @@ async def breakdown(interaction: discord.Interaction, player: str, breakdown_dir
 
     total_points = skill_points + activity_points
 
-    output = "---Points from Skills---\n"
+    output = '---Points from Skills---\n'
     for i in point_values.skills():
         if points_by_skill.get(i, 0) > 0:
-            output += "{}: {}\n".format(i, points_by_skill.get(i))
-    output += "Total Skill Points: {} ({}% of total)\n\n".format(
-        skill_points, round((skill_points / total_points) * 100, 2))
-    output += "---Points from Minigames & Bossing---\n"
+            output += f'{i}: {points_by_skill.get(i):,}\n'
+    output += (f'Total Skill Points: {skill_points:,} ' +
+        f'({round((skill_points / total_points) * 100, 2)}% of total)\n\n')
+    output += '---Points from Minigames & Bossing---\n'
     for i in point_values.activities():
         if points_by_activity.get(i, 0) > 0:
-            output += "{}: {}\n".format(i, points_by_activity.get(i))
+            output += f'{i}: {points_by_activity.get(i):,}\n'
     output += (
-        "Total Minigame & Bossing Points: {} ({}% of total)\n\n".format(
-            activity_points, round((activity_points / total_points) * 100, 2)))
-    output += "Total Points: {}\n".format(total_points)
+        f'Total Minigame & Bossing Points: {activity_points} ' +
+        f'({round((activity_points / total_points) * 100, 2)}% of total)\n\n')
+    output += f'Total Points: {total_points:,}\n'
 
     # Now we have all of the data that we need for a full point breakdown.
     # If we write a single file though, there is a potential race
     # condition if multiple users try to run breakdown at once.
     # text files are cheap - use the player name as a good-enough amount
     # of uniquity.
-    path = os.path.join(breakdown_dir_path, '{}.txt'.format(player))
+    path = os.path.join(breakdown_dir_path, f'{player}.txt')
     with open(path, 'w') as f:
         f.write(output)
+
+    emoji_name = compute_clan_icon(total_points)
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == emoji_name:
+            icon = emoji
+            break
+
 
     with open(path, 'rb') as f:
         discord_file = discord.File(f, filename='breakdown.txt')
         await interaction.response.send_message(
-            f"Total Points for {player}: {total_points}\n",
+            f'Total Points for {player}: {total_points}{icon}\n',
             file=discord_file)
 
 
 async def ingots(
-    interaction: discord.Interaction, player: str,
+    interaction: discord.Interaction,
+    discord_client: discord.Client, player: str,
     sheets_client: Resource, sheet_id: str):
     """View ingots for a Runescape playername.
 
@@ -288,17 +310,18 @@ async def ingots(
     for i in values:
         ingots_by_player[i[0]] = i[1]
 
-    ingots = ingots_by_player.get(player, 0)
-    # TODO: Include ingot emoji in response.
+    ingots = int(ingots_by_player.get(player, 0))
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == 'Ingot':
+            icon = emoji
     await interaction.response.send_message(
-        f'{player} has {ingots} ingots')
+        f'{player} has {ingots:,} ingots{icon}')
 
-
-# TODO: Ingots mutations should log the change to the
-# changeLog spreadsheet.
 
 async def addingots(
-    interaction: discord.Interaction, player: str, ingots: int,
+    interaction: discord.Interaction,
+    discord_client: discord.Client, player: str, ingots: int,
     sheets_client: Resource, sheet_id: str):
     """Add ingots to a Runescape alias.
 
@@ -335,26 +358,26 @@ async def addingots(
     values = result.get('values', [])
 
     # Start at 2 since we skip header
-    rowIndex = 2
+    row_index = 2
     found = False
-    newValue = 0
+    new_value = 0
     old_value = 0
     for i in values:
         if i[0] == player:
             found = True
             old_value = int(i[1])
-            newValue = int(i[1]) + ingots
+            new_value = int(i[1]) + ingots
             break
-        rowIndex += 1
+        row_index += 1
 
     if not found:
         await interaction.response.send_message(
             f'{player} wasn\'t found.')
         return
 
-    write_range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
+    write_range = f'ClanIngots!B{row_index}:B{row_index}'
     body = {
-       'values': [[newValue]]
+       'values': [[new_value]]
     }
 
     try:
@@ -366,13 +389,17 @@ async def addingots(
             f'Encountered error writing to sheets: {e}')
         return
 
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == 'Ingot':
+            icon = emoji
     await interaction.response.send_message(
-        f'Added {ingots} ingots to {player}')
+        f'Added {ingots:,} ingots to {player}{icon}')
 
     tz = timezone('EST')
     dt = datetime.now(tz)
     modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
-    change = [[player, modification_timestamp, old_value, newValue, interaction.user.nick, '']]
+    change = [[player, modification_timestamp, old_value, new_value, interaction.user.nick, '']]
 
     try:
         log_change(change, sheets_client, sheet_id)
@@ -382,12 +409,14 @@ async def addingots(
 
 
 async def updateingots(
-    interaction: discord.Interaction, player: str, ingots: int,
+    interaction: discord.Interaction,
+    discord_client: discord.Client, player: str, ingots: int,
     sheets_client: Resource, sheet_id: str):
     """Set ingots for a Runescape alias.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
+        discord_client: Discord client for reading Guilds & Emojis.
         player: Runescape username to view ingot count for.
         ingots: New ingot count for this user.
         sheets_client: Sheets API Resource object.
@@ -420,7 +449,7 @@ async def updateingots(
     values = result.get('values', [])
 
     # Start at 2 since we skip header
-    rowIndex = 2
+    row_index = 2
     found = False
     old_value = 0
     for i in values:
@@ -428,14 +457,14 @@ async def updateingots(
             found = True
             old_value = i[1]
             break
-        rowIndex += 1
+        row_index += 1
 
     if not found:
         await interaction.response.send_message(
             f'{player} wasn\'t found.')
         return
 
-    write_range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
+    write_range = f'ClanIngots!B{row_index}:B{row_index}'
     body = {
         'values': [[ingots]]
     }
@@ -449,8 +478,12 @@ async def updateingots(
             f'Encountered error writing to sheets: {e}')
         return
 
+    icon = ''
+    for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
+        if emoji.name == 'Ingot':
+            icon = emoji
     await interaction.response.send_message(
-        f'Set ingot count to {ingots} for {player}')
+        f'Set ingot count to {ingots:,} for {player}{icon}')
 
     tz = timezone('EST')
     dt = datetime.now(tz)
@@ -464,23 +497,20 @@ async def updateingots(
             f'Encountered error in logging changes: {e}')
 
 
-# TODO: This takes a long time; if we want messages sent to calling user,
-# send an initial one followed by a followup webhook with real info.
-
 async def syncmembers(
     interaction: discord.Interaction, client: discord.Client,
     sheets_client: Resource, sheet_id: str):
-    guild = await client.fetch_guild(client.guild.id)
+#    guild = await client.fetch_guild(client.guild.id)
 
     mutator = interaction.user
     if isinstance(mutator, discord.User):
         await interaction.response.send_message(
-            f'PERMISSION_DENIED: {member.name} is not in this guild.')
+            f'PERMISSION_DENIED: {mutator.name} is not in this guild.')
         return
 
     if not is_admin(mutator):
         await interaction.response.send_message(
-            f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+            f'PERMISSION_DENIED: {mutator.name} is not in a leadership role.')
         return
 
     await interaction.response.send_message(
@@ -490,7 +520,8 @@ async def syncmembers(
     # First, read all members from Discord.
     members = []
     member_ids = []
-    async for member in guild.fetch_members(limit=None):
+    for member in client.get_guild(client.guild.id).members:
+#    async for member in guild.fetch_members(limit=None):
         members.append(member)
         member_ids.append(str(member.id))
 
@@ -543,7 +574,9 @@ async def syncmembers(
         for value in new_values:
             if str(member.id) == value[2]:
                 if member.nick != value[0]:
-                    changes.append([value[0], modification_timestamp, value[0], member.nick, 'Name Change', ''])
+                    changes.append(
+                        [value[0], modification_timestamp, value[0], member.nick, 'Name Change',
+                        ''])
 
                     value[0] = member.nick
 
@@ -559,7 +592,7 @@ async def syncmembers(
     write_range = f'ClanIngots!A2:C{2 + buf}'
     body = {'values': new_values}
     try:
-        response = sheets_client.spreadsheets().values().update(
+        _ = sheets_client.spreadsheets().values().update(
             spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
@@ -576,8 +609,6 @@ async def syncmembers(
 
     await interaction.followup.send(
         'Successfully synced ingots storage with current members!')
-
-
 
 
 def add_commands_to_tree(
@@ -617,10 +648,13 @@ def add_commands_to_tree(
 
 
     # TODO: Make description not look silly.
+    async def score_wrap(interaction: discord.Interaction, player: str):
+        await score(interaction, client, player)
+
     score_command = app_commands.Command(
         name="score",
         description="player=Runescape playername to look up score for.",
-        callback=score,
+        callback=score_wrap,
         nsfw=False,
         parent=None,
         auto_locale_strings=True,
@@ -629,7 +663,7 @@ def add_commands_to_tree(
 
 
     async def breakdown_wrap(interaction: discord.Interaction, player: str):
-        await breakdown(interaction, player, breakdown_dir_path)
+        await breakdown(interaction, client, player, breakdown_dir_path)
 
 
     breakdown_command = app_commands.Command(
@@ -647,7 +681,7 @@ def add_commands_to_tree(
 
 
     async def ingots_wrap(interaction: discord.Interaction, player: str):
-        await ingots(interaction, player, sheets_client, sheet_id)
+        await ingots(interaction, client, player, sheets_client, sheet_id)
 
 
     ingots_command = app_commands.Command(
@@ -663,7 +697,7 @@ def add_commands_to_tree(
 
     async def addingots_wrap(
         interaction: discord.Interaction, player: str, ingots: int):
-        await addingots(interaction, player, ingots, sheets_client, sheet_id)
+        await addingots(interaction, client, player, ingots, sheets_client, sheet_id)
 
 
     addingots_command = app_commands.Command(
@@ -681,7 +715,7 @@ ingots: Number of ingots to add.""",
     async def updateingots_wrap(
         interaction: discord.Interaction, player: str, ingots: int):
         await updateingots(
-            interaction, player, ingots, sheets_client, sheet_id)
+            interaction, client, player, ingots, sheets_client, sheet_id)
 
 
     updateingots_command = app_commands.Command(
@@ -714,7 +748,7 @@ def skill_score(hiscores: List[str]) -> Dict[str, int]:
     """Compute score from skills portion of hiscores response."""
     score = {}
     skills = point_values.skills()
-    for i in range(len(skills)):
+    for i, _ in enumerate(skills):
         line = hiscores[i].split(',')
         skill = skills[i]
         experience = int(line[2])
@@ -741,7 +775,7 @@ def activity_score(hiscores: List[str]) -> Dict[str, int]:
     score = {}
     skills = point_values.skills()
     activities = point_values.activities()
-    for i in range(len(activities)):
+    for i, _ in enumerate(activities):
         line = hiscores[len(skills) + i]
         count = int(line.split(',')[1])
         activity = activities[i]
@@ -781,7 +815,8 @@ if __name__ == '__main__':
     tree = discord.app_commands.CommandTree(client)
 
 
-    creds = service_account.Credentials.from_service_account_file('service.json', scopes=SHEETS_SCOPES)
+    creds = service_account.Credentials.from_service_account_file(
+        'service.json', scopes=SHEETS_SCOPES)
     service = build('sheets', 'v4', credentials=creds)
 
     add_commands_to_tree(client, tree, args.breakdown_tmp_dir, service, init_config.get('SHEETID'))
