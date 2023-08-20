@@ -160,10 +160,18 @@ class TestIronForgedBot(unittest.TestCase):
         """Test that all required fields are present in config."""
         self.assertEqual(main.validate_initial_config(config), expected)
 
+    @parameterized.expand([
+        ('johnnycache', True),
+        ('somesuperlonginvalidname', False),
+    ])
+    def test_validate_player_name(self, player, expected):
+        self.assertEqual(main.validate_player_name(player), expected)
+
     def test_score(self):
         """Test that the expected score is given to the user."""
         response = requests.Response()
         response._content = bytes(hiscores_raw_response(), 'utf-8')
+        response.status_code = 200
 
         with patch.object(requests, 'get', return_value=response):
             self.loop.run_until_complete(main.score(
@@ -178,6 +186,7 @@ Points from minigames & bossing: 370""")
         """Test that full score is given to user."""
         response = requests.Response()
         response._content = bytes(hiscores_raw_response(), 'utf-8')
+        response.status_code = 200
 
         mo = mock_open()
         with patch.object(requests, 'get', return_value=response):
