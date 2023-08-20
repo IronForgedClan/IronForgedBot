@@ -169,8 +169,8 @@ class TestIronForgedBot(unittest.TestCase):
             self.loop.run_until_complete(main.score(self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
-            """johnnycache has 1626
-Points from skills: 1256
+            """johnnycache has 1,626
+Points from skills: 1,256
 Points from minigames & bossing: 370""")
 
     def test_breakdown(self):
@@ -210,7 +210,7 @@ Farming: 39
 Runecraft: 76
 Hunter: 27
 Construction: 72
-Total Skill Points: 1256 (77.24% of total)
+Total Skill Points: 1,256 (77.24% of total)
 
 ---Points from Minigames & Bossing---
 Clue Scrolls (beginner): 38
@@ -229,13 +229,13 @@ Tempoross: 27
 Wintertodt: 40
 Total Minigame & Bossing Points: 370 (22.76% of total)
 
-Total Points: 1626
+Total Points: 1,626
 """)
 
     def test_ingots(self):
         """Test that ingots for given player are returned to user."""
         sheets_read_response = {'values': [
-            ['johnnycache', 200]]}
+            ['johnnycache', 2000]]}
 
         http = HttpMock(headers={'status': '200'})
         http.data = json.dumps(sheets_read_response)
@@ -247,7 +247,7 @@ Total Points: 1626
             'bloop'))
 
         self.mock_interaction.response.send_message.assert_called_once_with(
-            'johnnycache has 200 ingots')
+            'johnnycache has 2,000 ingots')
 
     def test_ingots_user_not_present(self):
         """Test that a missing player shows 0 ingots."""
@@ -284,19 +284,19 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, 'johnnycache', 5, sheets_client, ''))
+            self.mock_interaction, 'johnnycache', 5000, sheets_client, ''))
 
         # Ideally we could read the written file to assert data present.
         # But this is sheets, not a database, so asserting the value in
         # the PUT request is close enough.
         self.assertEqual(
             http.request_sequence[1][2],
-            json.dumps({'values': [[205]]}))
+            json.dumps({'values': [[5200]]}))
 
         self.assertEqual(len(json.loads(http.request_sequence[3][2]).get('values', [])), 2)
 
         self.mock_interaction.response.send_message.assert_called_once_with(
-            'Added 5 ingots to johnnycache')
+            'Added 5,000 ingots to johnnycache')
 
     def test_addingots_player_not_found(self):
         """Test that a missing player is surfaced to caller."""
@@ -347,18 +347,18 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, 'johnnycache', 400, sheets_client, ''))
+            self.mock_interaction, 'johnnycache', 4000, sheets_client, ''))
 
         self.assertEqual(
             http.request_sequence[1][2],
-            json.dumps({'values': [[400]]}))
+            json.dumps({'values': [[4000]]}))
 
         self.assertEqual(
             len(json.loads(http.request_sequence[3][2]).get('values', [])),
             2)
 
         self.mock_interaction.response.send_message.assert_called_once_with(
-            'Set ingot count to 400 for johnnycache')
+            'Set ingot count to 4,000 for johnnycache')
 
     def test_updateingots_player_not_found(self):
         """Test that a missing player is surfaced to caller."""

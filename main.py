@@ -192,9 +192,9 @@ async def score(
 
     points = skill_points + activity_points
 
-    content=f"""{player} has {points}
-Points from skills: {skill_points}
-Points from minigames & bossing: {activity_points}"""
+    content=f"""{player} has {points:,}
+Points from skills: {skill_points:,}
+Points from minigames & bossing: {activity_points:,}"""
 
     # TODO: Include emoji icon from computeIconID in response.
     await interaction.response.send_message(content)
@@ -229,17 +229,17 @@ async def breakdown(interaction: discord.Interaction, player: str, breakdown_dir
     output = '---Points from Skills---\n'
     for i in point_values.skills():
         if points_by_skill.get(i, 0) > 0:
-            output += f'{i}: {points_by_skill.get(i)}\n'
-    output += (f'Total Skill Points: {skill_points} ' +
+            output += f'{i}: {points_by_skill.get(i):,}\n'
+    output += (f'Total Skill Points: {skill_points:,} ' +
         f'({round((skill_points / total_points) * 100, 2)}% of total)\n\n')
     output += '---Points from Minigames & Bossing---\n'
     for i in point_values.activities():
         if points_by_activity.get(i, 0) > 0:
-            output += f'{i}: {points_by_activity.get(i)}\n'
+            output += f'{i}: {points_by_activity.get(i):,}\n'
     output += (
         f'Total Minigame & Bossing Points: {activity_points} ' +
         f'({round((activity_points / total_points) * 100, 2)}% of total)\n\n')
-    output += f'Total Points: {total_points}\n'
+    output += f'Total Points: {total_points:,}\n'
 
     # Now we have all of the data that we need for a full point breakdown.
     # If we write a single file though, there is a potential race
@@ -290,7 +290,7 @@ async def ingots(
     ingots = ingots_by_player.get(player, 0)
     # TODO: Include ingot emoji in response.
     await interaction.response.send_message(
-        f'{player} has {ingots} ingots')
+        f'{player} has {ingots:,} ingots')
 
 
 # TODO: Ingots mutations should log the change to the
@@ -366,7 +366,7 @@ async def addingots(
         return
 
     await interaction.response.send_message(
-        f'Added {ingots} ingots to {player}')
+        f'Added {ingots:,} ingots to {player}')
 
     tz = timezone('EST')
     dt = datetime.now(tz)
@@ -449,7 +449,7 @@ async def updateingots(
         return
 
     await interaction.response.send_message(
-        f'Set ingot count to {ingots} for {player}')
+        f'Set ingot count to {ingots:,} for {player}')
 
     tz = timezone('EST')
     dt = datetime.now(tz)
