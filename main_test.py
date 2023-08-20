@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 from googleapiclient.discovery import build
 from googleapiclient.http import HttpMock, HttpMockSequence
 import json
@@ -266,6 +267,7 @@ Total Points: 1626
 
         member = MagicMock()
         member.roles = [role]
+        member.nick = 'actor'
 
         mock_interaction = AsyncMock()
         mock_interaction.user = member
@@ -274,8 +276,13 @@ Total Points: 1626
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
+        changelog_response = {'values': [
+            ['kennylogs', '', '0', '0', 'johnnycache', '']]}
+
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
+            ({'status': '200'}, json.dumps('')),
+            ({'status': '200'}, json.dumps(changelog_response)),
             ({'status': '200'}, json.dumps(''))])
 
         sheets_client = build(
@@ -290,6 +297,8 @@ Total Points: 1626
         self.assertEqual(
             http.request_sequence[1][2],
             json.dumps({'values': [[205]]}))
+
+        self.assertEqual(len(json.loads(http.request_sequence[3][2]).get('values', [])), 2)
 
         mock_interaction.response.send_message.assert_called_once_with(
             'Added 5 ingots to johnnycache')
@@ -351,6 +360,7 @@ Total Points: 1626
 
         member = MagicMock()
         member.roles = [role]
+        member.nick = 'actor'
 
         mock_interaction = AsyncMock()
         mock_interaction.user = member
@@ -359,8 +369,13 @@ Total Points: 1626
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
+        changelog_response = {'values': [
+            ['kennylogs', '', '0', '0', 'johnnycache', '']]}
+
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
+            ({'status': '200'}, json.dumps('')),
+            ({'status': '200'}, json.dumps(changelog_response)),
             ({'status': '200'}, json.dumps(''))])
 
         sheets_client = build(
@@ -372,6 +387,10 @@ Total Points: 1626
         self.assertEqual(
             http.request_sequence[1][2],
             json.dumps({'values': [[400]]}))
+
+        self.assertEqual(
+            len(json.loads(http.request_sequence[3][2]).get('values', [])),
+            2)
 
         mock_interaction.response.send_message.assert_called_once_with(
             'Set ingot count to 400 for johnnycache')
@@ -479,8 +498,13 @@ Total Points: 1626
             ['member4', '1000', '4'],
         ]}
 
+        changelog_response = {'values': [
+            ['kennylogs', '', '0', '0', 'johnnycache', '']]}
+
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
+            ({'status': '200'}, json.dumps('')),
+            ({'status': '200'}, json.dumps(changelog_response)),
             ({'status': '200'}, json.dumps(''))])
 
         sheets_client = build(
@@ -497,4 +521,7 @@ Total Points: 1626
         self.assertEqual(
             http.request_sequence[1][2],
             json.dumps(expected_body))
+
+        self.assertEqual(
+            len(json.loads(http.request_sequence[3][2]).get('values', [])), 3)
 
