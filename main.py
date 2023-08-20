@@ -1,7 +1,9 @@
 from typing import Dict, List, Tuple
 
 import argparse
+from datetime import datetime
 import os
+from pytz import timezone
 import sys
 
 import discord
@@ -22,6 +24,7 @@ LEVEL_99_EXPERIENCE = 13034431
 SHEETS_SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # Skip header in read.
 SHEET_RANGE = 'ClanIngots!A2:B'
+SHEET_RANGE_WITH_DISCORD_IDS = 'ClanIngots!A2:C'
 # pylint: enable=line-too-long
 
 
@@ -255,6 +258,9 @@ async def ingots(
         f'{player} has {ingots} ingots')
 
 
+# TODO: Ingots mutations should log the change to the
+# changeLog spreadsheet.
+
 async def addingots(
     interaction: discord.Interaction, player: str, ingots: int,
     sheets_client: Resource, sheet_id: str):
@@ -308,14 +314,14 @@ async def addingots(
             f'{player} wasn\'t found.')
         return
 
-    range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
+    write_range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
     body = {
        'values': [[newValue]]
     }
 
     try:
         _ = sheets_client.spreadsheets().values().update(
-            spreadsheetId=sheet_id, range=range,
+            spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
         await interaction.response.send_message(
@@ -378,14 +384,14 @@ async def updateingots(
             f'{player} wasn\'t found.')
         return
 
-    range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
+    write_range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
     body = {
         'values': [[ingots]]
     }
 
     try:
         _ = sheets_client.spreadsheets().values().update(
-            spreadsheetId=sheet_id, range=range,
+            spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
         await interaction.response.send_message(
@@ -395,6 +401,109 @@ async def updateingots(
     await interaction.response.send_message(
         f'Set ingot count to {ingots} for {player}')
 
+
+# TODO: This takes a long time; if we want messages sent to calling user,
+# send an initial one followed by a followup webhook with real info.
+
+async def syncmembers(
+    interaction: discord.Interaction, client: discord.Client,
+    sheets_client: Resource, sheet_id: str):
+    guild = await client.fetch_guild(client.guild.id)
+
+    mutator = interaction.user
+    if isinstance(mutator, discord.User):
+        await interaction.response.send_message(
+            f'PERMISSION_DENIED: {member.name} is not in this guild.')
+        return
+
+    if not is_admin(mutator):
+        await interaction.response.send_message(
+            f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+        return
+
+    # Perform a cross join between current Discord members and
+    # entries in the sheet.
+    # First, read all members from Discord.
+    members = []
+    member_ids = []
+    async for member in guild.fetch_members(limit=None):
+        members.append(member)
+        member_ids.append(str(member.id))
+
+    # Then, get all current entries from sheets.
+    try:
+        result = sheets_client.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=SHEET_RANGE_WITH_DISCORD_IDS).execute()
+    except HttpError as e:
+        await interaction.response.send_message(
+            f'Encountered error reading ClanIngots from sheets: {e}')
+        return
+
+    # All Changes are done in a single bulk pass.
+    # Get the current timestamp once for convenience.
+    tz = timezone('EST')
+    dt = datetime.now(tz)
+    modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+
+    values = result.get('values', [])
+    print(f'original values: {values}')
+    # Used in determining if we need to buffer response with empty rows.
+    original_length = len(values)
+    written_ids = [value[2] for value in values]
+    # Keep track of changes in the same schema as the changeLog sheet.
+    changes = []
+
+    # Now for the actual diffing.
+    # First, what new members are in Discord but not the sheet?
+    # Append to the end, we'll sort before a write.
+    for member in members:
+        if str(member.id) not in written_ids:
+            if member.nick is None:
+                print(f'{member.name} has not had their nickname updated, moving on.')
+                continue
+            values.append([member.nick, 0, str(member.id)])
+
+            changes.append([member.nick, modification_timestamp, 0, 0, 'User Joined Server'])
+
+    new_values = []
+    # Okay, now for all the users who have left.
+    for value in values:
+        if value[2] not in member_ids:
+            changes.append([value[0], modification_timestamp, value[1], 0, 'User Left Server'])
+            continue
+
+        new_values.append([value[0], int(value[1]), value[2]])
+
+    # Now we have a fully cross joined set of values.
+    # Update all users that have changed their RSN.
+    for member in members:
+        for value in new_values:
+            if str(member.id) == value[2]:
+                if member.nick != value[0]:
+                    changes.append([value[0], modification_timestamp, value[0], member.nick, 'Name Change'])
+
+                    value[0] = member.nick
+
+    # Sort by RSN for output stability
+    new_values.sort(key=lambda x: x[0])
+
+    # We have to fill the request with empty data for the rows we want to go away
+    if original_length > len(new_values):
+        diff = original_length - len(new_values)
+        for _ in range(diff):
+            new_values.append(['', '', ''])
+    buf = max(original_length, len(new_values))
+    write_range = f'ClanIngots!A2:C{2 + buf}'
+    body = {'values': new_values}
+    try:
+        response = sheets_client.spreadsheets().values().update(
+            spreadsheetId=sheet_id, range=write_range,
+            valueInputOption="RAW", body=body).execute()
+    except HttpError as e:
+        await interaction.response.send_message(
+            f'Encountered error writing to sheets: {e}')
+        return
 
 
 def add_commands_to_tree(
@@ -513,6 +622,20 @@ ingots: New umber of ingots for player.""",
     tree.add_command(updateingots_command)
 
 
+    async def syncmembers_wrap(interaction: discord.Interaction):
+        await syncmembers(interaction, client, sheets_client, sheet_id)
+
+    syncmembers_command = app_commands.Command(
+        name="syncmembers",
+        description="Sync members of Discord server with ingots storage.",
+        callback=syncmembers_wrap,
+        nsfw=False,
+        parent=None,
+        auto_locale_strings=True,
+    )
+    tree.add_command(syncmembers_command)
+
+
 def skill_score(hiscores: List[str]) -> Dict[str, int]:
     """Compute score from skills portion of hiscores response."""
     score = {}
@@ -577,6 +700,7 @@ if __name__ == '__main__':
 
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
     intents = discord.Intents.default()
+    intents.members = True
     guild = discord.Object(id=init_config.get('GUILDID'))
     client = DiscordClient(intents=intents, upload=args.upload_commands,
                            guild=guild)

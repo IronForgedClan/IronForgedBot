@@ -423,3 +423,78 @@ Total Points: 1626
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
+
+    def test_syncmembers(self):
+        role_payload = {
+            'id': 0,
+            'name': "Leadership",
+        }
+        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
+
+        member = MagicMock()
+        member.roles = [role]
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = member
+        mock_interaction.response = AsyncMock()
+
+        mock_discord_client = AsyncMock()
+        mock_guild = MagicMock()
+        mock_discord_client.fetch_guild.return_value = mock_guild
+
+        member1 = MagicMock()
+        member1.id = 1
+        member1.name = "member1"
+        member1.nick = "member1"
+
+        member2 = MagicMock()
+        member2.id = 2
+        member2.name = "member2"
+        member2.nick = None
+
+        member3 = MagicMock()
+        member3.id = 3
+        member3.name = "member3"
+        member3.nick = "member3"
+
+        class AsyncMemberFetcher(object):
+            def __init__(self):
+                self.items = [member1, member2, member3]
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                try:
+                    return self.items.pop()
+                except IndexError:
+                    pass
+
+                raise StopAsyncIteration
+
+        mock_guild.fetch_members.return_value = AsyncMemberFetcher()
+
+        sheets_read_response = {'values': [
+            ['member1', '200', '1'],
+            ['member4', '1000', '4'],
+        ]}
+
+        http = HttpMockSequence([
+            ({'status': '200'}, json.dumps(sheets_read_response)),
+            ({'status': '200'}, json.dumps(''))])
+
+        sheets_client = build(
+            'sheets', 'v4', http=http, developerKey='bloop')
+
+        self.loop.run_until_complete(main.syncmembers(
+            mock_interaction, mock_discord_client, sheets_client, ''))
+
+        expected_body = {'values': [
+            ['member1', 200, '1'],
+            ['member3', 0, '3'],
+        ]}
+
+        self.assertEqual(
+            http.request_sequence[1][2],
+            json.dumps(expected_body))
+
