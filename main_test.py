@@ -1,12 +1,11 @@
 import asyncio
-import datetime
+import json
+import unittest
+from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 from googleapiclient.discovery import build
 from googleapiclient.http import HttpMock, HttpMockSequence
-import json
 from parameterized import parameterized
 import requests
-import unittest
-from unittest.mock import AsyncMock, create_autospec, MagicMock, Mock, mock_open, patch
 
 
 import discord
@@ -136,33 +135,46 @@ class TestIronForgedBot(unittest.TestCase):
     def tearDownClass(cls):
         cls.loop.close()
 
+    def setUp(self):
+        self.leader_payload = {
+            'id': 0,
+            'name': "Leadership",
+        }
+        self.leader_role = discord.Role(
+            guild=MagicMock(), state=MagicMock(), data=self.leader_payload)
+
+        self.leader = MagicMock()
+        self.leader.roles = [self.leader_role]
+        self.leader.nick = 'leader'
+
+        self.mock_interaction = AsyncMock()
+        self.mock_interaction.user = self.leader
+        self.mock_interaction.response = AsyncMock()
+
     @parameterized.expand([
         ({'SHEETID': 'blorp', 'GUILDID': 'bleep', 'BOT_TOKEN': 'bloop'}, True),
         ({'GUILDID': 'bleep'}, False),
         ({'BOT_TOKEN': 'bloop'}, False),
     ])
     def test_validate_initial_config(self, config, expected):
+        """Test that all required fields are present in config."""
         self.assertEqual(main.validate_initial_config(config), expected)
 
     def test_score(self):
-        mock_interaction = AsyncMock()
-        mock_interaction.response = AsyncMock()
-
+        """Test that the expected score is given to the user."""
         response = requests.Response()
         response._content = bytes(hiscores_raw_response(), 'utf-8')
 
         with patch.object(requests, 'get', return_value=response):
-            self.loop.run_until_complete(main.score(mock_interaction, 'johnnycache'))
+            self.loop.run_until_complete(main.score(self.mock_interaction, 'johnnycache'))
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             """johnnycache has 1626
 Points from skills: 1256
 Points from minigames & bossing: 370""")
 
     def test_breakdown(self):
-        mock_interaction = AsyncMock()
-        mock_interaction.response = AsyncMock()
-
+        """Test that full score is given to user."""
         response = requests.Response()
         response._content = bytes(hiscores_raw_response(), 'utf-8')
 
@@ -170,9 +182,9 @@ Points from minigames & bossing: 370""")
         with patch.object(requests, 'get', return_value=response):
             with patch('builtins.open', mo):
                 self.loop.run_until_complete(
-                    main.breakdown(mock_interaction, 'johnnycache', '/'))
+                    main.breakdown(self.mock_interaction, 'johnnycache', '/'))
 
-        mock_interaction.response.send_message.assert_called_once()
+        self.mock_interaction.response.send_message.assert_called_once()
         mo().write.assert_called_once_with(
             """---Points from Skills---
 Attack: 20
@@ -221,9 +233,7 @@ Total Points: 1626
 """)
 
     def test_ingots(self):
-        mock_interaction = AsyncMock()
-        mock_interaction.response = AsyncMock()
-
+        """Test that ingots for given player are returned to user."""
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
@@ -233,16 +243,14 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.ingots(
-            mock_interaction, 'johnnycache', sheets_client,
+            self.mock_interaction, 'johnnycache', sheets_client,
             'bloop'))
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             'johnnycache has 200 ingots')
 
     def test_ingots_user_not_present(self):
-        mock_interaction = AsyncMock()
-        mock_interaction.response = AsyncMock()
-
+        """Test that a missing player shows 0 ingots."""
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
@@ -252,27 +260,14 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.ingots(
-            mock_interaction, 'kennylogs', sheets_client,
+            self.mock_interaction, 'kennylogs', sheets_client,
             'bloop'))
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs has 0 ingots')
 
     def test_addingots(self):
-        role_payload = {
-            'id': 0,
-            'name': "Leadership",
-        }
-        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
-
-        member = MagicMock()
-        member.roles = [role]
-        member.nick = 'actor'
-
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
-
+        """Test that ingots can be added to a user."""
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
@@ -289,7 +284,7 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.addingots(
-            mock_interaction, 'johnnycache', 5, sheets_client, ''))
+            self.mock_interaction, 'johnnycache', 5, sheets_client, ''))
 
         # Ideally we could read the written file to assert data present.
         # But this is sheets, not a database, so asserting the value in
@@ -300,23 +295,11 @@ Total Points: 1626
 
         self.assertEqual(len(json.loads(http.request_sequence[3][2]).get('values', [])), 2)
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             'Added 5 ingots to johnnycache')
 
     def test_addingots_player_not_found(self):
-        role_payload = {
-            'id': 0,
-            'name': "Leadership",
-        }
-        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
-
-        member = MagicMock()
-        member.roles = [role]
-
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
-
+        """Test that a missing player is surfaced to caller."""
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
@@ -326,18 +309,13 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.addingots(
-            mock_interaction, 'kennylogs', 5, sheets_client, ''))
+            self.mock_interaction, 'kennylogs', 5, sheets_client, ''))
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs wasn\'t found.')
 
     def test_addingots_permission_denied(self):
-        role_payload = {
-            'id': 0,
-            'name': 'blorp',
-        }
-        role = discord.Role(guild=Mock(), state=Mock(), data=role_payload)
-
+        """Test that non-leadership role can't add ingots."""
         member = MagicMock()
         member.name = 'johnnycache'
 
@@ -352,20 +330,7 @@ Total Points: 1626
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
 
     def test_updateingots(self):
-        role_payload = {
-            'id': 0,
-            'name': 'Leadership',
-        }
-        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
-
-        member = MagicMock()
-        member.roles = [role]
-        member.nick = 'actor'
-
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
-
+        """Test that ingots can be written for a player."""
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
@@ -382,7 +347,7 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.updateingots(
-            mock_interaction, 'johnnycache', 400, sheets_client, ''))
+            self.mock_interaction, 'johnnycache', 400, sheets_client, ''))
 
         self.assertEqual(
             http.request_sequence[1][2],
@@ -392,23 +357,11 @@ Total Points: 1626
             len(json.loads(http.request_sequence[3][2]).get('values', [])),
             2)
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             'Set ingot count to 400 for johnnycache')
 
     def test_updateingots_player_not_found(self):
-        role_payload = {
-            'id': 0,
-            'name': "Leadership",
-        }
-        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
-
-        member = MagicMock()
-        member.roles = [role]
-
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
-
+        """Test that a missing player is surfaced to caller."""
         sheets_read_response = {'values': [
             ['johnnycache', 200]]}
 
@@ -418,18 +371,13 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.updateingots(
-            mock_interaction, 'kennylogs', 400, sheets_client, ''))
+            self.mock_interaction, 'kennylogs', 400, sheets_client, ''))
 
-        mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.response.send_message.assert_called_once_with(
             'kennylogs wasn\'t found.')
 
     def test_updateingots_permission_denied(self):
-        role_payload = {
-            'id': 0,
-            'name': 'blorp',
-        }
-        role = discord.Role(guild=Mock(), state=Mock(), data=role_payload)
-
+        """Test that only leadership can update ingots."""
         member = MagicMock()
         member.name = 'johnnycache'
 
@@ -444,19 +392,7 @@ Total Points: 1626
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
 
     def test_syncmembers(self):
-        role_payload = {
-            'id': 0,
-            'name': "Leadership",
-        }
-        role = discord.Role(guild=MagicMock(), state=MagicMock(), data=role_payload)
-
-        member = MagicMock()
-        member.roles = [role]
-
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
-
+        """Test that sheet can be updated to only members in Discord."""
         mock_discord_client = AsyncMock()
         mock_guild = MagicMock()
         mock_discord_client.fetch_guild.return_value = mock_guild
@@ -476,7 +412,7 @@ Total Points: 1626
         member3.name = "member3"
         member3.nick = "member3"
 
-        class AsyncMemberFetcher(object):
+        class AsyncMemberFetcher:
             def __init__(self):
                 self.items = [member1, member2, member3]
 
@@ -511,7 +447,7 @@ Total Points: 1626
             'sheets', 'v4', http=http, developerKey='bloop')
 
         self.loop.run_until_complete(main.syncmembers(
-            mock_interaction, mock_discord_client, sheets_client, ''))
+            self.mock_interaction, mock_discord_client, sheets_client, ''))
 
         expected_body = {'values': [
             ['member1', 200, '1'],
@@ -524,4 +460,3 @@ Total Points: 1626
 
         self.assertEqual(
             len(json.loads(http.request_sequence[3][2]).get('values', [])), 3)
-

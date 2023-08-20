@@ -1,19 +1,18 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 import argparse
 from datetime import datetime
 import os
-from pytz import timezone
 import sys
+from pytz import timezone
 
 import discord
 from discord import app_commands
 import requests
-from common import point_values
-
 from google.oauth2 import service_account
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
+from common import point_values
 
 
 # Don't care about line length for URLs & constants.
@@ -227,34 +226,34 @@ async def breakdown(interaction: discord.Interaction, player: str, breakdown_dir
 
     total_points = skill_points + activity_points
 
-    output = "---Points from Skills---\n"
+    output = '---Points from Skills---\n'
     for i in point_values.skills():
         if points_by_skill.get(i, 0) > 0:
-            output += "{}: {}\n".format(i, points_by_skill.get(i))
-    output += "Total Skill Points: {} ({}% of total)\n\n".format(
-        skill_points, round((skill_points / total_points) * 100, 2))
-    output += "---Points from Minigames & Bossing---\n"
+            output += f'{i}: {points_by_skill.get(i)}\n'
+    output += (f'Total Skill Points: {skill_points} ' +
+        f'({round((skill_points / total_points) * 100, 2)}% of total)\n\n')
+    output += '---Points from Minigames & Bossing---\n'
     for i in point_values.activities():
         if points_by_activity.get(i, 0) > 0:
-            output += "{}: {}\n".format(i, points_by_activity.get(i))
+            output += f'{i}: {points_by_activity.get(i)}\n'
     output += (
-        "Total Minigame & Bossing Points: {} ({}% of total)\n\n".format(
-            activity_points, round((activity_points / total_points) * 100, 2)))
-    output += "Total Points: {}\n".format(total_points)
+        f'Total Minigame & Bossing Points: {activity_points} ' +
+        f'({round((activity_points / total_points) * 100, 2)}% of total)\n\n')
+    output += f'Total Points: {total_points}\n'
 
     # Now we have all of the data that we need for a full point breakdown.
     # If we write a single file though, there is a potential race
     # condition if multiple users try to run breakdown at once.
     # text files are cheap - use the player name as a good-enough amount
     # of uniquity.
-    path = os.path.join(breakdown_dir_path, '{}.txt'.format(player))
+    path = os.path.join(breakdown_dir_path, f'{player}.txt')
     with open(path, 'w') as f:
         f.write(output)
 
     with open(path, 'rb') as f:
         discord_file = discord.File(f, filename='breakdown.txt')
         await interaction.response.send_message(
-            f"Total Points for {player}: {total_points}\n",
+            f'Total Points for {player}: {total_points}\n',
             file=discord_file)
 
 
@@ -335,26 +334,26 @@ async def addingots(
     values = result.get('values', [])
 
     # Start at 2 since we skip header
-    rowIndex = 2
+    row_index = 2
     found = False
-    newValue = 0
+    new_value = 0
     old_value = 0
     for i in values:
         if i[0] == player:
             found = True
             old_value = int(i[1])
-            newValue = int(i[1]) + ingots
+            new_value = int(i[1]) + ingots
             break
-        rowIndex += 1
+        row_index += 1
 
     if not found:
         await interaction.response.send_message(
             f'{player} wasn\'t found.')
         return
 
-    write_range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
+    write_range = f'ClanIngots!B{row_index}:B{row_index}'
     body = {
-       'values': [[newValue]]
+       'values': [[new_value]]
     }
 
     try:
@@ -372,7 +371,7 @@ async def addingots(
     tz = timezone('EST')
     dt = datetime.now(tz)
     modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
-    change = [[player, modification_timestamp, old_value, newValue, interaction.user.nick, '']]
+    change = [[player, modification_timestamp, old_value, new_value, interaction.user.nick, '']]
 
     try:
         log_change(change, sheets_client, sheet_id)
@@ -420,7 +419,7 @@ async def updateingots(
     values = result.get('values', [])
 
     # Start at 2 since we skip header
-    rowIndex = 2
+    row_index = 2
     found = False
     old_value = 0
     for i in values:
@@ -428,14 +427,14 @@ async def updateingots(
             found = True
             old_value = i[1]
             break
-        rowIndex += 1
+        row_index += 1
 
     if not found:
         await interaction.response.send_message(
             f'{player} wasn\'t found.')
         return
 
-    write_range = f'ClanIngots!B{rowIndex}:B{rowIndex}'
+    write_range = f'ClanIngots!B{row_index}:B{row_index}'
     body = {
         'values': [[ingots]]
     }
@@ -464,9 +463,6 @@ async def updateingots(
             f'Encountered error in logging changes: {e}')
 
 
-# TODO: This takes a long time; if we want messages sent to calling user,
-# send an initial one followed by a followup webhook with real info.
-
 async def syncmembers(
     interaction: discord.Interaction, client: discord.Client,
     sheets_client: Resource, sheet_id: str):
@@ -475,12 +471,12 @@ async def syncmembers(
     mutator = interaction.user
     if isinstance(mutator, discord.User):
         await interaction.response.send_message(
-            f'PERMISSION_DENIED: {member.name} is not in this guild.')
+            f'PERMISSION_DENIED: {mutator.name} is not in this guild.')
         return
 
     if not is_admin(mutator):
         await interaction.response.send_message(
-            f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+            f'PERMISSION_DENIED: {mutator.name} is not in a leadership role.')
         return
 
     await interaction.response.send_message(
@@ -543,7 +539,9 @@ async def syncmembers(
         for value in new_values:
             if str(member.id) == value[2]:
                 if member.nick != value[0]:
-                    changes.append([value[0], modification_timestamp, value[0], member.nick, 'Name Change', ''])
+                    changes.append(
+                        [value[0], modification_timestamp, value[0], member.nick, 'Name Change',
+                        ''])
 
                     value[0] = member.nick
 
@@ -559,7 +557,7 @@ async def syncmembers(
     write_range = f'ClanIngots!A2:C{2 + buf}'
     body = {'values': new_values}
     try:
-        response = sheets_client.spreadsheets().values().update(
+        _ = sheets_client.spreadsheets().values().update(
             spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
@@ -576,8 +574,6 @@ async def syncmembers(
 
     await interaction.followup.send(
         'Successfully synced ingots storage with current members!')
-
-
 
 
 def add_commands_to_tree(
@@ -714,7 +710,7 @@ def skill_score(hiscores: List[str]) -> Dict[str, int]:
     """Compute score from skills portion of hiscores response."""
     score = {}
     skills = point_values.skills()
-    for i in range(len(skills)):
+    for i, _ in enumerate(skills):
         line = hiscores[i].split(',')
         skill = skills[i]
         experience = int(line[2])
@@ -741,7 +737,7 @@ def activity_score(hiscores: List[str]) -> Dict[str, int]:
     score = {}
     skills = point_values.skills()
     activities = point_values.activities()
-    for i in range(len(activities)):
+    for i, _ in enumerate(activities):
         line = hiscores[len(skills) + i]
         count = int(line.split(',')[1])
         activity = activities[i]
@@ -781,7 +777,8 @@ if __name__ == '__main__':
     tree = discord.app_commands.CommandTree(client)
 
 
-    creds = service_account.Credentials.from_service_account_file('service.json', scopes=SHEETS_SCOPES)
+    creds = service_account.Credentials.from_service_account_file(
+        'service.json', scopes=SHEETS_SCOPES)
     service = build('sheets', 'v4', credentials=creds)
 
     add_commands_to_tree(client, tree, args.breakdown_tmp_dir, service, init_config.get('SHEETID'))
