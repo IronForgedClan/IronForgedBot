@@ -51,6 +51,7 @@ def hiscores_raw_response():
 -1,-1
 -1,-1
 -1,-1
+-1,-1
 39982,797
 6252,387
 23070,200
@@ -177,7 +178,7 @@ class TestIronForgedBot(unittest.TestCase):
             self.loop.run_until_complete(main.score(
                 self.mock_interaction, MagicMock(), 'johnnycache'))
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send.assert_called_once_with(
             """johnnycache has 1,626
 Points from skills: 1,256
 Points from minigames & bossing: 370""")
@@ -194,7 +195,7 @@ Points from minigames & bossing: 370""")
                 self.loop.run_until_complete(
                     main.breakdown(self.mock_interaction, MagicMock(), 'johnnycache', '/'))
 
-        self.mock_interaction.response.send_message.assert_called_once()
+        self.mock_interaction.followup.send.assert_called_once()
         mo().write.assert_called_once_with(
             """---Points from Skills---
 Attack: 20
@@ -256,7 +257,7 @@ Total Points: 1,626
             self.mock_interaction, MagicMock(), 'johnnycache', sheets_client,
             'bloop'))
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send.assert_called_once_with(
             'johnnycache has 2,000 ingots')
 
     def test_ingots_user_not_present(self):
@@ -273,7 +274,7 @@ Total Points: 1,626
             self.mock_interaction, MagicMock(), 'kennylogs', sheets_client,
             'bloop'))
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs has 0 ingots')
 
     def test_addingots(self):
@@ -305,7 +306,7 @@ Total Points: 1,626
 
         self.assertEqual(len(json.loads(http.request_sequence[3][2]).get('values', [])), 2)
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send.assert_called_once_with(
             'Added 5,000 ingots to johnnycache')
 
     def test_addingots_player_not_found(self):
@@ -321,7 +322,7 @@ Total Points: 1,626
         self.loop.run_until_complete(main.addingots(
             self.mock_interaction, MagicMock(), 'kennylogs', 5, sheets_client, ''))
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs wasn\'t found.')
 
     def test_addingots_permission_denied(self):
@@ -367,7 +368,7 @@ Total Points: 1,626
             len(json.loads(http.request_sequence[3][2]).get('values', [])),
             2)
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send(
             'Set ingot count to 4,000 for johnnycache')
 
     def test_updateingots_player_not_found(self):
@@ -383,7 +384,7 @@ Total Points: 1,626
         self.loop.run_until_complete(main.updateingots(
             self.mock_interaction, MagicMock(), 'kennylogs', 400, sheets_client, ''))
 
-        self.mock_interaction.response.send_message.assert_called_once_with(
+        self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs wasn\'t found.')
 
     def test_updateingots_permission_denied(self):

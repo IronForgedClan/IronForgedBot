@@ -186,10 +186,11 @@ async def score(
         await interaction.response.send_message(
             f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
         return
+    await interaction.response.defer()
     resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
                         timeout=15)
     if resp.status_code != 200:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
         return
     # Omit the first line of the response, which is total level & xp.
@@ -217,7 +218,7 @@ async def score(
 Points from skills: {skill_points:,}
 Points from minigames & bossing: {activity_points:,}"""
 
-    await interaction.response.send_message(content)
+    await interaction.followup.send(content)
 
 
 async def breakdown(
@@ -238,10 +239,12 @@ async def breakdown(
             f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
         return
 
+    await interaction.response.defer()
+
     resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
                         timeout=15)
     if resp.status_code != 200:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
         return
     # Omit the first line of the response, which is total level & xp.
@@ -293,7 +296,7 @@ async def breakdown(
 
     with open(path, 'rb') as f:
         discord_file = discord.File(f, filename='breakdown.txt')
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Total Points for {player}: {total_points}{icon}\n',
             file=discord_file)
 
@@ -315,13 +318,14 @@ async def ingots(
             f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
         return
 
+    await interaction.response.defer()
     result = {}
 
     try:
         result = sheets_client.spreadsheets().values().get(
             spreadsheetId=sheet_id, range=SHEET_RANGE).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error reading from sheets: {e}')
         return
 
@@ -339,7 +343,7 @@ async def ingots(
     for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
         if emoji.name == 'Ingot':
             icon = emoji
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f'{player} has {ingots:,} ingots{icon}')
 
 
@@ -374,14 +378,14 @@ async def addingots(
             f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
         return
 
-
+    await interaction.response.defer()
     result = {}
 
     try:
         result = sheets_client.spreadsheets().values().get(
             spreadsheetId=sheet_id, range=SHEET_RANGE).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error reading from sheets: {e}')
         return
 
@@ -401,7 +405,7 @@ async def addingots(
         row_index += 1
 
     if not found:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'{player} wasn\'t found.')
         return
 
@@ -415,7 +419,7 @@ async def addingots(
             spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error writing to sheets: {e}')
         return
 
@@ -423,7 +427,7 @@ async def addingots(
     for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
         if emoji.name == 'Ingot':
             icon = emoji
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f'Added {ingots:,} ingots to {player}{icon}')
 
     tz = timezone('EST')
@@ -470,13 +474,14 @@ async def updateingots(
             f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
         return
 
+    await interaction.response.defer()
     result = {}
 
     try:
         result = sheets_client.spreadsheets().values().get(
             spreadsheetId=sheet_id, range=SHEET_RANGE).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error reading from sheets: {e}')
         return
 
@@ -494,7 +499,7 @@ async def updateingots(
         row_index += 1
 
     if not found:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'{player} wasn\'t found.')
         return
 
@@ -508,7 +513,7 @@ async def updateingots(
             spreadsheetId=sheet_id, range=write_range,
             valueInputOption="RAW", body=body).execute()
     except HttpError as e:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f'Encountered error writing to sheets: {e}')
         return
 
@@ -516,7 +521,7 @@ async def updateingots(
     for emoji in discord_client.get_guild(discord_client.guild.id).emojis:
         if emoji.name == 'Ingot':
             icon = emoji
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f'Set ingot count to {ingots:,} for {player}{icon}')
 
     tz = timezone('EST')
@@ -534,7 +539,6 @@ async def updateingots(
 async def syncmembers(
     interaction: discord.Interaction, client: discord.Client,
     sheets_client: Resource, sheet_id: str):
-#    guild = await client.fetch_guild(client.guild.id)
 
     mutator = interaction.user
     if isinstance(mutator, discord.User):
@@ -547,8 +551,7 @@ async def syncmembers(
             f'PERMISSION_DENIED: {mutator.name} is not in a leadership role.')
         return
 
-    await interaction.response.send_message(
-        'This command is pretty slow; this might take a moment.')
+    await interaction.response.defer()
     # Perform a cross join between current Discord members and
     # entries in the sheet.
     # First, read all members from Discord.

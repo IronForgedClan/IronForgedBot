@@ -30,6 +30,7 @@ def activities():
   """All activities in order they are set in Runescape Hiscores API response."""
   return [
     "League Points",
+    "Deadman?",
     "Bounty Hunter - Hunter",
     "Bounty Hunter - Rogue",
     "Bounty Hunter (Legacy) - Hunter",
