@@ -12,7 +12,7 @@ import requests
 from google.oauth2 import service_account
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
-from common import point_values
+from ironforgedbot.common import point_values
 
 
 # Don't care about line length for URLs & constants.
