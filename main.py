@@ -157,10 +157,11 @@ class IronForgedCommands:
         else:
             self._clock = clock
 
-        # TODO: Make descriptions render correctly in Discord.
+        # Description only sets the brief description.
+        # Arg descriptions are pulled from function definition.
         score_command = app_commands.Command(
             name="score",
-            description="player=Runescape playername to look up score for.",
+            description="Compute clan score for a player.",
             callback=self.score,
             nsfw=False,
             parent=None,
@@ -170,7 +171,7 @@ class IronForgedCommands:
 
         breakdown_command = app_commands.Command(
             name="breakdown",
-            description="player: Runescape username to break down clan score for.",
+            description="Get full breakdown of score for a player.",
             callback=self.breakdown,
             nsfw=False,
             parent=None,
@@ -180,7 +181,7 @@ class IronForgedCommands:
 
         ingots_command = app_commands.Command(
             name="ingots",
-            description="player: Runescape username to view ingot count for.",
+            description="View current ingots for a player.",
             callback=self.ingots,
             nsfw=False,
             parent=None,
@@ -190,8 +191,7 @@ class IronForgedCommands:
 
         addingots_command = app_commands.Command(
             name="addingots",
-            description="""player: Runescape username to add ingots to.
-ingots: Number of ingots to add.""",
+            description="Add or remove ingots to a player.",
             callback=self.addingots,
             nsfw=False,
             parent=None,
@@ -201,8 +201,7 @@ ingots: Number of ingots to add.""",
 
         updateingots_command = app_commands.Command(
             name="updateingots",
-            description="""player: Runescape username to add ingots to.
-ingots: New umber of ingots for player.""",
+            description="Set a player's ingot count to a new value.",
             callback=self.updateingots,
             nsfw=False,
             parent=None,
