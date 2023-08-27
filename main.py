@@ -144,14 +144,18 @@ class IronForgedCommands:
         # TODO: replace sheets client with a storage interface &
         # pass in a sheets impl.
         sheets_client: Resource,
-        # TODO: pass in an optional clock for better time testing.
         sheet_id: str,
-        breakdown_dir_path: str):
+        breakdown_dir_path: str,
+        clock: datetime = None):
         self._tree = tree
         self._discord_client = discord_client
         self._sheets_client = sheets_client
         self._sheet_id = sheet_id
         self._breakdown_dir_path = breakdown_dir_path
+        if clock is None:
+            self._clock = datetime
+        else:
+            self._clock = clock
 
         # TODO: Make descriptions render correctly in Discord.
         score_command = app_commands.Command(
@@ -470,7 +474,7 @@ Points from minigames & bossing: {activity_points:,}"""
             f'Added {ingots:,} ingots to {player}{icon}')
 
         tz = timezone('EST')
-        dt = datetime.now(tz)
+        dt = self._clock.now(tz)
         modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
         change = [[player, modification_timestamp, old_value, new_value, interaction.user.nick, '']]
 
@@ -561,7 +565,7 @@ Points from minigames & bossing: {activity_points:,}"""
             f'Set ingot count to {ingots:,} for {player}{icon}')
 
         tz = timezone('EST')
-        dt = datetime.now(tz)
+        dt = self._clock.now(tz)
         modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
         change = [[player, modification_timestamp, old_value, ingots, interaction.user.nick, '']]
 
@@ -609,7 +613,7 @@ Points from minigames & bossing: {activity_points:,}"""
         # All Changes are done in a single bulk pass.
         # Get the current timestamp once for convenience.
         tz = timezone('EST')
-        dt = datetime.now(tz)
+        dt = self._clock.now(tz)
         modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
 
         values = result.get('values', [])
