@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import json
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
@@ -174,9 +175,12 @@ class TestIronForgedBot(unittest.TestCase):
         response._content = bytes(hiscores_raw_response(), 'utf-8')
         response.status_code = 200
 
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '')
+
         with patch.object(requests, 'get', return_value=response):
-            self.loop.run_until_complete(main.score(
-                self.mock_interaction, MagicMock(), 'johnnycache'))
+            self.loop.run_until_complete(commands.score(
+                self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             """johnnycache has 1,626
@@ -189,11 +193,13 @@ Points from minigames & bossing: 370""")
         response._content = bytes(hiscores_raw_response(), 'utf-8')
         response.status_code = 200
 
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '/')
         mo = mock_open()
         with patch.object(requests, 'get', return_value=response):
             with patch('builtins.open', mo):
                 self.loop.run_until_complete(
-                    main.breakdown(self.mock_interaction, MagicMock(), 'johnnycache', '/'))
+                    commands.breakdown(self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once()
         mo().write.assert_called_once_with(
@@ -253,9 +259,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.ingots(
-            self.mock_interaction, MagicMock(), 'johnnycache', sheets_client,
-            'bloop'))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.ingots(
+            self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'johnnycache has 2,000 ingots')
@@ -270,9 +277,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.ingots(
-            self.mock_interaction, MagicMock(), 'kennylogs', sheets_client,
-            'bloop'))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.ingots(
+            self.mock_interaction, 'kennylogs'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs has 0 ingots')
@@ -283,7 +291,7 @@ Total Points: 1,626
             ['johnnycache', 200]]}
 
         changelog_response = {'values': [
-            ['kennylogs', '', '0', '0', 'johnnycache', '']]}
+            ['kennylogs', '08/25/2023, 10:00:00', '0', '0', 'johnnycache', '']]}
 
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
@@ -294,8 +302,14 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, MagicMock(), 'johnnycache', 5000, sheets_client, ''))
+        mock_datetime = MagicMock()
+        # Sat Aug 26 06:33:20 PM PDT 2023
+        mock_datetime.now.return_value = datetime.fromtimestamp(1693100000)
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '', mock_datetime)
+        self.loop.run_until_complete(commands.addingots(
+            self.mock_interaction, 'johnnycache', 5000))
 
         # Ideally we could read the written file to assert data present.
         # But this is sheets, not a database, so asserting the value in
@@ -304,7 +318,13 @@ Total Points: 1,626
             http.request_sequence[1][2],
             json.dumps({'values': [[5200]]}))
 
-        self.assertEqual(len(json.loads(http.request_sequence[3][2]).get('values', [])), 2)
+        self.assertEqual(
+            http.request_sequence[3][2],
+            json.dumps({'values': [
+                ['johnnycache', '08/26/2023, 18:33:20', 200, 5200, 'leader', ''],
+                ['kennylogs', '08/25/2023, 10:00:00', '0', '0', 'johnnycache', '']
+            ]}),
+        )
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'Added 5,000 ingots to johnnycache')
@@ -319,8 +339,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, MagicMock(), 'kennylogs', 5, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.addingots(
+            self.mock_interaction, 'kennylogs', 5))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs wasn\'t found.')
@@ -334,8 +356,10 @@ Total Points: 1,626
         mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
-        self.loop.run_until_complete(main.addingots(
-            mock_interaction, MagicMock(), 'kennylogs', 5, Mock(), ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '')
+        self.loop.run_until_complete(commands.addingots(
+            mock_interaction, 'kennylogs', 5))
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
@@ -346,7 +370,7 @@ Total Points: 1,626
             ['johnnycache', 200]]}
 
         changelog_response = {'values': [
-            ['kennylogs', '', '0', '0', 'johnnycache', '']]}
+            ['kennylogs', '08/25/2023, 10:00:00', '0', '0', 'johnnycache', '']]}
 
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
@@ -357,16 +381,26 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, MagicMock(), 'johnnycache', 4000, sheets_client, ''))
+        mock_datetime = MagicMock()
+        # Sat Aug 26 06:33:20 PM PDT 2023
+        mock_datetime.now.return_value = datetime.fromtimestamp(1693100000)
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '', mock_datetime)
+        self.loop.run_until_complete(commands.updateingots(
+            self.mock_interaction, 'johnnycache', 4000))
 
         self.assertEqual(
             http.request_sequence[1][2],
             json.dumps({'values': [[4000]]}))
 
         self.assertEqual(
-            len(json.loads(http.request_sequence[3][2]).get('values', [])),
-            2)
+            http.request_sequence[3][2],
+            json.dumps({'values': [
+                ['johnnycache', '08/26/2023, 18:33:20', 200, 4000, 'leader', ''],
+                ['kennylogs', '08/25/2023, 10:00:00', '0', '0', 'johnnycache', ''],
+            ]}),
+        )
 
         self.mock_interaction.followup.send(
             'Set ingot count to 4,000 for johnnycache')
@@ -381,8 +415,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, MagicMock(), 'kennylogs', 400, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.updateingots(
+            self.mock_interaction, 'kennylogs', 400))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs wasn\'t found.')
@@ -396,8 +432,10 @@ Total Points: 1,626
         mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
-        self.loop.run_until_complete(main.updateingots(
-            mock_interaction, MagicMock(), 'kennylogs', 5, Mock(), ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '')
+        self.loop.run_until_complete(commands.updateingots(
+            mock_interaction, 'kennylogs', 5))
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
@@ -431,7 +469,7 @@ Total Points: 1,626
         ]}
 
         changelog_response = {'values': [
-            ['kennylogs', '', '0', '0', 'johnnycache', '']]}
+            ['kennylogs', '08/25/2023, 10:00:00', '0', '0', 'johnnycache', '']]}
 
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
@@ -442,8 +480,14 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.syncmembers(
-            self.mock_interaction, mock_discord_client, sheets_client, ''))
+        mock_datetime = MagicMock()
+        # Sat Aug 26 06:33:20 PM PDT 2023
+        mock_datetime.now.return_value = datetime.fromtimestamp(1693100000)
+
+        commands = main.IronForgedCommands(
+            MagicMock(), mock_discord_client, sheets_client, '', '', mock_datetime)
+        self.loop.run_until_complete(commands.syncmembers(
+            self.mock_interaction))
 
         expected_body = {'values': [
             ['member1', 200, '1'],
@@ -454,5 +498,15 @@ Total Points: 1,626
             http.request_sequence[1][2],
             json.dumps(expected_body))
 
+        self.maxDiff = None
         self.assertEqual(
-            len(json.loads(http.request_sequence[3][2]).get('values', [])), 3)
+            http.request_sequence[3][2],
+            json.dumps({'values': [
+                ['member3', '08/26/2023, 18:33:20', 0, 0, 'User Joined Server', ''],
+                ['member4', '08/26/2023, 18:33:20', '1000', 0, 'User Left Server', ''],
+                ['kennylogs', '08/25/2023, 10:00:00', '0', '0', 'johnnycache', ''],
+            ]}),
+        )
+
+#        self.assertEqual(
+#            len(json.loads(http.request_sequence[3][2]).get('values', [])), 3)
