@@ -174,9 +174,12 @@ class TestIronForgedBot(unittest.TestCase):
         response._content = bytes(hiscores_raw_response(), 'utf-8')
         response.status_code = 200
 
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '')
+
         with patch.object(requests, 'get', return_value=response):
-            self.loop.run_until_complete(main.score(
-                self.mock_interaction, MagicMock(), 'johnnycache'))
+            self.loop.run_until_complete(commands.score(
+                self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             """johnnycache has 1,626
@@ -189,11 +192,13 @@ Points from minigames & bossing: 370""")
         response._content = bytes(hiscores_raw_response(), 'utf-8')
         response.status_code = 200
 
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '/')
         mo = mock_open()
         with patch.object(requests, 'get', return_value=response):
             with patch('builtins.open', mo):
                 self.loop.run_until_complete(
-                    main.breakdown(self.mock_interaction, MagicMock(), 'johnnycache', '/'))
+                    commands.breakdown(self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once()
         mo().write.assert_called_once_with(
@@ -253,9 +258,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.ingots(
-            self.mock_interaction, MagicMock(), 'johnnycache', sheets_client,
-            'bloop'))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.ingots(
+            self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'johnnycache has 2,000 ingots')
@@ -270,9 +276,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.ingots(
-            self.mock_interaction, MagicMock(), 'kennylogs', sheets_client,
-            'bloop'))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.ingots(
+            self.mock_interaction, 'kennylogs'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs has 0 ingots')
@@ -294,8 +301,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, MagicMock(), 'johnnycache', 5000, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.addingots(
+            self.mock_interaction, 'johnnycache', 5000))
 
         # Ideally we could read the written file to assert data present.
         # But this is sheets, not a database, so asserting the value in
@@ -319,8 +328,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.addingots(
-            self.mock_interaction, MagicMock(), 'kennylogs', 5, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.addingots(
+            self.mock_interaction, 'kennylogs', 5))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs wasn\'t found.')
@@ -334,8 +345,10 @@ Total Points: 1,626
         mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
-        self.loop.run_until_complete(main.addingots(
-            mock_interaction, MagicMock(), 'kennylogs', 5, Mock(), ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '')
+        self.loop.run_until_complete(commands.addingots(
+            mock_interaction, 'kennylogs', 5))
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
@@ -357,8 +370,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, MagicMock(), 'johnnycache', 4000, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.updateingots(
+            self.mock_interaction, 'johnnycache', 4000))
 
         self.assertEqual(
             http.request_sequence[1][2],
@@ -381,8 +396,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.updateingots(
-            self.mock_interaction, MagicMock(), 'kennylogs', 400, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), sheets_client, '', '')
+        self.loop.run_until_complete(commands.updateingots(
+            self.mock_interaction, 'kennylogs', 400))
 
         self.mock_interaction.followup.send.assert_called_once_with(
             'kennylogs wasn\'t found.')
@@ -396,8 +413,10 @@ Total Points: 1,626
         mock_interaction.user = member
         mock_interaction.response = AsyncMock()
 
-        self.loop.run_until_complete(main.updateingots(
-            mock_interaction, MagicMock(), 'kennylogs', 5, Mock(), ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '', '')
+        self.loop.run_until_complete(commands.updateingots(
+            mock_interaction, 'kennylogs', 5))
 
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
@@ -442,8 +461,10 @@ Total Points: 1,626
         sheets_client = build(
             'sheets', 'v4', http=http, developerKey='bloop')
 
-        self.loop.run_until_complete(main.syncmembers(
-            self.mock_interaction, mock_discord_client, sheets_client, ''))
+        commands = main.IronForgedCommands(
+            MagicMock(), mock_discord_client, sheets_client, '', '')
+        self.loop.run_until_complete(commands.syncmembers(
+            self.mock_interaction))
 
         expected_body = {'values': [
             ['member1', 200, '1'],
