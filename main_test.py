@@ -120,7 +120,6 @@ def hiscores_raw_response():
 246238,405
 -1,-1
 -1,-1
-
 """
     return scores
 

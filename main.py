@@ -22,6 +22,10 @@ from ironforgedbot.storage.sheets import SheetsStorage
 # pylint: disable=line-too-long
 HISCORES_PLAYER_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={player}'
 LEVEL_99_EXPERIENCE = 13034431
+# Length of expected response from Runescape API. Since it returns a list,
+# we can only have confidence in computed scores when response length
+# matches those in the common.point_values structures.
+HISCORES_EXPECTED_LENGTH = 99
 # pylint: enable=line-too-long
 
 
@@ -234,6 +238,10 @@ class IronForgedCommands:
             return
         # Omit the first line of the response, which is total level & xp.
         lines = resp.text.split('\n')[1:]
+        if len(lines) != HISCORES_EXPECTED_LENGTH:
+            await interaction.followup.send(
+                f'Runescape API response is not expected length; the bot needs to be updated.')
+            return
 
         points_by_skill = skill_score(lines)
         skill_points = 0
@@ -287,6 +295,10 @@ Points from minigames & bossing: {activity_points:,}"""
             return
         # Omit the first line of the response, which is total level & xp.
         lines = resp.text.split('\n')[1:]
+        if len(lines) != HISCORES_EXPECTED_LENGTH:
+            await interaction.followup.send(
+                f'Runescape API response is not expected length; the bot needs to be updated.')
+            return
 
         points_by_skill = skill_score(lines)
         skill_points = 0
