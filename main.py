@@ -13,18 +13,14 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 from ironforgedbot.common import point_values
+from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
+from ironforgedbot.storage.sheets import SheetsStorage
 
 
 # Don't care about line length for URLs & constants.
 # pylint: disable=line-too-long
 HISCORES_PLAYER_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={player}'
 LEVEL_99_EXPERIENCE = 13034431
-
-SHEETS_SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-# Skip header in read.
-SHEET_RANGE = 'ClanIngots!A2:B'
-SHEET_RANGE_WITH_DISCORD_IDS = 'ClanIngots!A2:C'
-CHANGELOG_RANGE = 'ChangeLog!A2:F'
 # pylint: enable=line-too-long
 
 
@@ -143,19 +139,12 @@ class IronForgedCommands:
         discord_client: DiscordClient,
         # TODO: replace sheets client with a storage interface &
         # pass in a sheets impl.
-        sheets_client: Resource,
-        sheet_id: str,
-        breakdown_dir_path: str,
-        clock: datetime = None):
+        storage_client: IngotsStorage,
+        breakdown_dir_path: str):
         self._tree = tree
         self._discord_client = discord_client
-        self._sheets_client = sheets_client
-        self._sheet_id = sheet_id
+        self._storage_client = storage_client
         self._breakdown_dir_path = breakdown_dir_path
-        if clock is None:
-            self._clock = datetime
-        else:
-            self._clock = clock
 
         # Description only sets the brief description.
         # Arg descriptions are pulled from function definition.
@@ -362,34 +351,26 @@ Points from minigames & bossing: {activity_points:,}"""
             return
 
         await interaction.response.defer()
-        result = {}
 
         try:
-            result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id, range=SHEET_RANGE).execute()
-        except HttpError as e:
+            member = self._storage_client.read_member(player)
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error reading from sheets: {e}')
+                f'Encountered error reading member: {e}')
             return
 
-        values = result.get('values', [])
+        if member is None:
+            await interaction.followup.send(
+                f'{player} not found in storage')
+            return
 
-        # Response is a list of lists, all of which have 2
-        # entries: ['username', count]. Transform that into
-        # a dictionary.
-        ingots_by_player = {}
-        for i in values:
-            ingots_by_player[i[0]] = i[1]
-
-        ingots = int(ingots_by_player.get(player, 0))
         icon = ''
         for emoji in self._discord_client.get_guild(
             self._discord_client.guild.id).emojis:
             if emoji.name == 'Ingot':
                 icon = emoji
         await interaction.followup.send(
-            f'{player} has {ingots:,} ingots{icon}')
-
+            f'{player} has {member.ingots:,} ingots{icon}')
 
     async def addingots(
         self,
@@ -405,15 +386,15 @@ Points from minigames & bossing: {activity_points:,}"""
         """
         # interaction.user can be a User or Member, but we can only
         # rely on permission checking for a Member.
-        member = interaction.user
-        if isinstance(member, discord.User):
+        caller = interaction.user
+        if isinstance(caller, discord.User):
             await interaction.response.send_message(
-                f'PERMISSION_DENIED: {member.name} is not in this guild.')
+                f'PERMISSION_DENIED: {caller.name} is not in this guild.')
             return
 
-        if not is_admin(member):
+        if not is_admin(caller):
             await interaction.response.send_message(
-                f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+                f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
 
         if not validate_player_name(player):
@@ -422,46 +403,26 @@ Points from minigames & bossing: {activity_points:,}"""
             return
 
         await interaction.response.defer()
-        result = {}
 
         try:
-            result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id, range=SHEET_RANGE).execute()
-        except HttpError as e:
+            member = self._storage_client.read_member(player)
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error reading from sheets: {e}')
+                f'Encountered error reading member: {e}')
             return
 
-        values = result.get('values', [])
-
-        # Start at 2 since we skip header
-        row_index = 2
-        found = False
-        new_value = 0
-        old_value = 0
-        for i in values:
-            if i[0] == player:
-                found = True
-                old_value = int(i[1])
-                new_value = int(i[1]) + ingots
-                break
-            row_index += 1
-
-        if not found:
+        if member is None:
             await interaction.followup.send(
                 f'{player} wasn\'t found.')
             return
 
-        write_range = f'ClanIngots!B{row_index}:B{row_index}'
-        body = {'values': [[new_value]]}
+        member.ingots += ingots
 
         try:
-            _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
-        except HttpError as e:
+            self._storage_client.update_members([member], caller.nick)
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error writing to sheets: {e}')
+                f'Encountered error writing ingots: {e}')
             return
 
         icon = ''
@@ -471,18 +432,6 @@ Points from minigames & bossing: {activity_points:,}"""
                 icon = emoji
         await interaction.followup.send(
             f'Added {ingots:,} ingots to {player}{icon}')
-
-        tz = timezone('EST')
-        dt = self._clock.now(tz)
-        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
-        change = [[player, modification_timestamp, old_value, new_value, interaction.user.nick, '']]
-
-        try:
-            self._log_change(change)
-        except HttpError as e:
-            await interaction.followup.send(
-                f'Encountered error in logging changes: {e}')
-
 
     async def updateingots(
         self,
@@ -498,61 +447,43 @@ Points from minigames & bossing: {activity_points:,}"""
         """
         # interaction.user can be a User or Member, but we can only
         # rely on permission checking for a Member.
-        member = interaction.user
-        if isinstance(member, discord.User):
+        caller = interaction.user
+        if isinstance(caller, discord.User):
             await interaction.response.send_message(
-                f'PERMISSION_DENIED: {member.name} is not in this guild.')
+                f'PERMISSION_DENIED: {caller.name} is not in this guild.')
             return
 
-        if not is_admin(member):
+        if not is_admin(caller):
             await interaction.response.send_message(
-                f'PERMISSION_DENIED: {member.name} is not in a leadership role.')
+                f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
 
         if not validate_player_name(player):
             await interaction.response.send_message(
-                'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+                f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
         await interaction.response.defer()
-        result = {}
 
         try:
-            result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id, range=SHEET_RANGE).execute()
-        except HttpError as e:
+            member = self._storage_client.read_member(player)
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error reading from sheets: {e}')
+                f'Encountered error reading member: {e}')
             return
 
-        values = result.get('values', [])
-
-        # Start at 2 since we skip header
-        row_index = 2
-        found = False
-        old_value = 0
-        for i in values:
-            if i[0] == player:
-                found = True
-                old_value = i[1]
-                break
-            row_index += 1
-
-        if not found:
+        if member is None:
             await interaction.followup.send(
                 f'{player} wasn\'t found.')
             return
 
-        write_range = f'ClanIngots!B{row_index}:B{row_index}'
-        body = {'values': [[ingots]]}
+        member.ingots = ingots
 
         try:
-            _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
-        except HttpError as e:
+            self._storage_client.update_members([member], caller.nick)
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error writing to sheets: {e}')
+                f'Encountered error writing ingots: {e}')
             return
 
         icon = ''
@@ -561,18 +492,7 @@ Points from minigames & bossing: {activity_points:,}"""
             if emoji.name == 'Ingot':
                 icon = emoji
         await interaction.followup.send(
-            f'Set ingot count to {ingots:,} for {player}{icon}')
-
-        tz = timezone('EST')
-        dt = self._clock.now(tz)
-        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
-        change = [[player, modification_timestamp, old_value, ingots, interaction.user.nick, '']]
-
-        try:
-            self._log_change(change)
-        except HttpError as e:
-            await interaction.followup.send(
-                f'Encountered error in logging changes: {e}')
+            f'Added {ingots:,} ingots to {player}{icon}')
 
 
     async def syncmembers(self, interaction: discord.Interaction):
@@ -597,118 +517,72 @@ Points from minigames & bossing: {activity_points:,}"""
         for member in self._discord_client.get_guild(
             self._discord_client.guild.id).members:
             members.append(member)
-            member_ids.append(str(member.id))
+            member_ids.append(member.id)
 
-        # Then, get all current entries from sheets.
+        # Then, get all current entries from storage.
         try:
-            result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=SHEET_RANGE_WITH_DISCORD_IDS).execute()
-        except HttpError as e:
+            existing = self._storage_client.read_members()
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error reading ClanIngots from sheets: {e}')
+                f'Encountered error reading members: {e}')
             return
 
-        # All Changes are done in a single bulk pass.
-        # Get the current timestamp once for convenience.
-        tz = timezone('EST')
-        dt = self._clock.now(tz)
-        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
-
-        values = result.get('values', [])
-        # Used in determining if we need to buffer response with empty rows.
-        original_length = len(values)
-        written_ids = [value[2] for value in values]
-        # Keep track of changes in the same schema as the changeLog sheet.
-        changes = []
+        original_length = len(existing)
+        written_ids = [member.id for member in existing]
 
         # Now for the actual diffing.
         # First, what new members are in Discord but not the sheet?
-        # Append to the end, we'll sort before a write.
+        new_members = []
         for member in members:
-            if str(member.id) not in written_ids:
+            if member.id not in written_ids:
                 if member.nick is None:
                     continue
-                values.append([member.nick, 0, str(member.id)])
+                new_members.append(Member(
+                    id=int(member.id), runescape_name=member.nick, ingots=0))
 
-                changes.append([member.nick, modification_timestamp, 0, 0, 'User Joined Server', ''])
-
-        new_values = []
-        # Okay, now for all the users who have left.
-        for value in values:
-            if value[2] not in member_ids:
-                changes.append([value[0], modification_timestamp, value[1], 0, 'User Left Server', ''])
-                continue
-
-            new_values.append([value[0], int(value[1]), value[2]])
-
-        # Now we have a fully cross joined set of values.
-        # Update all users that have changed their RSN.
-        for member in members:
-            for value in new_values:
-                if str(member.id) == value[2]:
-                    if member.nick != value[0]:
-                        changes.append(
-                            [value[0], modification_timestamp, value[0], member.nick, 'Name Change',
-                            ''])
-
-                        value[0] = member.nick
-
-        # Sort by RSN for output stability
-        new_values.sort(key=lambda x: x[0])
-
-        # We have to fill the request with empty data for the rows we want to go away
-        if original_length > len(new_values):
-            diff = original_length - len(new_values)
-            for _ in range(diff):
-                new_values.append(['', '', ''])
-        buf = max(original_length, len(new_values))
-        write_range = f'ClanIngots!A2:C{2 + buf}'
-        body = {'values': new_values}
         try:
-            _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
-        except HttpError as e:
+            self._storage_client.add_members(
+                new_members, 'User Joined Server')
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error writing to sheets: {e}')
+                f'Encountered error writing new members: {e}')
             return
 
+        # Okay, now for all the users who have left.
+        leaving_members = []
+        for existing_member in existing:
+            if existing_member.id not in member_ids:
+                leaving_members.append(existing_member)
+
         try:
-            self._log_change(changes)
-        except HttpError as e:
+            self._storage_client.remove_members(
+                leaving_members, 'User Left Server')
+        except StorageError as e:
             await interaction.followup.send(
-                f'Encountered error in logging changes: {e}')
+                f'Encountered error removing members: {e}')
+            return
+
+        # Update all users that have changed their RSN.
+        changed_members = []
+        for member in members:
+            for existing_member in existing:
+                if member.id == existing_member.id:
+                    if member.nick != existing_member.runescape_name:
+                        changed_members.append(Member(
+                            id=existing_member.id,
+                            runescape_name=member.nick,
+                            ingots=existing_member.ingots))
+
+        try:
+            self._storage_client.update_members(
+                changed_members, 'Name Change')
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error updating changed members: {e}')
             return
 
         await interaction.followup.send(
             'Successfully synced ingots storage with current members!')
-
-    def _log_change(
-        self, changes: List[List[Union[str, int]]]):
-        """Log change to ChangeLog sheet.
-
-        Arguments:
-            changes: Values to prepend to current changelog. Expected
-                format: [user, timestamp, old value, new value, mutator, note]
-
-        Raises:
-            HttpError: Any error is encountered interacting with sheets.
-        """
-        changelog_response = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=CHANGELOG_RANGE).execute()
-
-        # We want newest changes first
-        changelog_values = changelog_response.get('values', [])
-        changes.extend(changelog_values)
-
-        change_range = f'ChangeLog!A2:F{2 + len(changes)}'
-        body = {'values': changes}
-
-        _ = self._sheets_client.spreadsheets().values().update(
-            spreadsheetId=self._sheet_id, range=change_range,
-            valueInputOption="RAW", body=body).execute()
 
 
 def skill_score(hiscores: List[str]) -> Dict[str, int]:
@@ -781,13 +655,11 @@ if __name__ == '__main__':
                            guild=guild)
     tree = discord.app_commands.CommandTree(client)
 
-
-    creds = service_account.Credentials.from_service_account_file(
-        'service.json', scopes=SHEETS_SCOPES)
-    service = build('sheets', 'v4', credentials=creds)
+    storage_client = SheetsStorage.from_account_file(
+        'service.json', init_config.get('SHEETID'))
 
     commands = IronForgedCommands(
-        tree, client, service, init_config.get('SHEETID'), args.breakdown_tmp_dir)
+        tree, client, storage_client, args.breakdown_tmp_dir)
     client.tree = tree
 
     client.run(init_config.get('BOT_TOKEN'))
