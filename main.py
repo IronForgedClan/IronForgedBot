@@ -2,6 +2,7 @@ from typing import Dict, List, Union
 
 import argparse
 from datetime import datetime
+import logging
 import os
 import sys
 from pytz import timezone
@@ -223,6 +224,7 @@ class IronForgedCommands:
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
+        logging.info(f'Handling /score for {player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
         resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
                             timeout=15)
@@ -274,6 +276,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
+        logging.info(f'Handling /breakdown for {player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
         resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
@@ -350,6 +353,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
+        logging.info(f'Handling /ingots for {player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
         try:
@@ -402,6 +406,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
+        logging.info(f'Handling /addingots for {player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
         try:
@@ -463,6 +468,8 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
+        logging.info(f'Handling /updateingots for {player} on behalf of {interaction.user.nick}')
+
         await interaction.response.defer()
 
         try:
@@ -507,6 +514,8 @@ Points from minigames & bossing: {activity_points:,}"""
             await interaction.response.send_message(
                 f'PERMISSION_DENIED: {mutator.name} is not in a leadership role.')
             return
+
+        logging.info(f'Handling /syncmembers on behalf of {interaction.user.nick}')
 
         await interaction.response.defer()
         # Perform a cross join between current Discord members and
@@ -639,8 +648,22 @@ if __name__ == '__main__':
     parser.add_argument(
         '--breakdown_tmp_dir', default='./breakdown_tmp', required=False,
         help='Directory path for where to store point break downs to upload to discord.')
+    parser.add_argument(
+        '--logfile', default='./ironforgedbot.log', required=False,
+        help='Path to file to write log entries to.')
     args = parser.parse_args()
 
+    logging.basicConfig(
+        format='%(asctime)s %(message)s', filename=args.logfile,
+        level=logging.INFO)
+
+    # also log to stderr
+    root = logging.getLogger()
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    handler.setFormatter(formatter)
+    root.addHandler(handler)
 
     # Fail out early if our required args are not present.
     init_config = read_dotenv(args.dotenv_path)

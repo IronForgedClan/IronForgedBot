@@ -165,3 +165,6 @@ breakdown_tmp/
 # Credentials file for Google Sheets API
 credentials.json
 service.json
+
+# Default logfile
+ironforgedbot.log
