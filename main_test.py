@@ -376,12 +376,12 @@ Total Points: 1,626
         mock_discord_client.get_guild.return_value = mock_guild
 
         member_role = MagicMock()
-        member_role.name = "member"
+        member_role.name = "Member"
 
         member1 = MagicMock()
         member1.id = 1
         member1.name = "member1"
-        member1.nick = "johnnycache"
+        member1.nick = "Johnnycache"
         member1.roles = [member_role]
 
         member2 = MagicMock()
@@ -408,7 +408,7 @@ Total Points: 1,626
         mock_storage.read_members.return_value = [
             Member(id=1, runescape_name='member1', ingots=200),
             # In storage, but nick is not set.
-            Member(id=2, runescape_name='crimson chin', ingots=400),
+            Member(id=2, runescape_name='Crimson chin', ingots=400),
             Member(id=4, runescape_name='member4', ingots=1000)]
 
         commands = main.IronForgedCommands(

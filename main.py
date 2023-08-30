@@ -379,7 +379,7 @@ Points from minigames & bossing: {activity_points:,}"""
         await interaction.response.defer()
 
         try:
-            member = self._storage_client.read_member(player)
+            member = self._storage_client.read_member(player.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member: {e}')
@@ -432,7 +432,7 @@ Points from minigames & bossing: {activity_points:,}"""
         await interaction.response.defer()
 
         try:
-            member = self._storage_client.read_member(player)
+            member = self._storage_client.read_member(player.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member: {e}')
@@ -508,7 +508,7 @@ Points from minigames & bossing: {activity_points:,}"""
         await interaction.response.defer()
 
         try:
-            member = self._storage_client.read_member(player)
+            member = self._storage_client.read_member(player.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member: {e}')
@@ -560,7 +560,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member_ids = []
         for member in self._discord_client.get_guild(
             self._discord_client.guild.id).members:
-            if check_role(member, "member"):
+            if check_role(member, "Member"):
                 members.append(member)
                 member_ids.append(member.id)
 
@@ -584,7 +584,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 if member.nick is None:
                     continue
                 new_members.append(Member(
-                    id=int(member.id), runescape_name=member.nick, ingots=0))
+                    id=int(member.id), runescape_name=member.nick.lower(), ingots=0))
 
         try:
             self._storage_client.add_members(
@@ -620,13 +620,13 @@ Points from minigames & bossing: {activity_points:,}"""
                         if member.name != existing_member.runescape_name:
                             changed_members.append(Member(
                                 id=existing_member.id,
-                                runescape_name=member.name,
+                                runescape_name=member.name.lower(),
                                 ingots=existing_member.ingots))
                     else:
-                        if member.nick != existing_member.runescape_name:
+                        if member.nick.lower() != existing_member.runescape_name:
                             changed_members.append(Member(
                                 id=existing_member.id,
-                                runescape_name=member.nick,
+                                runescape_name=member.nick.lower(),
                                 ingots=existing_member.ingots))
 
         try:
