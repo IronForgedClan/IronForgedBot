@@ -375,10 +375,14 @@ Total Points: 1,626
         mock_guild = MagicMock()
         mock_discord_client.get_guild.return_value = mock_guild
 
+        member_role = MagicMock()
+        member_role.name = "member"
+
         member1 = MagicMock()
         member1.id = 1
         member1.name = "member1"
         member1.nick = "johnnycache"
+        member1.roles = [member_role]
 
         member2 = MagicMock()
         member2.id = 2
@@ -389,6 +393,7 @@ Total Points: 1,626
         member3.id = 3
         member3.name = "member3"
         member3.nick = "member3"
+        member3.roles = [member_role]
 
         mock_guild.members = [member1, member2, member3]
 
