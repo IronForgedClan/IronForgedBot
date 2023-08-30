@@ -375,26 +375,40 @@ Total Points: 1,626
         mock_guild = MagicMock()
         mock_discord_client.get_guild.return_value = mock_guild
 
+        member_role = MagicMock()
+        member_role.name = "member"
+
         member1 = MagicMock()
         member1.id = 1
         member1.name = "member1"
         member1.nick = "johnnycache"
+        member1.roles = [member_role]
 
         member2 = MagicMock()
         member2.id = 2
         member2.name = "member2"
         member2.nick = None
+        member2.roles = [member_role]
 
         member3 = MagicMock()
         member3.id = 3
         member3.name = "member3"
         member3.nick = "member3"
+        member3.roles = [member_role]
+
+        # Not in members & no nick, ignored.
+        member5 = MagicMock()
+        member5.id = 5
+        member5.name = "member5"
+        member5.nick = None
 
         mock_guild.members = [member1, member2, member3]
 
         mock_storage = MagicMock()
         mock_storage.read_members.return_value = [
             Member(id=1, runescape_name='member1', ingots=200),
+            # In storage, but nick is not set.
+            Member(id=2, runescape_name='crimson chin', ingots=400),
             Member(id=4, runescape_name='member4', ingots=1000)]
 
         commands = main.IronForgedCommands(
@@ -411,6 +425,7 @@ Total Points: 1,626
             'User Left Server')
 
         mock_storage.update_members.assert_called_once_with([
-            Member(id=1, runescape_name='johnnycache', ingots=200)],
+            Member(id=1, runescape_name='johnnycache', ingots=200),
+            Member(id=2, runescape_name='member2', ingots=400)],
             'Name Change')
 

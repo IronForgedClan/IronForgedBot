@@ -78,11 +78,11 @@ def compute_clan_icon(points: int):
     return "Iron"
 
 
-def is_admin(member: discord.Member) -> bool:
+def check_role(member: discord.Member, checked_role: str) -> bool:
     """Check if a member has a leadership role."""
     roles = member.roles
     for role in roles:
-        if role.name == "Leadership":
+        if role.name == checked_role:
             return True
 
     return False
@@ -192,6 +192,16 @@ class IronForgedCommands:
             auto_locale_strings=True,
         )
         self._tree.add_command(addingots_command)
+
+        addingotsbulk_command = app_commands.Command(
+            name="addingotsbulk",
+            description="Add or remove ingots to multiple players.",
+            callback=self.addingotsbulk,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
+        )
+        self._tree.add_command(addingotsbulk_command)
 
         updateingots_command = app_commands.Command(
             name="updateingots",
@@ -397,7 +407,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         Arguments:
             interaction: Discord Interaction from CommandTree.
-            player: Runescape username to view ingot count for.
+            player: Runescape username to add ingots to.
             ingots: number of ingots to add to this player.
         """
         # interaction.user can be a User or Member, but we can only
@@ -408,7 +418,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {caller.name} is not in this guild.')
             return
 
-        if not is_admin(caller):
+        if not check_role(caller, "Leadership"):
             await interaction.response.send_message(
                 f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
@@ -450,6 +460,19 @@ Points from minigames & bossing: {activity_points:,}"""
         await interaction.followup.send(
             f'Added {ingots:,} ingots to {player}{icon}')
 
+    async def addingotsbulk(
+        self,
+        interaction: discord.Interaction,
+        players: str,
+        ingots: int):
+        """Add ingots to a Runescape alias.
+
+        Arguments:
+            interaction: Discord Interaction from CommandTree.
+            player: Comma-separated list of Runescape usernames to add ingots to.
+            ingots: number of ingots to add to this player.
+        """
+
     async def updateingots(
         self,
         interaction: discord.Interaction,
@@ -470,7 +493,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {caller.name} is not in this guild.')
             return
 
-        if not is_admin(caller):
+        if not check_role(caller, "Leadership"):
             await interaction.response.send_message(
                 f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
@@ -522,7 +545,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {mutator.name} is not in this guild.')
             return
 
-        if not is_admin(mutator):
+        if not check_role(mutator, "Leadership"):
             await interaction.response.send_message(
                 f'PERMISSION_DENIED: {mutator.name} is not in a leadership role.')
             return
@@ -537,8 +560,9 @@ Points from minigames & bossing: {activity_points:,}"""
         member_ids = []
         for member in self._discord_client.get_guild(
             self._discord_client.guild.id).members:
-            members.append(member)
-            member_ids.append(member.id)
+            if check_role(member, "member"):
+                members.append(member)
+                member_ids.append(member.id)
 
         # Then, get all current entries from storage.
         try:
@@ -556,6 +580,7 @@ Points from minigames & bossing: {activity_points:,}"""
         new_members = []
         for member in members:
             if member.id not in written_ids:
+                # Don't allow users without a nickname into storage.
                 if member.nick is None:
                     continue
                 new_members.append(Member(
@@ -588,11 +613,21 @@ Points from minigames & bossing: {activity_points:,}"""
         for member in members:
             for existing_member in existing:
                 if member.id == existing_member.id:
-                    if member.nick != existing_member.runescape_name:
-                        changed_members.append(Member(
-                            id=existing_member.id,
-                            runescape_name=member.nick,
-                            ingots=existing_member.ingots))
+                    # If a member is already in storage but had their nickname
+                    # unset, set rsn to their Discord name.
+                    # Otherwise, sorting fails when comparing NoneType.
+                    if member.nick is None:
+                        if member.name != existing_member.runescape_name:
+                            changed_members.append(Member(
+                                id=existing_member.id,
+                                runescape_name=member.name,
+                                ingots=existing_member.ingots))
+                    else:
+                        if member.nick != existing_member.runescape_name:
+                            changed_members.append(Member(
+                                id=existing_member.id,
+                                runescape_name=member.nick,
+                                ingots=existing_member.ingots))
 
         try:
             self._storage_client.update_members(
