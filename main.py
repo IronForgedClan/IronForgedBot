@@ -580,6 +580,7 @@ Points from minigames & bossing: {activity_points:,}"""
         new_members = []
         for member in members:
             if member.id not in written_ids:
+                # Don't allow users without a nickname into storage.
                 if member.nick is None:
                     continue
                 new_members.append(Member(
@@ -612,11 +613,21 @@ Points from minigames & bossing: {activity_points:,}"""
         for member in members:
             for existing_member in existing:
                 if member.id == existing_member.id:
-                    if member.nick != existing_member.runescape_name:
-                        changed_members.append(Member(
-                            id=existing_member.id,
-                            runescape_name=member.nick,
-                            ingots=existing_member.ingots))
+                    # If a member is already in storage but had their nickname
+                    # unset, set rsn to their Discord name.
+                    # Otherwise, sorting fails when comparing NoneType.
+                    if member.nick is None:
+                        if member.name != existing_member.runescape_name:
+                            changed_members.append(Member(
+                                id=existing_member.id,
+                                runescape_name=member.name,
+                                ingots=existing_member.ingots))
+                    else:
+                        if member.nick != existing_member.runescape_name:
+                            changed_members.append(Member(
+                                id=existing_member.id,
+                                runescape_name=member.nick,
+                                ingots=existing_member.ingots))
 
         try:
             self._storage_client.update_members(
