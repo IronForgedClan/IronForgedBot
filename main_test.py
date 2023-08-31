@@ -321,6 +321,43 @@ Total Points: 1,626
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
 
+    def test_addingotsbulk(self):
+        """Test that ingots can be added to multiple users."""
+        mock_storage = MagicMock()
+        mock_storage.read_members.return_value = [
+            Member(id=123456, runescape_name='johnnycache', ingots=5000),
+            Member(id=654321, runescape_name='kennylogs', ingots=400)]
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.addingotsbulk(
+            self.mock_interaction, 'johnnycache,kennylogsin', 5000))
+
+        mock_storage.update_members.assert_called_once_with(
+            [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
+            'leader')
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
+kennylogsin not found in storage.""")
+
+    def test_addingotsbulk_permission_denied(self):
+        """Test that non-leadership role can't add ingots."""
+        member = MagicMock()
+        member.name = 'johnnycache'
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = member
+        mock_interaction.response = AsyncMock()
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '')
+        self.loop.run_until_complete(commands.addingotsbulk(
+            mock_interaction, 'kennylogs', 5))
+
+        mock_interaction.response.send_message.assert_called_once_with(
+            'PERMISSION_DENIED: johnnycache is not in a leadership role.')
+
     def test_updateingots(self):
         """Test that ingots can be written for a player."""
         mock_storage = MagicMock()
@@ -336,7 +373,7 @@ Total Points: 1,626
             Member(id=123456, runescape_name='johnnycache', ingots=4000)],
             'leader')
 
-        self.mock_interaction.followup.send(
+        self.mock_interaction.followup.send.assert_called_once_with(
             'Set ingot count to 4,000 for johnnycache')
 
     def test_updateingots_player_not_found(self):

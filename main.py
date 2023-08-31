@@ -42,13 +42,13 @@ def read_dotenv(path: str) -> Dict[str, str]:
 
 def validate_initial_config(config: Dict[str, str]) -> bool:
     if config.get('SHEETID') is None:
-        print('validation failed; SHEETID required but not present in env')
+        logging.error('validation failed; SHEETID required but not present in env')
         return False
     if config.get('GUILDID') is None:
-        print('validation failed; GUILDID required but not present in env')
+        logging.error('validation failed; GUILDID required but not present in env')
         return False
     if config.get('BOT_TOKEN') is None:
-        print('validation failed; ' +
+        logging.error('validation failed; ' +
               'BOT_TOKEN required but not present in env')
         return False
 
@@ -472,6 +472,58 @@ Points from minigames & bossing: {activity_points:,}"""
             player: Comma-separated list of Runescape usernames to add ingots to.
             ingots: number of ingots to add to this player.
         """
+        # interaction.user can be a User or Member, but we can only
+        # rely on permission checking for a Member.
+        caller = interaction.user
+        if isinstance(caller, discord.User):
+            await interaction.response.send_message(
+                f'PERMISSION_DENIED: {caller.name} is not in this guild.')
+            return
+
+        if not check_role(caller, "Leadership"):
+            await interaction.response.send_message(
+                f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
+            return
+
+        logging.info(f'Handling /addingotsbulk on behalf of {caller.nick}')
+        await interaction.response.defer()
+
+        player_names = players.split(',')
+        for player in player_names:
+            if not validate_player_name(player):
+                await interaction.response.send_message(
+                    f'FAILED_PRECONDITION: {player} is longer than 12 characters.')
+                return
+
+        try:
+            members = self._storage_client.read_members()
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading member: {e}')
+            return
+
+        output = []
+        members_to_update = []
+        for player in player_names:
+            found = False
+            for member in members:
+                if member.runescape_name == player.lower():
+                    found = True
+                    member.ingots += ingots
+                    members_to_update.append(member)
+                    output.append(f'Added {ingots:,} ingots to {player}. They now have {member.ingots:,} ingots')
+                    break
+            if not found:
+                output.append(f'{player} not found in storage.')
+
+        try:
+            self._storage_client.update_members(members_to_update, caller.nick)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error writing ingots: {e}')
+            return
+
+        await interaction.followup.send('\n'.join(output))
 
     async def updateingots(
         self,
@@ -534,7 +586,7 @@ Points from minigames & bossing: {activity_points:,}"""
             if emoji.name == 'Ingot':
                 icon = emoji
         await interaction.followup.send(
-            f'Added {ingots:,} ingots to {player}{icon}')
+            f'Set ingot count to {ingots:,} for {player}{icon}')
 
 
     async def syncmembers(self, interaction: discord.Interaction):
