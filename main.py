@@ -458,7 +458,7 @@ Points from minigames & bossing: {activity_points:,}"""
             if emoji.name == 'Ingot':
                 icon = emoji
         await interaction.followup.send(
-            f'Added {ingots:,} ingots to {player}{icon}')
+            f'Added {ingots:,} ingots to {player}. They now have {member.ingots:,} ingots{icon}')
 
     async def addingotsbulk(
         self,

@@ -289,7 +289,7 @@ Total Points: 1,626
             'leader')
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            'Added 5,000 ingots to johnnycache')
+            'Added 5,000 ingots to johnnycache. They now have 10,000 ingots')
 
     def test_addingots_player_not_found(self):
         """Test that a missing player is surfaced to caller."""
