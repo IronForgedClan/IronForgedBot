@@ -223,6 +223,7 @@ class IronForgedCommands:
         )
         self._tree.add_command(syncmembers_command)
 
+    # TODO: Add tests for error cases.
 
     async def score(self,
                     interaction: discord.Interaction,
@@ -240,12 +241,19 @@ class IronForgedCommands:
 
         logging.info(f'Handling /score for {player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
-        resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
-                            timeout=15)
-        if resp.status_code != 200:
+
+        try:
+            resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
+                                timeout=15)
+            if resp.status_code != 200:
+                await interaction.followup.send(
+                    f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
+                return
+        except requests.exceptions.RequestException as e:
             await interaction.followup.send(
-                f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
+                f'Encountered an error calling Runescape API: {e}')
             return
+
         # Omit the first line of the response, which is total level & xp.
         lines = resp.text.split('\n')[1:]
         if len(lines) != HISCORES_EXPECTED_LENGTH:
@@ -297,12 +305,18 @@ Points from minigames & bossing: {activity_points:,}"""
         logging.info(f'Handling /breakdown for {player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
-        resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
-                            timeout=15)
-        if resp.status_code != 200:
+        try:
+            resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
+                                timeout=15)
+            if resp.status_code != 200:
+                await interaction.followup.send(
+                    f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
+                return
+        except requests.exceptions.RequestException as e:
             await interaction.followup.send(
-                f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
+                f'Encountered an error calling Runescape API: {e}')
             return
+
         # Omit the first line of the response, which is total level & xp.
         lines = resp.text.split('\n')[1:]
         if len(lines) != HISCORES_EXPECTED_LENGTH:
@@ -491,7 +505,7 @@ Points from minigames & bossing: {activity_points:,}"""
         player_names = players.split(',')
         for player in player_names:
             if not validate_player_name(player):
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     f'FAILED_PRECONDITION: {player} is longer than 12 characters.')
                 return
 
