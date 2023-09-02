@@ -341,6 +341,19 @@ Total Points: 1,626
             """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
 kennylogsin not found in storage.""")
 
+    def test_addingotsbulk_player_does_not_pass_validation(self):
+        """Test that a missing player is surfaced to caller."""
+        mock_storage = MagicMock()
+        mock_storage.read_member.return_value = None
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.addingotsbulk(
+            self.mock_interaction, 'somesuperlongfakename', 5))
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            'FAILED_PRECONDITION: somesuperlongfakename is longer than 12 characters.')
+
     def test_addingotsbulk_permission_denied(self):
         """Test that non-leadership role can't add ingots."""
         member = MagicMock()
