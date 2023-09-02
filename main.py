@@ -239,7 +239,7 @@ class IronForgedCommands:
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /score for {player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /score player:{player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
         try:
@@ -302,7 +302,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /breakdown for {player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /breakdown player:{player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
         try:
@@ -389,9 +389,11 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /ingots for {player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /ingots player:{player} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
+        # Strip whitespaces from mis-typing.
+        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:
@@ -442,9 +444,10 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /addingots for {player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /addingots player:{player} ingots:{ingots} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
+        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:
@@ -499,10 +502,11 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
 
-        logging.info(f'Handling /addingotsbulk on behalf of {caller.nick}')
+        logging.info(f'Handling /addingotsbulk players:{players} ingots:{ingots} on behalf of {caller.nick}')
         await interaction.response.defer()
 
         player_names = players.split(',')
+        player_names = [player.strip() for player in player_names]
         for player in player_names:
             if not validate_player_name(player):
                 await interaction.followup.send(
@@ -569,10 +573,11 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /updateingots for {player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /updateingots player:{player} ingots:{ingots} on behalf of {interaction.user.nick}')
 
         await interaction.response.defer()
 
+        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:

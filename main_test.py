@@ -341,6 +341,27 @@ Total Points: 1,626
             """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
 kennylogsin not found in storage.""")
 
+    def test_addingotsbulk_whitespace_stripped(self):
+        """Test that ingots can be added to multiple users."""
+        mock_storage = MagicMock()
+        mock_storage.read_members.return_value = [
+            Member(id=123456, runescape_name='johnnycache', ingots=5000),
+            Member(id=654321, runescape_name='kennylogs', ingots=400)]
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        # User adds whitespace between args.
+        self.loop.run_until_complete(commands.addingotsbulk(
+            self.mock_interaction, 'johnnycache, skagul tosti', 5000))
+
+        mock_storage.update_members.assert_called_once_with(
+            [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
+            'leader')
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
+skagul tosti not found in storage.""")
+
     def test_addingotsbulk_player_does_not_pass_validation(self):
         """Test that a missing player is surfaced to caller."""
         mock_storage = MagicMock()
