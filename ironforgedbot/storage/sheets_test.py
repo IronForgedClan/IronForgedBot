@@ -65,7 +65,6 @@ class TestSheetsStorage(unittest.TestCase):
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
             ({'status': '200'}, json.dumps('')),
-            ({'status': '200'}, json.dumps({'values': []})),
             ({'status': '200'}, json.dumps(''))])
 
         sheets_client = build(
@@ -88,7 +87,7 @@ class TestSheetsStorage(unittest.TestCase):
                 ['kennylogs', 0, '654321']]}))
 
         self.assertEqual(
-            http.request_sequence[3][2],
+            http.request_sequence[2][2],
             json.dumps({'values': [
                 ['kennylogs', '08/26/2023, 18:33:20', 0, 0, 'User Joined Server', '']]}))
 
@@ -101,7 +100,6 @@ class TestSheetsStorage(unittest.TestCase):
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
             ({'status': '200'}, json.dumps('')),
-            ({'status': '200'}, json.dumps({'values': []})),
             ({'status': '200'}, json.dumps(''))])
 
         sheets_client = build(
@@ -123,7 +121,7 @@ class TestSheetsStorage(unittest.TestCase):
                 ['kennylogs', 2000, '123456']]}))
 
         self.assertEqual(
-            http.request_sequence[3][2],
+            http.request_sequence[2][2],
             json.dumps({'values': [
                 ['johnnycache', '08/26/2023, 18:33:20', str(johnnycache), str(kennylogs), 'leader', '']]}))
 
@@ -135,7 +133,6 @@ class TestSheetsStorage(unittest.TestCase):
         http = HttpMockSequence([
             ({'status': '200'}, json.dumps(sheets_read_response)),
             ({'status': '200'}, json.dumps('')),
-            ({'status': '200'}, json.dumps({'values': []})),
             ({'status': '200'}, json.dumps(''))])
 
         sheets_client = build(
@@ -154,6 +151,6 @@ class TestSheetsStorage(unittest.TestCase):
             json.dumps({'values': [['', '', '']]}))
 
         self.assertEqual(
-            http.request_sequence[3][2],
+            http.request_sequence[2][2],
             json.dumps({'values': [
                 ['johnnycache', '08/26/2023, 18:33:20', str(johnnycache), 0, 'User Left Server', '']]}))

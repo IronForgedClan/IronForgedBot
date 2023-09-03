@@ -4,6 +4,7 @@ from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
+import logging
 from pytz import timezone
 from typing import List, Optional, Union
 
@@ -205,8 +206,6 @@ class SheetsStorage(metaclass=IngotsStorage):
             # history at least.
             pass
 
-    # TODO: We should also log to a logfile in case this function fails.
-    # Since we tuck this behind an interface, we don't want to surface this to users.
     def _log_change(
         self, changes: List[List[Union[str, int]]]):
         """Log change to ChangeLog sheet.
@@ -218,18 +217,10 @@ class SheetsStorage(metaclass=IngotsStorage):
         Raises:
             HttpError: Any error is encountered interacting with sheets.
         """
-        changelog_response = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=CHANGELOG_RANGE).execute()
-
-        # We want newest changes first
-        changelog_values = changelog_response.get('values', [])
-        changes.extend(changelog_values)
-
-        change_range = f'ChangeLog!A2:F{2 + len(changes)}'
         body = {'values': changes}
 
-        _ = self._sheets_client.spreadsheets().values().update(
-            spreadsheetId=self._sheet_id, range=change_range,
+        logging.info(f'wrote changes: {changes}')
+        _ = self._sheets_client.spreadsheets().values().append(
+            spreadsheetId=self._sheet_id, range=CHANGELOG_RANGE,
             valueInputOption="RAW", body=body).execute()
 
