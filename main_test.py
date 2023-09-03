@@ -328,16 +328,20 @@ Total Points: 1,626
             Member(id=123456, runescape_name='johnnycache', ingots=5000),
             Member(id=654321, runescape_name='kennylogs', ingots=400)]
 
+        mo = mock_open()
+
         commands = main.IronForgedCommands(
             MagicMock(), MagicMock(), mock_storage, '')
-        self.loop.run_until_complete(commands.addingotsbulk(
-            self.mock_interaction, 'johnnycache,kennylogsin', 5000))
+
+        with patch('builtins.open', mo):
+            self.loop.run_until_complete(commands.addingotsbulk(
+                self.mock_interaction, 'johnnycache,kennylogsin', 5000))
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
             'leader')
 
-        self.mock_interaction.followup.send.assert_called_once_with(
+        mo().write.assert_called_once_with(
             """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
 kennylogsin not found in storage.""")
 
@@ -348,17 +352,20 @@ kennylogsin not found in storage.""")
             Member(id=123456, runescape_name='johnnycache', ingots=5000),
             Member(id=654321, runescape_name='kennylogs', ingots=400)]
 
+        mo = mock_open()
+
         commands = main.IronForgedCommands(
             MagicMock(), MagicMock(), mock_storage, '')
-        # User adds whitespace between args.
-        self.loop.run_until_complete(commands.addingotsbulk(
-            self.mock_interaction, 'johnnycache, skagul tosti', 5000))
+        with patch('builtins.open', mo):
+            # User adds whitespace between args.
+            self.loop.run_until_complete(commands.addingotsbulk(
+                self.mock_interaction, 'johnnycache, skagul tosti', 5000))
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
             'leader')
 
-        self.mock_interaction.followup.send.assert_called_once_with(
+        mo().write.assert_called_once_with(
             """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
 skagul tosti not found in storage.""")
 

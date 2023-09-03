@@ -145,11 +145,11 @@ class IronForgedCommands:
         # TODO: replace sheets client with a storage interface &
         # pass in a sheets impl.
         storage_client: IngotsStorage,
-        breakdown_dir_path: str):
+        tmp_dir_path: str):
         self._tree = tree
         self._discord_client = discord_client
         self._storage_client = storage_client
-        self._breakdown_dir_path = breakdown_dir_path
+        self._tmp_dir_path = tmp_dir_path
 
         # Description only sets the brief description.
         # Arg descriptions are pulled from function definition.
@@ -356,7 +356,7 @@ Points from minigames & bossing: {activity_points:,}"""
         # condition if multiple users try to run breakdown at once.
         # text files are cheap - use the player name as a good-enough amount
         # of uniquity.
-        path = os.path.join(self._breakdown_dir_path, f'{player}.txt')
+        path = os.path.join(self._tmp_dir_path, f'breakdown_{player}.txt')
         with open(path, 'w') as f:
             f.write(output)
 
@@ -541,7 +541,17 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'Encountered error writing ingots: {e}')
             return
 
-        await interaction.followup.send('\n'.join(output))
+        # Our output can be larger than the interaction followup max.
+        # Send it in a file to accomodate this.
+        path = os.path.join(self._tmp_dir_path, f'addingotsbulk_{caller.nick}.txt')
+        with open(path, 'w') as f:
+            f.write('\n'.join(output))
+
+        with open(path, 'rb') as f:
+            discord_file = discord.File(f, filename='addingotsbulk.txt')
+            await interaction.followup.send(
+                'Added ingots to multiple members!',
+                file=discord_file)
 
     async def updateingots(
         self,
@@ -764,7 +774,7 @@ if __name__ == '__main__':
         '--upload_commands', action='store_true',
         help='If supplied, will upload commands to discord server.')
     parser.add_argument(
-        '--breakdown_tmp_dir', default='./breakdown_tmp', required=False,
+        '--tmp_dir', default='./commands_tmp', required=False,
         help='Directory path for where to store point break downs to upload to discord.')
     parser.add_argument(
         '--logfile', default='./ironforgedbot.log', required=False,
@@ -800,7 +810,7 @@ if __name__ == '__main__':
         'service.json', init_config.get('SHEETID'))
 
     commands = IronForgedCommands(
-        tree, client, storage_client, args.breakdown_tmp_dir)
+        tree, client, storage_client, args.tmp_dir)
     client.tree = tree
 
     client.run(init_config.get('BOT_TOKEN'))
