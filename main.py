@@ -645,7 +645,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 members.append(member)
                 member_ids.append(member.id)
             else:
-                output += f'skipped user {member} because they don\'t have a \"Member\" role'
+                output += f'skipped user {member} because they don\'t have a \"Member\" role\n'
 
         # Then, get all current entries from storage.
         try:
