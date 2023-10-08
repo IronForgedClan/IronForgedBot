@@ -286,10 +286,10 @@ Total Points: 1,626
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
-            'leader')
+            'leader', note='None')
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            'Added 5,000 ingots to johnnycache. They now have 10,000 ingots')
+            'Added 5,000 ingots to johnnycache; reason: None. They now have 10,000 ingots')
 
     def test_addingots_player_not_found(self):
         """Test that a missing player is surfaced to caller."""
@@ -339,7 +339,7 @@ Total Points: 1,626
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
-            'leader')
+            'leader', note='None')
 
         mo().write.assert_called_once_with(
             """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
@@ -363,7 +363,7 @@ kennylogsin not found in storage.""")
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=123456, runescape_name='johnnycache', ingots=10000)],
-            'leader')
+            'leader', note='None')
 
         mo().write.assert_called_once_with(
             """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
@@ -412,10 +412,10 @@ skagul tosti not found in storage.""")
 
         mock_storage.update_members.assert_called_once_with([
             Member(id=123456, runescape_name='johnnycache', ingots=4000)],
-            'leader')
+            'leader', note='None')
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            'Set ingot count to 4,000 for johnnycache')
+            'Set ingot count to 4,000 for johnnycache. Reason: None')
 
     def test_updateingots_player_not_found(self):
         """Test that a missing player is surfaced to caller."""
