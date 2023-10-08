@@ -552,7 +552,7 @@ Points from minigames & bossing: {activity_points:,}"""
         with open(path, 'rb') as f:
             discord_file = discord.File(f, filename='addingotsbulk.txt')
             await interaction.followup.send(
-                'Added ingots to multiple members! Reason: {reason}',
+                f'Added ingots to multiple members! Reason: {reason}',
                 file=discord_file)
 
     async def updateingots(
