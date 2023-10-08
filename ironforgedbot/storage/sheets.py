@@ -85,7 +85,7 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         return members
 
-    def add_members(self, members: List[Member], attribution: str):
+    def add_members(self, members: List[Member], attribution: str, note: str = ''):
         """Add new members to sheet."""
         existing = self.read_members()
         existing.extend(members)
@@ -111,7 +111,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         dt = self._clock.now(tz)
         modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
         changes = [
-            [member.runescape_name, modification_timestamp, 0, 0, attribution, '']
+            [member.runescape_name, modification_timestamp, 0, 0, attribution, note]
             for member in members]
 
         try:
@@ -121,7 +121,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             # history at least.
             pass
 
-    def update_members(self, members: List[Member], attribution: str):
+    def update_members(self, members: List[Member], attribution: str, note: str = ''):
         """Update metadata for existing members."""
         tz = timezone('EST')
         dt = self._clock.now(tz)
@@ -133,7 +133,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             for i, existing_member in enumerate(existing):
                 if member.id == existing_member.id:
                     changes.append([existing_member.runescape_name, modification_timestamp,
-                        str(existing_member), str(member), attribution, ''])
+                        str(existing_member), str(member), attribution, note])
                     existing[i] = member
                     break
 
@@ -160,7 +160,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             # history at least.
             pass
 
-    def remove_members(self, members: List[Member], attribution: str):
+    def remove_members(self, members: List[Member], attribution: str, note: str = ''):
         """Remove members from storage."""
         tz = timezone('EST')
         dt = self._clock.now(tz)
@@ -176,7 +176,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             if member.id in remove_ids:
                 changes.append(
                     [member.runescape_name, modification_timestamp, str(member),
-                    0, attribution, ''])
+                    0, attribution, note])
                 continue
             filtered_values.append(member)
 

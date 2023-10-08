@@ -418,7 +418,8 @@ Points from minigames & bossing: {activity_points:,}"""
         self,
         interaction: discord.Interaction,
         player: str,
-        ingots: int):
+        ingots: int,
+        reason: str = 'None'):
         """Add ingots to a Runescape alias.
 
         Arguments:
@@ -444,7 +445,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /addingots player:{player} ingots:{ingots} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /addingots player:{player} ingots:{ingots} reason:{reason} on behalf of {interaction.user.nick}')
         await interaction.response.defer()
 
         player = player.strip()
@@ -463,7 +464,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member.ingots += ingots
 
         try:
-            self._storage_client.update_members([member], caller.nick)
+            self._storage_client.update_members([member], caller.nick, note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -475,13 +476,14 @@ Points from minigames & bossing: {activity_points:,}"""
             if emoji.name == 'Ingot':
                 icon = emoji
         await interaction.followup.send(
-            f'Added {ingots:,} ingots to {player}. They now have {member.ingots:,} ingots{icon}')
+            f'Added {ingots:,} ingots to {player}; reason: {reason}. They now have {member.ingots:,} ingots{icon}')
 
     async def addingotsbulk(
         self,
         interaction: discord.Interaction,
         players: str,
-        ingots: int):
+        ingots: int,
+        reason: str = 'None'):
         """Add ingots to a Runescape alias.
 
         Arguments:
@@ -502,7 +504,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
 
-        logging.info(f'Handling /addingotsbulk players:{players} ingots:{ingots} on behalf of {caller.nick}')
+        logging.info(f'Handling /addingotsbulk players:{players} ingots:{ingots} reason:{reason} on behalf of {caller.nick}')
         await interaction.response.defer()
 
         player_names = players.split(',')
@@ -535,7 +537,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 output.append(f'{player} not found in storage.')
 
         try:
-            self._storage_client.update_members(members_to_update, caller.nick)
+            self._storage_client.update_members(members_to_update, caller.nick, note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -550,14 +552,15 @@ Points from minigames & bossing: {activity_points:,}"""
         with open(path, 'rb') as f:
             discord_file = discord.File(f, filename='addingotsbulk.txt')
             await interaction.followup.send(
-                'Added ingots to multiple members!',
+                f'Added ingots to multiple members! Reason: {reason}',
                 file=discord_file)
 
     async def updateingots(
         self,
         interaction: discord.Interaction,
         player: str,
-        ingots: int):
+        ingots: int,
+        reason: str = 'None'):
         """Set ingots for a Runescape alias.
 
         Arguments:
@@ -583,7 +586,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /updateingots player:{player} ingots:{ingots} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /updateingots player:{player} ingots:{ingots} reason:{reason} on behalf of {interaction.user.nick}')
 
         await interaction.response.defer()
 
@@ -603,7 +606,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member.ingots = ingots
 
         try:
-            self._storage_client.update_members([member], caller.nick)
+            self._storage_client.update_members([member], caller.nick, note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -615,7 +618,7 @@ Points from minigames & bossing: {activity_points:,}"""
             if emoji.name == 'Ingot':
                 icon = emoji
         await interaction.followup.send(
-            f'Set ingot count to {ingots:,} for {player}{icon}')
+            f'Set ingot count to {ingots:,} for {player}. Reason: {reason}{icon}')
 
 
     async def syncmembers(self, interaction: discord.Interaction):

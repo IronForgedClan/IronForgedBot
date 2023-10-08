@@ -36,13 +36,13 @@ class IngotsStorage(type):
         """Read members from storage."""
 
     @abstractmethod
-    def add_members(self, members: List[Member], attribution: str) -> None:
+    def add_members(self, members: List[Member], attribution: str, note: str = '') -> None:
         """Adds new members to storage."""
 
     @abstractmethod
-    def update_members(self, members: List[Member], attribution: str) -> None:
+    def update_members(self, members: List[Member], attribution: str, note: str = '') -> None:
         """Updates metadata for the provided members."""
 
     @abstractmethod
-    def remove_members(self, members: List[Member], attribution: str) -> None:
+    def remove_members(self, members: List[Member], attribution: str, note: str = '') -> None:
         """Removes provided members from storage. Requires Member.id."""
