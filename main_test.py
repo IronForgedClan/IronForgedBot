@@ -489,10 +489,14 @@ skagul tosti not found in storage.""")
             Member(id=2, runescape_name='Crimson chin', ingots=400),
             Member(id=4, runescape_name='member4', ingots=1000)]
 
+        mo = mock_open()
+
         commands = main.IronForgedCommands(
             MagicMock(), mock_discord_client, mock_storage, '')
-        self.loop.run_until_complete(commands.syncmembers(
-            self.mock_interaction))
+        
+        with patch('builtins.open', mo):
+            self.loop.run_until_complete(commands.syncmembers(
+                self.mock_interaction))
 
         mock_storage.add_members.assert_called_once_with([
             Member(id=3, runescape_name='member3', ingots=0)],
@@ -506,4 +510,6 @@ skagul tosti not found in storage.""")
             Member(id=1, runescape_name='johnnycache', ingots=200),
             Member(id=2, runescape_name='member2', ingots=400)],
             'Name Change')
+        
+        mo().write.assert_called_once_with("""added user member3 because they joined\nremoved user member4 because they left the server\nupdated RSN for johnnycache\nupdated RSN for member2\n""")
 
