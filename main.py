@@ -622,7 +622,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
 
     async def syncmembers(self, interaction: discord.Interaction):
-
+        output = ''
         mutator = interaction.user
         if isinstance(mutator, discord.User):
             await interaction.response.send_message(
@@ -647,6 +647,8 @@ Points from minigames & bossing: {activity_points:,}"""
             if check_role(member, "Member"):
                 members.append(member)
                 member_ids.append(member.id)
+            else:
+                output += f'skipped user {member.name} because they don\'t have a "Member" role\n'
 
         # Then, get all current entries from storage.
         try:
@@ -666,9 +668,11 @@ Points from minigames & bossing: {activity_points:,}"""
             if member.id not in written_ids:
                 # Don't allow users without a nickname into storage.
                 if member.nick is None:
+                    output += f'skipped user {member.name} because they don\'t have a nickname in Discord\n'
                     continue
                 new_members.append(Member(
                     id=int(member.id), runescape_name=member.nick.lower(), ingots=0))
+                output += f'added user {member.nick} because they joined\n'
 
         try:
             self._storage_client.add_members(
@@ -683,7 +687,7 @@ Points from minigames & bossing: {activity_points:,}"""
         for existing_member in existing:
             if existing_member.id not in member_ids:
                 leaving_members.append(existing_member)
-
+                output += f'removed user {existing_member.runescape_name} because they left the server\n'
         try:
             self._storage_client.remove_members(
                 leaving_members, 'User Left Server')
@@ -712,6 +716,10 @@ Points from minigames & bossing: {activity_points:,}"""
                                 id=existing_member.id,
                                 runescape_name=member.nick.lower(),
                                 ingots=existing_member.ingots))
+                            
+        for changed_member in changed_members:
+            output += f'updated RSN for {changed_member.runescape_name}\n'
+
 
         try:
             self._storage_client.update_members(
@@ -721,8 +729,15 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'Encountered error updating changed members: {e}')
             return
 
-        await interaction.followup.send(
-            'Successfully synced ingots storage with current members!')
+        path = os.path.join(self._tmp_dir_path, f'syncmembers_{mutator.nick}.txt')
+        with open(path, 'w') as f:
+            f.write(output)
+
+        with open(path, 'rb') as f:
+            discord_file = discord.File(f, filename='syncmembers.txt')
+            await interaction.followup.send(
+                'Successfully synced ingots storage with current members!',
+                file=discord_file)
 
 
 def skill_score(hiscores: List[str]) -> Dict[str, int]:
