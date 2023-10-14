@@ -79,7 +79,7 @@ def compute_clan_icon(points: int):
 
 
 def check_role(member: discord.Member, checked_role: str) -> bool:
-    """Check if a member has a leadership role."""
+    """Check if a member has a given role."""
     roles = member.roles
     for role in roles:
         if role.name == checked_role:
@@ -716,7 +716,7 @@ Points from minigames & bossing: {activity_points:,}"""
                                 id=existing_member.id,
                                 runescape_name=member.nick.lower(),
                                 ingots=existing_member.ingots))
-                            
+
         for changed_member in changed_members:
             output += f'updated RSN for {changed_member.runescape_name}\n'
 
