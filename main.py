@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 import logging
 import os
+import random
 import sys
 from pytz import timezone
 
@@ -212,6 +213,36 @@ class IronForgedCommands:
             auto_locale_strings=True,
         )
         self._tree.add_command(updateingots_command)
+
+        raffleadmin_command = app_commands.Command(
+            name="raffleadmin",
+            description="Command wrapper for admin actions on raffles.",
+            callback=self.raffleadmin,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
+        )
+        self._tree.add_command(raffleadmin_command)
+
+        raffletickets_command = app_commands.Command(
+            name="raffletickets",
+            description="View current raffle ticket count.",
+            callback=self.raffletickets,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
+        )
+        self._tree.add_command(raffletickets_command)
+
+        buyraffletickets_command = app_commands.Command(
+            name="buyraffletickets",
+            description="Buy raffle tickets for 5000 ingots each.",
+            callback=self.buyraffletickets,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
+        )
+        self._tree.add_command(buyraffletickets_command)
 
         syncmembers_command = app_commands.Command(
             name="syncmembers",
@@ -620,6 +651,233 @@ Points from minigames & bossing: {activity_points:,}"""
         await interaction.followup.send(
             f'Set ingot count to {ingots:,} for {player}. Reason: {reason}{icon}')
 
+
+    async def raffleadmin(self, interaction: discord.Interaction, subcommand: str):
+        """Parent command for doing admin actions around raffles.
+
+        Args:
+            subcommand: string of admin action to perform. Valid actions: [start_raffle, end_raffle, choose_winner].
+                'start_raffle' will open purchasing of tickets, 'end_raffle' will close
+                purchasing, and 'choose_winner' will choose a winner & display
+                their winnings (alongside clearing storage for the next raffle).
+        """
+        logging.info(f'Handling /raffleadmin {subcommand} on behalf of {interaction.user.nick}')
+        await interaction.response.defer()
+
+        # interaction.user can be a User or Member, but we can only
+        # rely on permission checking for a Member.
+        caller = interaction.user
+        if isinstance(caller, discord.User):
+            await interaction.followup.send(
+                f'PERMISSION_DENIED: {caller.name} is not in this guild.')
+            return
+
+        if not check_role(caller, "Leadership"):
+            await interaction.followup.send(
+                f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
+            return
+
+        if subcommand.lower() == 'start_raffle':
+            await self._start_raffle(interaction)
+        elif subcommand.lower() == 'end_raffle':
+            await self._end_raffle(interaction)
+        elif subcommand.lower() == 'choose_winner':
+            await self._choose_winner(interaction)
+        else:
+            await interaction.followup.send('provided subcommand is not implemented')
+
+    async def _start_raffle(self, interaction: discord.Interaction):
+        """Starts a raffle, enabling purchase of raffle tickets.
+
+        Expects provided interaction to have already deferred the response.
+        """
+        try:
+            self._storage_client.start_raffle(interaction.user.nick)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error starting raffle: {e}')
+            return
+
+        await interaction.followup.send(
+            'Started raffle! Members can now use ingots to purchase tickets.')
+
+    async def _end_raffle(self, interaction: discord.Interaction):
+        """Ends raffle, disabling purchase of tickets.
+
+        Expects provided interaction to have already deferred the response.
+        """
+        try:
+            self._storage_client.end_raffle(interaction.user.nick)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error ending raffle: {e}')
+            return
+
+        await interaction.followup.send(
+            'Raffle ended! Members can no longer purchase tickets.')
+
+    async def _choose_winner(self, interaction: discord.Interaction):
+        """Chooses a winner & winning amount. Clears storage of all tickets."""
+        try:
+            current_tickets = self._storage_client.read_raffle_tickets()
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading tickets: {e}')
+            return
+
+        try:
+            members = self._storage_client.read_members()
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading current members: {e}')
+            return
+
+        # Now we have ID:tickets & RSN:ID
+        # Morph these into a List[RSN], where RSN appears once for each ticket
+        # First, make our list of members a dictionary for faster lookups
+        id_to_runescape_name = {}
+        for member in members:
+            id_to_runescape_name[member.id] = member.runescape_name
+
+        entries = []
+        for id, ticket_count in current_tickets.items():
+            # Account for users who left clan since buying tickets.
+            if id_to_runescape_name.get(id) is not None:
+                entries.extend([id_to_runescape_name.get(id)] * ticket_count)
+
+        winner = entries[random.randrange(0, len(entries))]
+
+        winnings = len(entries) * 2500
+
+        # TODO: Make this more fun by adding an entries file or rendering a graphic
+        await interaction.followup.send(
+            f'{winner} has won {winnings} ingots out of {len(entries)} entries!')
+
+        try:
+            self._storage_client.delete_raffle_tickets(interaction.user.nick)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error clearing ticket storage: {e}')
+            return
+
+    async def raffletickets(self, interaction: discord.Interaction):
+        """View calling user's current raffle ticket count."""
+        await interaction.response.defer()
+
+        # interaction.user can be a User or Member, but we can only
+        # rely on permission checking for a Member.
+        caller = interaction.user
+        if isinstance(caller, discord.User):
+            await interaction.followup.send(
+                f'PERMISSION_DENIED: {caller.name} is not in this guild.')
+            return
+
+        if caller.nick is None:
+            await interaction.followup.send(
+                f'FAILED_PRECONDITION: {caller.name} does not have a nickname set.')
+            return
+
+        logging.info(f'Handling /raffletickets on behalf of {interaction.user.nick}')
+
+        try:
+            member = self._storage_client.read_member(interaction.user.nick)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading member from storage: {e}')
+            return
+
+        if member is None:
+            await interaction.followup.send(
+                f'{interaction.user.nick} not found in storage, please reach out to leadership.')
+            return
+
+        try:
+            current_tickets = self._storage_client.read_raffle_tickets()
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading raffle tickets from storage: {e}')
+            return
+
+        count = 0
+        for id, tickets in current_tickets.items():
+            if id == member.id:
+                count = tickets
+                break
+
+        await interaction.followup.send(
+            f'{interaction.user.nick} has {count} tickets!')
+
+    async def buyraffletickets(self, interaction: discord.Interaction, tickets: int):
+        """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
+        await interaction.response.defer()
+
+        # interaction.user can be a User or Member, but we can only
+        # rely on permission checking for a Member.
+        caller = interaction.user
+        if isinstance(caller, discord.User):
+            await interaction.followup.send(
+                f'PERMISSION_DENIED: {caller.name} is not in this guild.')
+            return
+
+        if caller.nick is None:
+            await interaction.followup.send(
+                f'FAILED_PRECONDITION: {caller.name} does not have a nickname set.')
+            return
+
+        logging.info(f'Handling /buyraffletickets {tickets} on behalf of {interaction.user.nick}')
+
+        try:
+            ongoing_raffle = self._storage_client.read_raffle()
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading raffle status from storage: {e}')
+            return
+
+        if not ongoing_raffle:
+            await interaction.followup.send(
+                f'FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought.')
+            return
+
+        # First, read member to get Discord ID & ingot count
+        try:
+            member = self._storage_client.read_member(caller.nick)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error reading member from storage: {e}')
+            return
+
+        if member is None:
+            await interaction.followup.send(
+                f'{caller.nick} not found in storage, please reach out to leadership.')
+            return
+
+        # Now we have the Discord ID & current ingot count
+        # Does the user have enough ingots to make the purchase?
+        cost = tickets * 5000
+        if cost > member.ingots:
+            await interaction.followup.send(
+                f'{caller.nick} does not have enough ingots for {tickets} tickets.\n' +
+                f'Cost: {cost}, current ingots: {member.ingots}')
+            return
+
+        # We got this for, do the transactions
+        member.ingots -= cost
+        try:
+            self._storage_client.update_members([member], caller.nick, note='Bought raffle tickets')
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error updating member ingot count: {e}')
+            return
+
+        try:
+            self._storage_client.add_raffle_tickets(member.id, tickets)
+        except StorageError as e:
+            await interaction.followup.send(
+                f'Encountered error adding raffle tickets: {e}')
+            return
+
+        await interaction.followup.send(
+            f'{caller.nick} successfully bought {tickets} tickets for {cost} ingots!')
 
     async def syncmembers(self, interaction: discord.Interaction):
         output = ''

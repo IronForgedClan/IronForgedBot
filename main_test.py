@@ -447,6 +447,172 @@ skagul tosti not found in storage.""")
         mock_interaction.response.send_message.assert_called_once_with(
             'PERMISSION_DENIED: johnnycache is not in a leadership role.')
 
+    def test_raffleadmin_permission_denied(self):
+        member = MagicMock()
+        member.name = 'johnnycache'
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = member
+        mock_interaction.response = AsyncMock()
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '')
+        self.loop.run_until_complete(commands.raffleadmin(
+            mock_interaction, 'start_raffle'))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            'PERMISSION_DENIED: johnnycache is not in a leadership role.')
+
+    def test_raffleadmin_start_raffle(self):
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '')
+        self.loop.run_until_complete(commands.raffleadmin(
+            self.mock_interaction, 'start_raffle'))
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            'Started raffle! Members can now use ingots to purchase tickets.')
+
+    def test_raffleadmin_end_raffle(self):
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '')
+        self.loop.run_until_complete(commands.raffleadmin(
+            self.mock_interaction, 'end_raffle'))
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            'Raffle ended! Members can no longer purchase tickets.')
+
+    def test_raffleadmin_choose_winner(self):
+        member = Member(id=12345, runescape_name='johnnycache')
+
+        mock_storage = MagicMock()
+        mock_storage.read_raffle_tickets.return_value = {12345: 25}
+        mock_storage.read_members.return_value = [member]
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.raffleadmin(
+            self.mock_interaction, 'choose_winner'))
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            'johnnycache has won 62500 ingots out of 25 entries!')
+
+    def test_raffletickets_no_nickname_set(self):
+        member = MagicMock()
+        member.name = "member1"
+        member.nick = None
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = member
+        mock_interaction.response = AsyncMock()
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '')
+        self.loop.run_until_complete(commands.raffletickets(
+            mock_interaction))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            'FAILED_PRECONDITION: member1 does not have a nickname set.')
+
+    def test_raffletickets_user_not_found(self):
+        mock_user = MagicMock()
+        mock_user.nick = "johnnycache"
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = mock_user
+        mock_interaction.response = AsyncMock()
+
+        mock_storage = MagicMock()
+        mock_storage.read_member.return_value = None
+        mock_storage.read_raffle_tickets.return_value = {12345: 25}
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.raffletickets(
+            mock_interaction))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            'johnnycache not found in storage, please reach out to leadership.')
+
+    def test_raffletickets(self):
+        mock_user = MagicMock()
+        mock_user.nick = "johnnycache"
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = mock_user
+        mock_interaction.response = AsyncMock()
+
+        mock_storage = MagicMock()
+        mock_storage.read_member.return_value = Member(id=12345, runescape_name="johnnycache")
+        mock_storage.read_raffle_tickets.return_value = {12345: 25}
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.raffletickets(
+            mock_interaction))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            'johnnycache has 25 tickets!')
+
+    def test_buyraffletickets_missing_nickname(self):
+        mock_user = MagicMock()
+        mock_user.name = "member1"
+        mock_user.nick = None
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = mock_user
+        mock_interaction.response = AsyncMock()
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), MagicMock(), '')
+        self.loop.run_until_complete(commands.buyraffletickets(
+            mock_interaction, 1))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            'FAILED_PRECONDITION: member1 does not have a nickname set.')
+
+    def test_buyraffletickets_not_enough_ingots(self):
+        mock_user = MagicMock()
+        mock_user.name = "member1"
+        mock_user.nick = "johnnycache"
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = mock_user
+        mock_interaction.response = AsyncMock()
+
+        mock_storage = MagicMock()
+        mock_storage.read_raffle.return_value = True
+        mock_storage.read_member.return_value = Member(id=12345, runescape_name='johnnycache', ingots=5000)
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.buyraffletickets(
+            mock_interaction, 5))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            """johnnycache does not have enough ingots for 5 tickets.
+Cost: 25000, current ingots: 5000""")
+
+    def test_buyraffletickets(self):
+        mock_user = MagicMock()
+        mock_user.name = "member1"
+        mock_user.nick = "johnnycache"
+
+        mock_interaction = AsyncMock()
+        mock_interaction.user = mock_user
+        mock_interaction.response = AsyncMock()
+
+        mock_storage = MagicMock()
+        mock_storage.read_raffle.return_value = True
+        mock_storage.read_member.return_value = Member(id=12345, runescape_name='johnnycache', ingots=25000)
+
+        commands = main.IronForgedCommands(
+            MagicMock(), MagicMock(), mock_storage, '')
+        self.loop.run_until_complete(commands.buyraffletickets(
+            mock_interaction, 1))
+
+        mock_interaction.followup.send.assert_called_once_with(
+            'johnnycache successfully bought 1 tickets for 5000 ingots!')
+
     def test_syncmembers(self):
         """Test that sheet can be updated to only members in Discord."""
         mock_discord_client = MagicMock()
@@ -493,7 +659,7 @@ skagul tosti not found in storage.""")
 
         commands = main.IronForgedCommands(
             MagicMock(), mock_discord_client, mock_storage, '')
-        
+
         with patch('builtins.open', mo):
             self.loop.run_until_complete(commands.syncmembers(
                 self.mock_interaction))
@@ -510,6 +676,10 @@ skagul tosti not found in storage.""")
             Member(id=1, runescape_name='johnnycache', ingots=200),
             Member(id=2, runescape_name='member2', ingots=400)],
             'Name Change')
-        
-        mo().write.assert_called_once_with("""added user member3 because they joined\nremoved user member4 because they left the server\nupdated RSN for johnnycache\nupdated RSN for member2\n""")
+
+        mo().write.assert_called_once_with("""added user member3 because they joined
+removed user member4 because they left the server
+updated RSN for johnnycache
+updated RSN for member2
+""")
 

@@ -208,12 +208,8 @@ class SheetsStorage(metaclass=IngotsStorage):
             # history at least.
             pass
 
-    def start_raffle(self, attribution: str) -> None:
-        """Starts a raffle, enabling purchase of raffle tickets."""
-        tz = timezone('EST')
-        dt = self._clock.now(tz)
-        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
-
+    def read_raffle(self) -> bool:
+        """Reads if a raffle is currently ongoing."""
         result = {}
         try:
             result = self._sheets_client.spreadsheets().values().get(
@@ -224,7 +220,21 @@ class SheetsStorage(metaclass=IngotsStorage):
                 f'Encountered error reading ClanRaffle from sheets: {e}')
 
         values = result.get('values', [])
-        if values[0][0] != 'False':
+        if len(values) < 1:
+            return False
+        if len(values[0]) < 1:
+            return False
+        if values[0][0] != 'True':
+            return False
+        return True
+
+    def start_raffle(self, attribution: str) -> None:
+        """Starts a raffle, enabling purchase of raffle tickets."""
+        tz = timezone('EST')
+        dt = self._clock.now(tz)
+        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+
+        if self.read_raffle():
             raise StorageError('There is already a raffle ongoing')
 
         body = {'values': [['True']]}
@@ -252,17 +262,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         dt = self._clock.now(tz)
         modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
 
-        result = {}
-        try:
-            result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=RAFFLE_RANGE).execute()
-        except HttpError as e:
-            raise StorageError(
-                f'Encountered error reading ClanRaffle from sheets: {e}')
-
-        values = result.get('values', [])
-        if values[0][0] != 'True':
+        if not self.read_raffle():
             raise StorageError('There is no currently ongoing raffle')
 
         body = {'values': [['False']]}
@@ -301,6 +301,10 @@ class SheetsStorage(metaclass=IngotsStorage):
         tickets = {}
         for value in values:
             if len(value) >= 2:
+                if value[0] == '':
+                    continue
+                if value[1] == '':
+                    value[1] = 0
                 tickets[int(value[0])] = int(value[1])
 
         return tickets
@@ -327,7 +331,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         # Convert to list for write & sort for stability.
         values = []
         for id, current_count in current_tickets.items():
-            values.append([id, current_count])
+            values.append([str(id), str(current_count)])
 
         values.sort(key=lambda x: x[0])
 

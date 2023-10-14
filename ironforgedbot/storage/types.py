@@ -61,6 +61,10 @@ class IngotsStorage(type):
         """Removes provided members from storage. Requires Member.id."""
 
     @abstractmethod
+    def read_raffle(self) -> bool:
+        """Reads if a raffle is currently ongoing."""
+
+    @abstractmethod
     def start_raffle(self, attribution: str) -> None:
         """Starts a raffle, enabling purchase of raffle tickets."""
 

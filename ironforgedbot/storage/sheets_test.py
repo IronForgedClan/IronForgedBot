@@ -265,7 +265,7 @@ class TestSheetsStorage(unittest.TestCase):
 
         self.assertEqual(
             http.request_sequence[1][2],
-            json.dumps({'values': [[12345, 25]]}))
+            json.dumps({'values': [['12345', '25']]}))
 
         self.assertEqual(
             http.request_sequence[2][2],
@@ -291,7 +291,7 @@ class TestSheetsStorage(unittest.TestCase):
 
         self.assertEqual(
             http.request_sequence[1][2],
-            json.dumps({'values': [[12345, 5]]}))
+            json.dumps({'values': [['12345', '5']]}))
 
         self.assertEqual(
             http.request_sequence[2][2],
