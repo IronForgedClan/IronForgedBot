@@ -495,7 +495,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member.ingots += ingots
 
         try:
-            self._storage_client.update_members([member], caller.nick, note=reason)
+            self._storage_client.update_members([member], caller.nick.lower(), note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -568,7 +568,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 output.append(f'{player} not found in storage.')
 
         try:
-            self._storage_client.update_members(members_to_update, caller.nick, note=reason)
+            self._storage_client.update_members(members_to_update, caller.nick.lower(), note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -637,7 +637,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member.ingots = ingots
 
         try:
-            self._storage_client.update_members([member], caller.nick, note=reason)
+            self._storage_client.update_members([member], caller.nick.lower(), note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -692,7 +692,7 @@ Points from minigames & bossing: {activity_points:,}"""
         Expects provided interaction to have already deferred the response.
         """
         try:
-            self._storage_client.start_raffle(interaction.user.nick)
+            self._storage_client.start_raffle(interaction.user.nick.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error starting raffle: {e}')
@@ -707,7 +707,7 @@ Points from minigames & bossing: {activity_points:,}"""
         Expects provided interaction to have already deferred the response.
         """
         try:
-            self._storage_client.end_raffle(interaction.user.nick)
+            self._storage_client.end_raffle(interaction.user.nick.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error ending raffle: {e}')
@@ -754,7 +754,7 @@ Points from minigames & bossing: {activity_points:,}"""
             f'{winner} has won {winnings} ingots out of {len(entries)} entries!')
 
         try:
-            self._storage_client.delete_raffle_tickets(interaction.user.nick)
+            self._storage_client.delete_raffle_tickets(interaction.user.nick.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error clearing ticket storage: {e}')
@@ -780,7 +780,7 @@ Points from minigames & bossing: {activity_points:,}"""
         logging.info(f'Handling /raffletickets on behalf of {interaction.user.nick}')
 
         try:
-            member = self._storage_client.read_member(interaction.user.nick)
+            member = self._storage_client.read_member(interaction.user.nick.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member from storage: {e}')
@@ -840,7 +840,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         # First, read member to get Discord ID & ingot count
         try:
-            member = self._storage_client.read_member(caller.nick)
+            member = self._storage_client.read_member(caller.nick.lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member from storage: {e}')
@@ -863,7 +863,7 @@ Points from minigames & bossing: {activity_points:,}"""
         # We got this for, do the transactions
         member.ingots -= cost
         try:
-            self._storage_client.update_members([member], caller.nick, note='Bought raffle tickets')
+            self._storage_client.update_members([member], caller.nick.lower(), note='Bought raffle tickets')
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error updating member ingot count: {e}')
