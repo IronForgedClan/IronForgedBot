@@ -6,7 +6,7 @@ from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 import logging
 from pytz import timezone
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 
@@ -14,6 +14,8 @@ SHEETS_SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # Skip header in read.
 SHEET_RANGE = 'ClanIngots!A2:B'
 SHEET_RANGE_WITH_DISCORD_IDS = 'ClanIngots!A2:C'
+RAFFLE_RANGE = 'ClanRaffle!A2'
+RAFFLE_TICKETS_RANGE = 'ClanRaffleTickets!A2:B'
 CHANGELOG_RANGE = 'ChangeLog!A2:F'
 
 
@@ -190,6 +192,182 @@ class SheetsStorage(metaclass=IngotsStorage):
             rows.append(['', '', ''])
         write_range = f'ClanIngots!A2:C{2 + len(existing)}'
         body = {'values': rows}
+
+        try:
+            _ = self._sheets_client.spreadsheets().values().update(
+                spreadsheetId=self._sheet_id, range=write_range,
+                valueInputOption="RAW", body=body).execute()
+        except HttpError as e:
+            raise StorageError(
+                f'Encountered error writing to sheets: {e}')
+
+        try:
+            self._log_change(changes)
+        except HttpError as e:
+            # Just swallow the error; the action is done & captured in version
+            # history at least.
+            pass
+
+    def read_raffle(self) -> bool:
+        """Reads if a raffle is currently ongoing."""
+        result = {}
+        try:
+            result = self._sheets_client.spreadsheets().values().get(
+                spreadsheetId=self._sheet_id,
+                range=RAFFLE_RANGE).execute()
+        except HttpError as e:
+            raise StorageError(
+                f'Encountered error reading ClanRaffle from sheets: {e}')
+
+        values = result.get('values', [])
+        if len(values) < 1:
+            return False
+        if len(values[0]) < 1:
+            return False
+        if values[0][0] != 'True':
+            return False
+        return True
+
+    def start_raffle(self, attribution: str) -> None:
+        """Starts a raffle, enabling purchase of raffle tickets."""
+        tz = timezone('EST')
+        dt = self._clock.now(tz)
+        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+
+        if self.read_raffle():
+            raise StorageError('There is already a raffle ongoing')
+
+        body = {'values': [['True']]}
+
+        try:
+            _ = self._sheets_client.spreadsheets().values().update(
+                spreadsheetId=self._sheet_id, range=RAFFLE_RANGE,
+                valueInputOption="RAW", body=body).execute()
+        except HttpError as e:
+            raise StorageError(
+                f'Encountered error writing to sheets: {e}')
+
+        changes = [['', modification_timestamp, 'False', 'True', attribution, 'Started Raffle']]
+
+        try:
+            self._log_change(changes)
+        except HttpError as e:
+            # Just swallow the error; the action is done & captured in version
+            # history at least.
+            pass
+
+    def end_raffle(self, attribution: str) -> None:
+        """Marks a raffle as over, disallowing purchase of tickets."""
+        tz = timezone('EST')
+        dt = self._clock.now(tz)
+        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+
+        if not self.read_raffle():
+            raise StorageError('There is no currently ongoing raffle')
+
+        body = {'values': [['False']]}
+
+        try:
+            _ = self._sheets_client.spreadsheets().values().update(
+                spreadsheetId=self._sheet_id, range=RAFFLE_RANGE,
+                valueInputOption="RAW", body=body).execute()
+        except HttpError as e:
+            raise StorageError(
+                f'Encountered error writing to sheets: {e}')
+
+        changes = [['', modification_timestamp, 'True', 'False', attribution, 'Ended Raffle']]
+
+        try:
+            self._log_change(changes)
+        except HttpError as e:
+            # Just swallow the error; the action is done & captured in version
+            # history at least.
+            pass
+
+    def read_raffle_tickets(self) -> Dict[int, int]:
+        """Reads number of tickets a user has for the current raffle."""
+        result = {}
+        try:
+            result = self._sheets_client.spreadsheets().values().get(
+                spreadsheetId=self._sheet_id,
+                range=RAFFLE_TICKETS_RANGE).execute()
+        except HttpError as e:
+            raise StorageError(
+                f'Encountered error reading ClanIngots from sheets: {e}')
+
+        # Unlike the ingots table, this is expected to get emptied.
+        # So we have to account for an empty response.
+        values = result.get('values', [])
+        tickets = {}
+        for value in values:
+            if len(value) >= 2:
+                if value[0] == '':
+                    continue
+                if value[1] == '':
+                    value[1] = 0
+                tickets[int(value[0])] = int(value[1])
+
+        return tickets
+
+    def add_raffle_tickets(self, member_id: int, tickets: int) -> None:
+        """Add tickets to a given member."""
+        tz = timezone('EST')
+        dt = self._clock.now(tz)
+        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+        changes = []
+
+        # If user is in storage, add tickets. Otherwise, add them to storage.
+        new_count = tickets
+        existing_count = 0
+        current_tickets = self.read_raffle_tickets()
+        for id, current_count in current_tickets.items():
+            if id == member_id:
+                existing_count = current_count
+                new_count = current_count + tickets
+
+        current_tickets[member_id] = new_count
+        changes.append([member_id, modification_timestamp, existing_count, new_count, member_id, 'Bought raffle tickets'])
+
+        # Convert to list for write & sort for stability.
+        values = []
+        for id, current_count in current_tickets.items():
+            values.append([str(id), str(current_count)])
+
+        values.sort(key=lambda x: x[0])
+
+        write_range = f'ClanRaffleTickets!A2:B{2 + len(values)}'
+        body = {'values': values}
+
+        try:
+            _ = self._sheets_client.spreadsheets().values().update(
+                spreadsheetId=self._sheet_id, range=write_range,
+                valueInputOption="RAW", body=body).execute()
+        except HttpError as e:
+            raise StorageError(
+                f'Encountered error writing to sheets: {e}')
+
+        try:
+            self._log_change(changes)
+        except HttpError as e:
+            # Just swallow the error; the action is done & captured in version
+            # history at least.
+            pass
+
+
+    def delete_raffle_tickets(self, attribution: str) -> None:
+        """Deletes all current raffle tickets. Called once when ending a raffle."""
+        tz = timezone('EST')
+        dt = self._clock.now(tz)
+        modification_timestamp = dt.strftime('%m/%d/%Y, %H:%M:%S')
+        changes = [['', modification_timestamp, '', '', attribution, 'Cleared all raffle tickets']]
+
+        values = []
+        current_tickets = self.read_raffle_tickets()
+        for _, _ in current_tickets.items():
+            values.append(['', ''])
+
+        write_range = f'ClanRaffleTickets!A2:B{2 + len(values)}'
+        body = {'values': values}
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
