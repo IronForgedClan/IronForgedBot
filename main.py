@@ -56,6 +56,18 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
     return True
 
 
+def normalize_nickname(nick: str) -> str:
+    """Strips Discord nickname down to plaintext."""
+    if nick.isascii():
+        return nick
+
+    new_nick = []
+    for letter in nick:
+        if letter.isascii():
+            new_nick.append(letter)
+    return ''.join(new_nick)
+
+
 def validate_player_name(player: str) -> bool:
     if len(player) > 12:
         return False
@@ -254,8 +266,6 @@ class IronForgedCommands:
         )
         self._tree.add_command(syncmembers_command)
 
-    # TODO: Add tests for error cases.
-
     async def score(self,
                     interaction: discord.Interaction,
                     player: str):
@@ -270,7 +280,7 @@ class IronForgedCommands:
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /score player:{player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /score player:{player} on behalf of {normalize_nickname(interaction.user.nick)}')
         await interaction.response.defer()
 
         try:
@@ -333,7 +343,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /breakdown player:{player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /breakdown player:{player} on behalf of {normalize_nickname(interaction.user.nick)}')
         await interaction.response.defer()
 
         try:
@@ -420,7 +430,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /ingots player:{player} on behalf of {interaction.user.nick}')
+        logging.info(f'Handling /ingots player:{player} on behalf of {normalize_nickname(interaction.user.nick)}')
         await interaction.response.defer()
 
         # Strip whitespaces from mis-typing.
@@ -476,7 +486,13 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /addingots player:{player} ingots:{ingots} reason:{reason} on behalf of {interaction.user.nick}')
+        if caller.nick is None:
+            await interaction.response.send_message(
+                f'FAILED_PRECONDITION: caller does not have a nickname set.')
+            return
+
+        caller = normalize_nickname(caller.nick).lower()
+        logging.info(f'Handling /addingots player:{player} ingots:{ingots} reason:{reason} on behalf of {caller}')
         await interaction.response.defer()
 
         player = player.strip()
@@ -495,7 +511,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member.ingots += ingots
 
         try:
-            self._storage_client.update_members([member], caller.nick.lower(), note=reason)
+            self._storage_client.update_members([member], caller, note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -535,7 +551,13 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {caller.name} is not in a leadership role.')
             return
 
-        logging.info(f'Handling /addingotsbulk players:{players} ingots:{ingots} reason:{reason} on behalf of {caller.nick}')
+        if caller.nick is None:
+            await interaction.response.send_message(
+                f'FAILED_PRECONDITION: caller does not have a nickname set.')
+            return
+
+        caller = normalize_nickname(caller.nick).lower()
+        logging.info(f'Handling /addingotsbulk players:{players} ingots:{ingots} reason:{reason} on behalf of {caller}')
         await interaction.response.defer()
 
         player_names = players.split(',')
@@ -568,7 +590,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 output.append(f'{player} not found in storage.')
 
         try:
-            self._storage_client.update_members(members_to_update, caller.nick.lower(), note=reason)
+            self._storage_client.update_members(members_to_update, caller, note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -576,7 +598,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         # Our output can be larger than the interaction followup max.
         # Send it in a file to accomodate this.
-        path = os.path.join(self._tmp_dir_path, f'addingotsbulk_{caller.nick}.txt')
+        path = os.path.join(self._tmp_dir_path, f'addingotsbulk_{caller}.txt')
         with open(path, 'w') as f:
             f.write('\n'.join(output))
 
@@ -617,7 +639,13 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
             return
 
-        logging.info(f'Handling /updateingots player:{player} ingots:{ingots} reason:{reason} on behalf of {interaction.user.nick}')
+        if caller.nick is None:
+            await interaction.response.send_message(
+                f'FAILED_PRECONDITION: caller does not have a nickname set.')
+            return
+
+        caller = normalize_nickname(caller.nick).lower()
+        logging.info(f'Handling /updateingots player:{player} ingots:{ingots} reason:{reason} on behalf of {caller}')
 
         await interaction.response.defer()
 
@@ -637,7 +665,7 @@ Points from minigames & bossing: {activity_points:,}"""
         member.ingots = ingots
 
         try:
-            self._storage_client.update_members([member], caller.nick.lower(), note=reason)
+            self._storage_client.update_members([member], caller, note=reason)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error writing ingots: {e}')
@@ -661,7 +689,12 @@ Points from minigames & bossing: {activity_points:,}"""
                 purchasing, and 'choose_winner' will choose a winner & display
                 their winnings (alongside clearing storage for the next raffle).
         """
-        logging.info(f'Handling /raffleadmin {subcommand} on behalf of {interaction.user.nick}')
+        if interaction.user.nick is None:
+            await interaction.response.send_message(
+                f'FAILED_PRECONDITION: caller does not have a nickname set.')
+            return
+
+        logging.info(f'Handling /raffleadmin {subcommand} on behalf of {normalize_nickname(interaction.user.nick).lower()}')
         await interaction.response.defer()
 
         # interaction.user can be a User or Member, but we can only
@@ -692,7 +725,7 @@ Points from minigames & bossing: {activity_points:,}"""
         Expects provided interaction to have already deferred the response.
         """
         try:
-            self._storage_client.start_raffle(interaction.user.nick.lower())
+            self._storage_client.start_raffle(normalize_nickname(interaction.user.nick).lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error starting raffle: {e}')
@@ -707,7 +740,7 @@ Points from minigames & bossing: {activity_points:,}"""
         Expects provided interaction to have already deferred the response.
         """
         try:
-            self._storage_client.end_raffle(interaction.user.nick.lower())
+            self._storage_client.end_raffle(normalize_nickname(interaction.user.nick).lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error ending raffle: {e}')
@@ -754,7 +787,7 @@ Points from minigames & bossing: {activity_points:,}"""
             f'{winner} has won {winnings} ingots out of {len(entries)} entries!')
 
         try:
-            self._storage_client.delete_raffle_tickets(interaction.user.nick.lower())
+            self._storage_client.delete_raffle_tickets(normalize_nickname(interaction.user.nick).lower())
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error clearing ticket storage: {e}')
@@ -777,10 +810,11 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: {caller.name} does not have a nickname set.')
             return
 
-        logging.info(f'Handling /raffletickets on behalf of {interaction.user.nick}')
+        caller = normalize_nickname(caller.nick).lower()
+        logging.info(f'Handling /raffletickets on behalf of {caller}')
 
         try:
-            member = self._storage_client.read_member(interaction.user.nick.lower())
+            member = self._storage_client.read_member(caller)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member from storage: {e}')
@@ -788,7 +822,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         if member is None:
             await interaction.followup.send(
-                f'{interaction.user.nick} not found in storage, please reach out to leadership.')
+                f'{caller} not found in storage, please reach out to leadership.')
             return
 
         try:
@@ -805,7 +839,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 break
 
         await interaction.followup.send(
-            f'{interaction.user.nick} has {count} tickets!')
+            f'{caller} has {count} tickets!')
 
     async def buyraffletickets(self, interaction: discord.Interaction, tickets: int):
         """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
@@ -824,7 +858,8 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'FAILED_PRECONDITION: {caller.name} does not have a nickname set.')
             return
 
-        logging.info(f'Handling /buyraffletickets {tickets} on behalf of {interaction.user.nick}')
+        caller = normalize_nickname(caller.nick).lower()
+        logging.info(f'Handling /buyraffletickets {tickets} on behalf of {caller}')
 
         try:
             ongoing_raffle = self._storage_client.read_raffle()
@@ -840,7 +875,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         # First, read member to get Discord ID & ingot count
         try:
-            member = self._storage_client.read_member(caller.nick.lower())
+            member = self._storage_client.read_member(caller)
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error reading member from storage: {e}')
@@ -848,7 +883,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         if member is None:
             await interaction.followup.send(
-                f'{caller.nick} not found in storage, please reach out to leadership.')
+                f'{caller} not found in storage, please reach out to leadership.')
             return
 
         # Now we have the Discord ID & current ingot count
@@ -856,14 +891,14 @@ Points from minigames & bossing: {activity_points:,}"""
         cost = tickets * 5000
         if cost > member.ingots:
             await interaction.followup.send(
-                f'{caller.nick} does not have enough ingots for {tickets} tickets.\n' +
+                f'{caller} does not have enough ingots for {tickets} tickets.\n' +
                 f'Cost: {cost}, current ingots: {member.ingots}')
             return
 
         # We got this for, do the transactions
         member.ingots -= cost
         try:
-            self._storage_client.update_members([member], caller.nick.lower(), note='Bought raffle tickets')
+            self._storage_client.update_members([member], caller, note='Bought raffle tickets')
         except StorageError as e:
             await interaction.followup.send(
                 f'Encountered error updating member ingot count: {e}')
@@ -877,7 +912,7 @@ Points from minigames & bossing: {activity_points:,}"""
             return
 
         await interaction.followup.send(
-            f'{caller.nick} successfully bought {tickets} tickets for {cost} ingots!')
+            f'{caller} successfully bought {tickets} tickets for {cost} ingots!')
 
     async def syncmembers(self, interaction: discord.Interaction):
         output = ''
@@ -892,7 +927,13 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'PERMISSION_DENIED: {mutator.name} is not in a leadership role.')
             return
 
-        logging.info(f'Handling /syncmembers on behalf of {interaction.user.nick}')
+        if mutator.nick is None:
+            await interaction.response.send_message(
+                f'FAILED_PRECONDITION: caller does not have a nickname set.')
+            return
+
+        caller = normalize_nickname(mutator.nick).lower()
+        logging.info(f'Handling /syncmembers on behalf of {caller}')
 
         await interaction.response.defer()
         # Perform a cross join between current Discord members and
@@ -929,8 +970,8 @@ Points from minigames & bossing: {activity_points:,}"""
                     output += f'skipped user {member.name} because they don\'t have a nickname in Discord\n'
                     continue
                 new_members.append(Member(
-                    id=int(member.id), runescape_name=member.nick.lower(), ingots=0))
-                output += f'added user {member.nick} because they joined\n'
+                    id=int(member.id), runescape_name=normalize_nickname(member.nick).lower(), ingots=0))
+                output += f'added user {normalize_nickname(member.nick).lower()} because they joined\n'
 
         try:
             self._storage_client.add_members(
@@ -969,10 +1010,10 @@ Points from minigames & bossing: {activity_points:,}"""
                                 runescape_name=member.name.lower(),
                                 ingots=existing_member.ingots))
                     else:
-                        if member.nick.lower() != existing_member.runescape_name:
+                        if normalize_nickname(member.nick).lower() != existing_member.runescape_name:
                             changed_members.append(Member(
                                 id=existing_member.id,
-                                runescape_name=member.nick.lower(),
+                                runescape_name=normalize_nickname(member.nick).lower(),
                                 ingots=existing_member.ingots))
 
         for changed_member in changed_members:
@@ -987,7 +1028,7 @@ Points from minigames & bossing: {activity_points:,}"""
                 f'Encountered error updating changed members: {e}')
             return
 
-        path = os.path.join(self._tmp_dir_path, f'syncmembers_{mutator.nick}.txt')
+        path = os.path.join(self._tmp_dir_path, f'syncmembers_{caller}.txt')
         with open(path, 'w') as f:
             f.write(output)
 
