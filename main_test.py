@@ -1,12 +1,11 @@
 import asyncio
-from datetime import datetime
 import unittest
-from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
-from parameterized import parameterized
-import requests
-
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import discord
+import requests
+from parameterized import parameterized
+
 import main
 from ironforgedbot.storage.types import Member
 
@@ -99,6 +98,7 @@ def hiscores_raw_response():
 -1,-1
 -1,-1
 -1,-1
+1234,160
 -1,-1
 -1,-1
 60667,190
@@ -180,9 +180,9 @@ class TestIronForgedBot(unittest.TestCase):
                 self.mock_interaction, 'johnnycache'))
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            """johnnycache has 1,626
+            """johnnycache has 1,628
 Points from skills: 1,256
-Points from minigames & bossing: 370""")
+Points from minigames & bossing: 372""")
 
     def test_breakdown(self):
         """Test that full score is given to user."""
@@ -224,7 +224,7 @@ Farming: 39
 Runecraft: 76
 Hunter: 27
 Construction: 72
-Total Skill Points: 1,256 (77.24% of total)
+Total Skill Points: 1,256 (77.15% of total)
 
 ---Points from Minigames & Bossing---
 Clue Scrolls (beginner): 38
@@ -239,11 +239,12 @@ Bryophyta: 37
 Dagannoth Rex: 2
 Hespori: 22
 Obor: 2
+Scurrius: 2
 Tempoross: 27
 Wintertodt: 40
-Total Minigame & Bossing Points: 370 (22.76% of total)
+Total Minigame & Bossing Points: 372 (22.85% of total)
 
-Total Points: 1,626
+Total Points: 1,628
 """)
 
     def test_ingots(self):
