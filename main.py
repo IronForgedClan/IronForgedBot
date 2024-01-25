@@ -1117,6 +1117,10 @@ if __name__ == '__main__':
     if not validate_initial_config(init_config):
         sys.exit(1)
 
+    # Create temp directory if it doesn't already exist
+    if not os.path.exists(args.tmp_dir):
+        os.makedirs(args.tmp_dir)
+
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
     intents = discord.Intents.default()
     intents.members = True
