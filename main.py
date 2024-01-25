@@ -58,6 +58,10 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
 
 def normalize_nickname(nick: str) -> str:
     """Strips Discord nickname down to plaintext."""
+    if nick is None:
+        logging.error('Discord member does not have a nickname set')
+        return "Unknown"
+
     if nick.isascii():
         return nick
 
