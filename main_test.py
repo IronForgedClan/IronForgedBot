@@ -18,7 +18,7 @@ def hiscores_raw_response():
 
     Equates to scores:
         skills: 1256
-        activities: 370
+        activities: 372
     """
     scores = """380984,1903,76082901
 883995,80,2030525
@@ -98,7 +98,7 @@ def hiscores_raw_response():
 -1,-1
 -1,-1
 -1,-1
-1234,160
+1234,120
 -1,-1
 -1,-1
 60667,190

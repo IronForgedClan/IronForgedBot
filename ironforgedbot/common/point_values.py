@@ -222,7 +222,7 @@ def activityPointValues():
     "Phantom Muspah": 8,
     "Sarachnis": 40,
     "Scorpia": 15,
-    "Scurrius": 80,
+    "Scurrius": 60,
     "Skotizo": 0.6,
     "Spindel": 20,
     "Tempoross": 7,
