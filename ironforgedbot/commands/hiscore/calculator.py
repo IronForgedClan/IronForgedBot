@@ -41,6 +41,9 @@ def _get_skills_score(score_data) -> Dict[str, int]:
         if skill_level < 1:
             continue
 
+        if skill_constant not in SKILL_POINTS_REGULAR or skill_constant not in SKILL_POINTS_PAST_99:
+            continue
+
         if skill_level < 99:
             points = int(experience / SKILL_POINTS_REGULAR[skill_constant])
         else:
@@ -67,6 +70,9 @@ def _get_activities_score(score_data) -> Dict[str, int]:
             continue
 
         activity_constant = ACTIVITIES(activity["name"])
+        if activity_constant not in ACTIVITY_POINTS:
+            continue
+
         points = int(kc / ACTIVITY_POINTS[activity_constant])
         if 0 == points:
             continue
