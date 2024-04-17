@@ -1,23 +1,17 @@
-from typing import Dict, List, Union
-
 import argparse
-from datetime import datetime
 import logging
 import os
 import random
 import sys
-from pytz import timezone
+from typing import Dict, List
 
 import discord
-from discord import app_commands
 import requests
-from google.oauth2 import service_account
-from googleapiclient.discovery import build, Resource
-from googleapiclient.errors import HttpError
-from ironforgedbot.common import point_values
-from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
-from ironforgedbot.storage.sheets import SheetsStorage
+from discord import app_commands
 
+from ironforgedbot.common import point_values
+from ironforgedbot.storage.sheets import SheetsStorage
+from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 
 # Don't care about line length for URLs & constants.
 # pylint: disable=line-too-long
@@ -26,7 +20,7 @@ LEVEL_99_EXPERIENCE = 13034431
 # Length of expected response from Runescape API. Since it returns a list,
 # we can only have confidence in computed scores when response length
 # matches those in the common.point_values structures.
-HISCORES_EXPECTED_LENGTH = 99
+HISCORES_EXPECTED_LENGTH = 100
 # pylint: enable=line-too-long
 
 
