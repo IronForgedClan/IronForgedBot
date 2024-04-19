@@ -3,25 +3,14 @@ import logging
 import os
 import random
 import sys
-from typing import Dict, List
+from typing import Dict
 
 import discord
-import requests
 from discord import app_commands
 
-from ironforgedbot.common import point_values
+from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
-
-# Don't care about line length for URLs & constants.
-# pylint: disable=line-too-long
-HISCORES_PLAYER_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player={player}'
-LEVEL_99_EXPERIENCE = 13034431
-# Length of expected response from Runescape API. Since it returns a list,
-# we can only have confidence in computed scores when response length
-# matches those in the common.point_values structures.
-HISCORES_EXPECTED_LENGTH = 100
-# pylint: enable=line-too-long
 
 
 def read_dotenv(path: str) -> Dict[str, str]:
@@ -278,30 +267,15 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
-                                timeout=15)
-            if resp.status_code != 200:
-                await interaction.followup.send(
-                    f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
-                return
-        except requests.exceptions.RequestException as e:
-            await interaction.followup.send(
-                f'Encountered an error calling Runescape API: {e}')
+            points_by_skill, points_by_activity = score_total(player)
+        except RuntimeError as e:
+            await interaction.followup.send(str(e))
             return
 
-        # Omit the first line of the response, which is total level & xp.
-        lines = resp.text.split('\n')[1:]
-        if len(lines) != HISCORES_EXPECTED_LENGTH:
-            await interaction.followup.send(
-                f'Runescape API response is not expected length; the bot needs to be updated.')
-            return
-
-        points_by_skill = skill_score(lines)
         skill_points = 0
         for _, v in points_by_skill.items():
             skill_points += v
 
-        points_by_activity = activity_score(lines)
         activity_points = 0
         for _, v in points_by_activity.items():
             activity_points += v
@@ -341,30 +315,16 @@ Points from minigames & bossing: {activity_points:,}"""
         await interaction.response.defer()
 
         try:
-            resp = requests.get(HISCORES_PLAYER_URL.format(player=player),
-                                timeout=15)
-            if resp.status_code != 200:
-                await interaction.followup.send(
-                    f'Looking up {player} on hiscores failed. Got status code {resp.status_code}')
-                return
-        except requests.exceptions.RequestException as e:
-            await interaction.followup.send(
-                f'Encountered an error calling Runescape API: {e}')
+            points_by_skill, points_by_activity = score_total(player)
+        except RuntimeError as e:
+            await interaction.followup.send(str(e))
             return
 
-        # Omit the first line of the response, which is total level & xp.
-        lines = resp.text.split('\n')[1:]
-        if len(lines) != HISCORES_EXPECTED_LENGTH:
-            await interaction.followup.send(
-                f'Runescape API response is not expected length; the bot needs to be updated.')
-            return
 
-        points_by_skill = skill_score(lines)
         skill_points = 0
         for _, v in points_by_skill.items():
             skill_points += v
 
-        points_by_activity = activity_score(lines)
         activity_points = 0
         for _, v in points_by_activity.items():
             activity_points += v
@@ -372,15 +332,17 @@ Points from minigames & bossing: {activity_points:,}"""
         total_points = skill_points + activity_points
 
         output = '---Points from Skills---\n'
-        for i in point_values.skills():
-            if points_by_skill.get(i, 0) > 0:
-                output += f'{i}: {points_by_skill.get(i):,}\n'
+
+        for k, v in points_by_skill.items():
+            output += f'{str(k)}: {v:,}\n'
+
         output += (f'Total Skill Points: {skill_points:,} ' +
             f'({round((skill_points / total_points) * 100, 2)}% of total)\n\n')
         output += '---Points from Minigames & Bossing---\n'
-        for i in point_values.activities():
-            if points_by_activity.get(i, 0) > 0:
-                output += f'{i}: {points_by_activity.get(i):,}\n'
+
+        for k, v in points_by_activity.items():
+            output += f'{str(k)}: {v:,}\n'
+
         output += (
             f'Total Minigame & Bossing Points: {activity_points} ' +
             f'({round((activity_points / total_points) * 100, 2)}% of total)\n\n')
@@ -1029,49 +991,6 @@ Points from minigames & bossing: {activity_points:,}"""
             await interaction.followup.send(
                 'Successfully synced ingots storage with current members!',
                 file=discord_file)
-
-
-def skill_score(hiscores: List[str]) -> Dict[str, int]:
-    """Compute score from skills portion of hiscores response."""
-    score = {}
-    skills = point_values.skills()
-    for i, _ in enumerate(skills):
-        line = hiscores[i].split(',')
-        skill = skills[i]
-        experience = int(line[2])
-        points = 0
-        # API response returns -1 if user is not on hiscores.
-        if experience >= 0:
-            if experience < LEVEL_99_EXPERIENCE:
-                points = int(
-                    experience / point_values.pre99SkillValue().get(
-                        skill, 0))
-            else:
-                points = int(
-                    LEVEL_99_EXPERIENCE /
-                    point_values.pre99SkillValue().get(skill, 0)) + int(
-                    (experience - LEVEL_99_EXPERIENCE) /
-                     point_values.post99SkillValue().get(skill, 0))
-        score[skill] = points
-
-    return score
-
-
-def activity_score(hiscores: List[str]) -> Dict[str, int]:
-    """Compute score from activities portion of hiscores response."""
-    score = {}
-    skills = point_values.skills()
-    activities = point_values.activities()
-    for i, _ in enumerate(activities):
-        line = hiscores[len(skills) + i]
-        count = int(line.split(',')[1])
-        activity = activities[i]
-        if count > 0 and point_values.activityPointValues().get(
-                activity, 0) > 0:
-            score[activity] = int(
-                count / point_values.activityPointValues().get(activity))
-
-    return score
 
 
 if __name__ == '__main__':
