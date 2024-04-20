@@ -41,6 +41,10 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
 
 def normalize_nickname(nick: str) -> str:
     """Strips Discord nickname down to plaintext."""
+    if nick is None:
+        logging.error('Discord member does not have a nickname set')
+        return "Unknown"
+
     if nick.isascii():
         return nick
 
@@ -1025,6 +1029,10 @@ if __name__ == '__main__':
     init_config = read_dotenv(args.dotenv_path)
     if not validate_initial_config(init_config):
         sys.exit(1)
+
+    # Create temp directory if it doesn't already exist
+    if not os.path.exists(args.tmp_dir):
+        os.makedirs(args.tmp_dir)
 
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
     intents = discord.Intents.default()
