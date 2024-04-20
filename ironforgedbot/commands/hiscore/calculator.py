@@ -16,6 +16,19 @@ def score_total(player_name: str):
     return skills_score, activities_score
 
 
+def points_total(player_name: str) -> int:
+    skills_score, activities_score = score_total(player_name)
+    total_points = 0
+
+    for _, v in skills_score.items():
+        total_points += v
+
+    for _, v in activities_score.items():
+        total_points += v
+
+    return total_points
+
+
 def _fetch_data(player_name: str):
     try:
         resp = requests.get(HISCORES_PLAYER_URL.format(player=player_name), timeout=15)
