@@ -3,7 +3,6 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import discord
-import requests
 from parameterized import parameterized
 
 import main
