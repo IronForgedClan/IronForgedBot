@@ -6,7 +6,7 @@ USER bot
 WORKDIR ~
 
 COPY --chown=bot:bot requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt --no-warn-script-location
 
 COPY --chown=bot:bot . .
 
