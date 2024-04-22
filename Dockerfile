@@ -1,11 +1,13 @@
 FROM python:3-alpine
 
-RUN mkdir -p /usr/src/bot
-WORKDIR /usr/src/bot
+RUN adduser -D bot
+USER bot
 
-COPY requirements.txt .
+WORKDIR ~
+
+COPY --chown=bot:bot requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY . .
+COPY --chown=bot:bot . .
 
 CMD [ "python3", "main.py" ]
