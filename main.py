@@ -13,9 +13,9 @@ from discord import app_commands
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.commands.hiscore.calculator import score_total
-from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.helpers import normalize_discord_string, calculate_percentage
-from ironforgedbot.common.ranks import get_rank_from_points
+from ironforgedbot.common.responses import build_error_message_embed, build_response_embed
+from ironforgedbot.common.ranks import get_rank_from_points, get_rank_color_from_points
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
@@ -272,27 +272,46 @@ class IronForgedCommands:
             return
 
         skill_points = 0
+        
         for _, v in points_by_skill.items():
             skill_points += v
-
         activity_points = 0
         for _, v in points_by_activity.items():
             activity_points += v
 
         points = skill_points + activity_points
 
-        emoji_name = get_rank_from_points(points)
+        rank_name = get_rank_from_points(points)
         icon = ''
         for emoji in self._discord_client.get_guild(
                 self._discord_client.guild.id).emojis:
-            if emoji.name == emoji_name:
+            if emoji.name == rank_name:
                 icon = emoji
                 break
-        content = f"""{player} has {points:,}{icon}
-Points from skills: {skill_points:,}
-Points from minigames & bossing: {activity_points:,}"""
 
-        await interaction.followup.send(content)
+        await interaction.followup.send(embed=build_error_message_embed("oh fuck..."))
+
+        embed = build_response_embed(
+            f"{icon} {player}",
+            ("Iron Forged member ranking system. Earn XP\n"
+            "or engage in activities in-game to climb the ranks."),
+            get_rank_color_from_points(points)
+        )
+        embed.add_field(
+            name="Skilling Points",
+            value=f"{skill_points:,} ({calculate_percentage(skill_points, points)}%)",
+            inline=True
+        )
+        embed.add_field(
+            name="Activity Points",
+            value=f"{activity_points:,} ({calculate_percentage(activity_points, points)}%)",
+            inline=True
+        )
+        embed.add_field(name="", value="", inline=False)
+        embed.add_field(name="Total Points", value=f"{points:,}", inline=True)
+        embed.add_field(name="Rank", value=f"{icon} {rank_name}", inline=True)
+
+        await interaction.followup.send(embed=embed)
 
     async def breakdown(
             self,

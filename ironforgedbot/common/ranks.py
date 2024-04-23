@@ -1,5 +1,5 @@
 from strenum import StrEnum
-
+from discord import Color
 
 class RANKS(StrEnum):
     MYTH = "Myth"
@@ -19,7 +19,7 @@ class RANKS(StrEnum):
         return list(map(lambda c: c.value, cls))
 
 
-def get_rank_from_points(points: int):
+def get_rank_from_points(points: int) -> str:
     if points >= 13000:
         return RANKS.MYTH
     if points >= 9000:
@@ -33,3 +33,19 @@ def get_rank_from_points(points: int):
     if points >= 700:
         return RANKS.MITHRIL
     return RANKS.IRON
+
+def get_rank_color_from_points(points: int) -> Color:
+    if points >= 13000:
+        return Color.from_str("#0ecea9")
+    if points >= 9000:
+        return Color.from_str("#cecece")
+    if points >= 5000:
+        return Color.from_str("#a51c1c")
+    if points >= 3000:
+        return Color.from_str("#11b9f8")
+    if points >= 1500:
+        return Color.from_str("#25964f")
+    if points >= 700:
+        return Color.from_str("#7f54fc")
+    return Color.from_str("#707070")
+

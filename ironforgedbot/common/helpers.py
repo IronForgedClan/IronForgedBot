@@ -12,6 +12,6 @@ def normalize_discord_string(nick: str) -> str:
             new_nick.append(letter)
     return ''.join(new_nick)
 
-def calculate_percentage(part, whole):
+def calculate_percentage(part, whole) -> int:
     return round(100 * float(part)/float(whole))
 
