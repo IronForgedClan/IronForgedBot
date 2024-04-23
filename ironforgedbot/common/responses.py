@@ -1,12 +1,8 @@
 import discord
 from datetime import datetime
 
-def build_error_message_embed(message:str) -> discord.Embed:
-    embed = discord.Embed(
-        description=message,
-        color=discord.Color.red()
-    )
-    return embed
+def build_error_message_string(message:str) -> str:
+    return f":warning:\n{message}"
 
 def build_response_embed(title:str, description:str, color: discord.Color) -> discord.Embed:
     embed = discord.Embed(

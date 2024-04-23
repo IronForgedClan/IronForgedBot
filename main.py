@@ -14,7 +14,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.common.helpers import normalize_discord_string, calculate_percentage
-from ironforgedbot.common.responses import build_error_message_embed, build_response_embed
+from ironforgedbot.common.responses import build_error_message_string, build_response_embed
 from ironforgedbot.common.ranks import get_rank_from_points, get_rank_color_from_points
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
@@ -259,7 +259,10 @@ class IronForgedCommands:
         """
         if not validate_player_name(player):
             await interaction.response.send_message(
-                    f'FAILED_PRECONDITION: RSNs can only be 12 characters long.')
+                build_error_message_string(
+                    "RSNs can not be longer than 12 characters."
+                )
+            )
             return
 
         logging.info(f'Handling /score player:{player} on behalf of {normalize_discord_string(interaction.user.nick)}')
@@ -268,7 +271,9 @@ class IronForgedCommands:
         try:
             points_by_skill, points_by_activity = score_total(player)
         except RuntimeError as e:
-            await interaction.followup.send(str(e))
+            await interaction.followup.send(
+                build_error_message_string(str(e))
+            )
             return
 
         skill_points = 0
@@ -280,7 +285,6 @@ class IronForgedCommands:
             activity_points += v
 
         points = skill_points + activity_points
-
         rank_name = get_rank_from_points(points)
         color = get_rank_color_from_points(points)
         
