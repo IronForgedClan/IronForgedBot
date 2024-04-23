@@ -11,3 +11,7 @@ def normalize_discord_string(nick: str) -> str:
         if letter.isascii():
             new_nick.append(letter)
     return ''.join(new_nick)
+
+def calculate_percentage(part, whole):
+    return round(100 * float(part)/float(whole))
+

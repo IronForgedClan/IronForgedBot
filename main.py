@@ -14,6 +14,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.helpers import normalize_discord_string, calculate_percentage
 from ironforgedbot.common.ranks import get_rank_from_points
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
@@ -334,7 +335,7 @@ Points from minigames & bossing: {activity_points:,}"""
             output += f'{str(k)}: {v:,}\n'
 
         output += (f'Total Skill Points: {skill_points:,} ' +
-                   f'({round((skill_points / total_points) * 100, 2)}% of total)\n\n')
+                   f'({calculate_percentage(skill_points, total_points)}% of total)\n\n')
         output += '---Points from Minigames & Bossing---\n'
 
         for k, v in points_by_activity.items():
@@ -342,7 +343,7 @@ Points from minigames & bossing: {activity_points:,}"""
 
         output += (
                 f'Total Minigame & Bossing Points: {activity_points} ' +
-                f'({round((activity_points / total_points) * 100, 2)}% of total)\n\n')
+                f'({calculate_percentage(activity_points, total_points)}% of total)\n\n')
         output += f'Total Points: {total_points:,}\n'
 
         # Now we have all of the data that we need for a full point breakdown.
