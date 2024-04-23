@@ -265,7 +265,10 @@ class IronForgedCommands:
             )
             return
 
-        logging.info(f'Handling /score player:{player} on behalf of {normalize_discord_string(interaction.user.nick)}')
+        logging.info(
+            (f"Handling '/score player:{player}' on behalf of "
+            f"{normalize_discord_string(interaction.user.display_name)}")
+        )
         await interaction.response.defer()
 
         try:
