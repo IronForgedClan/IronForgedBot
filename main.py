@@ -272,9 +272,9 @@ class IronForgedCommands:
             return
 
         skill_points = 0
-        
         for _, v in points_by_skill.items():
             skill_points += v
+
         activity_points = 0
         for _, v in points_by_activity.items():
             activity_points += v
@@ -282,23 +282,23 @@ class IronForgedCommands:
         points = skill_points + activity_points
 
         rank_name = get_rank_from_points(points)
-        icon = ''
+        color = get_rank_color_from_points(points)
+        
+        icon = ':question:'
         for emoji in self._discord_client.get_guild(
                 self._discord_client.guild.id).emojis:
             if emoji.name == rank_name:
                 icon = emoji
                 break
 
-        await interaction.followup.send(embed=build_error_message_embed("oh fuck..."))
-
         embed = build_response_embed(
             f"{icon} {player}",
-            ("Iron Forged member ranking system. Earn XP\n"
-            "or engage in activities in-game to climb the ranks."),
-            get_rank_color_from_points(points)
+            ("Iron Forged member ranking system. Earn XP or\n"
+            "engage in activities in-game to climb the ranks."),
+            color
         )
         embed.add_field(
-            name="Skilling Points",
+            name="Skill Points",
             value=f"{skill_points:,} ({calculate_percentage(skill_points, points)}%)",
             inline=True
         )
