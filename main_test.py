@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import unittest
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
@@ -10,6 +11,8 @@ from ironforgedbot.storage.types import Member
 
 
 class TestIronForgedBot(unittest.TestCase):
+    logging.disable(logging.CRITICAL)
+
     @classmethod
     def setUpClass(cls):
         cls.loop = asyncio.get_event_loop()
