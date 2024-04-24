@@ -23,7 +23,7 @@ def calculate_percentage(part, whole) -> int:
     return round(100 * float(part) / float(whole))
 
 
-def find_emoji(list: Sequence[Emoji], target: str) -> Emoji | str:
+def find_emoji(list: Sequence[Emoji], target: str):
     if target in emojiCache:
         return emojiCache[target]
 
