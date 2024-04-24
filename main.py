@@ -298,47 +298,50 @@ class IronForgedCommands:
         for _, v in points_by_activity.items():
             activity_points += v
 
-        points = skill_points + activity_points
-        rank_name = get_rank_from_points(points)
-        color = get_rank_color_from_points(points)
+        points_total = skill_points + activity_points
+        rank_name = get_rank_from_points(points_total)
+        rank_color = get_rank_color_from_points(points_total)
 
-        icon = ":question:"
+        rank_icon = ":question:"
         for emoji in self._discord_client.get_guild(
             self._discord_client.guild.id
         ).emojis:
             if emoji.name == rank_name:
-                icon = emoji
+                rank_icon = emoji
                 break
 
-        next_rank = get_next_rank_from_points(points)
-        next_rank_point_threshold = RANK_POINTS[next_rank.upper()].value
+        next_rank_name = get_next_rank_from_points(points_total)
+        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
         next_rank_icon = ":muscle:"
         for emoji in self._discord_client.get_guild(
             self._discord_client.guild.id
         ).emojis:
-            if emoji.name == next_rank:
+            if emoji.name == next_rank_name:
                 next_rank_icon = emoji
                 break
 
-        embed = build_response_embed(f"{icon} {player}", "", color)
+        embed = build_response_embed(f"{rank_icon} {player}", "", rank_color)
         embed.add_field(
             name="Skill Points",
-            value=f"{skill_points:,} ({calculate_percentage(skill_points, points)}%)",
+            value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
             inline=True,
         )
         embed.add_field(
             name="Activity Points",
-            value=f"{activity_points:,} ({calculate_percentage(activity_points, points)}%)",
+            value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
             inline=True,
         )
         embed.add_field(name="", value="", inline=False)
-        embed.add_field(name="Total Points", value=f"{points:,}", inline=True)
-        embed.add_field(name="Rank", value=f"{icon} {rank_name}", inline=True)
+        embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
+        embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
         if rank_name != RANKS.MYTH.value:
             embed.add_field(name="", value="", inline=False)
             embed.add_field(
                 name="Rank Progress",
-                value=f"{icon} -> {next_rank_icon} {points}/{next_rank_point_threshold} ({calculate_percentage(points, next_rank_point_threshold)}%)",
+                value=(
+                    f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
+                    f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                ),
                 inline=False,
             )
 
