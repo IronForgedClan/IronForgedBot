@@ -31,7 +31,7 @@ class RANK_POINTS(IntEnum):
     IRON = 0
 
 
-def get_rank_from_points(points: int) -> str:
+def get_rank_from_points(points: int) -> RANKS:
     if points >= RANK_POINTS.MYTH:
         return RANKS.MYTH
     if points >= RANK_POINTS.LEGEND:
@@ -47,6 +47,7 @@ def get_rank_from_points(points: int) -> str:
     return RANKS.IRON
 
 
+# TODO: Probably a more elegant way to achieve this using RANK_POINTS enum
 def get_next_rank_from_points(points: int) -> str:
     if points >= RANK_POINTS.MYTH:
         return RANKS.MYTH

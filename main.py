@@ -325,6 +325,8 @@ class IronForgedCommands:
         embed.add_field(name="", value="", inline=False)
         embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
         embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
+       
+        #TODO: Add a nice success message for max players?
         if rank_name != RANKS.MYTH.value:
             embed.add_field(name="", value="", inline=False)
             embed.add_field(
