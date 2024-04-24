@@ -361,8 +361,8 @@ class IronForgedCommands:
             return
 
         logging.info(
-            f"Handling /breakdown player:{player} on behalf of "
-            f"{normalize_discord_string(interaction.user.nick)}"
+            f"Handling '/breakdown player:{player}' on behalf of "
+            f"{normalize_discord_string(interaction.user.display_name)}"
         )
         await interaction.response.defer()
 
@@ -440,7 +440,7 @@ class IronForgedCommands:
             return
 
         logging.info(
-            f"Handling /ingots player:{player} on behalf of {normalize_discord_string(interaction.user.nick)}"
+            f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
         )
         await interaction.response.defer()
 
@@ -495,19 +495,19 @@ class IronForgedCommands:
 
         if not validate_player_name(player):
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: RSNs can only be 12 characters long."
+                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
             )
             return
 
         if caller.nick is None:
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
+                "FAILED_PRECONDITION: caller does not have a nickname set."
             )
             return
 
         caller = normalize_discord_string(caller.nick).lower()
         logging.info(
-            f"Handling /addingots player:{player} ingots:{ingots} reason:{reason} on behalf of {caller}"
+            f"Handling '/addingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
         await interaction.response.defer()
 
@@ -571,13 +571,13 @@ class IronForgedCommands:
 
         if caller.nick is None:
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
+                "FAILED_PRECONDITION: caller does not have a nickname set."
             )
             return
 
         caller = normalize_discord_string(caller.nick).lower()
         logging.info(
-            f"Handling /addingotsbulk players:{players} ingots:{ingots} reason:{reason} on behalf of {caller}"
+            f"Handling '/addingotsbulk players:{players} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
         await interaction.response.defer()
 
@@ -661,19 +661,19 @@ class IronForgedCommands:
 
         if not validate_player_name(player):
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: RSNs can only be 12 characters long."
+                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
             )
             return
 
         if caller.nick is None:
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
+                "FAILED_PRECONDITION: caller does not have a nickname set."
             )
             return
 
         caller = normalize_discord_string(caller.nick).lower()
         logging.info(
-            f"Handling /updateingots player:{player} ingots:{ingots} reason:{reason} on behalf of {caller}"
+            f"Handling '/updateingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
 
         await interaction.response.defer()
@@ -716,15 +716,15 @@ class IronForgedCommands:
                 purchasing, and 'choose_winner' will choose a winner & display
                 their winnings (alongside clearing storage for the next raffle).
         """
-        if interaction.user.nick is None:
+        if interaction.user.display_name is None:
             await interaction.response.send_message(
                 f"FAILED_PRECONDITION: caller does not have a nickname set."
             )
             return
 
         logging.info(
-            f"Handling /raffleadmin {subcommand} on behalf of "
-            f"{normalize_discord_string(interaction.user.nick).lower()}"
+            f"Handling '/raffleadmin {subcommand}' on behalf of "
+            f"{normalize_discord_string(interaction.user.display_name).lower()}"
         )
         await interaction.response.defer()
 
@@ -759,7 +759,7 @@ class IronForgedCommands:
         """
         try:
             self._storage_client.start_raffle(
-                normalize_discord_string(interaction.user.nick).lower()
+                normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as e:
             await interaction.followup.send(f"Encountered error starting raffle: {e}")
@@ -776,7 +776,7 @@ class IronForgedCommands:
         """
         try:
             self._storage_client.end_raffle(
-                normalize_discord_string(interaction.user.nick).lower()
+                normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as e:
             await interaction.followup.send(f"Encountered error ending raffle: {e}")
@@ -826,7 +826,7 @@ class IronForgedCommands:
 
         try:
             self._storage_client.delete_raffle_tickets(
-                normalize_discord_string(interaction.user.nick).lower()
+                normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as e:
             await interaction.followup.send(
@@ -854,7 +854,7 @@ class IronForgedCommands:
             return
 
         caller = normalize_discord_string(caller.nick).lower()
-        logging.info(f"Handling /raffletickets on behalf of {caller}")
+        logging.info(f"Handling '/raffletickets' on behalf of {caller}")
 
         try:
             member = self._storage_client.read_member(caller)
@@ -906,7 +906,7 @@ class IronForgedCommands:
             return
 
         caller = normalize_discord_string(caller.nick).lower()
-        logging.info(f"Handling /buyraffletickets {tickets} on behalf of {caller}")
+        logging.info(f"Handling '/buyraffletickets {tickets}' on behalf of {caller}")
 
         try:
             ongoing_raffle = self._storage_client.read_raffle()
@@ -993,7 +993,7 @@ class IronForgedCommands:
             return
 
         caller = normalize_discord_string(mutator.nick).lower()
-        logging.info(f"Handling /syncmembers on behalf of {caller}")
+        logging.info(f"Handling '/syncmembers' on behalf of {caller}")
 
         await interaction.response.defer()
         # Perform a cross join between current Discord members and
