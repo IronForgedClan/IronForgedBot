@@ -330,8 +330,9 @@ class IronForgedCommands:
                 name="",
                 value=(
                     f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
-                    f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"),
-                inline=False
+                    f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
+                ),
+                inline=False,
             )
         else:
             embed.add_field(name="", value="", inline=False)
@@ -355,7 +356,7 @@ class IronForgedCommands:
         """
         if not validate_player_name(player):
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: RSNs can only be 12 characters long."
+                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
             )
             return
 
@@ -430,7 +431,7 @@ class IronForgedCommands:
         """
         if not validate_player_name(player):
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: RSNs can only be 12 characters long."
+                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
             )
             return
 
