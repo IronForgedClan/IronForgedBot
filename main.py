@@ -13,7 +13,11 @@ from discord import app_commands
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.commands.hiscore.calculator import score_total
-from ironforgedbot.common.helpers import normalize_discord_string, calculate_percentage
+from ironforgedbot.common.helpers import (
+    normalize_discord_string,
+    calculate_percentage,
+    find_emoji,
+)
 from ironforgedbot.common.responses import (
     build_error_message_string,
     build_response_embed,
@@ -301,24 +305,11 @@ class IronForgedCommands:
         points_total = skill_points + activity_points
         rank_name = get_rank_from_points(points_total)
         rank_color = get_rank_color_from_points(points_total)
-
-        rank_icon = ":question:"
-        for emoji in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).emojis:
-            if emoji.name == rank_name:
-                rank_icon = emoji
-                break
+        rank_icon = find_emoji(self._discord_client.emojis, rank_name)
 
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
-        next_rank_icon = ":muscle:"
-        for emoji in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).emojis:
-            if emoji.name == next_rank_name:
-                next_rank_icon = emoji
-                break
+        next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
 
         embed = build_response_embed(f"{rank_icon} {player}", "", rank_color)
         embed.add_field(
@@ -411,19 +402,15 @@ class IronForgedCommands:
         with open(path, "w") as f:
             f.write(output)
 
-        emoji_name = str(get_rank_from_points(total_points))
-        icon = ""
-        for emoji in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).emojis:
-            if emoji.name == emoji_name:
-                icon = emoji
-                break
+        rank_icon = find_emoji(
+            self._discord_client.emojis, get_rank_from_points(total_points)
+        )
 
         with open(path, "rb") as f:
             discord_file = discord.File(f, filename="breakdown.txt")
             await interaction.followup.send(
-                f"Total Points for {player}: {total_points}{icon}\n", file=discord_file
+                f"Total Points for {player}: {total_points} {rank_icon}",
+                file=discord_file,
             )
 
     async def ingots(self, interaction: discord.Interaction, player: str):
@@ -456,13 +443,10 @@ class IronForgedCommands:
             await interaction.followup.send(f"{player} not found in storage")
             return
 
-        icon = ""
-        for emoji in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).emojis:
-            if emoji.name == "Ingot":
-                icon = emoji
-        await interaction.followup.send(f"{player} has {member.ingots:,} ingots{icon}")
+        ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
+        await interaction.followup.send(
+            f"{player} has {member.ingots:,} ingots {ingot_icon}"
+        )
 
     async def addingots(
         self,
@@ -530,14 +514,9 @@ class IronForgedCommands:
             await interaction.followup.send(f"Encountered error writing ingots: {e}")
             return
 
-        icon = ""
-        for emoji in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).emojis:
-            if emoji.name == "Ingot":
-                icon = emoji
+        ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
         await interaction.followup.send(
-            f"Added {ingots:,} ingots to {player}; reason: {reason}. They now have {member.ingots:,} ingots{icon}"
+            f"Added {ingots:,} ingots to {player}; reason: {reason}. They now have {member.ingots:,} ingots {ingot_icon}"
         )
 
     async def addingotsbulk(
@@ -697,14 +676,9 @@ class IronForgedCommands:
             await interaction.followup.send(f"Encountered error writing ingots: {e}")
             return
 
-        icon = ""
-        for emoji in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).emojis:
-            if emoji.name == "Ingot":
-                icon = emoji
+        ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
         await interaction.followup.send(
-            f"Set ingot count to {ingots:,} for {player}. Reason: {reason}{icon}"
+            f"Set ingot count to {ingots:,} for {player}. Reason: {reason} {ingot_icon}"
         )
 
     async def raffleadmin(self, interaction: discord.Interaction, subcommand: str):
