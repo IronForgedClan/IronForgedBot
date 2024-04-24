@@ -4,13 +4,11 @@ import logging
 import os
 import random
 import sys
-from datetime import datetime
 from typing import Dict
 
 import discord
-from discord import app_commands
-
 from apscheduler.schedulers.background import BackgroundScheduler
+from discord import app_commands
 
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.common.helpers import normalize_discord_string
@@ -121,10 +119,10 @@ class DiscordClient(discord.Client):
 
         discord_guild = self.get_guild(guild.id)
         scheduler = BackgroundScheduler()
-        # Use minutes | seconds = x for testing
-        scheduler.add_job(refresh_ranks, 'interval',
+        # Use 'interval' with minutes | seconds = x for testing
+        scheduler.add_job(refresh_ranks, 'cron',
                           args=[discord_guild, self.ranks_update_channel, loop],
-                          days=1, next_run_time=datetime.now())
+                          hour=2, minute=0, second=0, timezone='UTC')
         scheduler.start()
 
         print('Workers started')
