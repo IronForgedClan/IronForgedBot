@@ -32,4 +32,4 @@ def find_emoji(list: Sequence[Emoji], target: str) -> Emoji | str:
             emojiCache[emoji.name] = emoji
             return emoji
 
-    return ":question:"
+    return ""

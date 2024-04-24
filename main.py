@@ -53,9 +53,7 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
         logging.error("validation failed; GUILDID required but not present in env")
         return False
     if config.get("BOT_TOKEN") is None:
-        logging.error(
-            "validation failed; " + "BOT_TOKEN required but not present in env"
-        )
+        logging.error("validation failed; BOT_TOKEN required but not present in env")
         return False
 
     return True
@@ -325,8 +323,8 @@ class IronForgedCommands:
         embed.add_field(name="", value="", inline=False)
         embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
         embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
-       
-        #TODO: Add a nice success message for max players?
+
+        # TODO: Add a nice success message for max players?
         if rank_name != RANKS.MYTH.value:
             embed.add_field(name="", value="", inline=False)
             embed.add_field(
