@@ -38,6 +38,7 @@ class TestIronForgedBot(unittest.TestCase):
     @parameterized.expand(
         [
             ({"SHEETID": "blorp", "GUILDID": "bleep", "BOT_TOKEN": "bloop"}, True),
+            ({"SHEETID": "blorp"}, False),
             ({"GUILDID": "bleep"}, False),
             ({"BOT_TOKEN": "bloop"}, False),
         ]
