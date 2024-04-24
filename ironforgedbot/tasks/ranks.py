@@ -35,6 +35,9 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
 
         members_to_update[nick] = current_role
 
+    asyncio.run_coroutine_threadsafe(_send_message(
+            updates_channel, f'Starting daily ranks check for {len(members_to_update)} members'), loop)
+
     for member, current_role in members_to_update.items():
         try:
             current_points = points_total(member)
@@ -48,6 +51,8 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
             asyncio.run_coroutine_threadsafe(_send_message(updates_channel, message), loop)
 
         time.sleep(random.randint(1, 5))
+
+    asyncio.run_coroutine_threadsafe(_send_message(updates_channel, f'Finished daily ranks check'), loop)
 
 
 async def _send_message(channel, message):
