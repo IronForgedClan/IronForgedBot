@@ -324,8 +324,16 @@ class IronForgedCommands:
         embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
         embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
 
-        # TODO: Add a nice success message for max players?
-        if rank_name != RANKS.MYTH.value:
+        if rank_name == RANKS.MYTH.value:
+            grass_emoji = find_emoji(self._discord_client.emojis, "grass")
+            embed.add_field(
+                name="",
+                value=(
+                    f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
+                    f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"),
+                inline=False
+            )
+        else:
             embed.add_field(name="", value="", inline=False)
             embed.add_field(
                 name="Rank Progress",
