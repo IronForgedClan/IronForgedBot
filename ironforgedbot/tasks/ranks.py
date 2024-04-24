@@ -9,7 +9,9 @@ from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANKS, get_rank_from_points
 
 
-def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio.BaseEventLoop):
+def refresh_ranks(
+    guild: discord.Guild, updates_channel_name: str, loop: asyncio.BaseEventLoop
+):
     if updates_channel_name is None or "" == updates_channel_name:
         return
 
@@ -43,9 +45,13 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
 
         actual_role = get_rank_from_points(current_points)
         if current_role != str(actual_role):
-            message = (f'{member} has upgraded their rank from {icons[current_role]} to {icons[actual_role]} '
-                       f'with {current_points} points')
-            asyncio.run_coroutine_threadsafe(_send_message(updates_channel, message), loop)
+            message = (
+                f"{member} has upgraded their rank from {icons[current_role]} to {icons[actual_role]} "
+                f"with {current_points} points"
+            )
+            asyncio.run_coroutine_threadsafe(
+                _send_message(updates_channel, message), loop
+            )
 
         time.sleep(random.randint(1, 5))
 
