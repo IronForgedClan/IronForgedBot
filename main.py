@@ -14,8 +14,17 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.common.helpers import normalize_discord_string, calculate_percentage
-from ironforgedbot.common.responses import build_error_message_string, build_response_embed
-from ironforgedbot.common.ranks import get_rank_from_points, get_rank_color_from_points
+from ironforgedbot.common.responses import (
+    build_error_message_string,
+    build_response_embed,
+)
+from ironforgedbot.common.ranks import (
+    RANKS,
+    RANK_POINTS,
+    get_next_rank_from_points,
+    get_rank_from_points,
+    get_rank_color_from_points,
+)
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
@@ -248,9 +257,7 @@ class IronForgedCommands:
         )
         self._tree.add_command(syncmembers_command)
 
-    async def score(self,
-                    interaction: discord.Interaction,
-                    player: str):
+    async def score(self, interaction: discord.Interaction, player: str):
         """Compute clan score for a Runescape player name.
 
         Arguments:
@@ -259,24 +266,22 @@ class IronForgedCommands:
         """
         if not validate_player_name(player):
             await interaction.response.send_message(
-                build_error_message_string(
-                    "RSNs can not be longer than 12 characters."
-                )
+                build_error_message_string("RSNs can not be longer than 12 characters.")
             )
             return
 
         logging.info(
-            (f"Handling '/score player:{player}' on behalf of "
-            f"{normalize_discord_string(interaction.user.display_name)}")
+            (
+                f"Handling '/score player:{player}' on behalf of "
+                f"{normalize_discord_string(interaction.user.display_name)}"
+            )
         )
         await interaction.response.defer()
 
         try:
             points_by_skill, points_by_activity = score_total(player)
         except RuntimeError as e:
-            await interaction.followup.send(
-                build_error_message_string(str(e))
-            )
+            await interaction.followup.send(build_error_message_string(str(e)))
             return
 
         skill_points = 0
@@ -290,33 +295,46 @@ class IronForgedCommands:
         points = skill_points + activity_points
         rank_name = get_rank_from_points(points)
         color = get_rank_color_from_points(points)
-        
-        icon = ':question:'
+
+        icon = ":question:"
         for emoji in self._discord_client.get_guild(
-                self._discord_client.guild.id).emojis:
+            self._discord_client.guild.id
+        ).emojis:
             if emoji.name == rank_name:
                 icon = emoji
                 break
 
-        embed = build_response_embed(
-            f"{icon} {player}",
-            ("Iron Forged member ranking system. Earn XP or\n"
-            "engage in activities in-game to climb the ranks."),
-            color
-        )
+        next_rank = get_next_rank_from_points(points)
+        next_rank_point_threshold = RANK_POINTS[next_rank.upper()].value
+        next_rank_icon = ":muscle:"
+        for emoji in self._discord_client.get_guild(
+            self._discord_client.guild.id
+        ).emojis:
+            if emoji.name == next_rank:
+                next_rank_icon = emoji
+                break
+
+        embed = build_response_embed(f"{icon} {player}", "", color)
         embed.add_field(
             name="Skill Points",
             value=f"{skill_points:,} ({calculate_percentage(skill_points, points)}%)",
-            inline=True
+            inline=True,
         )
         embed.add_field(
             name="Activity Points",
             value=f"{activity_points:,} ({calculate_percentage(activity_points, points)}%)",
-            inline=True
+            inline=True,
         )
         embed.add_field(name="", value="", inline=False)
         embed.add_field(name="Total Points", value=f"{points:,}", inline=True)
         embed.add_field(name="Rank", value=f"{icon} {rank_name}", inline=True)
+        if rank_name != RANKS.MYTH.value:
+            embed.add_field(name="", value="", inline=False)
+            embed.add_field(
+                name="Rank Progress",
+                value=f"{icon} -> {next_rank_icon} {points}/{next_rank_point_threshold} ({calculate_percentage(points, next_rank_point_threshold)}%)",
+                inline=False,
+            )
 
         await interaction.followup.send(embed=embed)
 

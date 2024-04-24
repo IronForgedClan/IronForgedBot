@@ -14,7 +14,7 @@ def build_response_embed(title:str, description:str, color: discord.Color) -> di
     embed.timestamp = datetime.now();
     embed.set_footer(
         text="Iron Forged Bot",
-        icon_url="https://avatars.githubusercontent.com/u/166751212?s=200&v=4"
+        icon_url="https://avatars.githubusercontent.com/u/166751212"
     )
 
     return embed

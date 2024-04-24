@@ -1,5 +1,7 @@
 from strenum import StrEnum
+from enum import IntEnum
 from discord import Color
+
 
 class RANKS(StrEnum):
     MYTH = "Myth"
@@ -19,33 +21,63 @@ class RANKS(StrEnum):
         return list(map(lambda c: c.value, cls))
 
 
+class RANK_POINTS(IntEnum):
+    MYTH = 13_000
+    LEGEND = 9_000
+    DRAGON = 5_000
+    RUNE = 3_000
+    ADAMANT = 1_500
+    MITHRIL = 700
+    IRON = 0
+
+
 def get_rank_from_points(points: int) -> str:
-    if points >= 13000:
+    if points >= RANK_POINTS.MYTH:
         return RANKS.MYTH
-    if points >= 9000:
+    if points >= RANK_POINTS.LEGEND:
         return RANKS.LEGEND
-    if points >= 5000:
+    if points >= RANK_POINTS.DRAGON:
         return RANKS.DRAGON
-    if points >= 3000:
+    if points >= RANK_POINTS.RUNE:
         return RANKS.RUNE
-    if points >= 1500:
+    if points >= RANK_POINTS.ADAMANT:
         return RANKS.ADAMANT
-    if points >= 700:
+    if points >= RANK_POINTS.MITHRIL:
         return RANKS.MITHRIL
     return RANKS.IRON
 
-def get_rank_color_from_points(points: int) -> Color:
-    if points >= 13000:
-        return Color.from_str("#0ecea9")
-    if points >= 9000:
-        return Color.from_str("#cecece")
-    if points >= 5000:
-        return Color.from_str("#a51c1c")
-    if points >= 3000:
-        return Color.from_str("#11b9f8")
-    if points >= 1500:
-        return Color.from_str("#25964f")
-    if points >= 700:
-        return Color.from_str("#7f54fc")
-    return Color.from_str("#707070")
 
+def get_next_rank_from_points(points: int) -> str:
+    if points >= RANK_POINTS.MYTH:
+        return RANKS.MYTH
+    if points >= RANK_POINTS.LEGEND:
+        return RANKS.MYTH
+    if points >= RANK_POINTS.DRAGON:
+        return RANKS.LEGEND
+    if points >= RANK_POINTS.RUNE:
+        return RANKS.DRAGON
+    if points >= RANK_POINTS.ADAMANT:
+        return RANKS.RUNE
+    if points >= RANK_POINTS.MITHRIL:
+        return RANKS.ADAMANT
+    return RANKS.MITHRIL
+
+
+def get_rank_color_from_points(points: int) -> Color:
+    rank = get_rank_from_points(points)
+
+    match rank:
+        case RANKS.MYTH:
+            return Color.from_str("#0ecea9")
+        case RANKS.LEGEND:
+            return Color.from_str("#cecece")
+        case RANKS.DRAGON:
+            return Color.from_str("#a51c1c")
+        case RANKS.RUNE:
+            return Color.from_str("#11b9f8")
+        case RANKS.ADAMANT:
+            return Color.from_str("#25964f")
+        case RANKS.MITHRIL:
+            return Color.from_str("#7f54fc")
+        case _:
+            return Color.from_str("#707070")
