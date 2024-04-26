@@ -11,6 +11,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
 
 from ironforgedbot.commands.hiscore.calculator import score_total
+from ironforgedbot.commands.hiscore.constants import (
+    BOSS_DISPLAY_ORDER_PAGE_1,
+    MISC_DISPLAY_ORDER,
+    SKILLS_DISPLAY_ORDER,
+)
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
@@ -380,16 +385,66 @@ class IronForgedCommands:
         for _, v in points_by_activity.items():
             activity_points += v
 
-        total_points = skill_points + activity_points
+        points_total = skill_points + activity_points
+        rank_name = get_rank_from_points(points_total)
+        rank_color = get_rank_color_from_points(points_total)
+        rank_icon = find_emoji(self._discord_client.emojis, rank_name)
+
+        skill_breakdown_embed = build_response_embed(
+            "Skill Breakdown",
+            f"Detailed breakdown of skill points earned\nby the player {rank_icon} **{player}**:",
+            rank_color,
+        )
+
+        for skill in SKILLS_DISPLAY_ORDER:
+            skill_score = points_by_skill[skill]
+            logging.info(skill)
+            skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
+            skill_breakdown_embed.add_field(
+                name=f"{skill_icon}  {skill_score:,}", value="", inline=True
+            )
+
+        # add additional empty field to even out display
+        skill_breakdown_embed.add_field(name="", value="", inline=True)
+
+        skill_breakdown_embed.add_field(
+            name="Skill Point Total", value=f"{points_total:,}", inline=False
+        )
+        await interaction.followup.send(embed=skill_breakdown_embed)
+
+        boss_breakdown_embed = build_response_embed(
+            "Cluescroll Breakdown",
+            f"Detailed breakdown of activity points earned through\ncluescrolls by the player {rank_icon} **{player}**:",
+            rank_color,
+        )
+
+        for boss_type, display_name in BOSS_DISPLAY_ORDER_PAGE_1.items():
+            # if no value found, entry not on hiscores so display 0
+            boss_score = points_by_activity.get(boss_type, "0")
+            boss_breakdown_embed.add_field(name=display_name, value=boss_score)
+
+        await interaction.followup.send(embed=boss_breakdown_embed)
+
+        misc_breakdown_embed = build_response_embed(
+            "Cluescroll Breakdown",
+            f"Detailed breakdown of activity points earned through\ncluescrolls by the player {rank_icon} **{player}**:",
+            rank_color,
+        )
+
+        for misc_type, display_name in MISC_DISPLAY_ORDER.items():
+            # if no value found, entry not on hiscores so display 0
+            misc_score = points_by_activity.get(misc_type, "0")
+            misc_breakdown_embed.add_field(name=display_name, value=misc_score)
+
+        await interaction.followup.send(embed=misc_breakdown_embed)
 
         output = "---Points from Skills---\n"
-
         for k, v in points_by_skill.items():
             output += f"{str(k)}: {v:,}\n"
 
         output += (
             f"Total Skill Points: {skill_points:,} "
-            + f"({calculate_percentage(skill_points, total_points)}% of total)\n\n"
+            + f"({calculate_percentage(skill_points, points_total)}% of total)\n\n"
         )
         output += "---Points from Minigames & Bossing---\n"
 
@@ -398,29 +453,29 @@ class IronForgedCommands:
 
         output += (
             f"Total Minigame & Bossing Points: {activity_points} "
-            + f"({calculate_percentage(activity_points, total_points)}% of total)\n\n"
+            + f"({calculate_percentage(activity_points, points_total)}% of total)\n\n"
         )
-        output += f"Total Points: {total_points:,}\n"
+        output += f"Total Points: {points_total:,}\n"
 
         # Now we have all of the data that we need for a full point breakdown.
         # If we write a single file though, there is a potential race
         # condition if multiple users try to run breakdown at once.
         # text files are cheap - use the player name as a good-enough amount
         # of uniquity.
-        path = os.path.join(self._tmp_dir_path, f"breakdown_{player}.txt")
-        with open(path, "w") as f:
-            f.write(output)
+        # path = os.path.join(self._tmp_dir_path, f"breakdown_{player}.txt")
+        # with open(path, "w") as f:
+        #    f.write(output)
 
-        rank_icon = find_emoji(
-            self._discord_client.emojis, get_rank_from_points(total_points)
-        )
+        # rank_icon = find_emoji(
+        #    self._discord_client.emojis, get_rank_from_points(points_total)
+        # )
 
-        with open(path, "rb") as f:
-            discord_file = discord.File(f, filename="breakdown.txt")
-            await interaction.followup.send(
-                f"Total Points for {player}: {total_points} {rank_icon}",
-                file=discord_file,
-            )
+        # with open(path, "rb") as f:
+        #    discord_file = discord.File(f, filename="breakdown.txt")
+        #    await interaction.followup.send(
+        #        f"Total Points for {player}: {points_total} {rank_icon}",
+        #        file=discord_file,
+        #    )
 
     async def ingots(self, interaction: discord.Interaction, player: str):
         """View ingots for a Runescape playername.
@@ -701,7 +756,7 @@ class IronForgedCommands:
         """
         if interaction.user.display_name is None:
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
+                "FAILED_PRECONDITION: caller does not have a nickname set."
             )
             return
 
@@ -901,7 +956,7 @@ class IronForgedCommands:
 
         if not ongoing_raffle:
             await interaction.followup.send(
-                f"FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought."
+                "FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought."
             )
             return
 
@@ -971,7 +1026,7 @@ class IronForgedCommands:
 
         if mutator.nick is None:
             await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
+                "FAILED_PRECONDITION: caller does not have a nickname set."
             )
             return
 
