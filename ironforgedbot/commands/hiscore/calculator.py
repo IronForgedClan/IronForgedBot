@@ -1,46 +1,60 @@
-from typing import Dict
+from typing import Dict, TypedDict
 
 import requests
 
 from ironforgedbot.commands.hiscore.constants import SKILLS, ACTIVITIES
-from ironforgedbot.commands.hiscore.points import SKILL_POINTS_REGULAR, SKILL_POINTS_PAST_99, ACTIVITY_POINTS
+from ironforgedbot.commands.hiscore.points import (
+    SKILL_POINTS_REGULAR,
+    SKILL_POINTS_PAST_99,
+    ACTIVITY_POINTS,
+)
 
-HISCORES_PLAYER_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player={player}'
+HISCORES_PLAYER_URL = (
+    "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player={player}"
+)
 LEVEL_99_EXPERIENCE = 13034431
+
+
+class SkillInfo(TypedDict):
+    xp: int
+    level: int
+    points: int
 
 
 def score_total(player_name: str):
     data = _fetch_data(player_name)
-    skills_score = _get_skills_score(data)
+    skills_score = _get_skills_info(data)
     activities_score = _get_activities_score(data)
     return skills_score, activities_score
 
 
 def points_total(player_name: str) -> int:
-    skills_score, activities_score = score_total(player_name)
-    total_points = 0
+    skills, activities_score = score_total(player_name)
+    points = 0
 
-    for _, v in skills_score.items():
-        total_points += v
+    for _, skill in skills.items():
+        points += skill["points"]
 
     for _, v in activities_score.items():
-        total_points += v
+        points += v
 
-    return total_points
+    return points
 
 
 def _fetch_data(player_name: str):
     try:
         resp = requests.get(HISCORES_PLAYER_URL.format(player=player_name), timeout=15)
         if resp.status_code != 200:
-            raise RuntimeError(f'Looking up {player_name} on hiscores failed. Got status code {resp.status_code}')
+            raise RuntimeError(
+                f"Looking up {player_name} on hiscores failed. Got status code {resp.status_code}"
+            )
     except requests.exceptions.RequestException as e:
-        raise RuntimeError(f'Encountered an error calling Runescape API: {e}')
+        raise RuntimeError(f"Encountered an error calling Runescape API: {e}")
 
     return resp.json()
 
 
-def _get_skills_score(score_data) -> Dict[str, int]:
+def _get_skills_info(score_data) -> Dict[str, SkillInfo]:
     skill_points = {}
 
     for skill in score_data["skills"]:
@@ -54,19 +68,30 @@ def _get_skills_score(score_data) -> Dict[str, int]:
         if skill_level < 1:
             continue
 
-        if skill_constant not in SKILL_POINTS_REGULAR or skill_constant not in SKILL_POINTS_PAST_99:
+        if (
+            skill_constant not in SKILL_POINTS_REGULAR
+            or skill_constant not in SKILL_POINTS_PAST_99
+        ):
             continue
 
         if skill_level < 99:
             points = int(experience / SKILL_POINTS_REGULAR[skill_constant])
         else:
-            points = (int(LEVEL_99_EXPERIENCE / SKILL_POINTS_REGULAR[skill_constant]) +
-                      int((experience - LEVEL_99_EXPERIENCE) / SKILL_POINTS_PAST_99[skill_constant]))
+            points = int(
+                LEVEL_99_EXPERIENCE / SKILL_POINTS_REGULAR[skill_constant]
+            ) + int(
+                (experience - LEVEL_99_EXPERIENCE)
+                / SKILL_POINTS_PAST_99[skill_constant]
+            )
 
         if 0 == points:
             continue
 
-        skill_points[skill_constant] = points
+        skill_points[skill_constant] = {
+            "xp": experience,
+            "level": skill_level,
+            "points": points,
+        }
 
     return skill_points
 

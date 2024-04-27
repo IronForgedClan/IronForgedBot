@@ -295,14 +295,14 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            points_by_skill, points_by_activity = score_total(player)
+            skill_info, points_by_activity = score_total(player)
         except RuntimeError as e:
             await interaction.followup.send(build_error_message_string(str(e)))
             return
 
         skill_points = 0
-        for _, v in points_by_skill.items():
-            skill_points += v
+        for _, skill in skill_info.items():
+            skill_points += skill["points"]
 
         activity_points = 0
         for _, v in points_by_activity.items():
@@ -375,14 +375,14 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            points_by_skill, points_by_activity = score_total(player)
+            skill_info, points_by_activity = score_total(player)
         except RuntimeError as e:
             await interaction.followup.send(str(e))
             return
 
         skill_points = 0
-        for _, v in points_by_skill.items():
-            skill_points += v
+        for _, skill in skill_info.items():
+            skill_points += skill["points"]
 
         activity_points = 0
         for _, v in points_by_activity.items():
@@ -431,7 +431,7 @@ class IronForgedCommands:
         )
 
         for skill in SKILLS_DISPLAY_ORDER:
-            skill_score = points_by_skill[skill]
+            skill_score = skill_info[skill]["points"]
             skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
             skill_breakdown_embed.add_field(
                 name=f"{skill_icon} {skill_score:,}", value="", inline=True
