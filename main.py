@@ -394,7 +394,7 @@ class IronForgedCommands:
         rank_icon = find_emoji(self._discord_client.emojis, rank_name)
 
         rank_breakdown_embed = build_response_embed(
-            f"{player} - Rank Ladder",
+            f"{rank_icon} {player} - Rank Ladder",
             "A visual representation of the ranking ladder.",
             rank_color,
         )
@@ -425,23 +425,23 @@ class IronForgedCommands:
             )
 
         skill_breakdown_embed = build_response_embed(
-            f"{player} - Skilling",
+            f"{rank_icon} {player} - Skilling",
             "Points awarded for skill xp.",
             rank_color,
         )
 
         for skill in SKILLS_DISPLAY_ORDER:
-            skill_score = skill_info[skill]["points"]
             skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
             skill_breakdown_embed.add_field(
-                name=f"{skill_icon} {skill_score:,}", value="", inline=True
+                name=f"{skill_icon} {skill_info[skill]['points']:,} points",
+                value=f"⠀⠀{skill_info[skill]['xp']:,} xp",
+                inline=True,
             )
 
-        # add additional empty field to even out display
-        skill_breakdown_embed.add_field(name="", value="", inline=True)
-
         skill_breakdown_embed.add_field(
-            name="Skill Point Total", value=f"{points_total:,}", inline=False
+            name=f"{rank_icon} Total",
+            value=f"⠀⠀__{points_total:,}__",
+            inline=True,
         )
 
         # There is a 25 field limit on embeds, so we need to paginate.
@@ -451,7 +451,7 @@ class IronForgedCommands:
         boss_embeds = []
 
         working_embed = build_response_embed(
-            f"{player} - Bossing",
+            f"{rank_icon} {player} - Bossing",
             "Points awarded for boss kill count.",
             rank_color,
         )
@@ -461,7 +461,7 @@ class IronForgedCommands:
                 field_count = 0
                 boss_embeds.append((working_embed))
                 working_embed = build_response_embed(
-                    f"{player} - Bossing (Part {boss_embeds.__len__() + 1})",
+                    f"{rank_icon} {player} - Bossing (Part {boss_embeds.__len__() + 1})",
                     "Points awarded for boss kill count.",
                     rank_color,
                 )
@@ -476,7 +476,9 @@ class IronForgedCommands:
         boss_embeds.append(working_embed)
 
         raid_breakdown_embed = build_response_embed(
-            f"{player} - Raids", "Points awarded for raid completions.", rank_color
+            f"{rank_icon} {player} - Raids",
+            "Points awarded for raid completions.",
+            rank_color,
         )
 
         for raid_type, display_name in RAIDS_DISPLAY_ORDER.items():
@@ -484,7 +486,7 @@ class IronForgedCommands:
             raid_breakdown_embed.add_field(name=display_name, value=raid_score)
 
         misc_breakdown_embed = build_response_embed(
-            f"{player} - Miscellaneous",
+            f"{rank_icon} {player} - Miscellaneous",
             "Points awarded for other activities.",
             rank_color,
         )
