@@ -13,6 +13,7 @@ from discord import app_commands
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.commands.hiscore.constants import (
     MISC_DISPLAY_ORDER,
+    RAIDS_DISPLAY_ORDER,
     SKILLS_DISPLAY_ORDER,
     BOSS_DISPLAY_ORDER,
 )
@@ -393,7 +394,7 @@ class IronForgedCommands:
         rank_icon = find_emoji(self._discord_client.emojis, rank_name)
 
         rank_breakdown_embed = build_response_embed(
-            "Rank Breakdown",
+            f"{player} - Rank Ladder",
             "A visual representation of the ranking ladder.",
             rank_color,
         )
@@ -424,8 +425,8 @@ class IronForgedCommands:
             )
 
         skill_breakdown_embed = build_response_embed(
-            "Skilling",
-            "All points accumulated by skilling.",
+            f"{player} - Skilling",
+            "Points awarded for skill xp.",
             rank_color,
         )
 
@@ -450,8 +451,8 @@ class IronForgedCommands:
         boss_embeds = []
 
         working_embed = build_response_embed(
-            "Bossing",
-            "Points awarded by boss kill count.",
+            f"{player} - Bossing",
+            "Points awarded for boss kill count.",
             rank_color,
         )
 
@@ -460,8 +461,8 @@ class IronForgedCommands:
                 field_count = 0
                 boss_embeds.append((working_embed))
                 working_embed = build_response_embed(
-                    f"Bossing (Part {boss_embeds.__len__() + 1})",
-                    "Points awarded by boss kill count.",
+                    f"{player} - Bossing (Part {boss_embeds.__len__() + 1})",
+                    "Points awarded for boss kill count.",
                     rank_color,
                 )
 
@@ -474,9 +475,17 @@ class IronForgedCommands:
 
         boss_embeds.append(working_embed)
 
+        raid_breakdown_embed = build_response_embed(
+            f"{player} - Raids", "Points awarded for raid completions.", rank_color
+        )
+
+        for raid_type, display_name in RAIDS_DISPLAY_ORDER.items():
+            raid_score = points_by_activity.get(raid_type, "0")
+            raid_breakdown_embed.add_field(name=display_name, value=raid_score)
+
         misc_breakdown_embed = build_response_embed(
-            "Miscellaneous",
-            "Other points awarded for activities.",
+            f"{player} - Miscellaneous",
+            "Points awarded for other activities.",
             rank_color,
         )
 
@@ -490,12 +499,13 @@ class IronForgedCommands:
             menu_type=ViewMenu.TypeEmbed,
             show_page_director=True,
             timeout=1800,
-            delete_on_timeout=False,
+            delete_on_timeout=True,
         )
 
         menu.add_page(skill_breakdown_embed)
         for embed in boss_embeds:
             menu.add_page(embed)
+        menu.add_page(raid_breakdown_embed)
         menu.add_page(misc_breakdown_embed)
         menu.add_page(rank_breakdown_embed)
 
