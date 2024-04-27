@@ -12,7 +12,7 @@ from discord import app_commands
 
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.commands.hiscore.constants import (
-    MISC_DISPLAY_ORDER,
+    CLUE_DISPLAY_ORDER,
     RAIDS_DISPLAY_ORDER,
     SKILLS_DISPLAY_ORDER,
     BOSS_DISPLAY_ORDER,
@@ -375,7 +375,7 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            skill_info, points_by_activity = score_total(player)
+            skill_info, activity_info = score_total(player)
         except RuntimeError as e:
             await interaction.followup.send(str(e))
             return
@@ -385,8 +385,8 @@ class IronForgedCommands:
             skill_points += skill["points"]
 
         activity_points = 0
-        for _, v in points_by_activity.items():
-            activity_points += v
+        for _, activity in activity_info.items():
+            activity_points += activity["points"]
 
         points_total = skill_points + activity_points
         rank_name = get_rank_from_points(points_total)
@@ -405,7 +405,7 @@ class IronForgedCommands:
             rank_breakdown_embed.add_field(
                 name=(
                     f"{icon} {rank}%s"
-                    % ("⠀⠀⠀⠀<-- _You are here_" if rank == rank_name else "")
+                    % ("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀<-- _You are here_" if rank == rank_name else "")
                 ),
                 value=f"⠀⠀{rank_point_threshold:,}+ points",
                 inline=False,
@@ -440,7 +440,7 @@ class IronForgedCommands:
 
         skill_breakdown_embed.add_field(
             name=f"{rank_icon} Total",
-            value=f"⠀⠀__{points_total:,}__",
+            value=f"⠀⠀__{points_total:,}__ points",
             inline=True,
         )
 
@@ -466,12 +466,16 @@ class IronForgedCommands:
                     rank_color,
                 )
 
-            boss_score = points_by_activity.get(boss_type)
-            if boss_score is None:
+            boss_info = activity_info.get(boss_type)
+            if boss_info is None:
                 continue
 
             field_count += 1
-            working_embed.add_field(name=display_name, value=boss_score)
+            boss_icon = find_emoji(self._discord_client.emojis, display_name)
+            working_embed.add_field(
+                name=f"{boss_icon} {boss_info['points']} points",
+                value=f"⠀⠀{boss_info['kc']:,} kc",
+            )
 
         boss_embeds.append(working_embed)
 
@@ -482,19 +486,24 @@ class IronForgedCommands:
         )
 
         for raid_type, display_name in RAIDS_DISPLAY_ORDER.items():
-            raid_score = points_by_activity.get(raid_type, "0")
+            raid_score = activity_info.get(raid_type, "0")
             raid_breakdown_embed.add_field(name=display_name, value=raid_score)
 
-        misc_breakdown_embed = build_response_embed(
-            f"{rank_icon} {player} - Miscellaneous",
-            "Points awarded for other activities.",
+        clue_breakdown_embed = build_response_embed(
+            f"{rank_icon} {player} - Cluescrolls",
+            "Points awarded for completing cluescrolls.",
             rank_color,
         )
 
-        for misc_type, display_name in MISC_DISPLAY_ORDER.items():
-            # if no value found, entry not on hiscores so display 0
-            misc_score = points_by_activity.get(misc_type, "0")
-            misc_breakdown_embed.add_field(name=display_name, value=misc_score)
+        clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
+        for clue_type, display_name in CLUE_DISPLAY_ORDER.items():
+            clue_info = activity_info.get(clue_type)
+            if clue_info is None:
+                clue_info = {"points": 0, "kc": 0}
+            clue_breakdown_embed.add_field(
+                name=f"{clue_icon} {clue_info['points']} points",
+                value=f"⠀⠀{clue_info['kc']} {display_name.lower()}",
+            )
 
         menu = ViewMenu(
             interaction,
@@ -508,7 +517,7 @@ class IronForgedCommands:
         for embed in boss_embeds:
             menu.add_page(embed)
         menu.add_page(raid_breakdown_embed)
-        menu.add_page(misc_breakdown_embed)
+        menu.add_page(clue_breakdown_embed)
         menu.add_page(rank_breakdown_embed)
 
         menu.add_button(ViewButton.back())

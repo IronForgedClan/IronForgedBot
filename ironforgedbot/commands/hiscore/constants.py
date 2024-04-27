@@ -57,15 +57,13 @@ class SKILLS_DISPLAY_ORDER(StrEnum):
     HUNTER = "Hunter"
 
 
-MISC_DISPLAY_ORDER = {
-    "Clue Scrolls (beginner)": "Beginner Clues",
-    "Clue Scrolls (easy)": "Easy Clues",
-    "Clue Scrolls (medium)": "Medium Clues",
-    "Clue Scrolls (hard)": "Hard Clues",
-    "Clue Scrolls (elite)": "Elite Clues",
-    "Clue Scrolls (master)": "Master Clues",
-    "Rifts closed": "Guardians of the Rift",
-    "Tempoross": "Tempoross",
+CLUE_DISPLAY_ORDER = {
+    "Clue Scrolls (beginner)": "Beginner",
+    "Clue Scrolls (easy)": "Easy",
+    "Clue Scrolls (medium)": "Medium",
+    "Clue Scrolls (hard)": "Hard",
+    "Clue Scrolls (elite)": "Elite",
+    "Clue Scrolls (master)": "Master",
 }
 
 RAIDS_DISPLAY_ORDER = {
@@ -78,6 +76,7 @@ RAIDS_DISPLAY_ORDER = {
 }
 
 BOSS_DISPLAY_ORDER = {
+    "Rifts closed": "Guardians of the Rift",
     "Abyssal Sire": "Abyssal Sire",
     "Alchemical Hydra": "Alchemical Hydra",
     "Artio": "Artio",
@@ -120,7 +119,7 @@ BOSS_DISPLAY_ORDER = {
     "Spindel": "Spindel",
     "Tempoross": "Tempoross",
     "The Gauntlet": "The Gauntlet",
-    "The Corrupted Gauntlet": "The Corrupted Gauntlet",
+    "The Corrupted Gauntlet": "thecorruptedgauntlet",
     "The Leviathan": "The Leviathan",
     "The Whisperer": "The Whisperer",
     "Thermonuclear Smoke Devil": "Thermonuclear Smoke Devil",
