@@ -77,7 +77,7 @@ RAIDS_DISPLAY_ORDER = {
     "Tombs of Amascut: Expert Mode": "ToA: Expert Mode",
 }
 
-BOSS_DISPLAY_ORDER_PAGE_1 = {
+BOSS_DISPLAY_ORDER = {
     "Abyssal Sire": "Abyssal Sire",
     "Alchemical Hydra": "Alchemical Hydra",
     "Artio": "Artio",
@@ -98,9 +98,6 @@ BOSS_DISPLAY_ORDER_PAGE_1 = {
     "Duke Sucellus": "Duke Sucellus",
     "General Graardor": "General Graardor",
     "Giant Mole": "Giant Mole",
-}
-
-BOSS_DISPLAY_ORDER_PAGE_2 = {
     "Grotesque Guardians": "Grotesque Guardians",
     "Hespori": "Hespori",
     "Kalphite Queen": "Kalphite Queen",
@@ -121,8 +118,6 @@ BOSS_DISPLAY_ORDER_PAGE_2 = {
     "Skotizo": "Skotizo",
     "Sol Heredit": "Sol Heredit",
     "Spindel": "Spindel",
-}
-BOSS_DISPLAY_ORDER_PAGE_3 = {
     "Tempoross": "Tempoross",
     "The Gauntlet": "The Gauntlet",
     "The Corrupted Gauntlet": "The Corrupted Gauntlet",

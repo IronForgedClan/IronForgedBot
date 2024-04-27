@@ -12,9 +12,9 @@ from discord import app_commands
 
 from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.commands.hiscore.constants import (
-    BOSS_DISPLAY_ORDER_PAGE_1,
     MISC_DISPLAY_ORDER,
     SKILLS_DISPLAY_ORDER,
+    BOSS_DISPLAY_ORDER,
 )
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
@@ -35,6 +35,8 @@ from ironforgedbot.common.ranks import (
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
+
+from reactionmenu import ViewMenu, ViewButton
 
 
 def read_dotenv(path: str) -> Dict[str, str]:
@@ -390,18 +392,48 @@ class IronForgedCommands:
         rank_color = get_rank_color_from_points(points_total)
         rank_icon = find_emoji(self._discord_client.emojis, rank_name)
 
+        rank_breakdown_embed = build_response_embed(
+            "Rank Breakdown",
+            "A visual representation of the ranking ladder.",
+            rank_color,
+        )
+
+        for rank in RANKS:
+            icon = find_emoji(self._discord_client.emojis, rank)
+            rank_point_threshold = RANK_POINTS[rank.upper()].value
+            rank_breakdown_embed.add_field(
+                name=(
+                    f"{icon} {rank}%s"
+                    % ("⠀⠀⠀⠀<-- _You are here_" if rank == rank_name else "")
+                ),
+                value=f"⠀⠀{rank_point_threshold:,}+ points",
+                inline=False,
+            )
+
+        if rank_name != RANKS.MYTH.value:
+            next_rank_name = get_next_rank_from_points(points_total)
+            next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
+            next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
+            rank_breakdown_embed.add_field(
+                name="Your Progress",
+                value=(
+                    f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
+                    f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                ),
+                inline=False,
+            )
+
         skill_breakdown_embed = build_response_embed(
-            "Skill Breakdown",
-            f"Detailed breakdown of skill points earned\nby the player {rank_icon} **{player}**:",
+            "Skilling",
+            "All points accumulated by skilling.",
             rank_color,
         )
 
         for skill in SKILLS_DISPLAY_ORDER:
             skill_score = points_by_skill[skill]
-            logging.info(skill)
             skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
             skill_breakdown_embed.add_field(
-                name=f"{skill_icon}  {skill_score:,}", value="", inline=True
+                name=f"{skill_icon} {skill_score:,}", value="", inline=True
             )
 
         # add additional empty field to even out display
@@ -410,24 +442,41 @@ class IronForgedCommands:
         skill_breakdown_embed.add_field(
             name="Skill Point Total", value=f"{points_total:,}", inline=False
         )
-        await interaction.followup.send(embed=skill_breakdown_embed)
 
-        boss_breakdown_embed = build_response_embed(
-            "Cluescroll Breakdown",
-            f"Detailed breakdown of activity points earned through\ncluescrolls by the player {rank_icon} **{player}**:",
+        # There is a 25 field limit on embeds, so we need to paginate.
+        # As not every player has kc on every boss we don't need to show
+        # all bosses, so this won't be as bad for some players.
+        field_count = 0
+        boss_embeds = []
+
+        working_embed = build_response_embed(
+            "Bossing",
+            "Points awarded by boss kill count.",
             rank_color,
         )
 
-        for boss_type, display_name in BOSS_DISPLAY_ORDER_PAGE_1.items():
-            # if no value found, entry not on hiscores so display 0
-            boss_score = points_by_activity.get(boss_type, "0")
-            boss_breakdown_embed.add_field(name=display_name, value=boss_score)
+        for boss_type, display_name in BOSS_DISPLAY_ORDER.items():
+            if field_count == 18:
+                field_count = 0
+                boss_embeds.append((working_embed))
+                working_embed = build_response_embed(
+                    f"Bossing (Part {boss_embeds.__len__() + 1})",
+                    "Points awarded by boss kill count.",
+                    rank_color,
+                )
 
-        await interaction.followup.send(embed=boss_breakdown_embed)
+            boss_score = points_by_activity.get(boss_type)
+            if boss_score is None:
+                continue
+
+            field_count += 1
+            working_embed.add_field(name=display_name, value=boss_score)
+
+        boss_embeds.append(working_embed)
 
         misc_breakdown_embed = build_response_embed(
-            "Cluescroll Breakdown",
-            f"Detailed breakdown of activity points earned through\ncluescrolls by the player {rank_icon} **{player}**:",
+            "Miscellaneous",
+            "Other points awarded for activities.",
             rank_color,
         )
 
@@ -436,46 +485,24 @@ class IronForgedCommands:
             misc_score = points_by_activity.get(misc_type, "0")
             misc_breakdown_embed.add_field(name=display_name, value=misc_score)
 
-        await interaction.followup.send(embed=misc_breakdown_embed)
-
-        output = "---Points from Skills---\n"
-        for k, v in points_by_skill.items():
-            output += f"{str(k)}: {v:,}\n"
-
-        output += (
-            f"Total Skill Points: {skill_points:,} "
-            + f"({calculate_percentage(skill_points, points_total)}% of total)\n\n"
+        menu = ViewMenu(
+            interaction,
+            menu_type=ViewMenu.TypeEmbed,
+            show_page_director=True,
+            timeout=1800,
+            delete_on_timeout=False,
         )
-        output += "---Points from Minigames & Bossing---\n"
 
-        for k, v in points_by_activity.items():
-            output += f"{str(k)}: {v:,}\n"
+        menu.add_page(skill_breakdown_embed)
+        for embed in boss_embeds:
+            menu.add_page(embed)
+        menu.add_page(misc_breakdown_embed)
+        menu.add_page(rank_breakdown_embed)
 
-        output += (
-            f"Total Minigame & Bossing Points: {activity_points} "
-            + f"({calculate_percentage(activity_points, points_total)}% of total)\n\n"
-        )
-        output += f"Total Points: {points_total:,}\n"
+        menu.add_button(ViewButton.back())
+        menu.add_button(ViewButton.next())
 
-        # Now we have all of the data that we need for a full point breakdown.
-        # If we write a single file though, there is a potential race
-        # condition if multiple users try to run breakdown at once.
-        # text files are cheap - use the player name as a good-enough amount
-        # of uniquity.
-        # path = os.path.join(self._tmp_dir_path, f"breakdown_{player}.txt")
-        # with open(path, "w") as f:
-        #    f.write(output)
-
-        # rank_icon = find_emoji(
-        #    self._discord_client.emojis, get_rank_from_points(points_total)
-        # )
-
-        # with open(path, "rb") as f:
-        #    discord_file = discord.File(f, filename="breakdown.txt")
-        #    await interaction.followup.send(
-        #        f"Total Points for {player}: {points_total} {rank_icon}",
-        #        file=discord_file,
-        #    )
+        await menu.start()
 
     async def ingots(self, interaction: discord.Interaction, player: str):
         """View ingots for a Runescape playername.
