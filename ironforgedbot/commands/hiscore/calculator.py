@@ -67,17 +67,15 @@ def _get_skills_info(score_data) -> Dict[str, SkillInfo]:
             continue
 
         skill_constant = SKILLS(skill["name"])
-        skill_level = int(skill["level"])
-        experience = int(skill["xp"])
-
-        if skill_level < 1:
-            continue
 
         if (
             skill_constant not in SKILL_POINTS_REGULAR
             or skill_constant not in SKILL_POINTS_PAST_99
         ):
             continue
+
+        skill_level = int(skill["level"]) if int(skill["level"]) > 1 else 1
+        experience = int(skill["xp"]) if int(skill["xp"]) > 0 else 0
 
         if skill_level < 99:
             points = int(experience / SKILL_POINTS_REGULAR[skill_constant])
@@ -88,9 +86,6 @@ def _get_skills_info(score_data) -> Dict[str, SkillInfo]:
                 (experience - LEVEL_99_EXPERIENCE)
                 / SKILL_POINTS_PAST_99[skill_constant]
             )
-
-        if 0 == points:
-            continue
 
         skills[skill_constant] = {
             "xp": experience,
