@@ -418,7 +418,7 @@ class IronForgedCommands:
             rank_breakdown_embed.add_field(
                 name="Your Progress",
                 value=(
-                    f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
+                    f"{rank_icon} -> {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} "
                     f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
                 ),
                 inline=False,
@@ -440,7 +440,7 @@ class IronForgedCommands:
 
         skill_breakdown_embed.add_field(
             name=f"{rank_icon} Total",
-            value=f"⠀⠀__{points_total:,}__ points",
+            value=f"⠀⠀**{points_total:,}** points",
             inline=True,
         )
 
@@ -473,7 +473,7 @@ class IronForgedCommands:
             field_count += 1
             boss_icon = find_emoji(self._discord_client.emojis, display_name)
             working_embed.add_field(
-                name=f"{boss_icon} {boss_info['points']} points",
+                name=f"{boss_icon} {boss_info['points']:,} points",
                 value=f"⠀⠀{boss_info['kc']:,} kc",
             )
 
@@ -501,15 +501,15 @@ class IronForgedCommands:
             if clue_info is None:
                 clue_info = {"points": 0, "kc": 0}
             clue_breakdown_embed.add_field(
-                name=f"{clue_icon} {clue_info['points']} points",
-                value=f"⠀⠀{clue_info['kc']} {display_name.lower()}",
+                name=f"{clue_icon} {clue_info['points']:,} points",
+                value=f"⠀⠀{clue_info['kc']:,} {display_name.lower()}",
             )
 
         menu = ViewMenu(
             interaction,
             menu_type=ViewMenu.TypeEmbed,
             show_page_director=True,
-            timeout=1800,
+            timeout=600,
             delete_on_timeout=True,
         )
 
