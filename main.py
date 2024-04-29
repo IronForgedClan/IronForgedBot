@@ -285,8 +285,6 @@ class IronForgedCommands:
             await send_error_response(interaction, f"Player '**{player}**' is not a member of this server.")
             return
 
-        player_name = member.display_name
-
         logging.info(
             (
                 f"Handling '/score player:{player}' on behalf of "
@@ -296,7 +294,7 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            skill_info, points_by_activity = score_info(player_name)
+            skill_info, points_by_activity = score_info(player)
         except RuntimeError as e:
             await interaction.followup.send(build_error_message_string(str(e)))
             return
@@ -372,8 +370,6 @@ class IronForgedCommands:
             await send_error_response(interaction, f"Player '{player}' is not a member of this server")
             return
 
-        player = member.display_name
-
         logging.info(
             f"Handling '/breakdown player:{player}' on behalf of "
             f"{normalize_discord_string(interaction.user.display_name)}"
@@ -400,7 +396,7 @@ class IronForgedCommands:
         rank_icon = find_emoji(self._discord_client.emojis, rank_name)
 
         rank_breakdown_embed = build_response_embed(
-            f"{rank_icon} {player} - Rank Ladder",
+            f"{rank_icon} {member.display_name} | Rank Ladder",
             "A visual representation of the ranking ladder,\nincluding point thresholds.",
             rank_color,
         )
@@ -431,7 +427,7 @@ class IronForgedCommands:
             )
 
         skill_breakdown_embed = build_response_embed(
-            f"{rank_icon} {player}'s Skilling Points",
+            f"{rank_icon} {member.display_name} | Skilling Points",
             f"**{skill_points:,}** points awarded for skill xp.",
             rank_color,
         )
@@ -457,7 +453,7 @@ class IronForgedCommands:
         boss_embeds = []
 
         working_embed = build_response_embed(
-            f"{rank_icon} {player} - Bossing",
+            f"{rank_icon} {member.display_name} | Bossing",
             "Points awarded for boss kill count.",
             rank_color,
         )
@@ -467,7 +463,7 @@ class IronForgedCommands:
                 field_count = 0
                 boss_embeds.append((working_embed))
                 working_embed = build_response_embed(
-                    f"{rank_icon} {player} - Bossing (Part {boss_embeds.__len__() + 1})",
+                    f"{rank_icon} {member.display_name} | Bossing (Part {boss_embeds.__len__() + 1})",
                     "Points awarded for boss kill count.",
                     rank_color,
                 )
@@ -486,7 +482,7 @@ class IronForgedCommands:
         boss_embeds.append(working_embed)
 
         raid_breakdown_embed = build_response_embed(
-            f"{rank_icon} {player} - Raids",
+            f"{rank_icon} {member.display_name} | Raids",
             "Points awarded for raid completions.",
             rank_color,
         )
@@ -502,7 +498,7 @@ class IronForgedCommands:
             )
 
         clue_breakdown_embed = build_response_embed(
-            f"{rank_icon} {player} - Cluescrolls",
+            f"{rank_icon} {member.display_name} | Cluescrolls",
             "Points awarded for cluescroll completions.",
             rank_color,
         )
