@@ -15,7 +15,8 @@ def validate_player(guild: discord.Guild, player:str):
         return False
 
     for member in guild.members:
-        if normalize_discord_string(member.display_name.lower()) == player.lower():
+        normalized_display_name = normalize_discord_string(member.display_name.lower())
+        if normalized_display_name == normalize_discord_string(player.lower()):
             return member
 
     logging.info(f"Player name '{player}' is not a member of this guild")

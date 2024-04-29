@@ -8,6 +8,7 @@ from ironforgedbot.commands.hiscore.points import (
     SKILL_POINTS_PAST_99,
     ACTIVITY_POINTS,
 )
+from ironforgedbot.common.helpers import normalize_discord_string
 
 HISCORES_PLAYER_URL = (
     "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player={player}"
@@ -27,6 +28,8 @@ class ActivityInfo(TypedDict):
 
 
 def score_info(player_name: str):
+    player_name = normalize_discord_string(player_name)
+
     data = _fetch_data(player_name)
     skills_info = _get_skills_info(data)
     activities_info = _get_activities_info(data)
@@ -34,6 +37,8 @@ def score_info(player_name: str):
 
 
 def points_total(player_name: str) -> int:
+    player_name = normalize_discord_string(player_name)
+
     skills, activities = score_info(player_name)
     points = 0
 

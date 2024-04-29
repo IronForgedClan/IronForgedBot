@@ -277,19 +277,19 @@ class IronForgedCommands:
             player: Runescape playername to look up score for.
         """
         if not interaction.guild:
-            await send_error_response(interaction, "Error accessing guild")
+            await send_error_response(interaction, "Error accessing server.")
             return
 
         member = validate_player(interaction.guild, player)
         if not member:
-            await send_error_response(interaction, f"Player '{player}' is not a member of this server")
+            await send_error_response(interaction, f"Player '**{player}**' is not a member of this server.")
             return
 
         player_name = member.display_name
 
         logging.info(
             (
-                f"Handling '/score player:{player_name}' on behalf of "
+                f"Handling '/score player:{player}' on behalf of "
                 f"{normalize_discord_string(interaction.user.display_name)}"
             )
         )
