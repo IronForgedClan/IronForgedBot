@@ -1,6 +1,16 @@
 import discord
 from datetime import datetime
 
+async def send_error_response(interaction: discord.Interaction, message:str):
+    embed = discord.Embed(
+        title=":exclamation: Error",
+        description=message,
+        color=discord.Colour.red()
+    )
+
+    await interaction.response.send_message(embed=embed)
+
+
 def build_error_message_string(message:str) -> str:
     return f":warning:\n{message}"
 

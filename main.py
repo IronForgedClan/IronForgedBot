@@ -10,7 +10,7 @@ import discord
 from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
 
-from ironforgedbot.commands.hiscore.calculator import score_total
+from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     CLUE_DISPLAY_ORDER,
     RAIDS_DISPLAY_ORDER,
@@ -22,9 +22,11 @@ from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_emoji,
 )
+from ironforgedbot.common.player import validate_player
 from ironforgedbot.common.responses import (
     build_error_message_string,
     build_response_embed,
+    send_error_response,
 )
 from ironforgedbot.common.ranks import (
     RANKS,
@@ -62,12 +64,6 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
         logging.error("validation failed; BOT_TOKEN required but not present in env")
         return False
 
-    return True
-
-
-def validate_player_name(player: str) -> bool:
-    if len(player) > 12:
-        return False
     return True
 
 
@@ -280,22 +276,27 @@ class IronForgedCommands:
             interaction: Discord Interaction from CommandTree.
             player: Runescape playername to look up score for.
         """
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                build_error_message_string("RSNs can not be longer than 12 characters.")
-            )
+        if not interaction.guild:
+            await send_error_response(interaction, "Error accessing guild")
             return
+
+        member = validate_player(interaction.guild, player)
+        if not member:
+            await send_error_response(interaction, f"Player '{player}' is not a member of this server")
+            return
+
+        player_name = member.display_name
 
         logging.info(
             (
-                f"Handling '/score player:{player}' on behalf of "
+                f"Handling '/score player:{player_name}' on behalf of "
                 f"{normalize_discord_string(interaction.user.display_name)}"
             )
         )
         await interaction.response.defer()
 
         try:
-            skill_info, points_by_activity = score_total(player)
+            skill_info, points_by_activity = score_info(player_name)
         except RuntimeError as e:
             await interaction.followup.send(build_error_message_string(str(e)))
             return
@@ -306,7 +307,7 @@ class IronForgedCommands:
 
         activity_points = 0
         for _, v in points_by_activity.items():
-            activity_points += v
+            activity_points += v["points"]
 
         points_total = skill_points + activity_points
         rank_name = get_rank_from_points(points_total)
@@ -317,7 +318,7 @@ class IronForgedCommands:
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
         next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
 
-        embed = build_response_embed(f"{rank_icon} {player}", "", rank_color)
+        embed = build_response_embed(f"{rank_icon} {member.display_name}", "", rank_color)
         embed.add_field(
             name="Skill Points",
             value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
@@ -362,11 +363,16 @@ class IronForgedCommands:
             interaction: Discord Interaction from CommandTree.
             player: Runescape username to break down clan score for.
         """
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
+        if not interaction.guild:
+            await send_error_response(interaction, "Error accessing guild")
             return
+
+        member = validate_player(interaction.guild, player)
+        if not member:
+            await send_error_response(interaction, f"Player '{player}' is not a member of this server")
+            return
+
+        player = member.display_name
 
         logging.info(
             f"Handling '/breakdown player:{player}' on behalf of "
@@ -375,17 +381,17 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            skill_info, activity_info = score_total(player)
+            skills_info, activities_info = score_info(player)
         except RuntimeError as e:
             await interaction.followup.send(str(e))
             return
 
         skill_points = 0
-        for _, skill in skill_info.items():
+        for _, skill in skills_info.items():
             skill_points += skill["points"]
 
         activity_points = 0
-        for _, activity in activity_info.items():
+        for _, activity in activities_info.items():
             activity_points += activity["points"]
 
         points_total = skill_points + activity_points
@@ -395,7 +401,7 @@ class IronForgedCommands:
 
         rank_breakdown_embed = build_response_embed(
             f"{rank_icon} {player} - Rank Ladder",
-            "A visual representation of the ranking ladder.",
+            "A visual representation of the ranking ladder,\nincluding point thresholds.",
             rank_color,
         )
 
@@ -425,22 +431,22 @@ class IronForgedCommands:
             )
 
         skill_breakdown_embed = build_response_embed(
-            f"{rank_icon} {player} - Skilling",
-            "Points awarded for skill xp.",
+            f"{rank_icon} {player}'s Skilling Points",
+            f"**{skill_points:,}** points awarded for skill xp.",
             rank_color,
         )
 
         for skill in SKILLS_DISPLAY_ORDER:
             skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
             skill_breakdown_embed.add_field(
-                name=f"{skill_icon} {skill_info[skill]['points']:,} points",
-                value=f"⠀⠀{skill_info[skill]['xp']:,} xp",
+                name=f"{skill_icon} {skills_info[skill]['points']:,} points",
+                value=f"⠀⠀{skills_info[skill]['xp']:,} xp",
                 inline=True,
             )
 
         skill_breakdown_embed.add_field(
-            name=f"{rank_icon} Total",
-            value=f"⠀⠀**{points_total:,}** points",
+            name=f"{rank_icon} Skill Total",
+            value=f"⠀⠀**{points_total:,} points**",
             inline=True,
         )
 
@@ -457,7 +463,7 @@ class IronForgedCommands:
         )
 
         for boss_type, display_name in BOSS_DISPLAY_ORDER.items():
-            if field_count == 18:
+            if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
                 working_embed = build_response_embed(
@@ -466,7 +472,7 @@ class IronForgedCommands:
                     rank_color,
                 )
 
-            boss_info = activity_info.get(boss_type)
+            boss_info = activities_info.get(boss_type)
             if boss_info is None:
                 continue
 
@@ -486,18 +492,24 @@ class IronForgedCommands:
         )
 
         for raid_type, display_name in RAIDS_DISPLAY_ORDER.items():
-            raid_score = activity_info.get(raid_type, "0")
-            raid_breakdown_embed.add_field(name=display_name, value=raid_score)
+            raid_info = activities_info.get(raid_type)
+            if raid_info is None:
+                raid_info = {"points": 0, "kc": 0}
+            raid_icon = find_emoji(self._discord_client.emojis, display_name)
+            raid_breakdown_embed.add_field(
+                name=f"{raid_icon} {raid_info['points']:,} points",
+                value=f"⠀⠀{raid_info['kc']:,} kc",
+            )
 
         clue_breakdown_embed = build_response_embed(
             f"{rank_icon} {player} - Cluescrolls",
-            "Points awarded for completing cluescrolls.",
+            "Points awarded for cluescroll completions.",
             rank_color,
         )
 
         clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
         for clue_type, display_name in CLUE_DISPLAY_ORDER.items():
-            clue_info = activity_info.get(clue_type)
+            clue_info = activities_info.get(clue_type)
             if clue_info is None:
                 clue_info = {"points": 0, "kc": 0}
             clue_breakdown_embed.add_field(

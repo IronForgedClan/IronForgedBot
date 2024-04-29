@@ -129,7 +129,7 @@ BOSS_DISPLAY_ORDER = {
     "Venenatis": "Venenatis",
     "Vet'ion": "Vet'ion",
     "Vorkath": "Vorkath",
-    "Wintertodt": "Wintertodt",
+    "Wintertodt": "wintertodt",
 }
 
 

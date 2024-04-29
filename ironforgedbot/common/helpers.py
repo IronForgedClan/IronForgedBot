@@ -32,4 +32,4 @@ def find_emoji(list: Sequence[Emoji], target: str):
             emojiCache[emoji.name] = emoji
             return emoji
 
-    return ""
+    return ":grin:"

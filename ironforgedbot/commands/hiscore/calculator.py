@@ -26,15 +26,15 @@ class ActivityInfo(TypedDict):
     points: int
 
 
-def score_total(player_name: str):
+def score_info(player_name: str):
     data = _fetch_data(player_name)
-    skills_score = _get_skills_info(data)
-    activities_score = _get_activities_info(data)
-    return skills_score, activities_score
+    skills_info = _get_skills_info(data)
+    activities_info = _get_activities_info(data)
+    return skills_info, activities_info
 
 
 def points_total(player_name: str) -> int:
-    skills, activities = score_total(player_name)
+    skills, activities = score_info(player_name)
     points = 0
 
     for _, skill in skills.items():
