@@ -397,7 +397,7 @@ class IronForgedCommands:
 
         rank_breakdown_embed = build_response_embed(
             f"{rank_icon} {member.display_name} | Rank Ladder",
-            "A visual representation of the ranking ladder,\nincluding point thresholds.",
+            "The **Iron Forged** player rank ladder.",
             rank_color,
         )
 
@@ -428,7 +428,7 @@ class IronForgedCommands:
 
         skill_breakdown_embed = build_response_embed(
             f"{rank_icon} {member.display_name} | Skilling Points",
-            f"**{skill_points:,}** points awarded for skill xp.",
+            f"Breakdown of **{skill_points:,}** points awarded for skill xp.",
             rank_color,
         )
 
@@ -440,9 +440,10 @@ class IronForgedCommands:
                 inline=True,
             )
 
+        # empty field to maintain layout
         skill_breakdown_embed.add_field(
-            name=f"{rank_icon} Skill Total",
-            value=f"⠀⠀**{points_total:,} points**",
+            name="",
+            value="",
             inline=True,
         )
 
@@ -453,24 +454,27 @@ class IronForgedCommands:
         boss_embeds = []
 
         working_embed = build_response_embed(
-            f"{rank_icon} {member.display_name} | Bossing",
-            "Points awarded for boss kill count.",
+            "",
+            "",
             rank_color,
         )
 
+        boss_point_counter = 0
         for boss_type, display_name in BOSS_DISPLAY_ORDER.items():
             if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
                 working_embed = build_response_embed(
-                    f"{rank_icon} {member.display_name} | Bossing (Part {boss_embeds.__len__() + 1})",
-                    "Points awarded for boss kill count.",
+                    "",
+                    "",
                     rank_color,
                 )
 
             boss_info = activities_info.get(boss_type)
             if boss_info is None:
                 continue
+
+            boss_point_counter += boss_info["points"]
 
             field_count += 1
             boss_icon = find_emoji(self._discord_client.emojis, display_name)
@@ -480,22 +484,33 @@ class IronForgedCommands:
             )
 
         boss_embeds.append(working_embed)
+        boss_page_count = len(boss_embeds)
+
+        for index, embed in enumerate(boss_embeds):
+            embed.title = f"{rank_icon} {member.display_name} | Bossing"
+            if boss_page_count > 1:
+                embed.title = "".join(embed.title) + f" ({index+1}/{boss_page_count})"
+            embed.description = f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
 
         raid_breakdown_embed = build_response_embed(
             f"{rank_icon} {member.display_name} | Raids",
-            "Points awarded for raid completions.",
+            "",
             rank_color,
         )
 
+        raid_point_counter = 0
         for raid_type, display_name in RAIDS_DISPLAY_ORDER.items():
             raid_info = activities_info.get(raid_type)
             if raid_info is None:
                 raid_info = {"points": 0, "kc": 0}
+            raid_point_counter += raid_info["points"]
             raid_icon = find_emoji(self._discord_client.emojis, display_name)
             raid_breakdown_embed.add_field(
                 name=f"{raid_icon} {raid_info['points']:,} points",
                 value=f"⠀⠀{raid_info['kc']:,} kc",
             )
+
+        raid_breakdown_embed.description = f"Breakdown of **{raid_point_counter:,}** points awarded for raid completions."
 
         clue_breakdown_embed = build_response_embed(
             f"{rank_icon} {member.display_name} | Cluescrolls",
@@ -503,15 +518,19 @@ class IronForgedCommands:
             rank_color,
         )
 
+        clue_point_counter = 0
         clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
         for clue_type, display_name in CLUE_DISPLAY_ORDER.items():
             clue_info = activities_info.get(clue_type)
             if clue_info is None:
                 clue_info = {"points": 0, "kc": 0}
+            clue_point_counter += clue_info["points"]
             clue_breakdown_embed.add_field(
                 name=f"{clue_icon} {clue_info['points']:,} points",
                 value=f"⠀⠀{clue_info['kc']:,} {display_name.lower()}",
             )
+
+        clue_breakdown_embed.description = f"Breakdown of **{clue_point_counter:,}** points awarded for cluescroll completions."
 
         menu = ViewMenu(
             interaction,
