@@ -492,6 +492,10 @@ class IronForgedCommands:
                 embed.title = "".join(embed.title) + f" ({index+1}/{boss_page_count})"
             embed.description = f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
 
+            if index+1 == boss_page_count:
+                if len(embed.fields) % 3 != 0:
+                    embed.add_field(name="", value="")
+
         raid_breakdown_embed = build_response_embed(
             f"{rank_icon} {member.display_name} | Raids",
             "",
