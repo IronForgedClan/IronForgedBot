@@ -13,6 +13,7 @@ from discord import app_commands
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     CLUE_DISPLAY_ORDER,
+    EMPTY_SPACE,
     RAIDS_DISPLAY_ORDER,
     SKILLS_DISPLAY_ORDER,
     BOSS_DISPLAY_ORDER,
@@ -407,9 +408,9 @@ class IronForgedCommands:
             rank_breakdown_embed.add_field(
                 name=(
                     f"{icon} {rank}%s"
-                    % ("⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀<-- _You are here_" if rank == rank_name else "")
+                    % (f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}<-- _You are here_" if rank == rank_name else "")
                 ),
-                value=f"⠀⠀{rank_point_threshold:,}+ points",
+                value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
                 inline=False,
             )
 
@@ -436,7 +437,7 @@ class IronForgedCommands:
             skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
             skill_breakdown_embed.add_field(
                 name=f"{skill_icon} {skills_info[skill]['points']:,} points",
-                value=f"⠀⠀{skills_info[skill]['xp']:,} xp",
+                value=f"{EMPTY_SPACE}{skills_info[skill]['xp']:,} xp",
                 inline=True,
             )
 
@@ -480,7 +481,7 @@ class IronForgedCommands:
             boss_icon = find_emoji(self._discord_client.emojis, display_name)
             working_embed.add_field(
                 name=f"{boss_icon} {boss_info['points']:,} points",
-                value=f"⠀⠀{boss_info['kc']:,} kc",
+                value=f"{EMPTY_SPACE}{boss_info['kc']:,} kc",
             )
 
         boss_embeds.append(working_embed)
@@ -512,7 +513,7 @@ class IronForgedCommands:
             raid_icon = find_emoji(self._discord_client.emojis, display_name)
             raid_breakdown_embed.add_field(
                 name=f"{raid_icon} {raid_info['points']:,} points",
-                value=f"⠀⠀{raid_info['kc']:,} kc",
+                value=f"{EMPTY_SPACE}{raid_info['kc']:,} kc",
             )
 
         raid_breakdown_embed.description = f"Breakdown of **{raid_point_counter:,}** points awarded for raid completions."
@@ -533,7 +534,7 @@ class IronForgedCommands:
             clue_point_counter += clue_info["points"]
             clue_breakdown_embed.add_field(
                 name=f"{clue_icon} {clue_info['points']:,} points",
-                value=f"⠀⠀{clue_info['kc']:,} {display_name.lower()}",
+                value=f"{EMPTY_SPACE}{clue_info['kc']:,} {display_name.lower()}",
             )
 
         clue_breakdown_embed.description = f"Breakdown of **{clue_point_counter:,}** points awarded for cluescroll completions."

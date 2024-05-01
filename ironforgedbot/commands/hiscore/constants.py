@@ -1,5 +1,6 @@
 from strenum import StrEnum
 
+EMPTY_SPACE="⠀⠀"
 
 class SKILLS(StrEnum):
     ATK = "Attack"
