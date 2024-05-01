@@ -22,6 +22,7 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
     find_emoji,
+    validate_user_request,
 )
 from ironforgedbot.common.player import validate_player
 from ironforgedbot.common.responses import (
@@ -362,13 +363,11 @@ class IronForgedCommands:
             interaction: Discord Interaction from CommandTree.
             player: Runescape username to break down clan score for.
         """
-        if not interaction.guild:
-            await send_error_response(interaction, "Error accessing guild")
-            return
 
-        member = validate_player(interaction.guild, player)
-        if not member:
-            await send_error_response(interaction, f"Player '{player}' is not a member of this server")
+        try:
+            member, player = validate_user_request(interaction, player)
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
