@@ -1,4 +1,5 @@
 from discord import Emoji, Interaction, Guild
+import logging
 from collections.abc import Sequence
 
 emojiCache = dict[str, Emoji]()
@@ -19,13 +20,16 @@ def normalize_discord_string(nick: str) -> str:
 
 def validate_user_request(interaction: Interaction, playername: str):
     if not interaction.guild:
+        logging.error(f"Unable to access guild on interaction {interaction.id}")
         raise ReferenceError("Error accessing server")
 
     if interaction.is_expired():
+        logging.info(f"Interaction {interaction.id} expired")
         raise ReferenceError("Interaction has expired")
 
     playername = normalize_discord_string(playername)
     if len(playername) > 12 or len(playername) < 1:
+        logging.info(f"RSN length incorrect: {playername}")
         raise ValueError("Player name can only be 1-12 characters long")
 
     member = find_member_by_nickname(interaction.guild, playername)
@@ -37,6 +41,7 @@ def find_member_by_nickname(guild: Guild, target_name:str):
         normalized_display_name = normalize_discord_string(member.display_name.lower())
         if normalized_display_name == normalize_discord_string(target_name.lower()):
             if not member.nick or len(member.nick) < 1:
+                logging.info(f"{member.display_name} has no nickname set")
                 raise ValueError(f"Member '**{member.display_name}**' does not have a nickname set")
             return member
 
