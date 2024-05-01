@@ -487,17 +487,18 @@ class IronForgedCommands:
         boss_page_count = len(boss_embeds)
 
         for index, embed in enumerate(boss_embeds):
-            embed.title = f"{rank_icon} {member.display_name} | Bossing"
+            embed.title = f"{rank_icon} {member.display_name} | Bossing Points"
+            embed.description = f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
+
             if boss_page_count > 1:
                 embed.title = "".join(embed.title) + f" ({index+1}/{boss_page_count})"
-            embed.description = f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
 
             if index+1 == boss_page_count:
                 if len(embed.fields) % 3 != 0:
                     embed.add_field(name="", value="")
 
         raid_breakdown_embed = build_response_embed(
-            f"{rank_icon} {member.display_name} | Raids",
+            f"{rank_icon} {member.display_name} | Raid Points",
             "",
             rank_color,
         )
@@ -517,7 +518,7 @@ class IronForgedCommands:
         raid_breakdown_embed.description = f"Breakdown of **{raid_point_counter:,}** points awarded for raid completions."
 
         clue_breakdown_embed = build_response_embed(
-            f"{rank_icon} {member.display_name} | Cluescrolls",
+            f"{rank_icon} {member.display_name} | Cluescroll Points",
             "Points awarded for cluescroll completions.",
             rank_color,
         )
@@ -528,6 +529,7 @@ class IronForgedCommands:
             clue_info = activities_info.get(clue_type)
             if clue_info is None:
                 clue_info = {"points": 0, "kc": 0}
+
             clue_point_counter += clue_info["points"]
             clue_breakdown_embed.add_field(
                 name=f"{clue_icon} {clue_info['points']:,} points",
