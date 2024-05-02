@@ -4,7 +4,7 @@ import logging
 import os
 import random
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 import discord
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -271,7 +271,7 @@ class IronForgedCommands:
         )
         self._tree.add_command(syncmembers_command)
 
-    async def score(self, interaction: discord.Interaction, player: str):
+    async def score(self, interaction: discord.Interaction, player: Optional[str] = None):
         """Compute clan score for a Runescape player name.
 
         Arguments:
@@ -280,6 +280,9 @@ class IronForgedCommands:
         """
 
         await interaction.response.defer(thinking=True)
+
+        if player is None:
+            player = interaction.user.display_name
 
         try:
             member, player = validate_user_request(interaction, player)
@@ -293,7 +296,6 @@ class IronForgedCommands:
                 f"{normalize_discord_string(interaction.user.display_name)}"
             )
         )
-        await interaction.response.defer()
 
         try:
             skill_info, points_by_activity = score_info(player)
@@ -356,7 +358,7 @@ class IronForgedCommands:
 
         await interaction.followup.send(embed=embed)
 
-    async def breakdown(self, interaction: discord.Interaction, player: str):
+    async def breakdown(self, interaction: discord.Interaction, player: Optional[str] = None):
         """Compute player score with complete source enumeration.
 
         Arguments:
