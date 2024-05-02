@@ -278,13 +278,13 @@ class IronForgedCommands:
             interaction: Discord Interaction from CommandTree.
             player: Runescape playername to look up score for.
         """
-        if not interaction.guild:
-            await send_error_response(interaction, "Error accessing server.")
-            return
 
-        member = validate_player(interaction.guild, player)
-        if not member:
-            await send_error_response(interaction, f"Player '**{player}**' is not a member of this server.")
+        await interaction.response.defer(thinking=True)
+
+        try:
+            member, player = validate_user_request(interaction, player)
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
@@ -297,8 +297,8 @@ class IronForgedCommands:
 
         try:
             skill_info, points_by_activity = score_info(player)
-        except RuntimeError as e:
-            await interaction.followup.send(build_error_message_string(str(e)))
+        except RuntimeError as error:
+            await send_error_response(interaction, str(error))
             return
 
         skill_points = 0
@@ -364,6 +364,11 @@ class IronForgedCommands:
             player: Runescape username to break down clan score for.
         """
 
+        await interaction.response.defer(thinking=True)
+
+        if player is None:
+            player = interaction.user.display_name
+
         try:
             member, player = validate_user_request(interaction, player)
         except (ReferenceError, ValueError) as error:
@@ -374,7 +379,6 @@ class IronForgedCommands:
             f"Handling '/breakdown player:{player}' on behalf of "
             f"{normalize_discord_string(interaction.user.display_name)}"
         )
-        await interaction.response.defer()
 
         try:
             skills_info, activities_info = score_info(player)
@@ -407,7 +411,10 @@ class IronForgedCommands:
             rank_breakdown_embed.add_field(
                 name=(
                     f"{icon} {rank}%s"
-                    % (f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}<-- _You are here_" if rank == rank_name else "")
+                    % (
+                        f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
+                        f"<-- _You are here_" if rank == rank_name else ""
+                    )
                 ),
                 value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
                 inline=False,

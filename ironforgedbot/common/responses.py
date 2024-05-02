@@ -8,7 +8,7 @@ async def send_error_response(interaction: discord.Interaction, message:str):
         color=discord.Colour.red()
     )
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 
 def build_error_message_string(message:str) -> str:

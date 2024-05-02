@@ -20,23 +20,26 @@ def normalize_discord_string(nick: str) -> str:
 
 def validate_user_request(interaction: Interaction, playername: str):
     if not interaction.guild:
-        logging.error(f"Unable to access guild on interaction {interaction.id}")
+        logging.error(f"Error accessing guild ({interaction.id})")
         raise ReferenceError("Error accessing server")
 
     if interaction.is_expired():
-        logging.info(f"Interaction {interaction.id} expired")
+        logging.info(f"Interaction has expired ({interaction.id})")
         raise ReferenceError("Interaction has expired")
 
     playername = normalize_discord_string(playername)
     if len(playername) > 12 or len(playername) < 1:
-        logging.info(f"RSN length incorrect: {playername}")
-        raise ValueError("Player name can only be 1-12 characters long")
+        logging.info(f"RSN length incorrect: '{playername}' ({interaction.id})")
+        raise ValueError("RSN can only be 1-12 characters long")
 
     member = find_member_by_nickname(interaction.guild, playername)
 
     return member, playername
 
 def find_member_by_nickname(guild: Guild, target_name:str):
+    if not guild.members or len(guild.members) < 1:
+        raise ReferenceError("Error accessing server members")
+
     for member in guild.members:
         normalized_display_name = normalize_discord_string(member.display_name.lower())
         if normalized_display_name == normalize_discord_string(target_name.lower()):
@@ -50,7 +53,6 @@ def find_member_by_nickname(guild: Guild, target_name:str):
 def calculate_percentage(part, whole) -> int:
     return round(100 * float(part) / float(whole))
 
-
 def find_emoji(list: Sequence[Emoji], target: str):
     if target in emojiCache:
         return emojiCache[target]
@@ -60,4 +62,4 @@ def find_emoji(list: Sequence[Emoji], target: str):
             emojiCache[emoji.name] = emoji
             return emoji
 
-    return ":grin:"
+    return ""
