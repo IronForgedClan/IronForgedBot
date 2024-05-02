@@ -1,3 +1,4 @@
+from apscheduler.executors.base import logging
 from discord import Emoji
 from strenum import StrEnum
 from collections.abc import Sequence
@@ -13,6 +14,7 @@ def find_emoji(list: Sequence[Emoji], target: str):
             emojiCache[emoji.name] = emoji
             return emoji
 
+    logging.warn(f"Requested emoji '{target}' not found")
     return ""
 
 class SKILLS_TO_EMOJI(StrEnum):
