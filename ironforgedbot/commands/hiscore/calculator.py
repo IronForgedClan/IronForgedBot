@@ -29,10 +29,11 @@ class ActivityInfo(TypedDict):
 
 def score_info(player_name: str):
     player_name = normalize_discord_string(player_name)
-
     data = _fetch_data(player_name)
+
     skills_info = _get_skills_info(data)
     activities_info = _get_activities_info(data)
+
     return skills_info, activities_info
 
 

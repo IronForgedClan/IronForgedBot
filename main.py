@@ -384,8 +384,8 @@ class IronForgedCommands:
 
         try:
             skills_info, activities_info = score_info(player)
-        except RuntimeError as e:
-            await interaction.followup.send(str(e))
+        except RuntimeError as error:
+            await send_error_response(interaction, str(error))
             return
 
         skill_points = 0
