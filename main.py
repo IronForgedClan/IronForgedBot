@@ -12,21 +12,21 @@ from discord import app_commands
 
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
-    CLUE_DISPLAY_ORDER,
     EMPTY_SPACE,
-    RAIDS_DISPLAY_ORDER,
-    SKILLS_DISPLAY_ORDER,
-    BOSS_DISPLAY_ORDER,
 )
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
-    find_emoji,
     validate_user_request,
 )
-from ironforgedbot.common.player import validate_player
+from ironforgedbot.common.emoji import (
+    find_emoji,
+    CLUE_TO_EMOJI,
+    RAIDS_TO_EMOJI,
+    SKILLS_TO_EMOJI,
+    BOSS_TO_EMOJI,
+)
 from ironforgedbot.common.responses import (
-    build_error_message_string,
     build_response_embed,
     send_error_response,
 )
@@ -441,7 +441,7 @@ class IronForgedCommands:
             rank_color,
         )
 
-        for skill in SKILLS_DISPLAY_ORDER:
+        for skill in SKILLS_TO_EMOJI:
             skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
             skill_breakdown_embed.add_field(
                 name=f"{skill_icon} {skills_info[skill]['points']:,} points",
@@ -469,7 +469,7 @@ class IronForgedCommands:
         )
 
         boss_point_counter = 0
-        for boss_type, display_name in BOSS_DISPLAY_ORDER.items():
+        for boss_type, display_name in BOSS_TO_EMOJI.items():
             if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
@@ -513,7 +513,7 @@ class IronForgedCommands:
         )
 
         raid_point_counter = 0
-        for raid_type, display_name in RAIDS_DISPLAY_ORDER.items():
+        for raid_type, display_name in RAIDS_TO_EMOJI.items():
             raid_info = activities_info.get(raid_type)
             if raid_info is None:
                 raid_info = {"points": 0, "kc": 0}
@@ -534,7 +534,7 @@ class IronForgedCommands:
 
         clue_point_counter = 0
         clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
-        for clue_type, display_name in CLUE_DISPLAY_ORDER.items():
+        for clue_type, display_name in CLUE_TO_EMOJI.items():
             clue_info = activities_info.get(clue_type)
             if clue_info is None:
                 clue_info = {"points": 0, "kc": 0}

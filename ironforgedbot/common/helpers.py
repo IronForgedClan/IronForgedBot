@@ -1,8 +1,5 @@
-from discord import Emoji, Interaction, Guild
 import logging
-from collections.abc import Sequence
-
-emojiCache = dict[str, Emoji]()
+from discord import Interaction, Guild
 
 def normalize_discord_string(nick: str) -> str:
     """Strips Discord nickname down to plaintext."""
@@ -53,13 +50,3 @@ def find_member_by_nickname(guild: Guild, target_name:str):
 def calculate_percentage(part, whole) -> int:
     return round(100 * float(part) / float(whole))
 
-def find_emoji(list: Sequence[Emoji], target: str):
-    if target in emojiCache:
-        return emojiCache[target]
-
-    for emoji in list:
-        if emoji.available and emoji.name == target:
-            emojiCache[emoji.name] = emoji
-            return emoji
-
-    return ""
