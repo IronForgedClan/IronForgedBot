@@ -17,7 +17,7 @@ def find_emoji(list: Sequence[Emoji], target: str):
     logging.warn(f"Requested emoji '{target}' not found")
     return ""
 
-class SKILLS_TO_EMOJI(StrEnum):
+class SKILL_ORDER_AND_EMOJI(StrEnum):
     ATK = "Attack"
     HP = "Hitpoints"
     MINING = "Mining"
@@ -43,7 +43,7 @@ class SKILLS_TO_EMOJI(StrEnum):
     HUNTER = "Hunter"
 
 
-CLUE_TO_EMOJI = {
+CLUE_ORDER_AND_EMOJI = {
     "Clue Scrolls (beginner)": "Beginner",
     "Clue Scrolls (easy)": "Easy",
     "Clue Scrolls (medium)": "Medium",
@@ -52,7 +52,7 @@ CLUE_TO_EMOJI = {
     "Clue Scrolls (master)": "Master",
 }
 
-RAIDS_TO_EMOJI = {
+RAID_ORDER_AND_EMOJI = {
     "Chambers of Xeric": "Chambers of Xeric",
     "Chambers of Xeric: Challenge Mode": "CoX: Challenge Mode",
     "Theatre of Blood": "Theatre of Blood",
@@ -61,7 +61,7 @@ RAIDS_TO_EMOJI = {
     "Tombs of Amascut: Expert Mode": "ToA: Expert Mode",
 }
 
-BOSS_TO_EMOJI = {
+BOSS_ORDRE_AND_EMOJI = {
     "Rifts closed": "Guardians of the Rift",
     "Abyssal Sire": "Abyssal Sire",
     "Alchemical Hydra": "Alchemical Hydra",
