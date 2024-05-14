@@ -1,8 +1,9 @@
-from typing import Dict, TypedDict
+from typing import Any, Dict, List, Tuple, TypedDict, Union
 
+from apscheduler.executors.base import logging
 import requests
 
-from ironforgedbot.commands.hiscore.constants import SKILLS, ACTIVITIES
+from ironforgedbot.commands.hiscore.constants import Skill, SKILLS, ACTIVITIES
 from ironforgedbot.commands.hiscore.points import (
     SKILL_POINTS_REGULAR,
     SKILL_POINTS_PAST_99,
@@ -16,18 +17,12 @@ HISCORES_PLAYER_URL = (
 LEVEL_99_EXPERIENCE = 13034431
 
 
-class SkillInfo(TypedDict):
-    xp: int
-    level: int
-    points: int
-
-
 class ActivityInfo(TypedDict):
     kc: int
     points: int
 
 
-def score_info(player_name: str):
+def score_info(player_name: str) -> Tuple[List[Skill], Any]:
     player_name = normalize_discord_string(player_name)
     data = _fetch_data(player_name)
 
@@ -43,7 +38,7 @@ def points_total(player_name: str) -> int:
     skills, activities = score_info(player_name)
     points = 0
 
-    for _, skill in skills.items():
+    for skill in skills:
         points += skill["points"]
 
     for _, activity in activities.items():
@@ -65,41 +60,50 @@ def _fetch_data(player_name: str):
     return resp.json()
 
 
-def _get_skills_info(score_data) -> Dict[str, SkillInfo]:
-    skills = {}
+def _get_skills_info(score_data) -> List[Skill]:
+    output = []
 
-    for skill in score_data["skills"]:
-        if not SKILLS.has_value(skill["name"]):
+    for skill_data in score_data["skills"]:
+        skill_name = skill_data["name"]
+
+        if skill_name.lower() == "overall":
             continue
 
-        skill_constant = SKILLS(skill["name"])
+        skill = SKILLS.get_skill_by_long_name(skill_name)
+
+        if skill is None:
+            logging.info(f"Skill name '{skill_name}' not found")
+            continue
 
         if (
-            skill_constant not in SKILL_POINTS_REGULAR
-            or skill_constant not in SKILL_POINTS_PAST_99
+            skill_name not in SKILL_POINTS_REGULAR
+            or skill_name not in SKILL_POINTS_PAST_99
         ):
+            logging.info(f"No points defined for skill '{skill_name}'")
             continue
 
-        skill_level = int(skill["level"]) if int(skill["level"]) > 1 else 1
-        experience = int(skill["xp"]) if int(skill["xp"]) > 0 else 0
+        skill_level = int(skill_data["level"]) if int(skill_data["level"]) > 1 else 1
+        experience = int(skill_data["xp"]) if int(skill_data["xp"]) > 0 else 0
 
         if skill_level < 99:
-            points = int(experience / SKILL_POINTS_REGULAR[skill_constant])
+            points = int(experience / SKILL_POINTS_REGULAR[skill_name])
         else:
-            points = int(
-                LEVEL_99_EXPERIENCE / SKILL_POINTS_REGULAR[skill_constant]
-            ) + int(
-                (experience - LEVEL_99_EXPERIENCE)
-                / SKILL_POINTS_PAST_99[skill_constant]
+            points = int(LEVEL_99_EXPERIENCE / SKILL_POINTS_REGULAR[skill_name]) + int(
+                (experience - LEVEL_99_EXPERIENCE) / SKILL_POINTS_PAST_99[skill_name]
             )
 
-        skills[skill_constant] = {
-            "xp": experience,
-            "level": skill_level,
-            "points": points,
-        }
+        output.append(
+            {
+                **skill,
+                **{
+                    "xp": experience,
+                    "level": skill_level,
+                    "points": points,
+                },
+            }
+        )
 
-    return skills
+    return output
 
 
 def _get_activities_info(score_data) -> Dict[str, ActivityInfo]:

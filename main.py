@@ -21,10 +21,10 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.emoji import (
     find_emoji,
-    CLUE_TO_EMOJI,
-    RAIDS_TO_EMOJI,
-    SKILLS_TO_EMOJI,
-    BOSS_TO_EMOJI,
+    CLUE_ORDER_AND_EMOJI,
+    RAID_ORDER_AND_EMOJI,
+    SKILL_ORDER_AND_EMOJI,
+    BOSS_ORDRE_AND_EMOJI,
 )
 from ironforgedbot.common.responses import (
     build_response_embed,
@@ -271,7 +271,9 @@ class IronForgedCommands:
         )
         self._tree.add_command(syncmembers_command)
 
-    async def score(self, interaction: discord.Interaction, player: Optional[str] = None):
+    async def score(
+        self, interaction: discord.Interaction, player: Optional[str] = None
+    ):
         """Compute clan score for a Runescape player name.
 
         Arguments:
@@ -298,13 +300,13 @@ class IronForgedCommands:
         )
 
         try:
-            skill_info, points_by_activity = score_info(player)
+            skills, points_by_activity = score_info(player)
         except RuntimeError as error:
             await send_error_response(interaction, str(error))
             return
 
         skill_points = 0
-        for _, skill in skill_info.items():
+        for skill in skills:
             skill_points += skill["points"]
 
         activity_points = 0
@@ -320,7 +322,9 @@ class IronForgedCommands:
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
         next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
 
-        embed = build_response_embed(f"{rank_icon} {member.display_name}", "", rank_color)
+        embed = build_response_embed(
+            f"{rank_icon} {member.display_name}", "", rank_color
+        )
         embed.add_field(
             name="Skill Points",
             value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
@@ -358,7 +362,9 @@ class IronForgedCommands:
 
         await interaction.followup.send(embed=embed)
 
-    async def breakdown(self, interaction: discord.Interaction, player: Optional[str] = None):
+    async def breakdown(
+        self, interaction: discord.Interaction, player: Optional[str] = None
+    ):
         """Compute player score with complete source enumeration.
 
         Arguments:
@@ -383,13 +389,13 @@ class IronForgedCommands:
         )
 
         try:
-            skills_info, activities_info = score_info(player)
+            skills, activities_info = score_info(player)
         except RuntimeError as error:
             await send_error_response(interaction, str(error))
             return
 
         skill_points = 0
-        for _, skill in skills_info.items():
+        for skill in skills:
             skill_points += skill["points"]
 
         activity_points = 0
@@ -415,7 +421,9 @@ class IronForgedCommands:
                     f"{icon} {rank}%s"
                     % (
                         f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
-                        f"<-- _You are here_" if rank == rank_name else ""
+                        f"<-- _You are here_"
+                        if rank == rank_name
+                        else ""
                     )
                 ),
                 value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
@@ -441,11 +449,13 @@ class IronForgedCommands:
             rank_color,
         )
 
-        for skill in SKILLS_TO_EMOJI:
-            skill_icon = find_emoji(self._discord_client.emojis, skill.lower())
+        ordered_skills = sorted(skills, key=lambda x: x["display_order"])
+
+        for skill in ordered_skills:
+            skill_icon = find_emoji(self._discord_client.emojis, skill["emoji_key"])
             skill_breakdown_embed.add_field(
-                name=f"{skill_icon} {skills_info[skill]['points']:,} points",
-                value=f"{EMPTY_SPACE}{skills_info[skill]['xp']:,} xp",
+                name=f"{skill_icon} {skill['points']:,} points",
+                value=f"{EMPTY_SPACE}{skill['xp']:,} xp",
                 inline=True,
             )
 
@@ -469,7 +479,7 @@ class IronForgedCommands:
         )
 
         boss_point_counter = 0
-        for boss_type, display_name in BOSS_TO_EMOJI.items():
+        for boss_type, display_name in BOSS_ORDRE_AND_EMOJI.items():
             if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
@@ -497,12 +507,14 @@ class IronForgedCommands:
 
         for index, embed in enumerate(boss_embeds):
             embed.title = f"{rank_icon} {member.display_name} | Bossing Points"
-            embed.description = f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
+            embed.description = (
+                f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
+            )
 
             if boss_page_count > 1:
                 embed.title = "".join(embed.title) + f" ({index+1}/{boss_page_count})"
 
-            if index+1 == boss_page_count:
+            if index + 1 == boss_page_count:
                 if len(embed.fields) % 3 != 0:
                     embed.add_field(name="", value="")
 
@@ -513,7 +525,7 @@ class IronForgedCommands:
         )
 
         raid_point_counter = 0
-        for raid_type, display_name in RAIDS_TO_EMOJI.items():
+        for raid_type, display_name in RAID_ORDER_AND_EMOJI.items():
             raid_info = activities_info.get(raid_type)
             if raid_info is None:
                 raid_info = {"points": 0, "kc": 0}
@@ -534,7 +546,7 @@ class IronForgedCommands:
 
         clue_point_counter = 0
         clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
-        for clue_type, display_name in CLUE_TO_EMOJI.items():
+        for clue_type, display_name in CLUE_ORDER_AND_EMOJI.items():
             clue_info = activities_info.get(clue_type)
             if clue_info is None:
                 clue_info = {"points": 0, "kc": 0}
