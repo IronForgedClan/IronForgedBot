@@ -173,7 +173,7 @@ class IronForgedCommands:
         # Arg descriptions are pulled from function definition.
         score_command = app_commands.Command(
             name="score",
-            description="Compute clan score for a player.",
+            description="Compute your score, or the score of another member.",
             callback=self.score,
             nsfw=False,
             parent=None,
@@ -183,7 +183,7 @@ class IronForgedCommands:
 
         breakdown_command = app_commands.Command(
             name="breakdown",
-            description="Get full breakdown of score for a player.",
+            description="View your score breakdown, or the breakdown of another member.",
             callback=self.breakdown,
             nsfw=False,
             parent=None,
@@ -193,7 +193,7 @@ class IronForgedCommands:
 
         ingots_command = app_commands.Command(
             name="ingots",
-            description="View current ingots for a player.",
+            description="View your ingot balance, or the balance of another member.",
             callback=self.ingots,
             nsfw=False,
             parent=None,
@@ -371,7 +371,7 @@ class IronForgedCommands:
 
         Arguments:
             interaction: Discord Interaction from CommandTree.
-            player: Runescape username to break down clan score for.
+            (optional) player: Runescape username to break down clan score for.
         """
 
         await interaction.response.defer(thinking=True)
