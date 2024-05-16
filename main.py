@@ -572,26 +572,31 @@ class IronForgedCommands:
 
         await menu.start()
 
-    async def ingots(self, interaction: discord.Interaction, player: str):
-        """View ingots for a Runescape playername.
+    async def ingots(
+        self, interaction: discord.Interaction, player: Optional[str] = None
+    ):
+        """View your ingots, or those for another player.
 
         Arguments:
             interaction: Discord Interaction from CommandTree.
-            player: Runescape username to view ingot count for.
+            (optional) player: Runescape username to view ingot count for.
         """
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
+
+        await interaction.response.defer(thinking=True)
+
+        if player is None:
+            player = interaction.user.display_name
+
+        try:
+            _, player = validate_user_request(interaction, player)
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
             f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
         )
-        await interaction.response.defer()
 
-        # Strip whitespaces from mis-typing.
-        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:
