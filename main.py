@@ -300,18 +300,20 @@ class IronForgedCommands:
         )
 
         try:
-            skills, points_by_activity = score_info(player)
+            skills, clues, raids, bosses = score_info(player)
         except RuntimeError as error:
             await send_error_response(interaction, str(error))
             return
+
+        activities = clues + raids + bosses
 
         skill_points = 0
         for skill in skills:
             skill_points += skill["points"]
 
         activity_points = 0
-        for _, v in points_by_activity.items():
-            activity_points += v["points"]
+        for activity in activities:
+            activity_points += activity["points"]
 
         points_total = skill_points + activity_points
         rank_name = get_rank_from_points(points_total)
@@ -389,17 +391,19 @@ class IronForgedCommands:
         )
 
         try:
-            skills, activities_info = score_info(player)
+            skills, clues, raids, bosses = score_info(player)
         except RuntimeError as error:
             await send_error_response(interaction, str(error))
             return
+
+        activities = clues + raids + bosses
 
         skill_points = 0
         for skill in skills:
             skill_points += skill["points"]
 
         activity_points = 0
-        for _, activity in activities_info.items():
+        for activity in activities:
             activity_points += activity["points"]
 
         points_total = skill_points + activity_points
@@ -479,7 +483,7 @@ class IronForgedCommands:
         )
 
         boss_point_counter = 0
-        for boss_type, display_name in BOSS_ORDRE_AND_EMOJI.items():
+        for boss in bosses:
             if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
@@ -489,17 +493,13 @@ class IronForgedCommands:
                     rank_color,
                 )
 
-            boss_info = activities_info.get(boss_type)
-            if boss_info is None:
-                continue
-
-            boss_point_counter += boss_info["points"]
+            boss_point_counter += boss["points"]
 
             field_count += 1
-            boss_icon = find_emoji(self._discord_client.emojis, display_name)
+            boss_icon = find_emoji(self._discord_client.emojis, boss["emoji_key"])
             working_embed.add_field(
-                name=f"{boss_icon} {boss_info['points']:,} points",
-                value=f"{EMPTY_SPACE}{boss_info['kc']:,} kc",
+                name=f"{boss_icon} {boss['points']:,} points",
+                value=f"{EMPTY_SPACE}{boss['kc']:,} kc",
             )
 
         boss_embeds.append(working_embed)
@@ -525,15 +525,12 @@ class IronForgedCommands:
         )
 
         raid_point_counter = 0
-        for raid_type, display_name in RAID_ORDER_AND_EMOJI.items():
-            raid_info = activities_info.get(raid_type)
-            if raid_info is None:
-                raid_info = {"points": 0, "kc": 0}
-            raid_point_counter += raid_info["points"]
-            raid_icon = find_emoji(self._discord_client.emojis, display_name)
+        for raid in raids:
+            raid_point_counter += raid["points"]
+            raid_icon = find_emoji(self._discord_client.emojis, raid["emoji_key"])
             raid_breakdown_embed.add_field(
-                name=f"{raid_icon} {raid_info['points']:,} points",
-                value=f"{EMPTY_SPACE}{raid_info['kc']:,} kc",
+                name=f"{raid_icon} {raid['points']:,} points",
+                value=f"{EMPTY_SPACE}{raid['kc']:,} kc",
             )
 
         raid_breakdown_embed.description = f"Breakdown of **{raid_point_counter:,}** points awarded for raid completions."
@@ -546,15 +543,11 @@ class IronForgedCommands:
 
         clue_point_counter = 0
         clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
-        for clue_type, display_name in CLUE_ORDER_AND_EMOJI.items():
-            clue_info = activities_info.get(clue_type)
-            if clue_info is None:
-                clue_info = {"points": 0, "kc": 0}
-
-            clue_point_counter += clue_info["points"]
+        for clue in clues:
+            clue_point_counter += clue["points"]
             clue_breakdown_embed.add_field(
-                name=f"{clue_icon} {clue_info['points']:,} points",
-                value=f"{EMPTY_SPACE}{clue_info['kc']:,} {display_name.lower()}",
+                name=f"{clue_icon} {clue['points']:,} points",
+                value=f"{EMPTY_SPACE}{clue['kc']:,} {clue.get("display_name", clue['name'])}",
             )
 
         clue_breakdown_embed.description = f"Breakdown of **{clue_point_counter:,}** points awarded for cluescroll completions."
