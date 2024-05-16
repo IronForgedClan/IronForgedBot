@@ -17,14 +17,11 @@ from ironforgedbot.commands.hiscore.constants import (
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
+    validate_protected_request,
     validate_user_request,
 )
 from ironforgedbot.common.emoji import (
     find_emoji,
-    CLUE_ORDER_AND_EMOJI,
-    RAID_ORDER_AND_EMOJI,
-    SKILL_ORDER_AND_EMOJI,
-    BOSS_ORDRE_AND_EMOJI,
 )
 from ironforgedbot.common.responses import (
     build_response_embed,
@@ -67,16 +64,6 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
         return False
 
     return True
-
-
-def check_role(member: discord.Member, checked_role: str) -> bool:
-    """Check if a member has a given role."""
-    roles = member.roles
-    for role in roles:
-        if role.name == checked_role:
-            return True
-
-    return False
 
 
 class DiscordClient(discord.Client):
@@ -626,40 +613,18 @@ class IronForgedCommands:
             player: Runescape username to add ingots to.
             ingots: number of ingots to add to this player.
         """
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
-            )
-            return
-
-        if not check_role(caller, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
-
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
-            return
-
-        if caller.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
-        logging.info(
-            f"Handling '/addingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
-        )
         await interaction.response.defer()
 
-        player = player.strip()
+        try:
+            _, player = validate_protected_request(interaction, player, "Leadership")
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
+            return
+
+        logging.info(
+            f"Handling '/addingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {interaction.user.display_name}"
+        )
+
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:
@@ -673,7 +638,9 @@ class IronForgedCommands:
         member.ingots += ingots
 
         try:
-            self._storage_client.update_members([member], caller, note=reason)
+            self._storage_client.update_members(
+                [member], interaction.user.display_name, note=reason
+            )
         except StorageError as e:
             await interaction.followup.send(f"Encountered error writing ingots: {e}")
             return

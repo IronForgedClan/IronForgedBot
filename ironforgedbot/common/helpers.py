@@ -1,5 +1,7 @@
 import logging
-from discord import Interaction, Guild
+from typing import Tuple
+from discord import Interaction, Guild, Member
+
 
 def normalize_discord_string(nick: str) -> str:
     """Strips Discord nickname down to plaintext."""
@@ -15,7 +17,10 @@ def normalize_discord_string(nick: str) -> str:
             new_nick.append(letter)
     return "".join(new_nick).strip()
 
-def validate_user_request(interaction: Interaction, playername: str):
+
+def validate_user_request(
+    interaction: Interaction, playername: str
+) -> Tuple[Member, str]:
     if not interaction.guild:
         logging.error(f"Error accessing guild ({interaction.id})")
         raise ReferenceError("Error accessing server")
@@ -33,7 +38,23 @@ def validate_user_request(interaction: Interaction, playername: str):
 
     return member, playername
 
-def find_member_by_nickname(guild: Guild, target_name:str):
+
+def validate_protected_request(
+    interaction: Interaction, playername: str, required_role: str
+) -> Tuple[Member, str]:
+    member, playername = validate_user_request(interaction, playername)
+    roles = member.roles
+
+    for role in roles:
+        if role.name == required_role:
+            return member, playername
+
+    raise ValueError(
+        f"Member '{member.display_name}' does not have permission for this action"
+    )
+
+
+def find_member_by_nickname(guild: Guild, target_name: str):
     if not guild.members or len(guild.members) < 1:
         raise ReferenceError("Error accessing server members")
 
@@ -42,11 +63,13 @@ def find_member_by_nickname(guild: Guild, target_name:str):
         if normalized_display_name == normalize_discord_string(target_name.lower()):
             if not member.nick or len(member.nick) < 1:
                 logging.info(f"{member.display_name} has no nickname set")
-                raise ValueError(f"Member '**{member.display_name}**' does not have a nickname set")
+                raise ValueError(
+                    f"Member '**{member.display_name}**' does not have a nickname set"
+                )
             return member
 
     raise ValueError(f"Player '**{target_name}**' is not a member of this server")
 
+
 def calculate_percentage(part, whole) -> int:
     return round(100 * float(part) / float(whole))
-
