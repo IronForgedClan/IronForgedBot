@@ -17,6 +17,7 @@ from ironforgedbot.commands.hiscore.constants import (
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
+    validate_playername,
     validate_protected_request,
     validate_user_request,
 )
@@ -34,6 +35,7 @@ from ironforgedbot.common.ranks import (
     get_rank_from_points,
     get_rank_color_from_points,
 )
+from ironforgedbot.common.roles import ROLES, Role
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
@@ -586,12 +588,14 @@ class IronForgedCommands:
 
         try:
             member = self._storage_client.read_member(player.lower())
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading member: {e}")
+        except StorageError as error:
+            await send_error_response(interaction, str(error))
             return
 
         if member is None:
-            await interaction.followup.send(f"{player} not found in storage")
+            await send_error_response(
+                interaction, f"Member '{player}' not found in spreadsheet"
+            )
             return
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
@@ -616,8 +620,13 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            _, player = validate_protected_request(interaction, player, "Leadership")
+            _, player = validate_protected_request(
+                interaction, player, ROLES.LEADERSHIP
+            )
         except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried addingingots does not have permission"
+            )
             await send_error_response(interaction, str(error))
             return
 
@@ -627,12 +636,14 @@ class IronForgedCommands:
 
         try:
             member = self._storage_client.read_member(player.lower())
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading member: {e}")
+        except StorageError as error:
+            await send_error_response(interaction, str(error))
             return
 
         if member is None:
-            await interaction.followup.send(f"{player} wasn't found.")
+            await send_error_response(
+                interaction, f"Member '{player}' not found in spreadsheet"
+            )
             return
 
         member.ingots += ingots
@@ -641,8 +652,8 @@ class IronForgedCommands:
             self._storage_client.update_members(
                 [member], interaction.user.display_name, note=reason
             )
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error writing ingots: {e}")
+        except StorageError as error:
+            await send_error_response(interaction, f"Error updating ingots: {error}")
             return
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
@@ -664,46 +675,38 @@ class IronForgedCommands:
             player: Comma-separated list of Runescape usernames to add ingots to.
             ingots: number of ingots to add to this player.
         """
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+
+        await interaction.response.defer()
+
+        try:
+            _, caller = validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried addingingots does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
-        if not check_role(caller, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
-
-        if caller.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(
             f"Handling '/addingotsbulk players:{players} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
-        await interaction.response.defer()
 
         player_names = players.split(",")
         player_names = [player.strip() for player in player_names]
         for player in player_names:
-            if not validate_player_name(player):
-                await interaction.followup.send(
-                    f"FAILED_PRECONDITION: {player} is longer than 12 characters."
-                )
-                return
+            try:
+                validate_playername(player)
+            except ValueError as error:
+                await send_error_response(interaction, str(error))
 
         try:
             members = self._storage_client.read_members()
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading member: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading member '{error}'"
+            )
             return
 
         output = []
@@ -724,8 +727,10 @@ class IronForgedCommands:
 
         try:
             self._storage_client.update_members(members_to_update, caller, note=reason)
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error writing ingots: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error writing ingots for '{error}'"
+            )
             return
 
         # Our output can be larger than the interaction followup max.

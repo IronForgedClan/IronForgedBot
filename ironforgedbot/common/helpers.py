@@ -29,14 +29,20 @@ def validate_user_request(
         logging.info(f"Interaction has expired ({interaction.id})")
         raise ReferenceError("Interaction has expired")
 
-    playername = normalize_discord_string(playername)
-    if len(playername) > 12 or len(playername) < 1:
-        logging.info(f"RSN length incorrect: '{playername}' ({interaction.id})")
-        raise ValueError("RSN can only be 1-12 characters long")
-
+    playername = validate_playername(playername)
     member = find_member_by_nickname(interaction.guild, playername)
 
     return member, playername
+
+
+def validate_playername(playername: str) -> str:
+    playername = normalize_discord_string(playername)
+
+    if len(playername) > 12 or len(playername) < 1:
+        logging.info(f"RSN length incorrect: '{playername}'")
+        raise ValueError("RSN can only be 1-12 characters long")
+
+    return playername
 
 
 def validate_protected_request(
