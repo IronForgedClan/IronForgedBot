@@ -813,32 +813,23 @@ class IronForgedCommands:
                 purchasing, and 'choose_winner' will choose a winner & display
                 their winnings (alongside clearing storage for the next raffle).
         """
-        if interaction.user.display_name is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
+        await interaction.response.defer()
+
+        try:
+            validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried raffleadmin but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
             f"Handling '/raffleadmin {subcommand}' on behalf of "
             f"{normalize_discord_string(interaction.user.display_name).lower()}"
         )
-        await interaction.response.defer()
-
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
-            )
-            return
-
-        if not check_role(caller, "Leadership"):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
 
         if subcommand.lower() == "start_raffle":
             await self._start_raffle(interaction)
