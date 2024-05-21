@@ -979,50 +979,45 @@ class IronForgedCommands:
         """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
         await interaction.response.defer()
 
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+        try:
+            _, caller = validate_user_request(
+                interaction, interaction.user.display_name
             )
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
-        if caller.nick is None:
-            await interaction.followup.send(
-                f"FAILED_PRECONDITION: {caller.name} does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(f"Handling '/buyraffletickets {tickets}' on behalf of {caller}")
 
         try:
             ongoing_raffle = self._storage_client.read_raffle()
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading raffle status from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction,
+                f"Encountered error reading raffle status from storage: {error}",
             )
             return
 
         if not ongoing_raffle:
-            await interaction.followup.send(
-                "FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought."
+            await send_error_response(
+                interaction,
+                "FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought.",
             )
             return
 
         # First, read member to get Discord ID & ingot count
         try:
             member = self._storage_client.read_member(caller)
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading member from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading member from storage: {error}"
             )
             return
 
         if member is None:
-            await interaction.followup.send(
-                f"{caller} not found in storage, please reach out to leadership."
+            await send_error_response(
+                interaction,
+                f"{caller} not found in storage, please reach out to leadership.",
             )
             return
 
@@ -1042,18 +1037,19 @@ class IronForgedCommands:
             self._storage_client.update_members(
                 [member], caller, note="Bought raffle tickets"
             )
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error updating member ingot count: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error updating member ingot count: {error}"
             )
             return
 
         try:
             self._storage_client.add_raffle_tickets(member.id, tickets)
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error adding raffle tickets: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error adding raffle tickets: {error}"
             )
+
             return
 
         await interaction.followup.send(
