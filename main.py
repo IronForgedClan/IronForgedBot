@@ -930,45 +930,40 @@ class IronForgedCommands:
 
     async def raffletickets(self, interaction: discord.Interaction):
         """View calling user's current raffle ticket count."""
-        await interaction.response.defer()
 
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+        await interaction.response.defer(thinking=True)
+
+        try:
+            _, caller = validate_user_request(
+                interaction, interaction.user.display_name
             )
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
-        if caller.nick is None:
-            await interaction.followup.send(
-                f"FAILED_PRECONDITION: {caller.name} does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(f"Handling '/raffletickets' on behalf of {caller}")
 
         try:
             member = self._storage_client.read_member(caller)
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading member from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading member from storage: {error}"
             )
             return
 
         if member is None:
-            await interaction.followup.send(
-                f"{caller} not found in storage, please reach out to leadership."
+            await send_error_response(
+                interaction,
+                f"{caller} not found in storage, please reach out to leadership.",
             )
             return
 
         try:
             current_tickets = self._storage_client.read_raffle_tickets()
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading raffle tickets from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction,
+                f"Encountered error reading raffle tickets from storage: {error}",
             )
             return
 
