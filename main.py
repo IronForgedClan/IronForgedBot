@@ -849,8 +849,10 @@ class IronForgedCommands:
             self._storage_client.start_raffle(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error starting raffle: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error starting raffle: {error}"
+            )
             return
 
         await interaction.followup.send(
@@ -866,8 +868,10 @@ class IronForgedCommands:
             self._storage_client.end_raffle(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error ending raffle: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error ending raffle: {error}"
+            )
             return
 
         await interaction.followup.send(
@@ -878,15 +882,17 @@ class IronForgedCommands:
         """Chooses a winner & winning amount. Clears storage of all tickets."""
         try:
             current_tickets = self._storage_client.read_raffle_tickets()
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading tickets: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error ending raffle: {error}"
+            )
             return
 
         try:
             members = self._storage_client.read_members()
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading current members: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading current members: {error}"
             )
             return
 
@@ -916,9 +922,9 @@ class IronForgedCommands:
             self._storage_client.delete_raffle_tickets(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error clearing ticket storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error clearing ticket storage: {error}"
             )
             return
 
