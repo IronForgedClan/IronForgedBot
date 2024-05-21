@@ -759,41 +759,28 @@ class IronForgedCommands:
             player: Runescape username to view ingot count for.
             ingots: New ingot count for this user.
         """
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+        await interaction.response.defer()
+
+        try:
+            _, caller = validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried updateingots but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
-        if not check_role(caller, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
-
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
-            return
-
-        if caller.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(
             f"Handling '/updateingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
 
-        await interaction.response.defer()
+        try:
+            player = validate_playername(player)
+        except ValueError as error:
+            await send_error_response(interaction, str(error))
 
-        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:
