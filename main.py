@@ -1095,7 +1095,6 @@ class IronForgedCommands:
             )
             return
 
-        original_length = len(existing)
         written_ids = [member.id for member in existing]
 
         # Now for the actual diffing.
