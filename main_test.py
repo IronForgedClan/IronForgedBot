@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import unittest
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 import discord
 from parameterized import parameterized
@@ -52,12 +52,24 @@ class TestIronForgedBot(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("johnnycache", True),
-            ("somesuperlonginvalidname", False),
+            ("johnnycache", None, "johnnycache"),
+            ("123456789012", None, "123456789012"),
+            ("a", None, "a"),
+            (
+                "longinvalidname",
+                ValueError,
+                "RSN can only be 1-12 characters long",
+            ),
         ]
     )
-    def test_validate_player_name(self, player, expected):
-        self.assertEqual(main.validate_player_name(player), expected)
+    def test_validate_playername(self, player, expect_exception, expected):
+        """Test that player names are 1-12 characters long."""
+        if expect_exception:
+            with self.assertRaises(ValueError) as context:
+                validate_playername("alongandinvalidname")
+            self.assertEqual(str(context.exception), expected)
+        else:
+            self.assertEqual(validate_playername(player), expected)
 
     def test_ingots(self):
         """Test that ingots for given player are returned to user."""
