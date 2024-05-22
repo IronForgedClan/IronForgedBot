@@ -1057,30 +1057,22 @@ class IronForgedCommands:
         )
 
     async def syncmembers(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        try:
+            _, caller = validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
+            )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried syncmembers but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
+            return
+
         output = ""
-        mutator = interaction.user
-        if isinstance(mutator, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {mutator.name} is not in this guild."
-            )
-            return
-
-        if not check_role(mutator, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {mutator.name} is not in a leadership role."
-            )
-            return
-
-        if mutator.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(mutator.nick).lower()
         logging.info(f"Handling '/syncmembers' on behalf of {caller}")
 
-        await interaction.response.defer()
         # Perform a cross join between current Discord members and
         # entries in the sheet.
         # First, read all members from Discord.
@@ -1096,8 +1088,10 @@ class IronForgedCommands:
         # Then, get all current entries from storage.
         try:
             existing = self._storage_client.read_members()
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading members: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading members: {error}"
+            )
             return
 
         original_length = len(existing)
