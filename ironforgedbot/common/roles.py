@@ -1,6 +1,6 @@
-from discord import Enum
+from enum import StrEnum
 
 
-class ROLES(Enum):
+class ROLES(StrEnum):
     LEADERSHIP = "Leadership"
     MEMBER = "Member"
