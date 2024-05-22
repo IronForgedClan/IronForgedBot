@@ -8,6 +8,15 @@ from parameterized import parameterized
 
 import main
 from ironforgedbot.storage.types import Member
+from ironforgedbot.common.helpers import (
+    calculate_percentage,
+    normalize_discord_string,
+    validate_member_has_role,
+    validate_playername,
+    validate_protected_request,
+    validate_user_request,
+)
+from ironforgedbot.common.roles import ROLES
 
 
 class TestIronForgedBot(unittest.TestCase):
@@ -22,17 +31,12 @@ class TestIronForgedBot(unittest.TestCase):
         cls.loop.close()
 
     def setUp(self):
-        self.leader_payload = {
-            "id": 0,
-            "name": "Leadership",
-        }
-        self.leader_role = discord.Role(
-            guild=MagicMock(), state=MagicMock(), data=self.leader_payload
-        )
+        self.leader_role = Mock(spec=discord.Role)
+        self.leader_role.name = ROLES.LEADERSHIP
 
         self.leader = MagicMock()
         self.leader.roles = [self.leader_role]
-        self.leader.nick = "leader"
+        self.leader.nick = "Leader User"
 
         self.mock_interaction = AsyncMock()
         self.mock_interaction.user = self.leader
