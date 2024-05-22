@@ -17,6 +17,7 @@ from ironforgedbot.commands.hiscore.constants import (
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
+    validate_member_has_role,
     validate_playername,
     validate_protected_request,
     validate_user_request,
@@ -1078,10 +1079,10 @@ class IronForgedCommands:
         # First, read all members from Discord.
         members = []
         member_ids = []
-        for member in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).members:
-            if check_role(member, "Member"):
+
+        assert interaction.guild is not None
+        for member in interaction.guild.members:
+            if validate_member_has_role(member, ROLES.MEMBER):
                 members.append(member)
                 member_ids.append(member.id)
 
