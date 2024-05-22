@@ -19,6 +19,17 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.roles import ROLES
 
 
+def helper_create_member(name: str, role: ROLES) -> discord.User:
+    discord_role = Mock(spec=discord.Role)
+    discord_role.name = role
+
+    user = Mock(spec=discord.User)
+    user.roles = [role]
+    user.nick = name
+
+    return user
+
+
 class TestIronForgedBot(unittest.TestCase):
     logging.disable(logging.CRITICAL)
 
