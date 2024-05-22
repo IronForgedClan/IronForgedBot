@@ -36,7 +36,7 @@ from ironforgedbot.common.ranks import (
     get_rank_from_points,
     get_rank_color_from_points,
 )
-from ironforgedbot.common.roles import ROLES, Role
+from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
