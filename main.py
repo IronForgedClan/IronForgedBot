@@ -9,39 +9,38 @@ from typing import Dict, Optional
 import discord
 from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
+from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     EMPTY_SPACE,
 )
+from ironforgedbot.common.emoji import (
+    find_emoji,
+)
 from ironforgedbot.common.helpers import (
-    normalize_discord_string,
     calculate_percentage,
+    normalize_discord_string,
     validate_member_has_role,
     validate_playername,
     validate_protected_request,
     validate_user_request,
 )
-from ironforgedbot.common.emoji import (
-    find_emoji,
+from ironforgedbot.common.ranks import (
+    RANK_POINTS,
+    RANKS,
+    get_next_rank_from_points,
+    get_rank_color_from_points,
+    get_rank_from_points,
 )
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
 )
-from ironforgedbot.common.ranks import (
-    RANKS,
-    RANK_POINTS,
-    get_next_rank_from_points,
-    get_rank_from_points,
-    get_rank_color_from_points,
-)
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
-
-from reactionmenu import ViewMenu, ViewButton
 
 
 def read_dotenv(path: str) -> Dict[str, str]:
