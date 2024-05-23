@@ -35,11 +35,14 @@ class TestIronForgedBot(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.loop = asyncio.get_event_loop()
+        cls.loop = asyncio.new_event_loop()
+        cls.patch_find_emoji = patch("main.find_emoji", return_value="")
+        cls.patch_find_emoji.start()
 
     @classmethod
     def tearDownClass(cls):
         cls.loop.close()
+        cls.patch_find_emoji.stop()
 
     def setUp(self):
         self.leader_role = Mock(spec=discord.Role)
