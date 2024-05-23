@@ -21,6 +21,7 @@ def helper_create_member(name: str, role: ROLES) -> discord.User:
     user = Mock(spec=discord.User)
     user.roles = [role]
     user.nick = name
+    user.display_name = name
 
     return user
 
@@ -125,26 +126,35 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             self.mock_interaction, f"Member '{player}' not found in spreadsheet"
         )
 
-    def test_addingots(self):
+    @patch("main.validate_protected_request")
+    async def test_addingots(self, mock_validate_protected_request):
         """Test that ingots can be added to a user."""
+        leader_name = "leader"
+        playername = "johnnycache"
+        player_id = 123456
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            playername,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_member.return_value = Member(
-            id=123456, runescape_name="johnnycache", ingots=5000
+            id=player_id, runescape_name=playername, ingots=5000
         )
 
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(
-            commands.addingots(self.mock_interaction, "johnnycache", 5000)
-        )
+        bot = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
+
+        await bot.addingots(self.mock_interaction, playername, 5000)
 
         mock_storage.update_members.assert_called_once_with(
-            [Member(id=123456, runescape_name="johnnycache", ingots=10000)],
-            "leader",
+            [Member(id=player_id, runescape_name=playername, ingots=10000)],
+            leader_name,
             note="None",
         )
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            "Added 5,000 ingots to johnnycache; reason: None. They now have 10,000 ingots "
+            f"Added 5,000 ingots to {playername}; reason: None. They now have 10,000 ingots "
         )
 
     def test_addingots_player_not_found(self):
