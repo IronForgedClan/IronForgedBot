@@ -79,17 +79,24 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         else:
             self.assertEqual(validate_playername(player), expected)
 
-    def test_ingots(self):
+    @patch("main.validate_user_request")
+    async def test_ingots(self, mock_validate_user_request):
         """Test that ingots for given player are returned to user."""
-        mock_storage = MagicMock()
-        mock_storage.read_member.return_value = Member(
-            id=123456, runescape_name="johnnycache", ingots=2000
+        player = "johnnycache"
+        player_id = 123456
+
+        mock_validate_user_request.return_value = (
+            helper_create_member(player, ROLES.MEMBER),
+            player,
         )
 
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(
-            commands.ingots(self.mock_interaction, "johnnycache")
+        mock_storage = Mock()
+        mock_storage.read_member.return_value = Member(
+            id=player_id, runescape_name=player, ingots=2000
         )
+
+        commands = main.IronForgedCommands(Mock(), Mock(), mock_storage, "")
+        await commands.ingots(self.mock_interaction, "johnnycache")
 
         self.mock_interaction.followup.send.assert_called_once_with(
             "johnnycache has 2,000 ingots "
