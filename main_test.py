@@ -9,12 +9,7 @@ from parameterized import parameterized
 import main
 from ironforgedbot.storage.types import Member
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
-    normalize_discord_string,
-    validate_member_has_role,
     validate_playername,
-    validate_protected_request,
-    validate_user_request,
 )
 from ironforgedbot.common.roles import ROLES
 
@@ -30,8 +25,8 @@ def helper_create_member(name: str, role: ROLES) -> discord.User:
     return user
 
 
-    logging.disable(logging.CRITICAL)
 class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
+    # logging.disable(logging.CRITICAL)
 
     @classmethod
     def setUpClass(cls):
