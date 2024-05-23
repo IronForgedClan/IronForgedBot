@@ -620,7 +620,7 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            _, player = validate_protected_request(
+            caller, player = validate_protected_request(
                 interaction, player, ROLES.LEADERSHIP
             )
         except (ReferenceError, ValueError) as error:
@@ -650,7 +650,7 @@ class IronForgedCommands:
 
         try:
             self._storage_client.update_members(
-                [member], interaction.user.display_name, note=reason
+                [member], caller.display_name, note=reason
             )
         except StorageError as error:
             await send_error_response(interaction, f"Error updating ingots: {error}")
