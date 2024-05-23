@@ -45,15 +45,10 @@ class TestIronForgedBot(unittest.TestCase):
         cls.patch_find_emoji.stop()
 
     def setUp(self):
-        self.leader_role = Mock(spec=discord.Role)
-        self.leader_role.name = ROLES.LEADERSHIP
-
-        self.leader = MagicMock()
-        self.leader.roles = [self.leader_role]
-        self.leader.nick = "Leader User"
-
-        self.mock_interaction = AsyncMock()
-        self.mock_interaction.user = self.leader
+        self.mock_interaction = AsyncMock(spec=discord.Interaction)
+        self.mock_interaction.followup = AsyncMock()
+        self.mock_interaction.is_expired = AsyncMock()
+        self.mock_interaction.is_expired.return_value = False
         self.mock_interaction.response = AsyncMock()
 
     @parameterized.expand(
