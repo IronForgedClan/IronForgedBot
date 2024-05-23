@@ -30,8 +30,8 @@ def helper_create_member(name: str, role: ROLES) -> discord.User:
     return user
 
 
-class TestIronForgedBot(unittest.TestCase):
     logging.disable(logging.CRITICAL)
+class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
