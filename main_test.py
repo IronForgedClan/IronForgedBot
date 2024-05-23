@@ -102,18 +102,27 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             "johnnycache has 2,000 ingots "
         )
 
-    def test_ingots_user_not_present(self):
+    @patch("main.send_error_response")
+    @patch("main.validate_user_request")
+    async def test_ingots_user_not_in_spreadsheet(
+        self, mock_validate_user_request, mock_send_error_response
+    ):
         """Test that a missing player shows 0 ingots."""
+        player = "johnnycache"
+
+        mock_validate_user_request.return_value = (
+            helper_create_member(player, ROLES.MEMBER),
+            player,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_member.return_value = None
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(
-            commands.ingots(self.mock_interaction, "kennylogs")
-        )
+        await commands.ingots(self.mock_interaction, player)
 
-        self.mock_interaction.followup.send.assert_called_once_with(
-            "kennylogs not found in storage"
+        mock_send_error_response.assert_awaited_with(
+            self.mock_interaction, f"Member '{player}' not found in spreadsheet"
         )
 
     def test_addingots(self):
