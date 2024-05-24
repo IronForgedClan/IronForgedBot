@@ -157,18 +157,28 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             f"Added 5,000 ingots to {playername}; reason: None. They now have 10,000 ingots "
         )
 
-    def test_addingots_player_not_found(self):
+    @patch("main.send_error_response")
+    @patch("main.validate_protected_request")
+    async def test_addingots_player_not_found(
+        self, mock_validate_protected_request, mock_send_error_response
+    ):
         """Test that a missing player is surfaced to caller."""
+        leader_name = "leader"
+        playername = "johnnycache"
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            playername,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_member.return_value = None
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(
-            commands.addingots(self.mock_interaction, "kennylogs", 5)
-        )
+        await commands.addingots(self.mock_interaction, playername, 5)
 
-        self.mock_interaction.followup.send.assert_called_once_with(
-            "kennylogs wasn't found."
+        mock_send_error_response.assert_awaited_with(
+            self.mock_interaction, f"Member '{playername}' not found in spreadsheet"
         )
 
     def test_addingots_permission_denied(self):
