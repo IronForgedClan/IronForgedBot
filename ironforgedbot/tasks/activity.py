@@ -118,7 +118,6 @@ async def _find_inactive_users(wom_client: wom.Client, wom_group_id: int, update
                         continue
 
                     if wom_member.player.username.lower() in absentees:
-                        print(wom_member.player.username)
                         continue
 
                     if wom_member.membership.role is None:
