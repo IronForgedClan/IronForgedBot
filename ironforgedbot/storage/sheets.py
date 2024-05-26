@@ -17,6 +17,7 @@ SHEET_RANGE_WITH_DISCORD_IDS = 'ClanIngots!A2:C'
 RAFFLE_RANGE = 'ClanRaffle!A2'
 RAFFLE_TICKETS_RANGE = 'ClanRaffleTickets!A2:B'
 CHANGELOG_RANGE = 'ChangeLog!A2:F'
+ABSENCE_RANGE = 'AbsenceNotice!A2:C'
 
 
 class SheetsStorage(metaclass=IngotsStorage):
@@ -29,10 +30,10 @@ class SheetsStorage(metaclass=IngotsStorage):
     """
 
     def __init__(
-        self,
-        sheets_client: Resource,
-        sheet_id: str,
-        clock: datetime = None):
+            self,
+            sheets_client: Resource,
+            sheet_id: str,
+            clock: datetime = None):
         """Init.
 
         Arguments:
@@ -49,12 +50,12 @@ class SheetsStorage(metaclass=IngotsStorage):
 
     @classmethod
     def from_account_file(
-        cls,
-        account_filepath: str,
-        sheet_id: str) -> 'SheetsStorage':
+            cls,
+            account_filepath: str,
+            sheet_id: str) -> 'SheetsStorage':
         """Build sheets Resource from service account file."""
         creds = service_account.Credentials.from_service_account_file(
-            account_filepath, scopes=SHEETS_SCOPES)
+                account_filepath, scopes=SHEETS_SCOPES)
         service = build('sheets', 'v4', credentials=creds)
 
         return cls(service, sheet_id)
@@ -75,15 +76,15 @@ class SheetsStorage(metaclass=IngotsStorage):
         result = {}
         try:
             result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=SHEET_RANGE_WITH_DISCORD_IDS).execute()
+                    spreadsheetId=self._sheet_id,
+                    range=SHEET_RANGE_WITH_DISCORD_IDS).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error reading ClanIngots from sheets: {e}')
+                    f'Encountered error reading ClanIngots from sheets: {e}')
 
         values = result.get('values', [])
         members = [Member(id=int(value[2]), runescape_name=value[0], ingots=int(value[1]))
-            for value in values]
+                   for value in values]
 
         return members
 
@@ -103,11 +104,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=write_range,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         tz = timezone('EST')
         dt = self._clock.now(tz)
@@ -135,7 +136,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             for i, existing_member in enumerate(existing):
                 if member.id == existing_member.id:
                     changes.append([existing_member.runescape_name, modification_timestamp,
-                        str(existing_member), str(member), attribution, note])
+                                    str(existing_member), str(member), attribution, note])
                     existing[i] = member
                     break
 
@@ -149,11 +150,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=write_range,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         try:
             self._log_change(changes)
@@ -177,8 +178,8 @@ class SheetsStorage(metaclass=IngotsStorage):
         for member in existing:
             if member.id in remove_ids:
                 changes.append(
-                    [member.runescape_name, modification_timestamp, str(member),
-                    0, attribution, note])
+                        [member.runescape_name, modification_timestamp, str(member),
+                         0, attribution, note])
                 continue
             filtered_values.append(member)
 
@@ -186,7 +187,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         filtered_values.sort(key=lambda x: x.runescape_name)
         # string member id or sheets shortens to E notation.
         rows = [[member.runescape_name, member.ingots, str(member.id)]
-            for member in filtered_values]
+                for member in filtered_values]
         # Pad empty values to actually remove members from the sheet.
         for _ in range(len(existing) - len(filtered_values)):
             rows.append(['', '', ''])
@@ -195,11 +196,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=write_range,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         try:
             self._log_change(changes)
@@ -213,11 +214,11 @@ class SheetsStorage(metaclass=IngotsStorage):
         result = {}
         try:
             result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=RAFFLE_RANGE).execute()
+                    spreadsheetId=self._sheet_id,
+                    range=RAFFLE_RANGE).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error reading ClanRaffle from sheets: {e}')
+                    f'Encountered error reading ClanRaffle from sheets: {e}')
 
         values = result.get('values', [])
         if len(values) < 1:
@@ -241,11 +242,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=RAFFLE_RANGE,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=RAFFLE_RANGE,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         changes = [['', modification_timestamp, 'False', 'True', attribution, 'Started Raffle']]
 
@@ -269,11 +270,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=RAFFLE_RANGE,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=RAFFLE_RANGE,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         changes = [['', modification_timestamp, 'True', 'False', attribution, 'Ended Raffle']]
 
@@ -289,11 +290,11 @@ class SheetsStorage(metaclass=IngotsStorage):
         result = {}
         try:
             result = self._sheets_client.spreadsheets().values().get(
-                spreadsheetId=self._sheet_id,
-                range=RAFFLE_TICKETS_RANGE).execute()
+                    spreadsheetId=self._sheet_id,
+                    range=RAFFLE_TICKETS_RANGE).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error reading ClanIngots from sheets: {e}')
+                    f'Encountered error reading ClanIngots from sheets: {e}')
 
         # Unlike the ingots table, this is expected to get emptied.
         # So we have to account for an empty response.
@@ -326,7 +327,8 @@ class SheetsStorage(metaclass=IngotsStorage):
                 new_count = current_count + tickets
 
         current_tickets[member_id] = new_count
-        changes.append([member_id, modification_timestamp, existing_count, new_count, member_id, 'Bought raffle tickets'])
+        changes.append(
+                [member_id, modification_timestamp, existing_count, new_count, member_id, 'Bought raffle tickets'])
 
         # Convert to list for write & sort for stability.
         values = []
@@ -340,11 +342,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=write_range,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         try:
             self._log_change(changes)
@@ -352,7 +354,6 @@ class SheetsStorage(metaclass=IngotsStorage):
             # Just swallow the error; the action is done & captured in version
             # history at least.
             pass
-
 
     def delete_raffle_tickets(self, attribution: str) -> None:
         """Deletes all current raffle tickets. Called once when ending a raffle."""
@@ -371,11 +372,11 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         try:
             _ = self._sheets_client.spreadsheets().values().update(
-                spreadsheetId=self._sheet_id, range=write_range,
-                valueInputOption="RAW", body=body).execute()
+                    spreadsheetId=self._sheet_id, range=write_range,
+                    valueInputOption="RAW", body=body).execute()
         except HttpError as e:
             raise StorageError(
-                f'Encountered error writing to sheets: {e}')
+                    f'Encountered error writing to sheets: {e}')
 
         try:
             self._log_change(changes)
@@ -384,8 +385,26 @@ class SheetsStorage(metaclass=IngotsStorage):
             # history at least.
             pass
 
-    def _log_change(
-        self, changes: List[List[Union[str, int]]]):
+    def get_absentees(self) -> dict[str:str]:
+        """Returns known list of absentees with <rsn:date> format"""
+        try:
+            result = (self._sheets_client.spreadsheets().values()
+                      .get(spreadsheetId=self._sheet_id, range=ABSENCE_RANGE)
+                      .execute())
+        except HttpError as e:
+            raise StorageError(f'Encountered error reading Absentees from sheets: {e}')
+
+        values = result.get('values', [])
+        results = {}
+        for value in values:
+            date = "Unknown"
+            if len(value) > 1:
+                date = value[1]
+            results[value[0]] = date
+
+        return results
+
+    def _log_change(self, changes: List[List[Union[str, int]]]):
         """Log change to ChangeLog sheet.
 
         Arguments:
@@ -399,6 +418,5 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         logging.info(f'wrote changes: {changes}')
         _ = self._sheets_client.spreadsheets().values().append(
-            spreadsheetId=self._sheet_id, range=CHANGELOG_RANGE,
-            valueInputOption="RAW", body=body).execute()
-
+                spreadsheetId=self._sheet_id, range=CHANGELOG_RANGE,
+                valueInputOption="RAW", body=body).execute()

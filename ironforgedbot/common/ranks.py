@@ -31,7 +31,7 @@ class RANK_POINTS(IntEnum):
     IRON = 0
 
 
-def get_rank_from_points(points: int) -> RANKS:
+def get_rank_from_points(points: int) -> str:
     if points >= RANK_POINTS.MYTH:
         return RANKS.MYTH
     if points >= RANK_POINTS.LEGEND:
