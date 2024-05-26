@@ -125,7 +125,7 @@ async def _find_inactive_users(wom_client: wom.Client, wom_group_id: int, update
                     elif wom_member.membership.role == GroupRole.Helper:
                         role = "Alt"
                     elif wom_member.membership.role == GroupRole.Dogsbody:
-                        role = "Prospect"
+                        continue
                     elif wom_member.membership.role == GroupRole.Gold:
                         role = "Staff"
                     elif wom_member.membership.role == GroupRole.Collector:
