@@ -69,7 +69,7 @@ def validate_member_has_role(member: Member, required_role: str) -> bool:
     return False
 
 
-def find_member_by_nickname(guild: Guild, target_name: str):
+def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
     if not guild.members or len(guild.members) < 1:
         raise ReferenceError("Error accessing server members")
 
