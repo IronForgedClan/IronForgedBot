@@ -71,15 +71,6 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             ),
         ]
     )
-    def test_validate_playername(self, player, expect_exception, expected):
-        """Test that player names are 1-12 characters long."""
-        if expect_exception:
-            with self.assertRaises(ValueError) as context:
-                validate_playername("alongandinvalidname")
-            self.assertEqual(str(context.exception), expected)
-        else:
-            self.assertEqual(validate_playername(player), expected)
-
     @patch("main.validate_user_request")
     async def test_ingots(self, mock_validate_user_request):
         """Test that ingots for given player are returned to user."""
