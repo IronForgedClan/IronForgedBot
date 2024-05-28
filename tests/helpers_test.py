@@ -16,6 +16,7 @@ from ironforgedbot.common.helpers import (
 
 class TestHelpers(unittest.TestCase):
     def test_normalize_discord_string(self):
+        """ "Test to make sure normalization strips non ascii characters"""
         self.assertEqual(normalize_discord_string(""), "")
         self.assertEqual(normalize_discord_string("abc"), "abc")
         self.assertEqual(normalize_discord_string("abc😄"), "abc")
@@ -26,6 +27,7 @@ class TestHelpers(unittest.TestCase):
         )
 
     def test_validate_user_request(self):
+        """Test validate user request happy path"""
         interaction = Mock(discord.Interaction)
         guild = Mock(discord.Guild)
         member = Mock(discord.Member)
@@ -41,6 +43,7 @@ class TestHelpers(unittest.TestCase):
         )
 
     def test_validate_user_request_fails_when_no_guild(self):
+        """Test validate user request fails when unable to access guild"""
         interaction = Mock()
         interaction.guild = None
 
@@ -50,6 +53,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(str(context.exception), "Error accessing server")
 
     def test_validate_user_request_fails_when_interaction_expired(self):
+        """Test validate user request fails when interaction has expired"""
         interaction = Mock()
         interaction.guild = Mock()
         interaction.is_expired = Mock()
@@ -61,6 +65,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(str(context.exception), "Interaction has expired")
 
     def test_validate_protected_request(self):
+        """Test validate protected request happy path"""
         interaction = Mock(discord.Interaction)
         guild = Mock(discord.Guild)
         role = Mock(discord.Role)
@@ -80,6 +85,7 @@ class TestHelpers(unittest.TestCase):
         )
 
     def test_validate_protected_request_fails_no_role(self):
+        """Test validate protected request fails when member does not have required role"""
         interaction = Mock(discord.Interaction)
         guild = Mock(discord.Guild)
         member = Mock(discord.Member)
@@ -100,23 +106,27 @@ class TestHelpers(unittest.TestCase):
         )
 
     def test_validate_playername(self):
+        """Test validate playername happy path"""
         self.assertEqual(validate_playername("a"), "a")
         self.assertEqual(validate_playername("abcde"), "abcde")
         self.assertEqual(validate_playername("123456789012"), "123456789012")
 
     def test_validate_playername_fails_too_short(self):
+        """Test validate playername fails when too short"""
         with self.assertRaises(ValueError) as context:
             validate_playername("")
 
         self.assertEqual(str(context.exception), "RSN can only be 1-12 characters long")
 
     def test_validate_playername_fails_too_long(self):
+        """Test validate playername fails when too long"""
         with self.assertRaises(ValueError) as context:
             validate_playername("1234567890123")
 
         self.assertEqual(str(context.exception), "RSN can only be 1-12 characters long")
 
     def test_validate_member_has_role(self):
+        """Test validate member has role happy path"""
         member = Mock(discord.Member)
         role = Mock(discord.Role)
         role.name = "tester"
@@ -125,6 +135,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(validate_member_has_role(member, role.name), True)
 
     def test_validate_member_has_role_fails(self):
+        """Test validate member has role fails when member does not have role"""
         member = Mock(discord.Member)
         role = Mock(discord.Role)
         role.name = "tester"
@@ -133,6 +144,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(validate_member_has_role(member, role), False)
 
     def test_find_member_by_nickname(self):
+        """Test find member by nickname happy path"""
         guild = Mock(discord.Guild)
         member = Mock(discord.Member)
         member.name = "tester"
@@ -145,6 +157,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(result, member)
 
     def test_find_member_by_nickname_fails_no_guild_members(self):
+        """Test find member by nickname fails when no guild members"""
         guild = Mock(discord.Guild)
         guild.members = []
 
@@ -154,6 +167,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(str(context.exception), "Error accessing server members")
 
     def test_find_member_by_nickname_fails_no_nickname(self):
+        """Test find member by nickname fails when member has no nickname set"""
         guild = Mock(discord.Guild)
         member = Mock(discord.Member)
         member.name = "tester"
@@ -170,6 +184,7 @@ class TestHelpers(unittest.TestCase):
         )
 
     def test_find_member_by_nickname_fails_not_found(self):
+        """Test find member by nickname fails when member is not found"""
         target = "abc"
         guild = Mock(discord.Guild)
         member = Mock(discord.Member)
@@ -187,6 +202,7 @@ class TestHelpers(unittest.TestCase):
         )
 
     def test_calculate_percentage(self):
+        """Test caluclate percentage is correct"""
         self.assertEqual(calculate_percentage(10, 100), 10)
         self.assertEqual(calculate_percentage(50, 100), 50)
         self.assertEqual(calculate_percentage(0, 100), 0)
