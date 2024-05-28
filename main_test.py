@@ -20,6 +20,7 @@ def helper_create_member(name: str, role: ROLES) -> discord.User:
 
     user = Mock(spec=discord.User)
     user.roles = [role]
+    user.name = name
     user.nick = name
     user.display_name = name
 
@@ -175,24 +176,25 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("main.send_error_response")
-    @patch("main.validate_user_request", new_callable=Mock)
     async def test_addingots_permission_denied(
         self,
-        mock_validate_user_request,
         mock_send_error_response,
     ):
         """Test that non-leadership role can't add ingots."""
+        guild = AsyncMock(discord.Guild)
         caller = helper_create_member("1eader", ROLES.MEMBER)
-        playername = "johnnycache"
-
-        mock_validate_user_request.return_value = (caller, playername)
+        member = helper_create_member("member", ROLES.MEMBER)
+        guild.members = [caller, member]
+        self.mock_interaction.user = caller
+        self.mock_interaction.guild = guild
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
-        await commands.addingots(self.mock_interaction, playername, 5)
+
+        await commands.addingots(self.mock_interaction, member.name, 5)
 
         mock_send_error_response.assert_awaited_with(
             self.mock_interaction,
-            f"Member '{caller.display_name}' tried addingingots does not have permission",
+            f"Member '{caller.display_name}' does not have permission for this action",
         )
 
     def test_addingotsbulk(self):
