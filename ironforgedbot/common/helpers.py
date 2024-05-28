@@ -48,12 +48,14 @@ def validate_playername(playername: str) -> str:
 def validate_protected_request(
     interaction: Interaction, playername: str, required_role: str
 ) -> Tuple[Member, str]:
+    caller, _ = validate_user_request(interaction, interaction.user.display_name)
     member, playername = validate_user_request(interaction, playername)
-    has_role = validate_member_has_role(member, required_role)
+
+    has_role = validate_member_has_role(caller, required_role)
 
     if not has_role:
         raise ValueError(
-            f"Member '{member.display_name}' does not have permission for this action"
+            f"Member '{caller.display_name}' does not have permission for this action"
         )
 
     return member, playername
