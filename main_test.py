@@ -43,9 +43,11 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_interaction = AsyncMock(spec=discord.Interaction)
         self.mock_interaction.followup = AsyncMock()
-        self.mock_interaction.is_expired = AsyncMock()
+        self.mock_interaction.is_expired = Mock()
         self.mock_interaction.is_expired.return_value = False
         self.mock_interaction.response = AsyncMock()
+        self.mock_interaction.guild = Mock()
+        self.mock_interaction.guild.members = []
 
     @parameterized.expand(
         [
@@ -172,22 +174,25 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             self.mock_interaction, f"Member '{playername}' not found in spreadsheet"
         )
 
-    def test_addingots_permission_denied(self):
+    @patch("main.send_error_response")
+    @patch("main.validate_user_request", new_callable=Mock)
+    async def test_addingots_permission_denied(
+        self,
+        mock_validate_user_request,
+        mock_send_error_response,
+    ):
         """Test that non-leadership role can't add ingots."""
-        member = MagicMock()
-        member.name = "johnnycache"
+        caller = helper_create_member("1eader", ROLES.MEMBER)
+        playername = "johnnycache"
 
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
+        mock_validate_user_request.return_value = (caller, playername)
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
-        self.loop.run_until_complete(
-            commands.addingots(mock_interaction, "kennylogs", 5)
-        )
+        await commands.addingots(self.mock_interaction, playername, 5)
 
-        mock_interaction.response.send_message.assert_called_once_with(
-            "PERMISSION_DENIED: johnnycache is not in a leadership role."
+        mock_send_error_response.assert_awaited_with(
+            self.mock_interaction,
+            f"Member '{caller.display_name}' tried addingingots does not have permission",
         )
 
     def test_addingotsbulk(self):
