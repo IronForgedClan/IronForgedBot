@@ -48,12 +48,20 @@ To upload new slashcommands to the server: `python3 main.py --upload_commands`.
 
 ## Testing
 
+Test files live within the `tests/` directory. There is a script `run_tests.py`
+that scans that directory and runs all the unit tests it finds.
+
+All test filenames must follow this pattern: `*_test.py`
+
 There are two main ways to test:
 
-*  Attaching to a personal Discord server, performing the full setup &
-   uploading the commands. This has some expensive setup, but will test the
-   entire system.
-*  `python3 -m unittest main_test.py` will run unit tests.
+- Attaching to a personal Discord server, performing the full setup &
+  uploading the commands. This has some expensive setup, but will test the
+  entire system.
+- `python3 run_tests.py` will run all unit tests within the project.
+
+You can also run a specific test file directly:
+`python3 -m unittest tests/example_test.py`
 
 ## Contributing
 
