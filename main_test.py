@@ -305,22 +305,25 @@ skagul tosti not found in storage."""
             self.mock_interaction, "RSN can only be 1-12 characters long"
         )
 
-    def test_addingotsbulk_permission_denied(self):
+    @patch("main.send_error_response")
+    def test_addingots_bulk_permission_denied(self, mock_send_error_response):
         """Test that non-leadership role can't add ingots."""
-        member = MagicMock()
-        member.name = "johnnycache"
+        guild = AsyncMock(discord.Guild)
+        caller = helper_create_member("1eader", ROLES.MEMBER)
+        member = helper_create_member("member", ROLES.MEMBER)
+        guild.members = [caller, member]
 
-        mock_interaction = AsyncMock()
-        mock_interaction.user = member
-        mock_interaction.response = AsyncMock()
+        self.mock_interaction.user = caller
+        self.mock_interaction.guild = guild
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
         self.loop.run_until_complete(
-            commands.addingotsbulk(mock_interaction, "kennylogs", 5)
+            commands.addingotsbulk(self.mock_interaction, caller.name, 500)
         )
 
-        mock_interaction.response.send_message.assert_called_once_with(
-            "PERMISSION_DENIED: johnnycache is not in a leadership role."
+        mock_send_error_response.assert_awaited_with(
+            self.mock_interaction,
+            f"Member '{caller.name}' does not have permission for this action",
         )
 
     def test_updateingots(self):
