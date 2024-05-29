@@ -762,8 +762,8 @@ class IronForgedCommands:
         await interaction.response.defer()
 
         try:
-            _, caller = validate_protected_request(
-                interaction, interaction.user.display_name, ROLES.LEADERSHIP
+            caller, player = validate_protected_request(
+                interaction, player, ROLES.LEADERSHIP
             )
         except (ReferenceError, ValueError) as error:
             logging.info(
@@ -775,11 +775,6 @@ class IronForgedCommands:
         logging.info(
             f"Handling '/updateingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
-
-        try:
-            player = validate_playername(player)
-        except ValueError as error:
-            await send_error_response(interaction, str(error))
 
         try:
             member = self._storage_client.read_member(player.lower())
@@ -794,7 +789,9 @@ class IronForgedCommands:
         member.ingots = ingots
 
         try:
-            self._storage_client.update_members([member], caller, note=reason)
+            self._storage_client.update_members(
+                [member], caller.display_name, note=reason
+            )
         except StorageError as e:
             await interaction.followup.send(f"Encountered error writing ingots: {e}")
             return
