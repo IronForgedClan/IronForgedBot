@@ -197,12 +197,24 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             f"Member '{caller.display_name}' does not have permission for this action",
         )
 
-    def test_addingotsbulk(self):
+    @patch("main.validate_protected_request")
+    def test_addingots_bulk(self, mock_validate_protected_request):
         """Test that ingots can be added to multiple users."""
+        leader_name = "leader"
+        player1 = "johnnycache"
+        player1_id = 123456
+        player2 = "kennylogs"
+        player2_id = 654321
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            leader_name,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_members.return_value = [
-            Member(id=123456, runescape_name="johnnycache", ingots=5000),
-            Member(id=654321, runescape_name="kennylogs", ingots=400),
+            Member(id=player1_id, runescape_name=player1, ingots=5000),
+            Member(id=player2_id, runescape_name=player2, ingots=400),
         ]
 
         mo = mock_open()
@@ -212,19 +224,21 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         with patch("builtins.open", mo):
             self.loop.run_until_complete(
                 commands.addingotsbulk(
-                    self.mock_interaction, "johnnycache,kennylogsin", 5000
+                    self.mock_interaction, f"{player1},{player2}", 5000
                 )
             )
 
         mock_storage.update_members.assert_called_once_with(
-            [Member(id=123456, runescape_name="johnnycache", ingots=10000)],
-            "leader",
+            [
+                Member(id=player1_id, runescape_name=player1, ingots=10000),
+                Member(id=player2_id, runescape_name=player2, ingots=5400),
+            ],
+            leader_name,
             note="None",
         )
 
         mo().write.assert_called_once_with(
-            """Added 5,000 ingots to johnnycache. They now have 10,000 ingots
-kennylogsin not found in storage."""
+            f"Added 5,000 ingots to {player1}. They now have 10,000 ingots\nAdded 5,000 ingots to {player2}. They now have 5,400 ingots"
         )
 
     def test_addingotsbulk_whitespace_stripped(self):
