@@ -241,8 +241,16 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
             f"Added 5,000 ingots to {player1}. They now have 10,000 ingots\nAdded 5,000 ingots to {player2}. They now have 5,400 ingots"
         )
 
-    def test_addingotsbulk_whitespace_stripped(self):
+    @patch("main.validate_protected_request")
+    def test_addingots_bulk_whitespace_stripped(self, mock_validate_protected_request):
         """Test that ingots can be added to multiple users."""
+        leader_name = "leader"
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            leader_name,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_members.return_value = [
             Member(id=123456, runescape_name="johnnycache", ingots=5000),
