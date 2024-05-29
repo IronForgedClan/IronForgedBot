@@ -1,3 +1,4 @@
+import logging
 import unittest
 from unittest.mock import Mock
 
@@ -12,9 +13,12 @@ from ironforgedbot.common.helpers import (
     validate_protected_request,
     validate_user_request,
 )
+from ironforgedbot.common.roles import ROLES
 
 
 class TestHelpers(unittest.TestCase):
+    logging.disable(logging.CRITICAL)
+
     def test_normalize_discord_string(self):
         """ "Test to make sure normalization strips non ascii characters"""
         self.assertEqual(normalize_discord_string(""), "")
@@ -69,18 +73,19 @@ class TestHelpers(unittest.TestCase):
         interaction = Mock(discord.Interaction)
         guild = Mock(discord.Guild)
         role = Mock(discord.Role)
-        role.name = "leadership"
+        role.name = ROLES.LEADERSHIP
         member = Mock(discord.Member)
         member.name = "tester"
         member.display_name = member.name
         member.nick = member.name
         member.roles = [role]
         guild.members = [member]
+        interaction.user = member
         interaction.guild = guild
         interaction.is_expired.return_value = False
 
         self.assertEqual(
-            validate_protected_request(interaction, member.name, role.name),
+            validate_protected_request(interaction, member.name, ROLES.LEADERSHIP),
             (member, member.name),
         )
 
@@ -94,6 +99,7 @@ class TestHelpers(unittest.TestCase):
         member.nick = member.name
         member.roles = []
         guild.members = [member]
+        interaction.user = member
         interaction.guild = guild
         interaction.is_expired.return_value = False
 
