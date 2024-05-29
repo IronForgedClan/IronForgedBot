@@ -1099,7 +1099,7 @@ class IronForgedCommands:
         for member in members:
             if member.id not in written_ids:
                 # Don't allow users without a nickname into storage.
-                if member.nick is None:
+                if not member.nick or len(member.nick) < 1:
                     output += f"skipped user {member.name} because they don't have a nickname in Discord\n"
                     continue
                 new_members.append(
