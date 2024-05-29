@@ -279,18 +279,30 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
 skagul tosti not found in storage."""
         )
 
-    def test_addingotsbulk_player_does_not_pass_validation(self):
+    @patch("main.send_error_response")
+    @patch("main.validate_protected_request")
+    def test_addingots_bulk_player_fail_validation(
+        self, mock_validate_protected_request, mock_send_error_response
+    ):
         """Test that a missing player is surfaced to caller."""
+        leader_name = "leader"
+        bad_name = "somesuperlongfakename"
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            leader_name,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_member.return_value = None
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
         self.loop.run_until_complete(
-            commands.addingotsbulk(self.mock_interaction, "somesuperlongfakename", 5)
+            commands.addingotsbulk(self.mock_interaction, bad_name, 5)
         )
 
-        self.mock_interaction.followup.send.assert_called_once_with(
-            "FAILED_PRECONDITION: somesuperlongfakename is longer than 12 characters."
+        mock_send_error_response.assert_awaited_with(
+            self.mock_interaction, "RSN can only be 1-12 characters long"
         )
 
     def test_addingotsbulk_permission_denied(self):
