@@ -65,7 +65,7 @@ def validate_member_has_role(member: Member, required_role: str) -> bool:
     roles = member.roles
 
     for role in roles:
-        if role.name == required_role:
+        if role.name.lower() == required_role.lower():
             return True
 
     return False
