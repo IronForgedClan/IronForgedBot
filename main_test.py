@@ -358,18 +358,26 @@ skagul tosti not found in storage."""
             f"Set ingot count to 4,000 for {playername}. Reason: None "
         )
 
-    def test_updateingots_player_not_found(self):
+    @patch("main.validate_protected_request")
+    def test_updateingots_player_not_found(self, mock_validate_protected_request):
         """Test that a missing player is surfaced to caller."""
+        leader_name = "leader"
+        playername = "johnnycache"
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            playername,
+        )
         mock_storage = MagicMock()
         mock_storage.read_member.return_value = None
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
         self.loop.run_until_complete(
-            commands.updateingots(self.mock_interaction, "kennylogs", 400)
+            commands.updateingots(self.mock_interaction, playername, 400)
         )
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            "kennylogs wasn't found."
+            f"{playername} wasn't found."
         )
 
     def test_updateingots_permission_denied(self):
