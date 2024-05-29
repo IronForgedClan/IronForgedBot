@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
@@ -14,15 +15,19 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.roles import ROLES
 
 
-def helper_create_member(name: str, role: ROLES) -> discord.User:
-    discord_role = Mock(spec=discord.Role)
+def helper_create_member(name: str, role: ROLES, nick=None) -> discord.User:
+    if nick is None:
+        nick = name
+
+    discord_role = MagicMock(spec=discord.Role)
     discord_role.name = role
 
     user = Mock(spec=discord.User)
+    user.id = random.randint(100, 999)
     user.roles = [role]
     user.name = name
-    user.nick = name
-    user.display_name = name
+    user.nick = nick
+    user.display_name = nick
 
     return user
 
