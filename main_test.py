@@ -8,18 +8,15 @@ import discord
 from parameterized import parameterized
 
 import main
-from ironforgedbot.storage.types import Member
-from ironforgedbot.common.helpers import (
-    validate_playername,
-)
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.storage.types import Member
 
 
 def helper_create_member(name: str, role: ROLES, nick=None) -> discord.User:
     if nick is None:
         nick = name
 
-    discord_role = MagicMock(spec=discord.Role)
+    discord_role = Mock(spec=discord.Role)
     discord_role.name = role
 
     user = Mock(spec=discord.User)
@@ -33,7 +30,7 @@ def helper_create_member(name: str, role: ROLES, nick=None) -> discord.User:
 
 
 class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
-    # logging.disable(logging.CRITICAL)
+    logging.disable(logging.CRITICAL)
 
     @classmethod
     def setUpClass(cls):
@@ -67,39 +64,26 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         """Test that all required fields are present in config."""
         self.assertEqual(main.validate_initial_config(config), expected)
 
-    @parameterized.expand(
-        [
-            ("johnnycache", None, "johnnycache"),
-            ("123456789012", None, "123456789012"),
-            ("a", None, "a"),
-            (
-                "longinvalidname",
-                ValueError,
-                "RSN can only be 1-12 characters long",
-            ),
-        ]
-    )
     @patch("main.validate_user_request")
     async def test_ingots(self, mock_validate_user_request):
         """Test that ingots for given player are returned to user."""
-        player = "johnnycache"
-        player_id = 123456
+        user = helper_create_member("johnnycache", ROLES.MEMBER)
 
         mock_validate_user_request.return_value = (
-            helper_create_member(player, ROLES.MEMBER),
-            player,
+            user,
+            user.display_name,
         )
 
         mock_storage = Mock()
         mock_storage.read_member.return_value = Member(
-            id=player_id, runescape_name=player, ingots=2000
+            id=user.id, runescape_name=user.display_name, ingots=2000
         )
 
         commands = main.IronForgedCommands(Mock(), Mock(), mock_storage, "")
-        await commands.ingots(self.mock_interaction, "johnnycache")
+        await commands.ingots(self.mock_interaction, user.display_name)
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            "johnnycache has 2,000 ingots "
+            f"{user.display_name} has 2,000 ingots "
         )
 
     @patch("main.send_error_response")
