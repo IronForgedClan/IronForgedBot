@@ -326,26 +326,36 @@ skagul tosti not found in storage."""
             f"Member '{caller.name}' does not have permission for this action",
         )
 
-    def test_updateingots(self):
+    @patch("main.validate_protected_request")
+    def test_updateingots(self, mock_validate_protected_request):
         """Test that ingots can be written for a player."""
+        leader_name = "leader"
+        playername = "johnnycache"
+        player_id = 123456
+
+        mock_validate_protected_request.return_value = (
+            helper_create_member(leader_name, ROLES.LEADERSHIP),
+            playername,
+        )
+
         mock_storage = MagicMock()
         mock_storage.read_member.return_value = Member(
-            id=123456, runescape_name="johnnycache", ingots=10000
+            id=player_id, runescape_name=playername, ingots=10000
         )
 
         commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
         self.loop.run_until_complete(
-            commands.updateingots(self.mock_interaction, "johnnycache", 4000)
+            commands.updateingots(self.mock_interaction, playername, 4000)
         )
 
         mock_storage.update_members.assert_called_once_with(
-            [Member(id=123456, runescape_name="johnnycache", ingots=4000)],
-            "leader",
+            [Member(id=player_id, runescape_name=playername, ingots=4000)],
+            leader_name,
             note="None",
         )
 
         self.mock_interaction.followup.send.assert_called_once_with(
-            "Set ingot count to 4,000 for johnnycache. Reason: None "
+            f"Set ingot count to 4,000 for {playername}. Reason: None "
         )
 
     def test_updateingots_player_not_found(self):
