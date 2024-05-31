@@ -4,29 +4,40 @@ import logging
 import os
 import random
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 import discord
 from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
+from reactionmenu import ViewButton, ViewMenu
 
-from ironforgedbot.commands.hiscore.calculator import score_total
-from ironforgedbot.common.helpers import (
-    normalize_discord_string,
-    calculate_percentage,
+from ironforgedbot.commands.hiscore.calculator import score_info
+from ironforgedbot.commands.hiscore.constants import (
+    EMPTY_SPACE,
+)
+from ironforgedbot.common.emoji import (
     find_emoji,
 )
-from ironforgedbot.common.responses import (
-    build_error_message_string,
-    build_response_embed,
+from ironforgedbot.common.helpers import (
+    calculate_percentage,
+    normalize_discord_string,
+    validate_member_has_role,
+    validate_playername,
+    validate_protected_request,
+    validate_user_request,
 )
 from ironforgedbot.common.ranks import (
-    RANKS,
     RANK_POINTS,
+    RANKS,
     get_next_rank_from_points,
-    get_rank_from_points,
     get_rank_color_from_points,
+    get_rank_from_points,
 )
+from ironforgedbot.common.responses import (
+    build_response_embed,
+    send_error_response,
+)
+from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
@@ -55,22 +66,6 @@ def validate_initial_config(config: Dict[str, str]) -> bool:
         return False
 
     return True
-
-
-def validate_player_name(player: str) -> bool:
-    if len(player) > 12:
-        return False
-    return True
-
-
-def check_role(member: discord.Member, checked_role: str) -> bool:
-    """Check if a member has a given role."""
-    roles = member.roles
-    for role in roles:
-        if role.name == checked_role:
-            return True
-
-    return False
 
 
 class DiscordClient(discord.Client):
@@ -167,7 +162,7 @@ class IronForgedCommands:
         # Arg descriptions are pulled from function definition.
         score_command = app_commands.Command(
             name="score",
-            description="Compute clan score for a player.",
+            description="Compute your score, or the score of another member.",
             callback=self.score,
             nsfw=False,
             parent=None,
@@ -177,7 +172,7 @@ class IronForgedCommands:
 
         breakdown_command = app_commands.Command(
             name="breakdown",
-            description="Get full breakdown of score for a player.",
+            description="View your score breakdown, or the breakdown of another member.",
             callback=self.breakdown,
             nsfw=False,
             parent=None,
@@ -187,7 +182,7 @@ class IronForgedCommands:
 
         ingots_command = app_commands.Command(
             name="ingots",
-            description="View current ingots for a player.",
+            description="View your ingot balance, or the balance of another member.",
             callback=self.ingots,
             nsfw=False,
             parent=None,
@@ -265,17 +260,25 @@ class IronForgedCommands:
         )
         self._tree.add_command(syncmembers_command)
 
-    async def score(self, interaction: discord.Interaction, player: str):
+    async def score(
+        self, interaction: discord.Interaction, player: Optional[str] = None
+    ):
         """Compute clan score for a Runescape player name.
 
         Arguments:
             interaction: Discord Interaction from CommandTree.
             player: Runescape playername to look up score for.
         """
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                build_error_message_string("RSNs can not be longer than 12 characters.")
-            )
+
+        await interaction.response.defer(thinking=True)
+
+        if player is None:
+            player = interaction.user.display_name
+
+        try:
+            member, player = validate_user_request(interaction, player)
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
@@ -284,21 +287,22 @@ class IronForgedCommands:
                 f"{normalize_discord_string(interaction.user.display_name)}"
             )
         )
-        await interaction.response.defer()
 
         try:
-            points_by_skill, points_by_activity = score_total(player)
-        except RuntimeError as e:
-            await interaction.followup.send(build_error_message_string(str(e)))
+            skills, clues, raids, bosses = score_info(player)
+        except RuntimeError as error:
+            await send_error_response(interaction, str(error))
             return
 
+        activities = clues + raids + bosses
+
         skill_points = 0
-        for _, v in points_by_skill.items():
-            skill_points += v
+        for skill in skills:
+            skill_points += skill["points"]
 
         activity_points = 0
-        for _, v in points_by_activity.items():
-            activity_points += v
+        for activity in activities:
+            activity_points += activity["points"]
 
         points_total = skill_points + activity_points
         rank_name = get_rank_from_points(points_total)
@@ -309,7 +313,9 @@ class IronForgedCommands:
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
         next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
 
-        embed = build_response_embed(f"{rank_icon} {player}", "", rank_color)
+        embed = build_response_embed(
+            f"{rank_icon} {member.display_name}", "", rank_color
+        )
         embed.add_field(
             name="Skill Points",
             value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
@@ -347,109 +353,249 @@ class IronForgedCommands:
 
         await interaction.followup.send(embed=embed)
 
-    async def breakdown(self, interaction: discord.Interaction, player: str):
+    async def breakdown(
+        self, interaction: discord.Interaction, player: Optional[str] = None
+    ):
         """Compute player score with complete source enumeration.
 
         Arguments:
             interaction: Discord Interaction from CommandTree.
-            player: Runescape username to break down clan score for.
+            (optional) player: Runescape username to break down clan score for.
         """
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
+
+        await interaction.response.defer(thinking=True)
+
+        if player is None:
+            player = interaction.user.display_name
+
+        try:
+            member, player = validate_user_request(interaction, player)
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
             f"Handling '/breakdown player:{player}' on behalf of "
             f"{normalize_discord_string(interaction.user.display_name)}"
         )
-        await interaction.response.defer()
 
         try:
-            points_by_skill, points_by_activity = score_total(player)
-        except RuntimeError as e:
-            await interaction.followup.send(str(e))
+            skills, clues, raids, bosses = score_info(player)
+        except RuntimeError as error:
+            await send_error_response(interaction, str(error))
             return
 
+        activities = clues + raids + bosses
+
         skill_points = 0
-        for _, v in points_by_skill.items():
-            skill_points += v
+        for skill in skills:
+            skill_points += skill["points"]
 
         activity_points = 0
-        for _, v in points_by_activity.items():
-            activity_points += v
+        for activity in activities:
+            activity_points += activity["points"]
 
-        total_points = skill_points + activity_points
+        points_total = skill_points + activity_points
+        rank_name = get_rank_from_points(points_total)
+        rank_color = get_rank_color_from_points(points_total)
+        rank_icon = find_emoji(self._discord_client.emojis, rank_name)
 
-        output = "---Points from Skills---\n"
-
-        for k, v in points_by_skill.items():
-            output += f"{str(k)}: {v:,}\n"
-
-        output += (
-            f"Total Skill Points: {skill_points:,} "
-            + f"({calculate_percentage(skill_points, total_points)}% of total)\n\n"
-        )
-        output += "---Points from Minigames & Bossing---\n"
-
-        for k, v in points_by_activity.items():
-            output += f"{str(k)}: {v:,}\n"
-
-        output += (
-            f"Total Minigame & Bossing Points: {activity_points} "
-            + f"({calculate_percentage(activity_points, total_points)}% of total)\n\n"
-        )
-        output += f"Total Points: {total_points:,}\n"
-
-        # Now we have all of the data that we need for a full point breakdown.
-        # If we write a single file though, there is a potential race
-        # condition if multiple users try to run breakdown at once.
-        # text files are cheap - use the player name as a good-enough amount
-        # of uniquity.
-        path = os.path.join(self._tmp_dir_path, f"breakdown_{player}.txt")
-        with open(path, "w") as f:
-            f.write(output)
-
-        rank_icon = find_emoji(
-            self._discord_client.emojis, get_rank_from_points(total_points)
+        rank_breakdown_embed = build_response_embed(
+            f"{rank_icon} {member.display_name} | Rank Ladder",
+            "The **Iron Forged** player rank ladder.",
+            rank_color,
         )
 
-        with open(path, "rb") as f:
-            discord_file = discord.File(f, filename="breakdown.txt")
-            await interaction.followup.send(
-                f"Total Points for {player}: {total_points} {rank_icon}",
-                file=discord_file,
+        for rank in RANKS:
+            icon = find_emoji(self._discord_client.emojis, rank)
+            rank_point_threshold = RANK_POINTS[rank.upper()].value
+            rank_breakdown_embed.add_field(
+                name=(
+                    f"{icon} {rank}%s"
+                    % (
+                        f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
+                        f"<-- _You are here_"
+                        if rank == rank_name
+                        else ""
+                    )
+                ),
+                value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
+                inline=False,
             )
 
-    async def ingots(self, interaction: discord.Interaction, player: str):
-        """View ingots for a Runescape playername.
+        if rank_name != RANKS.MYTH.value:
+            next_rank_name = get_next_rank_from_points(points_total)
+            next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
+            next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
+            rank_breakdown_embed.add_field(
+                name="Your Progress",
+                value=(
+                    f"{rank_icon} -> {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} "
+                    f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                ),
+                inline=False,
+            )
+
+        skill_breakdown_embed = build_response_embed(
+            f"{rank_icon} {member.display_name} | Skilling Points",
+            f"Breakdown of **{skill_points:,}** points awarded for skill xp.",
+            rank_color,
+        )
+
+        ordered_skills = sorted(skills, key=lambda x: x["display_order"])
+
+        for skill in ordered_skills:
+            skill_icon = find_emoji(self._discord_client.emojis, skill["emoji_key"])
+            skill_breakdown_embed.add_field(
+                name=f"{skill_icon} {skill['points']:,} points",
+                value=f"{EMPTY_SPACE}{skill['xp']:,} xp",
+                inline=True,
+            )
+
+        # empty field to maintain layout
+        skill_breakdown_embed.add_field(
+            name="",
+            value="",
+            inline=True,
+        )
+
+        # There is a 25 field limit on embeds, so we need to paginate.
+        # As not every player has kc on every boss we don't need to show
+        # all bosses, so this won't be as bad for some players.
+        field_count = 0
+        boss_embeds = []
+
+        working_embed = build_response_embed(
+            "",
+            "",
+            rank_color,
+        )
+
+        boss_point_counter = 0
+        for boss in bosses:
+            if field_count == 24:
+                field_count = 0
+                boss_embeds.append((working_embed))
+                working_embed = build_response_embed(
+                    "",
+                    "",
+                    rank_color,
+                )
+
+            boss_point_counter += boss["points"]
+
+            field_count += 1
+            boss_icon = find_emoji(self._discord_client.emojis, boss["emoji_key"])
+            working_embed.add_field(
+                name=f"{boss_icon} {boss['points']:,} points",
+                value=f"{EMPTY_SPACE}{boss['kc']:,} kc",
+            )
+
+        boss_embeds.append(working_embed)
+        boss_page_count = len(boss_embeds)
+
+        for index, embed in enumerate(boss_embeds):
+            embed.title = f"{rank_icon} {member.display_name} | Bossing Points"
+            embed.description = (
+                f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
+            )
+
+            if boss_page_count > 1:
+                embed.title = "".join(embed.title) + f" ({index+1}/{boss_page_count})"
+
+            if index + 1 == boss_page_count:
+                if len(embed.fields) % 3 != 0:
+                    embed.add_field(name="", value="")
+
+        raid_breakdown_embed = build_response_embed(
+            f"{rank_icon} {member.display_name} | Raid Points",
+            "",
+            rank_color,
+        )
+
+        raid_point_counter = 0
+        for raid in raids:
+            raid_point_counter += raid["points"]
+            raid_icon = find_emoji(self._discord_client.emojis, raid["emoji_key"])
+            raid_breakdown_embed.add_field(
+                name=f"{raid_icon} {raid['points']:,} points",
+                value=f"{EMPTY_SPACE}{raid['kc']:,} kc",
+            )
+
+        raid_breakdown_embed.description = f"Breakdown of **{raid_point_counter:,}** points awarded for raid completions."
+
+        clue_breakdown_embed = build_response_embed(
+            f"{rank_icon} {member.display_name} | Cluescroll Points",
+            "Points awarded for cluescroll completions.",
+            rank_color,
+        )
+
+        clue_point_counter = 0
+        clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
+        for clue in clues:
+            clue_point_counter += clue["points"]
+            clue_breakdown_embed.add_field(
+                name=f"{clue_icon} {clue['points']:,} points",
+                value=f"{EMPTY_SPACE}{clue['kc']:,} {clue.get("display_name", clue['name'])}",
+            )
+
+        clue_breakdown_embed.description = f"Breakdown of **{clue_point_counter:,}** points awarded for cluescroll completions."
+
+        menu = ViewMenu(
+            interaction,
+            menu_type=ViewMenu.TypeEmbed,
+            show_page_director=True,
+            timeout=600,
+            delete_on_timeout=True,
+        )
+
+        menu.add_page(skill_breakdown_embed)
+        for embed in boss_embeds:
+            menu.add_page(embed)
+        menu.add_page(raid_breakdown_embed)
+        menu.add_page(clue_breakdown_embed)
+        menu.add_page(rank_breakdown_embed)
+
+        menu.add_button(ViewButton.back())
+        menu.add_button(ViewButton.next())
+
+        await menu.start()
+
+    async def ingots(
+        self, interaction: discord.Interaction, player: Optional[str] = None
+    ):
+        """View your ingots, or those for another player.
 
         Arguments:
             interaction: Discord Interaction from CommandTree.
-            player: Runescape username to view ingot count for.
+            (optional) player: Runescape username to view ingot count for.
         """
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
+
+        await interaction.response.defer(thinking=True)
+
+        if player is None:
+            player = interaction.user.display_name
+
+        try:
+            _, player = validate_user_request(interaction, player)
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
             f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
         )
-        await interaction.response.defer()
 
-        # Strip whitespaces from mis-typing.
-        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading member: {e}")
+        except StorageError as error:
+            await send_error_response(interaction, str(error))
             return
 
         if member is None:
-            await interaction.followup.send(f"{player} not found in storage")
+            await send_error_response(
+                interaction, f"Member '{player}' not found in spreadsheet"
+            )
             return
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
@@ -471,56 +617,43 @@ class IronForgedCommands:
             player: Runescape username to add ingots to.
             ingots: number of ingots to add to this player.
         """
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
-            )
-            return
-
-        if not check_role(caller, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
-
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
-            return
-
-        if caller.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
-        logging.info(
-            f"Handling '/addingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
-        )
         await interaction.response.defer()
 
-        player = player.strip()
+        try:
+            caller, player = validate_protected_request(
+                interaction, player, ROLES.LEADERSHIP
+            )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried addingingots does not have permission"
+            )
+            await send_error_response(interaction, str(error))
+            return
+
+        logging.info(
+            f"Handling '/addingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {interaction.user.display_name}"
+        )
+
         try:
             member = self._storage_client.read_member(player.lower())
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading member: {e}")
+        except StorageError as error:
+            await send_error_response(interaction, str(error))
             return
 
         if member is None:
-            await interaction.followup.send(f"{player} wasn't found.")
+            await send_error_response(
+                interaction, f"Member '{player}' not found in spreadsheet"
+            )
             return
 
         member.ingots += ingots
 
         try:
-            self._storage_client.update_members([member], caller, note=reason)
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error writing ingots: {e}")
+            self._storage_client.update_members(
+                [member], caller.display_name, note=reason
+            )
+        except StorageError as error:
+            await send_error_response(interaction, f"Error updating ingots: {error}")
             return
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
@@ -542,46 +675,38 @@ class IronForgedCommands:
             player: Comma-separated list of Runescape usernames to add ingots to.
             ingots: number of ingots to add to this player.
         """
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+
+        await interaction.response.defer()
+
+        try:
+            _, caller = validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried addingingots does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
-        if not check_role(caller, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
-
-        if caller.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(
             f"Handling '/addingotsbulk players:{players} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
-        await interaction.response.defer()
 
         player_names = players.split(",")
         player_names = [player.strip() for player in player_names]
         for player in player_names:
-            if not validate_player_name(player):
-                await interaction.followup.send(
-                    f"FAILED_PRECONDITION: {player} is longer than 12 characters."
-                )
-                return
+            try:
+                validate_playername(player)
+            except ValueError as error:
+                await send_error_response(interaction, str(error))
 
         try:
             members = self._storage_client.read_members()
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading member: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading member '{error}'"
+            )
             return
 
         output = []
@@ -602,8 +727,10 @@ class IronForgedCommands:
 
         try:
             self._storage_client.update_members(members_to_update, caller, note=reason)
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error writing ingots: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error writing ingots for '{error}'"
+            )
             return
 
         # Our output can be larger than the interaction followup max.
@@ -632,41 +759,23 @@ class IronForgedCommands:
             player: Runescape username to view ingot count for.
             ingots: New ingot count for this user.
         """
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+        await interaction.response.defer()
+
+        try:
+            caller, player = validate_protected_request(
+                interaction, player, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried updateingots but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
-        if not check_role(caller, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
-
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
-            return
-
-        if caller.nick is None:
-            await interaction.response.send_message(
-                "FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(
             f"Handling '/updateingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
 
-        await interaction.response.defer()
-
-        player = player.strip()
         try:
             member = self._storage_client.read_member(player.lower())
         except StorageError as e:
@@ -680,7 +789,9 @@ class IronForgedCommands:
         member.ingots = ingots
 
         try:
-            self._storage_client.update_members([member], caller, note=reason)
+            self._storage_client.update_members(
+                [member], caller.display_name, note=reason
+            )
         except StorageError as e:
             await interaction.followup.send(f"Encountered error writing ingots: {e}")
             return
@@ -699,32 +810,23 @@ class IronForgedCommands:
                 purchasing, and 'choose_winner' will choose a winner & display
                 their winnings (alongside clearing storage for the next raffle).
         """
-        if interaction.user.display_name is None:
-            await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
+        await interaction.response.defer()
+
+        try:
+            validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried raffleadmin but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
         logging.info(
             f"Handling '/raffleadmin {subcommand}' on behalf of "
             f"{normalize_discord_string(interaction.user.display_name).lower()}"
         )
-        await interaction.response.defer()
-
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
-            )
-            return
-
-        if not check_role(caller, "Leadership"):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in a leadership role."
-            )
-            return
 
         if subcommand.lower() == "start_raffle":
             await self._start_raffle(interaction)
@@ -744,8 +846,10 @@ class IronForgedCommands:
             self._storage_client.start_raffle(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error starting raffle: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error starting raffle: {error}"
+            )
             return
 
         await interaction.followup.send(
@@ -761,8 +865,10 @@ class IronForgedCommands:
             self._storage_client.end_raffle(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error ending raffle: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error ending raffle: {error}"
+            )
             return
 
         await interaction.followup.send(
@@ -773,15 +879,17 @@ class IronForgedCommands:
         """Chooses a winner & winning amount. Clears storage of all tickets."""
         try:
             current_tickets = self._storage_client.read_raffle_tickets()
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading tickets: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error ending raffle: {error}"
+            )
             return
 
         try:
             members = self._storage_client.read_members()
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading current members: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading current members: {error}"
             )
             return
 
@@ -811,53 +919,48 @@ class IronForgedCommands:
             self._storage_client.delete_raffle_tickets(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error clearing ticket storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error clearing ticket storage: {error}"
             )
             return
 
     async def raffletickets(self, interaction: discord.Interaction):
         """View calling user's current raffle ticket count."""
-        await interaction.response.defer()
 
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+        await interaction.response.defer(thinking=True)
+
+        try:
+            _, caller = validate_user_request(
+                interaction, interaction.user.display_name
             )
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
-        if caller.nick is None:
-            await interaction.followup.send(
-                f"FAILED_PRECONDITION: {caller.name} does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(f"Handling '/raffletickets' on behalf of {caller}")
 
         try:
             member = self._storage_client.read_member(caller)
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading member from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading member from storage: {error}"
             )
             return
 
         if member is None:
-            await interaction.followup.send(
-                f"{caller} not found in storage, please reach out to leadership."
+            await send_error_response(
+                interaction,
+                f"{caller} not found in storage, please reach out to leadership.",
             )
             return
 
         try:
             current_tickets = self._storage_client.read_raffle_tickets()
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading raffle tickets from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction,
+                f"Encountered error reading raffle tickets from storage: {error}",
             )
             return
 
@@ -873,50 +976,45 @@ class IronForgedCommands:
         """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
         await interaction.response.defer()
 
-        # interaction.user can be a User or Member, but we can only
-        # rely on permission checking for a Member.
-        caller = interaction.user
-        if isinstance(caller, discord.User):
-            await interaction.followup.send(
-                f"PERMISSION_DENIED: {caller.name} is not in this guild."
+        try:
+            _, caller = validate_user_request(
+                interaction, interaction.user.display_name
             )
+        except (ReferenceError, ValueError) as error:
+            await send_error_response(interaction, str(error))
             return
 
-        if caller.nick is None:
-            await interaction.followup.send(
-                f"FAILED_PRECONDITION: {caller.name} does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(caller.nick).lower()
         logging.info(f"Handling '/buyraffletickets {tickets}' on behalf of {caller}")
 
         try:
             ongoing_raffle = self._storage_client.read_raffle()
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading raffle status from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction,
+                f"Encountered error reading raffle status from storage: {error}",
             )
             return
 
         if not ongoing_raffle:
-            await interaction.followup.send(
-                f"FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought."
+            await send_error_response(
+                interaction,
+                "FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought.",
             )
             return
 
         # First, read member to get Discord ID & ingot count
         try:
             member = self._storage_client.read_member(caller)
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error reading member from storage: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading member from storage: {error}"
             )
             return
 
         if member is None:
-            await interaction.followup.send(
-                f"{caller} not found in storage, please reach out to leadership."
+            await send_error_response(
+                interaction,
+                f"{caller} not found in storage, please reach out to leadership.",
             )
             return
 
@@ -936,18 +1034,19 @@ class IronForgedCommands:
             self._storage_client.update_members(
                 [member], caller, note="Bought raffle tickets"
             )
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error updating member ingot count: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error updating member ingot count: {error}"
             )
             return
 
         try:
             self._storage_client.add_raffle_tickets(member.id, tickets)
-        except StorageError as e:
-            await interaction.followup.send(
-                f"Encountered error adding raffle tickets: {e}"
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error adding raffle tickets: {error}"
             )
+
             return
 
         await interaction.followup.send(
@@ -955,50 +1054,43 @@ class IronForgedCommands:
         )
 
     async def syncmembers(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        try:
+            _, caller = validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
+            )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried syncmembers but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
+            return
+
         output = ""
-        mutator = interaction.user
-        if isinstance(mutator, discord.User):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {mutator.name} is not in this guild."
-            )
-            return
-
-        if not check_role(mutator, "Leadership"):
-            await interaction.response.send_message(
-                f"PERMISSION_DENIED: {mutator.name} is not in a leadership role."
-            )
-            return
-
-        if mutator.nick is None:
-            await interaction.response.send_message(
-                f"FAILED_PRECONDITION: caller does not have a nickname set."
-            )
-            return
-
-        caller = normalize_discord_string(mutator.nick).lower()
         logging.info(f"Handling '/syncmembers' on behalf of {caller}")
 
-        await interaction.response.defer()
         # Perform a cross join between current Discord members and
         # entries in the sheet.
         # First, read all members from Discord.
         members = []
         member_ids = []
-        for member in self._discord_client.get_guild(
-            self._discord_client.guild.id
-        ).members:
-            if check_role(member, "Member"):
+
+        assert interaction.guild is not None
+        for member in interaction.guild.members:
+            if validate_member_has_role(member, ROLES.MEMBER):
                 members.append(member)
                 member_ids.append(member.id)
 
         # Then, get all current entries from storage.
         try:
             existing = self._storage_client.read_members()
-        except StorageError as e:
-            await interaction.followup.send(f"Encountered error reading members: {e}")
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error reading members: {error}"
+            )
             return
 
-        original_length = len(existing)
         written_ids = [member.id for member in existing]
 
         # Now for the actual diffing.
@@ -1007,7 +1099,7 @@ class IronForgedCommands:
         for member in members:
             if member.id not in written_ids:
                 # Don't allow users without a nickname into storage.
-                if member.nick is None:
+                if not member.nick or len(member.nick) < 1:
                     output += f"skipped user {member.name} because they don't have a nickname in Discord\n"
                     continue
                 new_members.append(
