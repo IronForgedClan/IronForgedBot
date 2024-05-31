@@ -1,15 +1,15 @@
-from typing import Any, Dict, List, Tuple, TypedDict, Union
+from typing import List, Tuple
 
 import requests
 from apscheduler.executors.base import logging
 
 from ironforgedbot.commands.hiscore.constants import (
     ACTIVITIES,
+    BOSSES,
     CLUES,
     IGNORED_ACTIVITIES,
-    SKILLS,
     RAIDS,
-    BOSSES,
+    SKILLS,
     Activity,
     Skill,
 )
