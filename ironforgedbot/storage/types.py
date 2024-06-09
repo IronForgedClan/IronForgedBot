@@ -2,8 +2,10 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+
 class StorageError(Exception):
     """Base exception raised for storage operations."""
+
 
 @dataclass
 class Member:
@@ -92,3 +94,7 @@ class IngotsStorage(type):
     @abstractmethod
     def delete_raffle_tickets(self, attribution: str) -> None:
         """Deletes all current raffle tickets. Called once when ending a raffle."""
+
+    @abstractmethod
+    def get_absentees(self) -> dict[str:str]:
+        """Returns known list of absentees with <rsn:date> format"""
