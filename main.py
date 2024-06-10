@@ -473,6 +473,9 @@ class IronForgedCommands:
 
         boss_point_counter = 0
         for boss in data.bosses:
+            if boss["points"] < 1:
+                continue
+
             if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
