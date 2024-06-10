@@ -34,7 +34,7 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
         current_role = _find_rank(member_roles)
         if current_role is None:
             # Check whether user is a member at all
-            if _is_member(member_roles):
+            if _is_member(member_roles) and not _is_prospect(member_roles):
                 message = f"Found a member {nick} w/o the ranked role"
                 logging.warning(message)
                 asyncio.run_coroutine_threadsafe(_send_discord_message_plain(updates_channel, message), loop)
@@ -68,8 +68,6 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
             updates_channel, f'Finished daily ranks check'), loop)
 
 
-
-
 def _extract_roles(member: discord.Member) -> list[str]:
     roles = []
     for role in member.roles:
@@ -91,6 +89,14 @@ def _find_rank(roles: list[str]) -> Optional[RANKS]:
 def _is_member(roles: list[str]) -> bool:
     for role in roles:
         if "member" == role.lower():
+            return True
+
+    return False
+
+
+def _is_prospect(roles: list[str]) -> bool:
+    for role in roles:
+        if "prospect" == role.lower():
             return True
 
     return False

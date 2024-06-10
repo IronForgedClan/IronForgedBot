@@ -54,7 +54,7 @@ def get_all_discord_members(guild: discord.Guild) -> list[str]:
             if "" == normalized_role:
                 continue
 
-            if "member" == normalized_role:
+            if "member" == normalized_role.lower():
                 known_members.append(nick)
 
     return known_members
