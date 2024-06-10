@@ -26,27 +26,41 @@ HISCORES_PLAYER_URL = (
 LEVEL_99_EXPERIENCE = 13034431
 
 
+class ScoreBreakdown:
+    def __init__(
+        self,
+        skills: List[Skill],
+        clues: List[Activity],
+        raids: List[Activity],
+        bosses: List[Activity],
+    ):
+        self.skills = skills
+        self.clues = clues
+        self.raids = raids
+        self.bosses = bosses
+
+
 def score_info(
     player_name: str,
-) -> Tuple[List[Skill], List[Activity], List[Activity], List[Activity]]:
+) -> ScoreBreakdown:
     player_name = normalize_discord_string(player_name)
     data = _fetch_data(player_name)
 
-    skills_info = _get_skills_info(data)
+    skills = _get_skills_info(data)
     clues, raids, bosses = _get_activities_info(data)
 
-    return skills_info, clues, raids, bosses
+    return ScoreBreakdown(skills, clues, raids, bosses)
 
 
 def points_total(player_name: str) -> int:
     player_name = normalize_discord_string(player_name)
 
-    skills, clues, raids, bosses = score_info(player_name)
-    activities = clues + raids + bosses
+    data = score_info(player_name)
+    activities = data.clues + data.raids + data.bosses
 
     points = 0
 
-    for skill in skills:
+    for skill in data.skills:
         points += skill["points"]
 
     for activity in activities:

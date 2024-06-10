@@ -289,15 +289,15 @@ class IronForgedCommands:
         )
 
         try:
-            skills, clues, raids, bosses = score_info(player)
+            data = score_info(player)
         except RuntimeError as error:
             await send_error_response(interaction, str(error))
             return
 
-        activities = clues + raids + bosses
+        activities = data.clues + data.raids + data.bosses
 
         skill_points = 0
-        for skill in skills:
+        for skill in data.skills:
             skill_points += skill["points"]
 
         activity_points = 0
@@ -380,15 +380,15 @@ class IronForgedCommands:
         )
 
         try:
-            skills, clues, raids, bosses = score_info(player)
+            data = score_info(player)
         except RuntimeError as error:
             await send_error_response(interaction, str(error))
             return
 
-        activities = clues + raids + bosses
+        activities = data.clues + data.raids + data.bosses
 
         skill_points = 0
-        for skill in skills:
+        for skill in data.skills:
             skill_points += skill["points"]
 
         activity_points = 0
@@ -442,7 +442,7 @@ class IronForgedCommands:
             rank_color,
         )
 
-        ordered_skills = sorted(skills, key=lambda x: x["display_order"])
+        ordered_skills = sorted(data.skills, key=lambda x: x["display_order"])
 
         for skill in ordered_skills:
             skill_icon = find_emoji(self._discord_client.emojis, skill["emoji_key"])
@@ -472,7 +472,7 @@ class IronForgedCommands:
         )
 
         boss_point_counter = 0
-        for boss in bosses:
+        for boss in data.bosses:
             if field_count == 24:
                 field_count = 0
                 boss_embeds.append((working_embed))
@@ -514,7 +514,7 @@ class IronForgedCommands:
         )
 
         raid_point_counter = 0
-        for raid in raids:
+        for raid in data.raids:
             raid_point_counter += raid["points"]
             raid_icon = find_emoji(self._discord_client.emojis, raid["emoji_key"])
             raid_breakdown_embed.add_field(
@@ -532,7 +532,7 @@ class IronForgedCommands:
 
         clue_point_counter = 0
         clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
-        for clue in clues:
+        for clue in data.clues:
             clue_point_counter += clue["points"]
             clue_breakdown_embed.add_field(
                 name=f"{clue_icon} {clue['points']:,} points",
