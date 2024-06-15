@@ -169,5 +169,6 @@ service.json
 
 # Default logfile
 ./logs
+*.log*
 
 .idea
