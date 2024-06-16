@@ -13,6 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
 
 from ironforgedbot.commands.hiscore.calculator import score_total
+from ironforgedbot.commands.roster.roster import cmd_roster
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     calculate_percentage,
@@ -111,6 +112,7 @@ class DiscordClient(discord.Client):
             storage: IngotsStorage
     ):
         super().__init__(intents=intents)
+        self.discord_guild = None
         self.upload = upload
         self.guild = guild
         self.ranks_update_channel = ranks_update_channel
@@ -137,14 +139,14 @@ class DiscordClient(discord.Client):
         # Starting background jobs
         loop = asyncio.get_running_loop()
 
-        discord_guild = self.get_guild(guild.id)
+        self.discord_guild = self.get_guild(guild.id)
         scheduler = BackgroundScheduler()
         # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
         # from datetime import datetime
         scheduler.add_job(
                 refresh_ranks,
                 "cron",
-                args=[discord_guild, self.ranks_update_channel, loop],
+                args=[self.discord_guild, self.ranks_update_channel, loop],
                 hour=2,
                 minute=0,
                 second=0,
@@ -154,7 +156,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
                 check_activity_reminder,
                 "cron",
-                args=[discord_guild, self.ranks_update_channel, loop, self.storage],
+                args=[self.discord_guild, self.ranks_update_channel, loop, self.storage],
                 day_of_week="mon",
                 hour=0,
                 minute=0,
@@ -165,7 +167,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
                 check_activity,
                 "cron",
-                args=[discord_guild, self.ranks_update_channel, loop, self.wom_client, self.wom_group_id, self.storage],
+                args=[self.discord_guild, self.ranks_update_channel, loop, self.wom_client, self.wom_group_id, self.storage],
                 day_of_week="mon",
                 hour=1,
                 minute=0,
@@ -291,6 +293,26 @@ class IronForgedCommands:
                 auto_locale_strings=True,
         )
         self._tree.add_command(syncmembers_command)
+
+        roster_command = app_commands.Command(
+                name="roster",
+                description="Builds an even roster from signups.",
+                callback=self.roster,
+                nsfw=False,
+                parent=None,
+                auto_locale_strings=True,
+        )
+        self._tree.add_command(roster_command)
+
+    async def roster(self, interaction: discord.Interaction, message_url: str):
+        if not check_role(interaction.user, "Leadership"):
+            await interaction.response.send_message(
+                    f"PERMISSION_DENIED: {interaction.user.name} is not in a leadership role."
+            )
+            return
+
+        await interaction.response.defer()
+        await cmd_roster(interaction, message_url, self._discord_client.discord_guild, self._storage_client)
 
     async def score(self, interaction: discord.Interaction, player: str):
         """Compute clan score for a Runescape player name.

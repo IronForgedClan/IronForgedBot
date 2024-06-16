@@ -2,13 +2,13 @@ import asyncio
 import logging
 import random
 import time
-from typing import Optional
 
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import points_total
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANKS, get_rank_from_points
+from ironforgedbot.common.roles import extract_roles, is_member, is_prospect, find_rank
 from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
 
 
@@ -30,11 +30,11 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
         if "" == nick:
             continue
 
-        member_roles = _extract_roles(member)
-        current_role = _find_rank(member_roles)
+        member_roles = extract_roles(member)
+        current_role = find_rank(member_roles)
         if current_role is None:
             # Check whether user is a member at all
-            if _is_member(member_roles) and not _is_prospect(member_roles):
+            if is_member(member_roles) and not is_prospect(member_roles):
                 message = f"Found a member {nick} w/o the ranked role"
                 logging.warning(message)
                 asyncio.run_coroutine_threadsafe(_send_discord_message_plain(updates_channel, message), loop)
@@ -66,40 +66,6 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
 
     asyncio.run_coroutine_threadsafe(_send_discord_message_plain(
             updates_channel, f'Finished daily ranks check'), loop)
-
-
-def _extract_roles(member: discord.Member) -> list[str]:
-    roles = []
-    for role in member.roles:
-        normalized_role = normalize_discord_string(role.name)
-        if "" == normalized_role:
-            continue
-        roles.append(normalized_role)
-
-    return roles
-
-
-def _find_rank(roles: list[str]) -> Optional[RANKS]:
-    for role in roles:
-        if RANKS.has_value(role):
-            return RANKS(role)
-    return None
-
-
-def _is_member(roles: list[str]) -> bool:
-    for role in roles:
-        if "member" == role.lower():
-            return True
-
-    return False
-
-
-def _is_prospect(roles: list[str]) -> bool:
-    for role in roles:
-        if "prospect" == role.lower():
-            return True
-
-    return False
 
 
 def _load_icons(guild: discord.Guild):

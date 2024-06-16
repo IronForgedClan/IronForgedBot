@@ -1,3 +1,6 @@
+import tempfile
+from io import BytesIO
+
 import discord
 from collections.abc import Sequence
 
@@ -76,3 +79,8 @@ def fit_log_lines_into_discord_messages(lines: list[str]) -> list[str]:
         messages.append(current_message)
 
     return messages
+
+
+async def reply_with_file(msg: str, body: str, file_name: str, interaction: discord.Interaction):
+    discord_file = discord.File(BytesIO(str.encode(body)), filename=file_name)
+    await interaction.followup.send(msg, file=discord_file)
