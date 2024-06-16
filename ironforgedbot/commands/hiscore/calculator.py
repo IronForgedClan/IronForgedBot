@@ -4,6 +4,7 @@ import requests
 
 from ironforgedbot.commands.hiscore.constants import SKILLS, ACTIVITIES
 from ironforgedbot.commands.hiscore.points import SKILL_POINTS_REGULAR, SKILL_POINTS_PAST_99, ACTIVITY_POINTS
+from ironforgedbot.common.ranks import RANKS, get_rank_from_points
 
 HISCORES_PLAYER_URL = 'https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player={player}'
 LEVEL_99_EXPERIENCE = 13034431
@@ -27,6 +28,24 @@ def points_total(player_name: str) -> int:
         total_points += v
 
     return total_points
+
+
+def get_rank(player_name: str) -> RANKS:
+    try:
+        points_by_skill, points_by_activity = score_total(player_name)
+    except RuntimeError as e:
+        raise e
+
+    skill_points = 0
+    for _, v in points_by_skill.items():
+        skill_points += v
+
+    activity_points = 0
+    for _, v in points_by_activity.items():
+        activity_points += v
+
+    total_points = skill_points + activity_points
+    return RANKS(get_rank_from_points(total_points))
 
 
 def _fetch_data(player_name: str):
