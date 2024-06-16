@@ -28,12 +28,12 @@ class Signups(object):
         self.prospects.append(normalize_discord_string(member.nick))
 
     def add_unknowns(self, member: discord.Member):
-        self.unknowns.append(normalize_discord_string(member.nick))
+        self.unknowns.append(normalize_discord_string(member.name))
 
 
 async def cmd_roster(interaction: discord.Interaction, url: str, guild: discord.Guild, storage: IngotsStorage):
     body = await _calc_roster(url, guild, storage)
-    title = f"Roster for the [event]({url})\n"
+    title = f"Roster for the [event]({url})"
     await reply_with_file(title, body, "roster.txt", interaction)
 
 
