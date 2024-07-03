@@ -1,0 +1,163 @@
+[
+    {
+        "name": "Attack",
+        "display_order": 1,
+        "emoji_key": "Attack",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Defence",
+        "display_order": 7,
+        "emoji_key": "Defence",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Strength",
+        "display_order": 4,
+        "emoji_key": "Strength",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Hitpoints",
+        "display_order": 2,
+        "emoji_key": "Hitpoints",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Ranged",
+        "display_order": 10,
+        "emoji_key": "Ranged",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Prayer",
+        "display_order": 13,
+        "emoji_key": "Prayer",
+        "xp_per_point": 35000,
+        "xp_per_point_post_99": 105000
+    },
+    {
+        "name": "Magic",
+        "display_order": 16,
+        "emoji_key": "Magic",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Cooking",
+        "display_order": 12,
+        "emoji_key": "Cooking",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Woodcutting",
+        "display_order": 18,
+        "emoji_key": "Woodcutting",
+        "xp_per_point": 50000,
+        "xp_per_point_post_99": 150000
+    },
+    {
+        "name": "Fletching",
+        "display_order": 17,
+        "emoji_key": "Fletching",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Fishing",
+        "display_order": 9,
+        "emoji_key": "Fishing",
+        "xp_per_point": 50000,
+        "xp_per_point_post_99": 100000
+    },
+    {
+        "name": "Firemaking",
+        "display_order": 15,
+        "emoji_key": "Firemaking",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Crafting",
+        "display_order": 14,
+        "emoji_key": "Crafting",
+        "xp_per_point": 35000,
+        "xp_per_point_post_99": 105000
+    },
+    {
+        "name": "Smithing",
+        "display_order": 6,
+        "emoji_key": "Smithing",
+        "xp_per_point": 50000,
+        "xp_per_point_post_99": 150000
+    },
+    {
+        "name": "Mining",
+        "display_order": 3,
+        "emoji_key": "Mining",
+        "xp_per_point": 30000,
+        "xp_per_point_post_99": 90000
+    },
+    {
+        "name": "Herblore",
+        "display_order": 8,
+        "emoji_key": "Herblore",
+        "xp_per_point": 25000,
+        "xp_per_point_post_99": 75000
+    },
+    {
+        "name": "Agility",
+        "display_order": 5,
+        "emoji_key": "Agility",
+        "xp_per_point": 30000,
+        "xp_per_point_post_99": 90000
+    },
+    {
+        "name": "Thieving",
+        "display_order": 11,
+        "emoji_key": "Thieving",
+        "xp_per_point": 100000,
+        "xp_per_point_post_99": 300000
+    },
+    {
+        "name": "Slayer",
+        "display_order": 20,
+        "emoji_key": "Slayer",
+        "xp_per_point": 30000,
+        "xp_per_point_post_99": 90000
+    },
+    {
+        "name": "Farming",
+        "display_order": 21,
+        "emoji_key": "Farming",
+        "xp_per_point": 50000,
+        "xp_per_point_post_99": 150000
+    },
+    {
+        "name": "Runecraft",
+        "display_order": 19,
+        "emoji_key": "Runecraft",
+        "xp_per_point": 30000,
+        "xp_per_point_post_99": 90000
+    },
+    {
+        "name": "Hunter",
+        "display_order": 23,
+        "emoji_key": "Hunter",
+        "xp_per_point": 50000,
+        "xp_per_point_post_99": 150000
+    },
+    {
+        "name": "Construction",
+        "display_order": 22,
+        "emoji_key": "Construction",
+        "xp_per_point": 50000,
+        "xp_per_point_post_99": 150000
+    }
+]

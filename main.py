@@ -38,6 +38,7 @@ from ironforgedbot.common.responses import (
     send_error_response,
 )
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 from ironforgedbot.tasks.ranks import refresh_ranks
@@ -1231,6 +1232,20 @@ if __name__ == "__main__":
     # Fail out early if our required args are not present.
     init_config = read_dotenv(args.dotenv_path)
     if not validate_initial_config(init_config):
+        sys.exit(1)
+
+    # Fail out if any errors reading local config data
+    try:
+        if BOSSES is None or len(BOSSES) < 1:
+            raise Exception("Error loading boss data")
+        if CLUES is None or len(CLUES) < 1:
+            raise Exception("Error loading clue data")
+        if RAIDS is None or len(RAIDS) < 1:
+            raise Exception("Error loading raid data")
+        if SKILLS is None or len(SKILLS) < 1:
+            raise Exception("Error loading skill data")
+    except Exception as e:
+        logging.error(e)
         sys.exit(1)
 
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?

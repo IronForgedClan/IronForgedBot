@@ -1,0 +1,44 @@
+[
+    {
+        "name": "Clue Scrolls (beginner)",
+        "display_name": "Beginner",
+        "display_order": 1,
+        "emoji_key": "ClueScrolls_Beginner",
+        "kc_per_point": 10
+    },
+    {
+        "name": "Clue Scrolls (easy)",
+        "display_name": "Easy",
+        "display_order": 2,
+        "emoji_key": "ClueScrolls_Easy",
+        "kc_per_point": 5
+    },
+    {
+        "name": "Clue Scrolls (medium)",
+        "display_name": "Medium",
+        "display_order": 3,
+        "emoji_key": "ClueScrolls_Medium",
+        "kc_per_point": 3.33333
+    },
+    {
+        "name": "Clue Scrolls (hard)",
+        "display_name": "Hard",
+        "display_order": 4,
+        "emoji_key": "ClueScrolls_Hard",
+        "kc_per_point": 2
+    },
+    {
+        "name": "Clue Scrolls (elite)",
+        "display_name": "Elite",
+        "display_order": 5,
+        "emoji_key": "ClueScrolls_Elite",
+        "kc_per_point": 1
+    },
+    {
+        "name": "Clue Scrolls (master)",
+        "display_name": "Master",
+        "display_order": 6,
+        "emoji_key": "ClueScrolls_Master",
+        "kc_per_point": 0.5
+    }
+]
