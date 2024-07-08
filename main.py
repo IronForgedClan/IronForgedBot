@@ -8,7 +8,6 @@ from logging.handlers import RotatingFileHandler
 from typing import Dict
 
 import discord
-import wom
 from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
 
@@ -19,16 +18,16 @@ from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_emoji,
 )
-from ironforgedbot.common.responses import (
-    build_error_message_string,
-    build_response_embed,
-)
 from ironforgedbot.common.ranks import (
     RANKS,
     RANK_POINTS,
     get_next_rank_from_points,
     get_rank_from_points,
     get_rank_color_from_points,
+)
+from ironforgedbot.common.responses import (
+    build_error_message_string,
+    build_response_embed,
 )
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
@@ -107,7 +106,7 @@ class DiscordClient(discord.Client):
             upload: bool,
             guild: discord.Object,
             ranks_update_channel: str,
-            wom_client: wom.Client,
+            wom_api_key: str,
             wom_group_id: int,
             storage: IngotsStorage
     ):
@@ -116,7 +115,7 @@ class DiscordClient(discord.Client):
         self.upload = upload
         self.guild = guild
         self.ranks_update_channel = ranks_update_channel
-        self.wom_client = wom_client
+        self.wom_api_key = wom_api_key
         self.wom_group_id = wom_group_id
         self.storage = storage
 
@@ -167,7 +166,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
                 check_activity,
                 "cron",
-                args=[self.discord_guild, self.ranks_update_channel, loop, self.wom_client, self.wom_group_id, self.storage],
+                args=[self.discord_guild, self.ranks_update_channel, loop, self.wom_api_key, self.wom_group_id, self.storage],
                 day_of_week="mon",
                 hour=1,
                 minute=0,
@@ -1196,10 +1195,7 @@ if __name__ == "__main__":
     intents = discord.Intents.default()
     intents.members = True
     guild = discord.Object(id=init_config.get("GUILDID"))
-    wom_client = wom.Client(
-            api_key=init_config.get("WOM_API_KEY"),
-            user_agent="IronForged"
-    )
+
     storage_client: IngotsStorage = SheetsStorage.from_account_file("service.json", init_config.get("SHEETID"))
 
     client = DiscordClient(
@@ -1207,7 +1203,7 @@ if __name__ == "__main__":
             upload=args.upload_commands,
             guild=guild,
             ranks_update_channel=init_config.get("RANKS_UPDATE_CHANNEL"),
-            wom_client=wom_client,
+            wom_api_key=init_config.get("WOM_API_KEY"),
             wom_group_id=int(init_config.get("WOM_GROUP_ID")),
             storage=storage_client
     )
