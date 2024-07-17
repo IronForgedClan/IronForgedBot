@@ -1,24 +1,10 @@
-from typing import List, Tuple
+from typing import Dict, List, NotRequired, Tuple, TypedDict
 
 import requests
 from apscheduler.executors.base import logging
 
-from ironforgedbot.commands.hiscore.constants import (
-    ACTIVITIES,
-    BOSSES,
-    CLUES,
-    IGNORED_ACTIVITIES,
-    RAIDS,
-    SKILLS,
-    Activity,
-    Skill,
-)
-from ironforgedbot.commands.hiscore.points import (
-    ACTIVITY_POINTS,
-    SKILL_POINTS_PAST_99,
-    SKILL_POINTS_REGULAR,
-)
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 HISCORES_PLAYER_URL = (
     "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player={player}"
@@ -26,13 +12,32 @@ HISCORES_PLAYER_URL = (
 LEVEL_99_EXPERIENCE = 13034431
 
 
+class ActivityScore(TypedDict):
+    name: str
+    display_name: NotRequired[str]
+    display_order: int
+    emoji_key: str
+    kc: int
+    points: int
+
+
+class SkillScore(TypedDict):
+    name: str
+    display_name: NotRequired[str]
+    display_order: int
+    emoji_key: str
+    xp: int
+    level: int
+    points: int
+
+
 class ScoreBreakdown:
     def __init__(
         self,
-        skills: List[Skill],
-        clues: List[Activity],
-        raids: List[Activity],
-        bosses: List[Activity],
+        skills: List[SkillScore],
+        clues: List[ActivityScore],
+        raids: List[ActivityScore],
+        bosses: List[ActivityScore],
     ):
         self.skills = skills
         self.clues = clues
@@ -82,7 +87,10 @@ def _fetch_data(player_name: str):
     return resp.json()
 
 
-def _get_skills_info(score_data) -> List[Skill]:
+def _get_skills_info(score_data) -> List[SkillScore]:
+    if SKILLS is None:
+        raise RuntimeError("Unable to read skills data")
+
     output = []
 
     for skill_data in score_data["skills"]:
@@ -91,46 +99,41 @@ def _get_skills_info(score_data) -> List[Skill]:
         if skill_name.lower() == "overall":
             continue
 
-        skill = SKILLS.get_item_by_name(skill_name)
+        skill = next((skill for skill in SKILLS if skill["name"] == skill_name), None)
 
         if skill is None:
             logging.info(f"Skill name '{skill_name}' not found")
-            continue
-
-        if (
-            skill_name not in SKILL_POINTS_REGULAR
-            or skill_name not in SKILL_POINTS_PAST_99
-        ):
-            logging.info(f"No points defined for skill '{skill_name}'")
             continue
 
         skill_level = int(skill_data["level"]) if int(skill_data["level"]) > 1 else 1
         experience = int(skill_data["xp"]) if int(skill_data["xp"]) > 0 else 0
 
         if skill_level < 99:
-            points = int(experience / SKILL_POINTS_REGULAR[skill_name])
+            points = int(experience / skill["xp_per_point"])
         else:
-            points = int(LEVEL_99_EXPERIENCE / SKILL_POINTS_REGULAR[skill_name]) + int(
-                (experience - LEVEL_99_EXPERIENCE) / SKILL_POINTS_PAST_99[skill_name]
+            points = int(LEVEL_99_EXPERIENCE / skill["xp_per_point"]) + int(
+                (experience - LEVEL_99_EXPERIENCE) / skill["xp_per_point_post_99"]
             )
 
-        output.append(
-            {
-                **skill,
-                **{
-                    "xp": experience,
-                    "level": skill_level,
-                    "points": points,
-                },
-            }
-        )
+        data: SkillScore = {
+            "name": skill["name"],
+            "display_order": skill["display_order"],
+            "emoji_key": skill["emoji_key"],
+            "level": skill_level,
+            "xp": experience,
+            "points": points,
+        }
+        output.append(data)
 
     return output
 
 
 def _get_activities_info(
     score_data,
-) -> Tuple[List[Activity], List[Activity], List[Activity]]:
+) -> Tuple[List[ActivityScore], List[ActivityScore], List[ActivityScore]]:
+    if CLUES is None or BOSSES is None or RAIDS is None:
+        raise RuntimeError("Unable to read activity data")
+
     clues = []
     raids = []
     bosses = []
@@ -138,36 +141,61 @@ def _get_activities_info(
     for activity in score_data["activities"]:
         activity_name = activity["name"]
 
-        if activity_name in IGNORED_ACTIVITIES.values():
-            continue
-
-        if not ACTIVITIES.has_item_name(activity_name):
-            logging.warn(f"Activity '{activity_name}' not known")
-            continue
-
-        kc = max(int(activity["score"]), 0)
-        points = max(int(kc / ACTIVITY_POINTS[activity_name]), 0)
-
-        data = {"kc": kc, "points": points}
-
-        clue = CLUES.get_item_by_name(activity_name)
+        clue = next((clue for clue in CLUES if clue["name"] == activity_name), None)
         if clue is not None:
-            clues.append({**clue, **data})
+            kc = max(int(activity["score"]), 0)
+            data: ActivityScore = {
+                "name": clue["name"],
+                "display_order": clue["display_order"],
+                "emoji_key": clue["emoji_key"],
+                "kc": kc,
+                "points": max(int(kc / clue["kc_per_point"]), 0),
+            }
+
+            if clue.get("display_name", None) is not None:
+                data["display_name"] = clue.get("display_name", "")
+
+            clues.append(data)
             continue
 
-        raid = RAIDS.get_item_by_name(activity_name)
+        raid = next((raid for raid in RAIDS if raid["name"] == activity_name), None)
         if raid is not None:
-            raids.append({**raid, **data})
+            kc = max(int(activity["score"]), 0)
+            data: ActivityScore = {
+                "name": raid["name"],
+                "display_order": raid["display_order"],
+                "emoji_key": raid["emoji_key"],
+                "kc": kc,
+                "points": max(int(kc / raid["kc_per_point"]), 0),
+            }
+
+            if raid.get("display_name", None) is not None:
+                data["display_name"] = raid.get("display_name", "")
+
+            raids.append(data)
             continue
 
-        boss = BOSSES.get_item_by_name(activity_name)
+        boss = next((boss for boss in BOSSES if boss["name"] == activity_name), None)
         if boss is not None:
+            kc = max(int(activity["score"]), 0)
+
             if kc < 1:
                 continue
 
-            bosses.append({**boss, **data})
+            data: ActivityScore = {
+                "name": boss["name"],
+                "display_order": boss["display_order"],
+                "emoji_key": boss["emoji_key"],
+                "kc": kc,
+                "points": max(int(kc / boss["kc_per_point"]), 0),
+            }
+
+            if boss.get("display_name", None) is not None:
+                data["display_name"] = boss.get("display_name", "")
+
+            bosses.append(data)
             continue
 
-        logging.error(f"Activity '{activity_name}' processed but not sorted")
+        logging.debug(f"Activity '{activity_name}' not handled")
 
     return clues, raids, bosses
