@@ -22,15 +22,13 @@ class Activity(TypedDict):
 
 
 def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
-    _dataPath = "data/"
-
     try:
-        with open(f"{_dataPath}{file_name}", "r") as file:
+        with open(f"{file_name}", "r") as file:
             logging.debug(f"Reading file: {file.name}")
             data = json.load(file)
 
             if not isinstance(data, list):
-                raise TypeError(f"{file_name} does not contain an array/list")
+                raise TypeError(f"{file_name}: does not contain an array/list")
 
             for item in data:
                 if not isinstance(item, dict):
@@ -47,11 +45,11 @@ def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
             return cast(List[T], data)
 
     except (TypeError, KeyError, FileNotFoundError, json.JSONDecodeError) as e:
-        logging.error(e)
+        logging.error(e.args[0])
         return None
 
 
-BOSSES = load_json_data("bosses.json", Activity)
-CLUES = load_json_data("clues.json", Activity)
-RAIDS = load_json_data("raids.json", Activity)
-SKILLS = load_json_data("skills.json", Skill)
+BOSSES = load_json_data("data/bosses.json", Activity)
+CLUES = load_json_data("data/clues.json", Activity)
+RAIDS = load_json_data("data/raids.json", Activity)
+SKILLS = load_json_data("data/skills.json", Skill)
