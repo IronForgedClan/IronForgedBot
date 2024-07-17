@@ -44,7 +44,10 @@ def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
 
             return cast(List[T], data)
 
-    except (TypeError, KeyError, FileNotFoundError, json.JSONDecodeError) as e:
+    except json.JSONDecodeError as e:
+        logging.debug(e.args[0])
+        logging.error("Error decoding json")
+    except (TypeError, KeyError, FileNotFoundError) as e:
         logging.error(e.args[0])
         return None
 

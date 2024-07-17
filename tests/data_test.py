@@ -25,7 +25,7 @@ class TestDataLoader(unittest.TestCase):
         result = load_json_data(_test_file, TestSkill)
         self.assertIsNone(result)
         mock_file.assert_called_once_with(_test_file, "r")
-        mock_log.assert_called_once_with("Expecting value: line 1 column 1 (char 0)")
+        mock_log.assert_called_once_with("Error decoding json")
 
     @patch("logging.error")
     @patch(
