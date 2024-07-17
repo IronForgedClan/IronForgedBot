@@ -6,5 +6,4 @@ google-api-python-client==2.115.0
 pytz==2023.3.post1
 StrEnum==0.4.15
 apscheduler==3.10.4
-reactionmenu==3.1.6
-
+reactionmenu==3.1.7
