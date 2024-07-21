@@ -25,4 +25,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
-        run: python -m unittest main_test.py --verbose
+        run: python run_tests.py

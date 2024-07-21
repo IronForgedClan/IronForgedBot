@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import discord
@@ -5,6 +6,7 @@ import discord
 from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import normalize_discord_string, reply_with_file
 from ironforgedbot.common.ranks import RANKS
+from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
 from ironforgedbot.storage.types import IngotsStorage, Member
 
@@ -57,8 +59,21 @@ class Signups(object):
         self.unknowns.append(normalize_discord_string(member.name))
 
 
-async def cmd_roster(interaction: discord.Interaction, url: str, guild: discord.Guild, storage: IngotsStorage):
-    body = await _calc_roster(url, guild, storage)
+async def cmd_roster(
+    interaction: discord.Interaction,
+    url: str,
+    guild: discord.Guild,
+    storage: IngotsStorage,
+):
+    try:
+        body = await _calc_roster(url, guild, storage)
+    except Exception as e:
+        logging.error(f"Roster generation error: {repr(e)}")
+        await send_error_response(
+            interaction, "An error occurred generating the roster."
+        )
+        return
+
     title = f"Roster for the [event]({url})"
     await reply_with_file(title, body, "roster.txt", interaction)
 

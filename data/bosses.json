@@ -1,0 +1,338 @@
+[
+    {
+        "name": "Rifts closed",
+        "display_order": 1,
+        "emoji_key": "GOTR_Rifts",
+        "kc_per_point": 7
+    },
+    {
+        "name": "Abyssal Sire",
+        "display_order": 2,
+        "emoji_key": "AbyssalSire",
+        "kc_per_point": 10
+    },
+    {
+        "name": "Alchemical Hydra",
+        "display_order": 3,
+        "emoji_key": "AlchemicalHydra",
+        "kc_per_point": 8
+    },
+    {
+        "name": "Artio",
+        "display_order": 4,
+        "emoji_key": "Artio",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Barrows Chests",
+        "display_order": 5,
+        "emoji_key": "BarrowsChests",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Bryophyta",
+        "display_order": 6,
+        "emoji_key": "Bryophyta",
+        "kc_per_point": 3
+    },
+    {
+        "name": "Callisto",
+        "display_order": 7,
+        "emoji_key": "Callisto",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Calvar'ion",
+        "display_order": 8,
+        "emoji_key": "Calvarion",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Cerberus",
+        "display_order": 9,
+        "emoji_key": "Cerberus",
+        "kc_per_point": 10
+    },
+    {
+        "name": "Chaos Elemental",
+        "display_order": 10,
+        "emoji_key": "ChaosElemental",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Chaos Fanatic",
+        "display_order": 11,
+        "emoji_key": "ChaosFanatic",
+        "kc_per_point": 30
+    },
+    {
+        "name": "Commander Zilyana",
+        "display_order": 12,
+        "emoji_key": "CommanderZilyana",
+        "kc_per_point": 8
+    },
+    {
+        "name": "Corporeal Beast",
+        "display_order": 13,
+        "emoji_key": "CorporealBeast",
+        "kc_per_point": 3
+    },
+    {
+        "name": "Crazy Archaeologist",
+        "display_order": 14,
+        "emoji_key": "CrazyArchaeologist",
+        "kc_per_point": 40
+    },
+    {
+        "name": "Dagannoth Prime",
+        "display_order": 15,
+        "emoji_key": "DagannothPrime",
+        "kc_per_point": 35
+    },
+    {
+        "name": "Dagannoth Rex",
+        "display_order": 16,
+        "emoji_key": "DagannothRex",
+        "kc_per_point": 60
+    },
+    {
+        "name": "Dagannoth Supreme",
+        "display_order": 17,
+        "emoji_key": "DagannothSupreme",
+        "kc_per_point": 35
+    },
+    {
+        "name": "Deranged Archaeologist",
+        "display_order": 18,
+        "emoji_key": "DerangedArchaeologist",
+        "kc_per_point": 50
+    },
+    {
+        "name": "Duke Sucellus",
+        "display_order": 19,
+        "emoji_key": "DukeSucellus",
+        "kc_per_point": 8
+    },
+    {
+        "name": "General Graardor",
+        "display_order": 20,
+        "emoji_key": "GeneralGraardor",
+        "kc_per_point": 8
+    },
+    {
+        "name": "Giant Mole",
+        "display_order": 21,
+        "emoji_key": "GiantMole",
+        "kc_per_point": 50
+    },
+    {
+        "name": "Grotesque Guardians",
+        "display_order": 22,
+        "emoji_key": "GrotesqueGuardians",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Hespori",
+        "display_order": 23,
+        "emoji_key": "Hespori",
+        "kc_per_point": 0.8
+    },
+    {
+        "name": "Kalphite Queen",
+        "display_order": 24,
+        "emoji_key": "KalphiteQueen",
+        "kc_per_point": 15
+    },
+    {
+        "name": "King Black Dragon",
+        "display_order": 25,
+        "emoji_key": "KingBlackDragon",
+        "kc_per_point": 25
+    },
+    {
+        "name": "Kraken",
+        "display_order": 26,
+        "emoji_key": "Kraken",
+        "kc_per_point": 35
+    },
+    {
+        "name": "Kree'Arra",
+        "display_order": 27,
+        "emoji_key": "Kreearra",
+        "kc_per_point": 8
+    },
+    {
+        "name": "K'ril Tsutsaroth",
+        "display_order": 28,
+        "emoji_key": "KrilTsutsaroth",
+        "kc_per_point": 8
+    },
+    {
+        "name": "Lunar Chests",
+        "display_order": 29,
+        "emoji_key": "LunarChests",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Mimic",
+        "display_order": 30,
+        "emoji_key": "Mimic",
+        "kc_per_point": 0.2
+    },
+    {
+        "name": "Nex",
+        "display_order": 31,
+        "emoji_key": "Nex",
+        "kc_per_point": 6
+    },
+    {
+        "name": "Nightmare",
+        "display_order": 32,
+        "emoji_key": "Nightmare",
+        "kc_per_point": 5
+    },
+    {
+        "name": "Phosani's Nightmare",
+        "display_order": 33,
+        "emoji_key": "PhosanisNightmare",
+        "kc_per_point": 2
+    },
+    {
+        "name": "Obor",
+        "display_order": 34,
+        "emoji_key": "Obor",
+        "kc_per_point": 3
+    },
+    {
+        "name": "Phantom Muspah",
+        "display_order": 35,
+        "emoji_key": "PhantomMuspah",
+        "kc_per_point": 8
+    },
+    {
+        "name": "Sarachnis",
+        "display_order": 36,
+        "emoji_key": "Sarachnis",
+        "kc_per_point": 40
+    },
+    {
+        "name": "Scorpia",
+        "display_order": 37,
+        "emoji_key": "Scorpia",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Scurrius",
+        "display_order": 38,
+        "emoji_key": "Scurrius",
+        "kc_per_point": 60
+    },
+    {
+        "name": "Skotizo",
+        "display_order": 39,
+        "emoji_key": "Skotizo",
+        "kc_per_point": 0.6
+    },
+    {
+        "name": "Sol Heredit",
+        "display_order": 40,
+        "emoji_key": "SolHeredit",
+        "kc_per_point": 0.2
+    },
+    {
+        "name": "Spindel",
+        "display_order": 41,
+        "emoji_key": "Spindel",
+        "kc_per_point": 20
+    },
+    {
+        "name": "Tempoross",
+        "display_order": 42,
+        "emoji_key": "Tempoross",
+        "kc_per_point": 7
+    },
+    {
+        "name": "The Gauntlet",
+        "display_order": 43,
+        "emoji_key": "Gauntlet",
+        "kc_per_point": 10
+    },
+    {
+        "name": "The Corrupted Gauntlet",
+        "display_order": 44,
+        "emoji_key": "CorruptedGauntlet",
+        "kc_per_point": 2.5
+    },
+    {
+        "name": "The Leviathan",
+        "display_order": 45,
+        "emoji_key": "Leviathan",
+        "kc_per_point": 8
+    },
+    {
+        "name": "The Whisperer",
+        "display_order": 46,
+        "emoji_key": "Whisperer",
+        "kc_per_point": 6
+    },
+    {
+        "name": "Thermonuclear Smoke Devil",
+        "display_order": 47,
+        "emoji_key": "ThermonuclearSmokeDevil",
+        "kc_per_point": 20
+    },
+    {
+        "name": "TzKal-Zuk",
+        "display_order": 48,
+        "emoji_key": "TzkalZuk",
+        "kc_per_point": 0.1
+    },
+    {
+        "name": "TzTok-Jad",
+        "display_order": 49,
+        "emoji_key": "Tztokjad",
+        "kc_per_point": 1
+    },
+    {
+        "name": "Vardorvis",
+        "display_order": 50,
+        "emoji_key": "Vardorvis",
+        "kc_per_point": 10
+    },
+    {
+        "name": "Venenatis",
+        "display_order": 51,
+        "emoji_key": "Venenatis",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Vet'ion",
+        "display_order": 52,
+        "emoji_key": "Vetion",
+        "kc_per_point": 15
+    },
+    {
+        "name": "Vorkath",
+        "display_order": 53,
+        "emoji_key": "Vorkath",
+        "kc_per_point": 12
+    },
+    {
+        "name": "Wintertodt",
+        "display_order": 54,
+        "emoji_key": "Wintertodt",
+        "kc_per_point": 10
+    },
+    {
+        "name": "Zalcano",
+        "display_order": 55,
+        "emoji_key": "Zalcano",
+        "kc_per_point": 5
+    },
+    {
+        "name": "Zulrah",
+        "display_order": 56,
+        "emoji_key": "Zulrah",
+        "kc_per_point": 12
+    }
+]
