@@ -19,16 +19,16 @@ class Signups(object):
         if rank not in self.ranked:
             self.ranked[rank] = []
 
-        nick = normalize_discord_string(member.nick)
+        nick = normalize_discord_string(member.display_name)
         if nick not in self.ranked:
             self.ranked[rank].append(nick)
             self.nick_id_map[nick] = member.id
 
     def add_prospect(self, member: discord.Member):
-        self.prospects.append(normalize_discord_string(member.nick))
+        self.prospects.append(normalize_discord_string(member.display_name))
 
     def add_unknowns(self, member: discord.Member):
-        self.unknowns.append(normalize_discord_string(member.name))
+        self.unknowns.append(normalize_discord_string(member.display_name))
 
 
 async def cmd_roster(interaction: discord.Interaction, url: str, guild: discord.Guild, storage: IngotsStorage):
