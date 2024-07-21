@@ -8,3 +8,4 @@ StrEnum==0.4.15
 apscheduler==3.10.4
 reactionmenu==3.1.7
 wom.py==0.9.5
+concurrent-log-handler==0.9.25

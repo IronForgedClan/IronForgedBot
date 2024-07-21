@@ -168,7 +168,7 @@ credentials.json
 service.json
 
 # Default logfile
-./logs
+logs/*
 *.log*
 
 .idea
