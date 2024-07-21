@@ -74,6 +74,63 @@ Go to the spreadsheet and share it with the `client_email` from the generated ke
 If it's a fresh GCP project, or you never enabled Google Sheets API, there will be 403 error with the direct link
 to enable it. You might need to wait for a few minutes for chances to kick in.
 
+## Data
+
+Upon startup, the bot will attempt to read four files inside the `/data` directory. These files are:
+
+- `skills.json`
+- `bosses.json`
+- `clues.json`
+- `raids.json`
+
+These files contain information on how the bot will award points, control output order, and set emojis. They are in `json` format so as to be human readable, and easy to modify for someone non-technical. Once a file has been changed, the bot will need to be restarted to load the new values. No code changes necessary.
+
+There are two categories of data files, `Skill` and `Activity`. `skills.json` is the only `Skill` type, while the others are all types of `Activity`.
+
+All files contain an array `[]` of objects `{}`.
+
+### Skill
+A `Skill` file looks something like this:
+
+``` json
+[
+  {
+    "name": "Attack",
+    "display_order": 1,
+    "emoji_key": "Attack",
+    "xp_per_point": 100000,
+    "xp_per_point_post_99": 300000
+  }
+]
+```
+
+- `name`: This field **must** be identical to the value on the official hiscores.
+- `display_order`: This is the order in which it is displayed. Currently only used in the `breakdown` command.
+- `emoji_key`: This is the name of the emoji to use to represent this skill.
+- `xp_per_point`: This is the amount of xp required to award one point.
+- `xp_per_point_post_99`: This is the amount of xp required to award one point beyond level 99.
+
+### Activity
+An `Activity` file looks something like this:
+
+``` json
+[
+  {
+    "name": "Clue Scrolls (beginner)",
+    "display_name": "Beginner",
+    "display_order": 1,
+    "emoji_key": "ClueScrolls_Beginner",
+    "kc_per_point": 10
+  }
+]
+```
+
+- `name`: This field **must** be identical to the value on the official hiscores.
+- `display_name`: This field is optional. It is the text that will be displayed for this activity. Currently only used in the `breakdown` command for clues.
+- `display_order`: This is the order in which it is displayed. Currently only used in the `breakdown` command.
+- `emoji_key`: This is the name of the emoji to use to represent this skill.
+- `kc_per_point`: This is the number of kill count required to award one point.
+
 ## Contributing
 
 Codebase follows Google Python Style Guide. This is loosely enforced via
