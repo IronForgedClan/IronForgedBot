@@ -1,9 +1,10 @@
-from typing import Dict, List, NotRequired, Tuple, TypedDict
+from typing import List, NotRequired, Tuple, TypedDict
 
 import requests
 from apscheduler.executors.base import logging
 
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.ranks import RANKS, get_rank_from_points
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 HISCORES_PLAYER_URL = (
@@ -72,6 +73,15 @@ def points_total(player_name: str) -> int:
         points += activity["points"]
 
     return points
+
+
+def get_rank(player_name: str) -> RANKS:
+    try:
+        total_points = points_total(player_name)
+    except RuntimeError as e:
+        raise e
+
+    return RANKS(get_rank_from_points(total_points))
 
 
 def _fetch_data(player_name: str):

@@ -8,7 +8,6 @@ from logging.handlers import RotatingFileHandler
 from typing import Dict, Optional
 
 import discord
-import wom
 from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
 from reactionmenu import ViewButton, ViewMenu
@@ -95,22 +94,22 @@ class DiscordClient(discord.Client):
     """
 
     def __init__(
-        self,
-        *,
-        intents: discord.Intents,
-        upload: bool,
-        guild: discord.Object,
-        ranks_update_channel: str,
-        wom_client: wom.Client,
-        wom_group_id: int,
-        storage: IngotsStorage,
+            self,
+            *,
+            intents: discord.Intents,
+            upload: bool,
+            guild: discord.Object,
+            ranks_update_channel: str,
+            wom_api_key: str,
+            wom_group_id: int,
+            storage: IngotsStorage
     ):
         super().__init__(intents=intents)
         self.discord_guild = None
         self.upload = upload
         self.guild = guild
         self.ranks_update_channel = ranks_update_channel
-        self.wom_client = wom_client
+        self.wom_api_key = wom_api_key
         self.wom_group_id = wom_group_id
         self.storage = storage
 
@@ -139,6 +138,7 @@ class DiscordClient(discord.Client):
         scheduler = BackgroundScheduler()
 
         # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
+        # from datetime import datetime
         scheduler.add_job(
             refresh_ranks,
             "cron",
@@ -161,21 +161,14 @@ class DiscordClient(discord.Client):
         )
 
         scheduler.add_job(
-            check_activity,
-            "cron",
-            args=[
-                self.discord_guild,
-                self.ranks_update_channel,
-                loop,
-                self.wom_client,
-                self.wom_group_id,
-                self.storage,
-            ],
-            day_of_week="mon",
-            hour=1,
-            minute=0,
-            second=0,
-            timezone="UTC",
+                check_activity,
+                "cron",
+                args=[self.discord_guild, self.ranks_update_channel, loop, self.wom_api_key, self.wom_group_id, self.storage],
+                day_of_week="mon",
+                hour=1,
+                minute=0,
+                second=0,
+                timezone="UTC"
         )
         scheduler.start()
 
@@ -1330,21 +1323,17 @@ if __name__ == "__main__":
     intents = discord.Intents.default()
     intents.members = True
     guild = discord.Object(id=init_config.get("GUILDID"))
-    wom_client = wom.Client(
-        api_key=init_config.get("WOM_API_KEY"), user_agent="IronForged"
-    )
-    storage_client: IngotsStorage = SheetsStorage.from_account_file(
-        "service.json", init_config.get("SHEETID")
-    )
+
+    storage_client: IngotsStorage = SheetsStorage.from_account_file("service.json", init_config.get("SHEETID"))
 
     client = DiscordClient(
-        intents=intents,
-        upload=args.upload_commands,
-        guild=guild,
-        ranks_update_channel=init_config.get("RANKS_UPDATE_CHANNEL"),
-        wom_client=wom_client,
-        wom_group_id=int(init_config.get("WOM_GROUP_ID")),
-        storage=storage_client,
+            intents=intents,
+            upload=args.upload_commands,
+            guild=guild,
+            ranks_update_channel=init_config.get("RANKS_UPDATE_CHANNEL"),
+            wom_api_key=init_config.get("WOM_API_KEY"),
+            wom_group_id=int(init_config.get("WOM_GROUP_ID")),
+            storage=storage_client
     )
     tree = discord.app_commands.CommandTree(client)
 

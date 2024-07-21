@@ -47,7 +47,7 @@ def check_activity_reminder(guild: discord.Guild,
 def check_activity(guild: discord.Guild,
                    updates_channel_name: str,
                    loop: asyncio.BaseEventLoop,
-                   wom_client: wom.Client,
+                   wom_api_key: str,
                    wom_group_id: int,
                    storage: IngotsStorage):
     updates_channel = can_start_task(guild, updates_channel_name)
@@ -69,7 +69,7 @@ def check_activity(guild: discord.Guild,
     asyncio.run_coroutine_threadsafe(_send_discord_message_plain(
             updates_channel, f'Starting weekly activity check for {len(all_members)} members '
                              f'with the threshold {int(MONTHLY_EXP_THRESHOLD / 1_000)}k/month'), loop)
-    future = asyncio.run_coroutine_threadsafe(_find_inactive_users(wom_client,
+    future = asyncio.run_coroutine_threadsafe(_find_inactive_users(wom_api_key,
                                                                    wom_group_id,
                                                                    updates_channel,
                                                                    known_absentees),
@@ -88,7 +88,11 @@ def check_activity(guild: discord.Guild,
                              f'and {len(absentees)} known absentees'), loop)
 
 
-async def _find_inactive_users(wom_client: wom.Client, wom_group_id: int, updates_channel, absentees: list[str]):
+async def _find_inactive_users(wom_api_key: str, wom_group_id: int, updates_channel, absentees: list[str]):
+    wom_client = wom.Client(
+            api_key=wom_api_key,
+            user_agent="IronForged"
+    )
     await wom_client.start()
     is_done = False
     offset = 0

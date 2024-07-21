@@ -3,6 +3,7 @@ from typing import List
 
 import discord
 
+from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import normalize_discord_string, reply_with_file
 from ironforgedbot.common.ranks import RANKS
 from ironforgedbot.common.responses import send_error_response
@@ -10,27 +11,52 @@ from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_p
 from ironforgedbot.storage.types import IngotsStorage, Member
 
 
+class Ranked(object):
+    def __init__(self, name: str, prospect: bool, ingots: str):
+        self.name = name
+        self.prospect = prospect
+        self.ingots = ingots
+
+    def to_string(self):
+        if self.prospect:
+            return f"{self.name} [prospect], ingots: {self.ingots}\n"
+
+        return f"{self.name}, ingots: {self.ingots}\n"
+
+    def to_string_clean(self):
+        return f"{self.name}\n"
+
+
 class Signups(object):
     def __init__(self):
         self.ranked = {}
-        self.prospects = []
+        self.known_ranks = {}
         self.unknowns = []
-        self.nick_id_map = {}
+        self.rank_failures = []
 
-    def add_ranked(self, member: discord.Member, rank: RANKS):
-        if rank not in self.ranked:
+    def add_ranked(self, member: discord.Member, rank: RANKS, prospect: bool, members: List[Member]):
+        if rank not in self.known_ranks:
             self.ranked[rank] = []
+            self.known_ranks[rank] = []
 
-        nick = normalize_discord_string(member.display_name)
-        if nick not in self.ranked:
-            self.ranked[rank].append(nick)
-            self.nick_id_map[nick] = member.id
+        nick = normalize_discord_string(member.nick)
+        if nick not in self.known_ranks:
+            self.known_ranks[rank].append(nick)
+            ranked = Ranked(nick, prospect, _get_ingots(member.id, members))
+            self.ranked[rank].append(ranked)
 
-    def add_prospect(self, member: discord.Member):
-        self.prospects.append(normalize_discord_string(member.display_name))
+    def add_prospect(self, member: discord.Member, members: List[Member]):
+        nick = normalize_discord_string(member.nick)
+        try:
+            rank = get_rank(nick)
+        except RuntimeError:
+            self.rank_failures.append(nick)
+            return
+
+        self.add_ranked(member, rank, True, members)
 
     def add_unknowns(self, member: discord.Member):
-        self.unknowns.append(normalize_discord_string(member.display_name))
+        self.unknowns.append(normalize_discord_string(member.name))
 
 
 async def cmd_roster(
@@ -54,33 +80,43 @@ async def cmd_roster(
 
 async def _calc_roster(url: str, guild: discord.Guild, storage: IngotsStorage) -> str:
     msg = await _get_message(url, guild)
-    signups = await _get_signups(msg)
-    result = ""
     members = storage.read_members()
+    signups = await _get_signups(msg, members)
+    result = "====STAFF MESSAGE BELOW====\n"
 
-    result += _add_rank(signups, RANKS.IRON, members)
-    result += _add_rank(signups, RANKS.MITHRIL, members)
-    result += _add_rank(signups, RANKS.ADAMANT, members)
-    result += _add_rank(signups, RANKS.RUNE, members)
-    result += _add_rank(signups, RANKS.DRAGON, members)
-    result += _add_rank(signups, RANKS.LEGEND, members)
-    result += _add_rank(signups, RANKS.MYTH, members)
+    result += _add_rank(signups, RANKS.MYTH, False)
+    result += _add_rank(signups, RANKS.LEGEND, False)
+    result += _add_rank(signups, RANKS.DRAGON, False)
+    result += _add_rank(signups, RANKS.RUNE, False)
+    result += _add_rank(signups, RANKS.ADAMANT, False)
+    result += _add_rank(signups, RANKS.MITHRIL, False)
+    result += _add_rank(signups, RANKS.IRON, False)
 
-    result += _add_list("Prospects", signups.prospects)
     result += _add_list("Unknown", signups.unknowns)
+    result += _add_list("Rank lookup failures", signups.rank_failures)
+    result += "====CLEAN MESSAGE BELOW====\n"
+
+    result += _add_rank(signups, RANKS.MYTH, True)
+    result += _add_rank(signups, RANKS.LEGEND, True)
+    result += _add_rank(signups, RANKS.DRAGON, True)
+    result += _add_rank(signups, RANKS.RUNE, True)
+    result += _add_rank(signups, RANKS.ADAMANT, True)
+    result += _add_rank(signups, RANKS.MITHRIL, True)
+    result += _add_rank(signups, RANKS.IRON, True)
 
     return result
 
 
-def _add_rank(signups: Signups, rank: RANKS, members: List[Member]) -> str:
+def _add_rank(signups: Signups, rank: RANKS, clean: bool) -> str:
     if rank not in signups.ranked:
         return ""
 
     res = f"{str(rank)} rank ({len(signups.ranked[rank])}):\n"
     for ranked in signups.ranked[rank]:
-        res += (
-            f"{ranked}, ingots: {_get_ingots(signups.nick_id_map[ranked], members)}\n"
-        )
+        if clean:
+            res += ranked.to_string_clean()
+        else:
+            res += ranked.to_string()
 
     res += "\n"
     return res
@@ -115,7 +151,7 @@ async def _get_message(url: str, guild: discord.Guild) -> discord.Message:
     return msg
 
 
-async def _get_signups(msg: discord.Message) -> Signups:
+async def _get_signups(msg: discord.Message, members: List[Member]) -> Signups:
     res = Signups()
     users = []
 
@@ -134,13 +170,13 @@ async def _get_signups(msg: discord.Message) -> Signups:
             continue
 
         if is_prospect(member_roles):
-            res.add_prospect(user)
+            res.add_prospect(user, members)
             continue
 
         rank = find_rank(member_roles)
         if rank is None:
             rank = RANKS.IRON
 
-        res.add_ranked(user, rank)
+        res.add_ranked(user, rank, False, members)
 
     return res
