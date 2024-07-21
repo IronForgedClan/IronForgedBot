@@ -63,6 +63,17 @@ There are two main ways to test:
 You can also run a specific test file directly:
 `python3 -m unittest tests/example_test.py`
 
+## Testing spreadsheets locally
+
+Go to GCP, in any of your projects, create a new SA -> Manage Keys -> Add -> JSON
+
+Save it as `service.json`
+
+Go to the spreadsheet and share it with the `client_email` from the generated key. 
+
+If it's a fresh GCP project, or you never enabled Google Sheets API, there will be 403 error with the direct link
+to enable it. You might need to wait for a few minutes for chances to kick in.
+
 ## Contributing
 
 Codebase follows Google Python Style Guide. This is loosely enforced via

@@ -168,6 +168,7 @@ credentials.json
 service.json
 
 # Default logfile
-ironforgedbot.log
+./logs
+*.log*
 
 .idea
