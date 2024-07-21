@@ -4,9 +4,8 @@ import logging
 import os
 import random
 import sys
-from typing import Dict, Optional
 from logging.handlers import RotatingFileHandler
-from typing import Dict
+from typing import Dict, Optional
 
 import discord
 import wom
@@ -18,16 +17,10 @@ from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     EMPTY_SPACE,
 )
-from ironforgedbot.common.emoji import (
-from ironforgedbot.commands.hiscore.calculator import score_total
 from ironforgedbot.commands.roster.roster import cmd_roster
 from ironforgedbot.common.helpers import (
-    normalize_discord_string,
     calculate_percentage,
     find_emoji,
-)
-from ironforgedbot.common.helpers import (
-    calculate_percentage,
     normalize_discord_string,
     validate_member_has_role,
     validate_playername,
@@ -102,15 +95,15 @@ class DiscordClient(discord.Client):
     """
 
     def __init__(
-            self,
-            *,
-            intents: discord.Intents,
-            upload: bool,
-            guild: discord.Object,
-            ranks_update_channel: str,
-            wom_client: wom.Client,
-            wom_group_id: int,
-            storage: IngotsStorage
+        self,
+        *,
+        intents: discord.Intents,
+        upload: bool,
+        guild: discord.Object,
+        ranks_update_channel: str,
+        wom_client: wom.Client,
+        wom_group_id: int,
+        storage: IngotsStorage,
     ):
         super().__init__(intents=intents)
         self.discord_guild = None
@@ -137,56 +130,65 @@ class DiscordClient(discord.Client):
             await self._tree.sync(guild=self.guild)
 
     async def on_ready(self):
+        logging.info(f"Logged in as {self.user.name} (ID: {self.user.id})")
+
         # Starting background jobs
         loop = asyncio.get_running_loop()
 
         self.discord_guild = self.get_guild(guild.id)
         scheduler = BackgroundScheduler()
+
         # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
-        # from datetime import datetime
         scheduler.add_job(
-                refresh_ranks,
-                "cron",
-                args=[self.discord_guild, self.ranks_update_channel, loop],
-                hour=2,
-                minute=0,
-                second=0,
-                timezone="UTC",
+            refresh_ranks,
+            "cron",
+            args=[self.discord_guild, self.ranks_update_channel, loop],
+            hour=2,
+            minute=0,
+            second=0,
+            timezone="UTC",
         )
 
         scheduler.add_job(
-                check_activity_reminder,
-                "cron",
-                args=[self.discord_guild, self.ranks_update_channel, loop, self.storage],
-                day_of_week="mon",
-                hour=0,
-                minute=0,
-                second=0,
-                timezone="UTC"
+            check_activity_reminder,
+            "cron",
+            args=[self.discord_guild, self.ranks_update_channel, loop, self.storage],
+            day_of_week="mon",
+            hour=0,
+            minute=0,
+            second=0,
+            timezone="UTC",
         )
 
         scheduler.add_job(
-                check_activity,
-                "cron",
-                args=[self.discord_guild, self.ranks_update_channel, loop, self.wom_client, self.wom_group_id, self.storage],
-                day_of_week="mon",
-                hour=1,
-                minute=0,
-                second=0,
-                timezone="UTC"
+            check_activity,
+            "cron",
+            args=[
+                self.discord_guild,
+                self.ranks_update_channel,
+                loop,
+                self.wom_client,
+                self.wom_group_id,
+                self.storage,
+            ],
+            day_of_week="mon",
+            hour=1,
+            minute=0,
+            second=0,
+            timezone="UTC",
         )
         scheduler.start()
 
 
 class IronForgedCommands:
     def __init__(
-            self,
-            tree: discord.app_commands.CommandTree,
-            discord_client: DiscordClient,
-            # TODO: replace sheets client with a storage interface &
-            # pass in a sheets impl.
-            storage_client: IngotsStorage,
-            tmp_dir_path: str,
+        self,
+        tree: discord.app_commands.CommandTree,
+        discord_client: DiscordClient,
+        # TODO: replace sheets client with a storage interface &
+        # pass in a sheets impl.
+        storage_client: IngotsStorage,
+        tmp_dir_path: str,
     ):
         self._tree = tree
         self._discord_client = discord_client
@@ -226,99 +228,111 @@ class IronForgedCommands:
         self._tree.add_command(ingots_command)
 
         addingots_command = app_commands.Command(
-                name="addingots",
-                description="Add or remove ingots to a player.",
-                callback=self.addingots,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="addingots",
+            description="Add or remove ingots to a player.",
+            callback=self.addingots,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(addingots_command)
 
         addingotsbulk_command = app_commands.Command(
-                name="addingotsbulk",
-                description="Add or remove ingots to multiple players.",
-                callback=self.addingotsbulk,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="addingotsbulk",
+            description="Add or remove ingots to multiple players.",
+            callback=self.addingotsbulk,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(addingotsbulk_command)
 
         updateingots_command = app_commands.Command(
-                name="updateingots",
-                description="Set a player's ingot count to a new value.",
-                callback=self.updateingots,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="updateingots",
+            description="Set a player's ingot count to a new value.",
+            callback=self.updateingots,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(updateingots_command)
 
         raffleadmin_command = app_commands.Command(
-                name="raffleadmin",
-                description="Command wrapper for admin actions on raffles.",
-                callback=self.raffleadmin,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="raffleadmin",
+            description="Command wrapper for admin actions on raffles.",
+            callback=self.raffleadmin,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(raffleadmin_command)
 
         raffletickets_command = app_commands.Command(
-                name="raffletickets",
-                description="View current raffle ticket count.",
-                callback=self.raffletickets,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="raffletickets",
+            description="View current raffle ticket count.",
+            callback=self.raffletickets,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(raffletickets_command)
 
         buyraffletickets_command = app_commands.Command(
-                name="buyraffletickets",
-                description="Buy raffle tickets for 5000 ingots each.",
-                callback=self.buyraffletickets,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="buyraffletickets",
+            description="Buy raffle tickets for 5000 ingots each.",
+            callback=self.buyraffletickets,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(buyraffletickets_command)
 
         syncmembers_command = app_commands.Command(
-                name="syncmembers",
-                description="Sync members of Discord server with ingots storage.",
-                callback=self.syncmembers,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="syncmembers",
+            description="Sync members of Discord server with ingots storage.",
+            callback=self.syncmembers,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(syncmembers_command)
 
-    async def score(
-        self, interaction: discord.Interaction, player: Optional[str] = None
-    ):
         roster_command = app_commands.Command(
-                name="roster",
-                description="Builds an even roster from signups.",
-                callback=self.roster,
-                nsfw=False,
-                parent=None,
-                auto_locale_strings=True,
+            name="roster",
+            description="Builds an even roster from signups.",
+            callback=self.roster,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
         )
         self._tree.add_command(roster_command)
 
     async def roster(self, interaction: discord.Interaction, message_url: str):
-        if not check_role(interaction.user, "Leadership"):
-            await interaction.response.send_message(
-                    f"PERMISSION_DENIED: {interaction.user.name} is not in a leadership role."
+        await interaction.response.defer()
+
+        try:
+            validate_protected_request(
+                interaction, interaction.user.display_name, ROLES.LEADERSHIP
             )
+        except (ReferenceError, ValueError) as error:
+            logging.info(
+                f"Member '{interaction.user.display_name}' tried using roster but does not have permission"
+            )
+            await send_error_response(interaction, str(error))
             return
 
-        await interaction.response.defer()
-        await cmd_roster(interaction, message_url, self._discord_client.discord_guild, self._storage_client)
+        logging.info(
+            f"Handling '/roster message_url:{message_url}' on behalf of {interaction.user.display_name}"
+        )
 
-    async def score(self, interaction: discord.Interaction, player: str):
+        await cmd_roster(
+            interaction,
+            message_url,
+            self._discord_client.discord_guild,
+            self._storage_client,
+        )
+
+    async def score(self, interaction: discord.Interaction, player: Optional[str]):
         """Compute clan score for a Runescape player name.
 
         Arguments:
@@ -335,18 +349,13 @@ class IronForgedCommands:
             member, player = validate_user_request(interaction, player)
         except (ReferenceError, ValueError) as error:
             await send_error_response(interaction, str(error))
-
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                    build_error_message_string("RSNs can not be longer than 12 characters.")
-            )
             return
 
         logging.info(
-                (
-                    f"Handling '/score player:{player}' on behalf of "
-                    f"{normalize_discord_string(interaction.user.display_name)}"
-                )
+            (
+                f"Handling '/score player:{player}' on behalf of "
+                f"{normalize_discord_string(interaction.user.display_name)}"
+            )
         )
 
         try:
@@ -378,14 +387,14 @@ class IronForgedCommands:
             f"{rank_icon} {member.display_name}", "", rank_color
         )
         embed.add_field(
-                name="Skill Points",
-                value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
-                inline=True,
+            name="Skill Points",
+            value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
+            inline=True,
         )
         embed.add_field(
-                name="Activity Points",
-                value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
-                inline=True,
+            name="Activity Points",
+            value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
+            inline=True,
         )
         embed.add_field(name="", value="", inline=False)
         embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
@@ -394,22 +403,22 @@ class IronForgedCommands:
         if rank_name == RANKS.MYTH.value:
             grass_emoji = find_emoji(self._discord_client.emojis, "grass")
             embed.add_field(
-                    name="",
-                    value=(
-                        f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
-                        f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
-                    ),
-                    inline=False,
+                name="",
+                value=(
+                    f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
+                    f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
+                ),
+                inline=False,
             )
         else:
             embed.add_field(name="", value="", inline=False)
             embed.add_field(
-                    name="Rank Progress",
-                    value=(
-                        f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
-                        f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
-                    ),
-                    inline=False,
+                name="Rank Progress",
+                value=(
+                    f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
+                    f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                ),
+                inline=False,
             )
 
         await interaction.followup.send(embed=embed)
@@ -433,15 +442,11 @@ class IronForgedCommands:
             member, player = validate_user_request(interaction, player)
         except (ReferenceError, ValueError) as error:
             await send_error_response(interaction, str(error))
-        if not validate_player_name(player):
-            await interaction.response.send_message(
-                    "FAILED_PRECONDITION: RSNs can only be 12 characters long."
-            )
             return
 
         logging.info(
-                f"Handling '/breakdown player:{player}' on behalf of "
-                f"{normalize_discord_string(interaction.user.display_name)}"
+            f"Handling '/breakdown player:{player}' on behalf of "
+            f"{normalize_discord_string(interaction.user.display_name)}"
         )
 
         try:
@@ -486,6 +491,7 @@ class IronForgedCommands:
                 ),
                 value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
                 inline=False,
+            )
 
         if rank_name != RANKS.MYTH.value:
             next_rank_name = get_next_rank_from_points(points_total)
@@ -650,7 +656,7 @@ class IronForgedCommands:
             return
 
         logging.info(
-                f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
+            f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
         )
 
         try:
@@ -667,15 +673,15 @@ class IronForgedCommands:
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
         await interaction.followup.send(
-                f"{player} has {member.ingots:,} ingots {ingot_icon}"
+            f"{player} has {member.ingots:,} ingots {ingot_icon}"
         )
 
     async def addingots(
-            self,
-            interaction: discord.Interaction,
-            player: str,
-            ingots: int,
-            reason: str = "None",
+        self,
+        interaction: discord.Interaction,
+        player: str,
+        ingots: int,
+        reason: str = "None",
     ):
         """Add ingots to a Runescape alias.
 
@@ -726,15 +732,15 @@ class IronForgedCommands:
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
         await interaction.followup.send(
-                f"Added {ingots:,} ingots to {player}; reason: {reason}. They now have {member.ingots:,} ingots {ingot_icon}"
+            f"Added {ingots:,} ingots to {player}; reason: {reason}. They now have {member.ingots:,} ingots {ingot_icon}"
         )
 
     async def addingotsbulk(
-            self,
-            interaction: discord.Interaction,
-            players: str,
-            ingots: int,
-            reason: str = "None",
+        self,
+        interaction: discord.Interaction,
+        players: str,
+        ingots: int,
+        reason: str = "None",
     ):
         """Add ingots to a Runescape alias.
 
@@ -758,7 +764,7 @@ class IronForgedCommands:
             return
 
         logging.info(
-                f"Handling '/addingotsbulk players:{players} ingots:{ingots} reason:{reason}' on behalf of {caller}"
+            f"Handling '/addingotsbulk players:{players} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
 
         player_names = players.split(",")
@@ -787,7 +793,7 @@ class IronForgedCommands:
                     member.ingots += ingots
                     members_to_update.append(member)
                     output.append(
-                            f"Added {ingots:,} ingots to {player}. They now have {member.ingots:,} ingots"
+                        f"Added {ingots:,} ingots to {player}. They now have {member.ingots:,} ingots"
                     )
                     break
             if not found:
@@ -810,15 +816,15 @@ class IronForgedCommands:
         with open(path, "rb") as f:
             discord_file = discord.File(f, filename="addingotsbulk.txt")
             await interaction.followup.send(
-                    f"Added ingots to multiple members! Reason: {reason}", file=discord_file
+                f"Added ingots to multiple members! Reason: {reason}", file=discord_file
             )
 
     async def updateingots(
-            self,
-            interaction: discord.Interaction,
-            player: str,
-            ingots: int,
-            reason: str = "None",
+        self,
+        interaction: discord.Interaction,
+        player: str,
+        ingots: int,
+        reason: str = "None",
     ):
         """Set ingots for a Runescape alias.
 
@@ -842,7 +848,7 @@ class IronForgedCommands:
             return
 
         logging.info(
-                f"Handling '/updateingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
+            f"Handling '/updateingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {caller}"
         )
 
         try:
@@ -867,7 +873,7 @@ class IronForgedCommands:
 
         ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
         await interaction.followup.send(
-                f"Set ingot count to {ingots:,} for {player}. Reason: {reason} {ingot_icon}"
+            f"Set ingot count to {ingots:,} for {player}. Reason: {reason} {ingot_icon}"
         )
 
     async def raffleadmin(self, interaction: discord.Interaction, subcommand: str):
@@ -894,8 +900,8 @@ class IronForgedCommands:
             return
 
         logging.info(
-                f"Handling '/raffleadmin {subcommand}' on behalf of "
-                f"{normalize_discord_string(interaction.user.display_name).lower()}"
+            f"Handling '/raffleadmin {subcommand}' on behalf of "
+            f"{normalize_discord_string(interaction.user.display_name).lower()}"
         )
         if subcommand.lower() == "start_raffle":
             await self._start_raffle(interaction)
@@ -913,7 +919,7 @@ class IronForgedCommands:
         """
         try:
             self._storage_client.start_raffle(
-                    normalize_discord_string(interaction.user.display_name).lower()
+                normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as error:
             await send_error_response(
@@ -922,7 +928,7 @@ class IronForgedCommands:
             return
 
         await interaction.followup.send(
-                "Started raffle! Members can now use ingots to purchase tickets."
+            "Started raffle! Members can now use ingots to purchase tickets."
         )
 
     async def _end_raffle(self, interaction: discord.Interaction):
@@ -932,7 +938,7 @@ class IronForgedCommands:
         """
         try:
             self._storage_client.end_raffle(
-                    normalize_discord_string(interaction.user.display_name).lower()
+                normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as error:
             await send_error_response(
@@ -941,7 +947,7 @@ class IronForgedCommands:
             return
 
         await interaction.followup.send(
-                "Raffle ended! Members can no longer purchase tickets."
+            "Raffle ended! Members can no longer purchase tickets."
         )
 
     async def _choose_winner(self, interaction: discord.Interaction):
@@ -981,12 +987,12 @@ class IronForgedCommands:
 
         # TODO: Make this more fun by adding an entries file or rendering a graphic
         await interaction.followup.send(
-                f"{winner} has won {winnings} ingots out of {len(entries)} entries!"
+            f"{winner} has won {winnings} ingots out of {len(entries)} entries!"
         )
 
         try:
             self._storage_client.delete_raffle_tickets(
-                    normalize_discord_string(interaction.user.display_name).lower()
+                normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as error:
             await send_error_response(
@@ -1092,8 +1098,8 @@ class IronForgedCommands:
         cost = tickets * 5000
         if cost > member.ingots:
             await interaction.followup.send(
-                    f"{caller} does not have enough ingots for {tickets} tickets.\n"
-                    + f"Cost: {cost}, current ingots: {member.ingots}"
+                f"{caller} does not have enough ingots for {tickets} tickets.\n"
+                + f"Cost: {cost}, current ingots: {member.ingots}"
             )
             return
 
@@ -1101,7 +1107,7 @@ class IronForgedCommands:
         member.ingots -= cost
         try:
             self._storage_client.update_members(
-                    [member], caller, note="Bought raffle tickets"
+                [member], caller, note="Bought raffle tickets"
             )
         except StorageError as error:
             await send_error_response(
@@ -1119,7 +1125,7 @@ class IronForgedCommands:
             return
 
         await interaction.followup.send(
-                f"{caller} successfully bought {tickets} tickets for {cost} ingots!"
+            f"{caller} successfully bought {tickets} tickets for {cost} ingots!"
         )
 
     async def syncmembers(self, interaction: discord.Interaction):
@@ -1172,11 +1178,11 @@ class IronForgedCommands:
                     output += f"skipped user {member.name} because they don't have a nickname in Discord\n"
                     continue
                 new_members.append(
-                        Member(
-                                id=int(member.id),
-                                runescape_name=normalize_discord_string(member.nick).lower(),
-                                ingots=0,
-                        )
+                    Member(
+                        id=int(member.id),
+                        runescape_name=normalize_discord_string(member.nick).lower(),
+                        ingots=0,
+                    )
                 )
                 output += f"added user {normalize_discord_string(member.nick).lower()} because they joined\n"
 
@@ -1184,7 +1190,7 @@ class IronForgedCommands:
             self._storage_client.add_members(new_members, "User Joined Server")
         except StorageError as e:
             await interaction.followup.send(
-                    f"Encountered error writing new members: {e}"
+                f"Encountered error writing new members: {e}"
             )
             return
 
@@ -1211,25 +1217,25 @@ class IronForgedCommands:
                     if member.nick is None:
                         if member.name != existing_member.runescape_name:
                             changed_members.append(
-                                    Member(
-                                            id=existing_member.id,
-                                            runescape_name=member.name.lower(),
-                                            ingots=existing_member.ingots,
-                                    )
+                                Member(
+                                    id=existing_member.id,
+                                    runescape_name=member.name.lower(),
+                                    ingots=existing_member.ingots,
+                                )
                             )
                     else:
                         if (
-                                normalize_discord_string(member.nick).lower()
-                                != existing_member.runescape_name
+                            normalize_discord_string(member.nick).lower()
+                            != existing_member.runescape_name
                         ):
                             changed_members.append(
-                                    Member(
-                                            id=existing_member.id,
-                                            runescape_name=normalize_discord_string(
-                                                    member.nick
-                                            ).lower(),
-                                            ingots=existing_member.ingots,
-                                    )
+                                Member(
+                                    id=existing_member.id,
+                                    runescape_name=normalize_discord_string(
+                                        member.nick
+                                    ).lower(),
+                                    ingots=existing_member.ingots,
+                                )
                             )
 
         for changed_member in changed_members:
@@ -1239,7 +1245,7 @@ class IronForgedCommands:
             self._storage_client.update_members(changed_members, "Name Change")
         except StorageError as e:
             await interaction.followup.send(
-                    f"Encountered error updating changed members: {e}"
+                f"Encountered error updating changed members: {e}"
             )
             return
 
@@ -1250,35 +1256,35 @@ class IronForgedCommands:
         with open(path, "rb") as f:
             discord_file = discord.File(f, filename="syncmembers.txt")
             await interaction.followup.send(
-                    "Successfully synced ingots storage with current members!",
-                    file=discord_file,
+                "Successfully synced ingots storage with current members!",
+                file=discord_file,
             )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A discord bot for Iron Forged.")
     parser.add_argument(
-            "--dotenv_path",
-            default="./.env",
-            required=False,
-            help="Filepath for .env with startup k/v pairs.",
+        "--dotenv_path",
+        default="./.env",
+        required=False,
+        help="Filepath for .env with startup k/v pairs.",
     )
     parser.add_argument(
-            "--upload_commands",
-            action="store_true",
-            help="If supplied, will upload commands to discord server.",
+        "--upload_commands",
+        action="store_true",
+        help="If supplied, will upload commands to discord server.",
     )
     parser.add_argument(
-            "--tmp_dir",
-            default="./commands_tmp",
-            required=False,
-            help="Directory path for where to store point break downs to upload to discord.",
+        "--tmp_dir",
+        default="./commands_tmp",
+        required=False,
+        help="Directory path for where to store point break downs to upload to discord.",
     )
     parser.add_argument(
-            "--logfile",
-            default="./ironforgedbot.log",
-            required=False,
-            help="Path to file to write log entries to.",
+        "--logfile",
+        default="./ironforgedbot.log",
+        required=False,
+        help="Path to file to write log entries to.",
     )
     args = parser.parse_args()
 
@@ -1286,9 +1292,11 @@ if __name__ == "__main__":
         os.makedirs("./logs")
 
     logging.basicConfig(
-            format="%(asctime)s %(message)s",
-            handlers=[RotatingFileHandler("./logs/bot.log", maxBytes=100_000, backupCount=10)],
-            level=logging.INFO,
+        format="%(asctime)s %(message)s",
+        handlers=[
+            RotatingFileHandler("./logs/bot.log", maxBytes=100_000, backupCount=10)
+        ],
+        level=logging.INFO,
     )
 
     # also log to stderr
@@ -1323,19 +1331,20 @@ if __name__ == "__main__":
     intents.members = True
     guild = discord.Object(id=init_config.get("GUILDID"))
     wom_client = wom.Client(
-            api_key=init_config.get("WOM_API_KEY"),
-            user_agent="IronForged"
+        api_key=init_config.get("WOM_API_KEY"), user_agent="IronForged"
     )
-    storage_client: IngotsStorage = SheetsStorage.from_account_file("service.json", init_config.get("SHEETID"))
+    storage_client: IngotsStorage = SheetsStorage.from_account_file(
+        "service.json", init_config.get("SHEETID")
+    )
 
     client = DiscordClient(
-            intents=intents,
-            upload=args.upload_commands,
-            guild=guild,
-            ranks_update_channel=init_config.get("RANKS_UPDATE_CHANNEL"),
-            wom_client=wom_client,
-            wom_group_id=int(init_config.get("WOM_GROUP_ID")),
-            storage=storage_client
+        intents=intents,
+        upload=args.upload_commands,
+        guild=guild,
+        ranks_update_channel=init_config.get("RANKS_UPDATE_CHANNEL"),
+        wom_client=wom_client,
+        wom_group_id=int(init_config.get("WOM_GROUP_ID")),
+        storage=storage_client,
     )
     tree = discord.app_commands.CommandTree(client)
 
