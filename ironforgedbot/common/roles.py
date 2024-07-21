@@ -1,9 +1,16 @@
+from enum import StrEnum
 from typing import Optional
 
 import discord
 
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANKS
+
+
+class ROLES(StrEnum):
+    LEADERSHIP = "Leadership"
+    MEMBER = "Member"
+    PROSPECT = "Prospect"
 
 
 def extract_roles(member: discord.Member) -> list[str]:
@@ -26,7 +33,7 @@ def find_rank(roles: list[str]) -> Optional[RANKS]:
 
 def is_member(roles: list[str]) -> bool:
     for role in roles:
-        if "member" == role.lower():
+        if ROLES.MEMBER.lower() == role.lower():
             return True
 
     return False
@@ -34,7 +41,7 @@ def is_member(roles: list[str]) -> bool:
 
 def is_prospect(roles: list[str]) -> bool:
     for role in roles:
-        if "prospect" == role.lower():
+        if ROLES.PROSPECT.lower() == role.lower():
             return True
 
     return False

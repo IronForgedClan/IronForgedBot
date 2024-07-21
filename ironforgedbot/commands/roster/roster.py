@@ -1,9 +1,11 @@
+import logging
 from typing import List
 
 import discord
 
 from ironforgedbot.common.helpers import normalize_discord_string, reply_with_file
 from ironforgedbot.common.ranks import RANKS
+from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
 from ironforgedbot.storage.types import IngotsStorage, Member
 
@@ -19,20 +21,33 @@ class Signups(object):
         if rank not in self.ranked:
             self.ranked[rank] = []
 
-        nick = normalize_discord_string(member.nick)
+        nick = normalize_discord_string(member.display_name)
         if nick not in self.ranked:
             self.ranked[rank].append(nick)
             self.nick_id_map[nick] = member.id
 
     def add_prospect(self, member: discord.Member):
-        self.prospects.append(normalize_discord_string(member.nick))
+        self.prospects.append(normalize_discord_string(member.display_name))
 
     def add_unknowns(self, member: discord.Member):
-        self.unknowns.append(normalize_discord_string(member.name))
+        self.unknowns.append(normalize_discord_string(member.display_name))
 
 
-async def cmd_roster(interaction: discord.Interaction, url: str, guild: discord.Guild, storage: IngotsStorage):
-    body = await _calc_roster(url, guild, storage)
+async def cmd_roster(
+    interaction: discord.Interaction,
+    url: str,
+    guild: discord.Guild,
+    storage: IngotsStorage,
+):
+    try:
+        body = await _calc_roster(url, guild, storage)
+    except Exception as e:
+        logging.error(f"Roster generation error: {repr(e)}")
+        await send_error_response(
+            interaction, "An error occurred generating the roster."
+        )
+        return
+
     title = f"Roster for the [event]({url})"
     await reply_with_file(title, body, "roster.txt", interaction)
 
@@ -63,7 +78,9 @@ def _add_rank(signups: Signups, rank: RANKS, members: List[Member]) -> str:
 
     res = f"{str(rank)} rank ({len(signups.ranked[rank])}):\n"
     for ranked in signups.ranked[rank]:
-        res += f"{ranked}, ingots: {_get_ingots(signups.nick_id_map[ranked], members)}\n"
+        res += (
+            f"{ranked}, ingots: {_get_ingots(signups.nick_id_map[ranked], members)}\n"
+        )
 
     res += "\n"
     return res

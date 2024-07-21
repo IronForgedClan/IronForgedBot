@@ -1,3 +1,6 @@
+import logging
+from typing import Tuple
+from discord import Interaction, Guild, Member
 import tempfile
 from io import BytesIO
 
@@ -23,7 +26,77 @@ def normalize_discord_string(nick: str) -> str:
     for letter in nick:
         if letter.isascii():
             new_nick.append(letter)
-    return "".join(new_nick)
+    return "".join(new_nick).strip()
+
+
+def validate_user_request(
+    interaction: Interaction, playername: str
+) -> Tuple[Member, str]:
+    if not interaction.guild:
+        logging.error(f"Error accessing guild ({interaction.id})")
+        raise ReferenceError("Error accessing server")
+
+    if interaction.is_expired():
+        logging.info(f"Interaction has expired ({interaction.id})")
+        raise ReferenceError("Interaction has expired")
+
+    playername = validate_playername(playername)
+    member = find_member_by_nickname(interaction.guild, playername)
+
+    return member, playername
+
+
+def validate_playername(playername: str) -> str:
+    playername = normalize_discord_string(playername)
+
+    if len(playername) > 12 or len(playername) < 1:
+        logging.info(f"RSN length incorrect: '{playername}'")
+        raise ValueError("RSN can only be 1-12 characters long")
+
+    return playername
+
+
+def validate_protected_request(
+    interaction: Interaction, playername: str, required_role: str
+) -> Tuple[Member, str]:
+    caller, _ = validate_user_request(interaction, interaction.user.display_name)
+    member, playername = validate_user_request(interaction, playername)
+
+    has_role = validate_member_has_role(caller, required_role)
+
+    if not has_role:
+        raise ValueError(
+            f"Member '{caller.display_name}' does not have permission for this action"
+        )
+
+    return member, playername
+
+
+def validate_member_has_role(member: Member, required_role: str) -> bool:
+    roles = member.roles
+
+    for role in roles:
+        if role.name.lower() == required_role.lower():
+            return True
+
+    return False
+
+
+def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
+    if not guild.members or len(guild.members) < 1:
+        raise ReferenceError("Error accessing server members")
+
+    for member in guild.members:
+        normalized_display_name = normalize_discord_string(member.display_name.lower())
+        if normalized_display_name == normalize_discord_string(target_name.lower()):
+            if not member.nick or len(member.nick) < 1:
+                logging.info(f"{member.display_name} has no nickname set")
+                raise ValueError(
+                    f"Member '**{member.display_name}**' does not have a nickname set"
+                )
+            return member
+
+    raise ValueError(f"Player '**{target_name}**' is not a member of this server")
 
 
 def calculate_percentage(part, whole) -> int:
@@ -81,6 +154,8 @@ def fit_log_lines_into_discord_messages(lines: list[str]) -> list[str]:
     return messages
 
 
-async def reply_with_file(msg: str, body: str, file_name: str, interaction: discord.Interaction):
+async def reply_with_file(
+    msg: str, body: str, file_name: str, interaction: discord.Interaction
+):
     discord_file = discord.File(BytesIO(str.encode(body)), filename=file_name)
     await interaction.followup.send(msg, file=discord_file)
