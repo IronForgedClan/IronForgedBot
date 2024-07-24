@@ -1,14 +1,14 @@
 import logging
-from typing import Tuple
-from discord import Interaction, Guild, Member
-import tempfile
+from collections.abc import Sequence
 from io import BytesIO
+from typing import Tuple
 
 import discord
-from collections.abc import Sequence
+from discord import Guild, Interaction, Member
+
+logger = logging.getLogger(__name__)
 
 emojiCache = dict[str, discord.Emoji]()
-
 QUOTES = "```"
 MAX_DISCORD_MESSAGE_SIZE = 2_000 - len(QUOTES) - 1
 NEW_LINE = "\n"
@@ -33,11 +33,11 @@ def validate_user_request(
     interaction: Interaction, playername: str
 ) -> Tuple[Member, str]:
     if not interaction.guild:
-        logging.error(f"Error accessing guild ({interaction.id})")
+        logger.error(f"Error accessing guild ({interaction.id})")
         raise ReferenceError("Error accessing server")
 
     if interaction.is_expired():
-        logging.info(f"Interaction has expired ({interaction.id})")
+        logger.info(f"Interaction has expired ({interaction.id})")
         raise ReferenceError("Interaction has expired")
 
     playername = validate_playername(playername)
@@ -50,7 +50,7 @@ def validate_playername(playername: str) -> str:
     playername = normalize_discord_string(playername)
 
     if len(playername) > 12 or len(playername) < 1:
-        logging.info(f"RSN length incorrect: '{playername}'")
+        logger.info(f"RSN length incorrect: '{playername}'")
         raise ValueError("RSN can only be 1-12 characters long")
 
     return playername
@@ -90,7 +90,7 @@ def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
         normalized_display_name = normalize_discord_string(member.display_name.lower())
         if normalized_display_name == normalize_discord_string(target_name.lower()):
             if not member.nick or len(member.nick) < 1:
-                logging.info(f"{member.display_name} has no nickname set")
+                logger.info(f"{member.display_name} has no nickname set")
                 raise ValueError(
                     f"Member '**{member.display_name}**' does not have a nickname set"
                 )
@@ -112,6 +112,7 @@ def find_emoji(list_: Sequence[discord.Emoji], target: str):
             emojiCache[emoji.name] = emoji
             return emoji
 
+    logger.warning(f"Requested emoji '{target}' not found")
     return ""
 
 
