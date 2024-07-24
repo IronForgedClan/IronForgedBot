@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import random
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
@@ -30,8 +29,6 @@ def helper_create_member(name: str, role: ROLES, nick=None) -> discord.User:
 
 
 class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
-    logging.disable(logging.CRITICAL)
-
     @classmethod
     def setUpClass(cls):
         cls.loop = asyncio.new_event_loop()

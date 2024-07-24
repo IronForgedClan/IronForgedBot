@@ -1,4 +1,3 @@
-import logging
 import unittest
 from unittest.mock import Mock
 
@@ -17,8 +16,6 @@ from ironforgedbot.common.roles import ROLES
 
 
 class TestHelpers(unittest.TestCase):
-    logging.disable(logging.CRITICAL)
-
     def test_normalize_discord_string(self):
         """ "Test to make sure normalization strips non ascii characters"""
         self.assertEqual(normalize_discord_string(""), "")
