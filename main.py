@@ -6,12 +6,12 @@ import random
 import sys
 from typing import Dict, Optional
 
-from concurrent_log_handler import ConcurrentRotatingFileHandler
 import discord
 from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
 from reactionmenu import ViewButton, ViewMenu
 
+import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     EMPTY_SPACE,
@@ -1277,28 +1277,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not os.path.exists("./logs"):
-        os.makedirs("./logs")
-
-    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-    formatter = logging.Formatter(LOG_FORMAT)
-
-    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO,)
-    rotating_handler = ConcurrentRotatingFileHandler("./logs/bot.log",
-                                                     maxBytes=100_000,
-                                                     backupCount=10,
-                                                     encoding="utf-8")
-    rotating_handler.setFormatter(formatter)
-
-    # also log to stderr
-    root = logging.getLogger()
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.INFO)
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
-    root.addHandler(rotating_handler)
-    root.setLevel(logging.INFO)
-
     # Fail out early if our required args are not present.
     init_config = read_dotenv(args.dotenv_path)
     if not validate_initial_config(init_config):
@@ -1315,7 +1293,7 @@ if __name__ == "__main__":
         if SKILLS is None or len(SKILLS) < 1:
             raise Exception("Error loading skill data")
     except Exception as e:
-        logging.error(e)
+        logger.critical(e)
         sys.exit(1)
 
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
