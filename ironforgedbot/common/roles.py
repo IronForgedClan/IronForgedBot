@@ -9,6 +9,7 @@ from ironforgedbot.common.ranks import RANKS
 
 class ROLES(StrEnum):
     LEADERSHIP = "Leadership"
+    DISCORD_TEAM = "Discord Team"
     MEMBER = "Member"
     PROSPECT = "Prospect"
 

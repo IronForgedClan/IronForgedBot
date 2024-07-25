@@ -16,6 +16,7 @@ from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     EMPTY_SPACE,
 )
+from ironforgedbot.commands.log.log_access import log_access
 from ironforgedbot.commands.roster.roster import cmd_roster
 from ironforgedbot.common.helpers import (
     calculate_percentage,
@@ -308,6 +309,26 @@ class IronForgedCommands:
             auto_locale_strings=True,
         )
         self._tree.add_command(roster_command)
+
+        log_command = app_commands.Command(
+            name="logs",
+            description="Allows access to bot logs.",
+            callback=self.log_access,
+            nsfw=False,
+            parent=None,
+            auto_locale_strings=True,
+        )
+        self._tree.add_command(log_command)
+
+    async def log_access(
+        self, interaction: discord.Interaction, file_index: Optional[int]
+    ):
+        try:
+            await log_access(interaction, file_index)
+        except Exception as e:
+            await interaction.response.defer()
+            logger.error(e)
+            await send_error_response(interaction, "Logs command encountered an error")
 
     async def roster(self, interaction: discord.Interaction, message_url: str):
         await interaction.response.defer()
