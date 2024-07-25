@@ -5,9 +5,11 @@ from typing import Optional
 
 import discord
 
+from ironforgedbot.commands.hiscore.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import validate_protected_request
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.logging_config import LOG_DIR
 
 
 logger = logging.getLogger(__name__)
@@ -36,28 +38,28 @@ async def log_access(interaction: discord.Interaction, file_index: Optional[int]
         f"Handling '/logs file_index:{file_index}' on behalf of {interaction.user.display_name}"
     )
 
-    embed = build_response_embed("🗃️ Iron Forged Bot Logs", "", discord.Color.blurple())
-    log_dir = os.listdir("./logs")
+    embed = build_response_embed("🗃️ Bot Logs", "", discord.Color.blurple())
+    logs = os.listdir(LOG_DIR)
 
-    if file_index is not None and file_index > 0 and file_index <= len(log_dir) - 1:
+    if file_index is not None and file_index > 0 and file_index <= len(logs) - 1:
         await interaction.response.send_message(
-            file=discord.File(f"./logs/{log_dir[file_index]}"), ephemeral=True
+            file=discord.File(f"{LOG_DIR}/{logs[file_index]}"), ephemeral=True
         )
         return
 
-    for index, file in enumerate(log_dir):
+    for index, file in enumerate(logs):
         if "lock" in file:
             continue
 
-        file_size = round(os.path.getsize(f"./logs/{file}") / 1024, 0)
+        file_size = round(os.path.getsize(f"{LOG_DIR}/{file}") / 1024, 0)
         file_modified = datetime.datetime.strftime(
-            datetime.datetime.fromtimestamp(os.path.getmtime(f"./logs/{file}")),
+            datetime.datetime.fromtimestamp(os.path.getmtime(f"{LOG_DIR}/{file}")),
             "%Y-%m-%d %H:%M:%S",
         )
 
         embed.add_field(
             name="",
-            value=f"**[{index}]** {file_modified} [{file_size}kb] -- {file}",
+            value=f"**[{index}]** {file_modified}\n{EMPTY_SPACE}_{file}_{EMPTY_SPACE}{file_size}kb",
             inline=False,
         )
 

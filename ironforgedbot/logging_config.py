@@ -3,10 +3,12 @@ import os
 
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
+LOG_DIR = "./logs"
+
 
 def configure_logging():
-    if not os.path.exists("./logs"):
-        os.makedirs("./logs")
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
 
     logging.basicConfig(level=logging.INFO, encoding="utf-8")
 
@@ -19,8 +21,10 @@ def configure_logging():
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
 
+    # NOTE: Beware of backup counts greater than 25
+    #       It will break /logs embed max fields
     file_handler = ConcurrentRotatingFileHandler(
-        "./logs/bot.log", maxBytes=100_000, backupCount=10
+        f"{LOG_DIR}/bot.log", maxBytes=100_000, backupCount=10
     )
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
