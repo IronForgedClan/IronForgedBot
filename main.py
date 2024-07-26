@@ -1,61 +1,35 @@
-from ironforgedbot.commands.ingots.add_ingots import add_ingots
-from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
-from ironforgedbot.commands.ingots.update_ingots import update_ingots
-from ironforgedbot.commands.raffle.raffle_admin import raffle_admin
-from ironforgedbot.commands.raffle.raffle_buy_tickets import raffle_buy_tickets
-from ironforgedbot.commands.raffle.raffle_tickets import raffle_view_tickets
-from ironforgedbot.commands.sync_members import sync_members
 import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
-
 import argparse
-import asyncio
 import logging
-import os
-import random
 import sys
 from typing import Dict, Optional
 
 import discord
-from apscheduler.schedulers.background import BackgroundScheduler
 from discord import app_commands
-from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.breakdown import breakdown
-from ironforgedbot.commands.hiscore.calculator import score_info
-from ironforgedbot.commands.hiscore.constants import (
-    EMPTY_SPACE,
-)
+from ironforgedbot.commands.ingots.add_ingots import add_ingots
+from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
+from ironforgedbot.commands.ingots.update_ingots import update_ingots
 from ironforgedbot.commands.ingots.view_ingots import view_ingots
 from ironforgedbot.commands.log.log_access import log_access
+from ironforgedbot.commands.raffle.raffle_admin import raffle_admin
+from ironforgedbot.commands.raffle.raffle_buy_tickets import raffle_buy_tickets
+from ironforgedbot.commands.raffle.raffle_tickets import raffle_view_tickets
 from ironforgedbot.commands.roster.roster import cmd_roster
 from ironforgedbot.commands.score import score
+from ironforgedbot.commands.sync_members import sync_members
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
-    find_emoji,
-    normalize_discord_string,
-    validate_member_has_role,
-    validate_playername,
     validate_protected_request,
-    validate_user_request,
-)
-from ironforgedbot.common.ranks import (
-    RANK_POINTS,
-    RANKS,
-    get_next_rank_from_points,
-    get_rank_color_from_points,
-    get_rank_from_points,
 )
 from ironforgedbot.common.responses import (
-    build_response_embed,
     send_error_response,
 )
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import SheetsStorage
-from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
-from ironforgedbot.tasks.activity import check_activity, check_activity_reminder
-from ironforgedbot.tasks.ranks import refresh_ranks
+from ironforgedbot.storage.types import IngotsStorage
 
 logger = logging.getLogger(__name__)
 
