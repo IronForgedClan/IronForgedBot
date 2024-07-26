@@ -2,6 +2,7 @@ import logging
 import discord
 
 from ironforgedbot.commands.raffle.raffle_end import sub_raffle_end
+from ironforgedbot.commands.raffle.raffle_select_winner import sub_raffle_select_winner
 from ironforgedbot.commands.raffle.raffle_start import sub_raffle_start
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
@@ -44,6 +45,6 @@ async def raffle_admin(self, interaction: discord.Interaction, subcommand: str):
     elif subcommand.lower() == "end_raffle":
         await sub_raffle_end(self, interaction)
     elif subcommand.lower() == "choose_winner":
-        await self._choose_winner(interaction)
+        await sub_raffle_select_winner(self, interaction)
     else:
         await interaction.followup.send("provided subcommand is not implemented")
