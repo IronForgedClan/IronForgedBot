@@ -1,6 +1,7 @@
 from ironforgedbot.commands.ingots.add_ingots import add_ingots
 from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
 from ironforgedbot.commands.ingots.update_ingots import update_ingots
+from ironforgedbot.commands.raffle.raffle_admin import raffle_admin
 import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
 
 import argparse
@@ -334,40 +335,14 @@ class IronForgedCommands:
             )
 
     async def raffleadmin(self, interaction: discord.Interaction, subcommand: str):
-        """Parent command for doing admin actions around raffles.
-
-        Args:
-            subcommand: string of admin action to perform. Valid actions: [start_raffle, end_raffle, choose_winner].
-                'start_raffle' will open purchasing of tickets, 'end_raffle' will close
-                purchasing, and 'choose_winner' will choose a winner & display
-                their winnings (alongside clearing storage for the next raffle).
-        """
-
-        await interaction.response.defer()
-
         try:
-            validate_protected_request(
-                interaction, interaction.user.display_name, ROLES.LEADERSHIP
+            await interaction.response.defer(thinking=True)
+            await raffle_admin(self, interaction, subcommand)
+        except Exception as e:
+            logger.error(e)
+            await send_error_response(
+                interaction, "Update ingots command encountered an error"
             )
-        except (ReferenceError, ValueError) as error:
-            logger.info(
-                f"Member '{interaction.user.display_name}' tried raffleadmin but does not have permission"
-            )
-            await send_error_response(interaction, str(error))
-            return
-
-        logger.info(
-            f"Handling '/raffleadmin {subcommand}' on behalf of "
-            f"{normalize_discord_string(interaction.user.display_name).lower()}"
-        )
-        if subcommand.lower() == "start_raffle":
-            await self._start_raffle(interaction)
-        elif subcommand.lower() == "end_raffle":
-            await self._end_raffle(interaction)
-        elif subcommand.lower() == "choose_winner":
-            await self._choose_winner(interaction)
-        else:
-            await interaction.followup.send("provided subcommand is not implemented")
 
     async def _start_raffle(self, interaction: discord.Interaction):
         """Starts a raffle, enabling purchase of raffle tickets.
