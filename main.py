@@ -2,31 +2,11 @@ import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:ski
 import argparse
 import logging
 import sys
-from typing import Dict, Optional
+from typing import Dict
 
 import discord
-from discord import app_commands
 
 from ironforgedbot.client import DiscordClient
-from ironforgedbot.commands.breakdown import breakdown
-from ironforgedbot.commands.ingots.add_ingots import add_ingots
-from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
-from ironforgedbot.commands.ingots.update_ingots import update_ingots
-from ironforgedbot.commands.ingots.view_ingots import view_ingots
-from ironforgedbot.commands.log.log_access import log_access
-from ironforgedbot.commands.raffle.raffle_admin import raffle_admin
-from ironforgedbot.commands.raffle.raffle_buy_tickets import raffle_buy_tickets
-from ironforgedbot.commands.raffle.raffle_tickets import raffle_view_tickets
-from ironforgedbot.commands.roster.roster import cmd_roster
-from ironforgedbot.commands.score import score
-from ironforgedbot.commands.sync_members import sync_members
-from ironforgedbot.common.helpers import (
-    validate_protected_request,
-)
-from ironforgedbot.common.responses import (
-    send_error_response,
-)
-from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage
