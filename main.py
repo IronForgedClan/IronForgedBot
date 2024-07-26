@@ -2,6 +2,7 @@ from ironforgedbot.commands.ingots.add_ingots import add_ingots
 from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
 from ironforgedbot.commands.ingots.update_ingots import update_ingots
 from ironforgedbot.commands.raffle.raffle_admin import raffle_admin
+from ironforgedbot.commands.raffle.raffle_buy_tickets import raffle_buy_tickets
 from ironforgedbot.commands.raffle.raffle_tickets import raffle_view_tickets
 import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
 
@@ -356,85 +357,14 @@ class IronForgedCommands:
             )
 
     async def buyraffletickets(self, interaction: discord.Interaction, tickets: int):
-        """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
-        await interaction.response.defer()
-
         try:
-            _, caller = validate_user_request(
-                interaction, interaction.user.display_name
-            )
-        except (ReferenceError, ValueError) as error:
-            await send_error_response(interaction, str(error))
-            return
-
-        logger.info(f"Handling '/buyraffletickets {tickets}' on behalf of {caller}")
-
-        try:
-            ongoing_raffle = self._storage_client.read_raffle()
-        except StorageError as error:
+            await interaction.response.defer(thinking=True)
+            await raffle_buy_tickets(self, interaction, tickets)
+        except Exception as e:
+            logger.error(e)
             await send_error_response(
-                interaction,
-                f"Encountered error reading raffle status from storage: {error}",
+                interaction, "Buy raffle tickets command encountered an error"
             )
-            return
-
-        if not ongoing_raffle:
-            await send_error_response(
-                interaction,
-                "FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought.",
-            )
-            return
-
-        # First, read member to get Discord ID & ingot count
-        try:
-            member = self._storage_client.read_member(caller)
-        except StorageError as error:
-            await send_error_response(
-                interaction, f"Encountered error reading member from storage: {error}"
-            )
-            return
-
-        if member is None:
-            await send_error_response(
-                interaction,
-                f"{caller} not found in storage, please reach out to leadership.",
-            )
-            return
-
-        # Now we have the Discord ID & current ingot count
-        # Does the user have enough ingots to make the purchase?
-        cost = tickets * 5000
-        if cost > member.ingots:
-            await interaction.followup.send(
-                f"{caller} does not have enough ingots for {tickets} tickets.\n"
-                + f"Cost: {cost}, current ingots: {member.ingots}"
-            )
-            return
-
-        # We got this for, do the transactions
-        member.ingots -= cost
-        try:
-            self._storage_client.update_members(
-                [member], caller, note="Bought raffle tickets"
-            )
-        except StorageError as error:
-            await send_error_response(
-                interaction, f"Encountered error updating member ingot count: {error}"
-            )
-            return
-
-        try:
-            self._storage_client.add_raffle_tickets(member.id, tickets)
-        except StorageError as error:
-            await send_error_response(
-                interaction, f"Encountered error adding raffle tickets: {error}"
-            )
-
-            return
-
-        await interaction.followup.send(
-            f"{caller} successfully bought {tickets} tickets for {cost} ingots!"
-        )
 
     async def syncmembers(self, interaction: discord.Interaction):
         await interaction.response.defer()
