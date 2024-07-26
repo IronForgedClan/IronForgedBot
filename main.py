@@ -1,5 +1,3 @@
-from ironforgedbot.commands.breakdown import breakdown
-from ironforgedbot.commands.score import score
 import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
 
 import argparse
@@ -16,12 +14,15 @@ from discord import app_commands
 from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.client import DiscordClient
+from ironforgedbot.commands.breakdown import breakdown
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     EMPTY_SPACE,
 )
+from ironforgedbot.commands.ingots.view_ingots import view_ingots
 from ironforgedbot.commands.log.log_access import log_access
 from ironforgedbot.commands.roster.roster import cmd_roster
+from ironforgedbot.commands.score import score
 from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_emoji,
@@ -272,44 +273,14 @@ class IronForgedCommands:
     async def ingots(
         self, interaction: discord.Interaction, player: Optional[str] = None
     ):
-        """View your ingots, or those for another player.
-
-        Arguments:
-            interaction: Discord Interaction from CommandTree.
-            (optional) player: Runescape username to view ingot count for.
-        """
-
-        await interaction.response.defer(thinking=True)
-
-        if player is None:
-            player = interaction.user.display_name
-
         try:
-            _, player = validate_user_request(interaction, player)
-        except (ReferenceError, ValueError) as error:
-            await send_error_response(interaction, str(error))
-            return
-
-        logger.info(
-            f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
-        )
-
-        try:
-            member = self._storage_client.read_member(player.lower())
-        except StorageError as error:
-            await send_error_response(interaction, str(error))
-            return
-
-        if member is None:
+            await interaction.response.defer(thinking=True)
+            await view_ingots(self, interaction, player)
+        except Exception as e:
+            logger.error(e)
             await send_error_response(
-                interaction, f"Member '{player}' not found in spreadsheet"
+                interaction, "Ingots command encountered an error"
             )
-            return
-
-        ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
-        await interaction.followup.send(
-            f"{player} has {member.ingots:,} ingots {ingot_icon}"
-        )
 
     async def addingots(
         self,
