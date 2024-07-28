@@ -9,6 +9,7 @@ import discord
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.command_tree import IronForgedCommands
+from ironforgedbot.config import CONFIG
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage
@@ -16,39 +17,8 @@ from ironforgedbot.storage.types import IngotsStorage
 logger = logging.getLogger(__name__)
 
 
-def read_dotenv(path: str) -> Dict[str, str]:
-    """Read config from a file of k=v entries."""
-    config = {}
-    with open(path, "r") as f:
-        for line in f:
-            tmp = line.partition("=")
-            config[tmp[0]] = tmp[2].removesuffix("\n")
-
-    return config
-
-
-def validate_initial_config(config: Dict[str, str]) -> bool:
-    if config.get("SHEETID") is None:
-        logger.error("validation failed; SHEETID required but not present in env")
-        return False
-    if config.get("GUILDID") is None:
-        logger.error("validation failed; GUILDID required but not present in env")
-        return False
-    if config.get("BOT_TOKEN") is None:
-        logger.error("validation failed; BOT_TOKEN required but not present in env")
-        return False
-
-    return True
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A discord bot for Iron Forged.")
-    parser.add_argument(
-        "--dotenv_path",
-        default="./.env",
-        required=False,
-        help="Filepath for .env with startup k/v pairs.",
-    )
     parser.add_argument(
         "--upload_commands",
         action="store_true",
@@ -62,11 +32,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    # Fail out early if our required args are not present.
-    init_config = read_dotenv(args.dotenv_path)
-    if not validate_initial_config(init_config):
-        sys.exit(1)
 
     # Fail out if any errors reading local config data
     try:
@@ -85,19 +50,18 @@ if __name__ == "__main__":
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
     intents = discord.Intents.default()
     intents.members = True
-    guild = discord.Object(id=init_config.get("GUILDID"))
+    guild = discord.Object(id=CONFIG.GUILD_ID)
 
-    storage_client: IngotsStorage = SheetsStorage.from_account_file(
-        "service.json", init_config.get("SHEETID")
-    )
+    # set up singleton storage instance
+    SheetsStorage.from_account_file("service.json", CONFIG.SHEET_ID)
 
     client = DiscordClient(
         intents=intents,
         upload=args.upload_commands,
         guild=guild,
-        ranks_update_channel=init_config.get("RANKS_UPDATE_CHANNEL"),
-        wom_api_key=init_config.get("WOM_API_KEY"),
-        wom_group_id=int(init_config.get("WOM_GROUP_ID")),
+        ranks_update_channel=CONFIG.RANKS_UPDATE_CHANNEL,
+        wom_api_key=CONFIG.WOM_API_KEY,
+        wom_group_id=int(CONFIG.WOM_GROUP_ID),
         storage=storage_client,
     )
     tree = discord.app_commands.CommandTree(client)
@@ -105,4 +69,4 @@ if __name__ == "__main__":
     commands = IronForgedCommands(tree, client, storage_client, args.tmp_dir)
     client.tree = tree
 
-    client.run(init_config.get("BOT_TOKEN"))
+    client.run(CONFIG.BOT_TOKEN)
