@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import discord
 
@@ -38,137 +39,139 @@ class IronForgedCommands:
         self._storage_client = storage_client
         self._tmp_dir_path = tmp_dir_path
 
-        # Description only sets the brief description.
-        # Arg descriptions are pulled from function definition.
-        score_command = discord.app_commands.Command(
-            name="score",
-            description="Compute your score, or the score of another member.",
-            callback=self.score,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="score",
+                description="Compute your score, or the score of another member.",
+                callback=score,
+                nsfw=False,
+                parent=None,
+                auto_locale_strings=True,
+            )
         )
-        self._tree.add_command(score_command)
 
-        breakdown_command = discord.app_commands.Command(
-            name="breakdown",
-            description="View your score breakdown, or the breakdown of another member.",
-            callback=self.breakdown,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="breakdown",
+                description="View your score breakdown, or the breakdown of another member.",
+                callback=breakdown,
+                nsfw=False,
+                parent=None,
+                auto_locale_strings=True,
+            )
         )
-        self._tree.add_command(breakdown_command)
 
-        ingots_command = discord.app_commands.Command(
-            name="ingots",
-            description="View your ingot balance, or the balance of another member.",
-            callback=self.ingots,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="ingots",
+                description="View your ingot balance, or the balance of another member.",
+                callback=view_ingots,
+                nsfw=False,
+                parent=None,
+                auto_locale_strings=True,
+                extras={"storage": storage_client},
+            )
         )
-        self._tree.add_command(ingots_command)
 
-        addingots_command = discord.app_commands.Command(
-            name="addingots",
-            description="Add or remove ingots to a player.",
-            callback=self.addingots,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(addingots_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="addingots",
+        #         description="Add or remove ingots to a player.",
+        #         callback=add_ingots,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        addingotsbulk_command = discord.app_commands.Command(
-            name="addingotsbulk",
-            description="Add or remove ingots to multiple players.",
-            callback=self.addingotsbulk,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(addingotsbulk_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="addingotsbulk",
+        #         description="Add or remove ingots to multiple players.",
+        #         callback=add_ingots_bulk,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        updateingots_command = discord.app_commands.Command(
-            name="updateingots",
-            description="Set a player's ingot count to a new value.",
-            callback=self.updateingots,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(updateingots_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="updateingots",
+        #         description="Set a player's ingot count to a new value.",
+        #         callback=update_ingots,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        raffleadmin_command = discord.app_commands.Command(
-            name="raffleadmin",
-            description="Command wrapper for admin actions on raffles.",
-            callback=self.raffleadmin,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(raffleadmin_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="raffleadmin",
+        #         description="Command wrapper for admin actions on raffles.",
+        #         callback=raffle_admin,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        raffletickets_command = discord.app_commands.Command(
-            name="raffletickets",
-            description="View current raffle ticket count.",
-            callback=self.raffletickets,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(raffletickets_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="raffletickets",
+        #         description="View current raffle ticket count.",
+        #         callback=raffle_view_tickets,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        buyraffletickets_command = discord.app_commands.Command(
-            name="buyraffletickets",
-            description="Buy raffle tickets for 5000 ingots each.",
-            callback=self.buyraffletickets,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(buyraffletickets_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="buyraffletickets",
+        #         description="Buy raffle tickets for 5000 ingots each.",
+        #         callback=raffle_buy_tickets,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        syncmembers_command = discord.app_commands.Command(
-            name="syncmembers",
-            description="Sync members of Discord server with ingots storage.",
-            callback=self.syncmembers,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(syncmembers_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="syncmembers",
+        #         description="Sync members of Discord server with ingots storage.",
+        #         callback=sync_members,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        roster_command = discord.app_commands.Command(
-            name="roster",
-            description="Builds an even roster from signups.",
-            callback=self.roster,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(roster_command)
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="roster",
+        #         description="Builds an even roster from signups.",
+        #         callback=cmd_roster,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #     )
+        # )
 
-        log_command = discord.app_commands.Command(
-            name="logs",
-            description="Allows access to bot logs.",
-            callback=self.log_access,
-            nsfw=False,
-            parent=None,
-            auto_locale_strings=True,
-        )
-        self._tree.add_command(log_command)
-
-    async def log_access(
-        self, interaction: discord.Interaction, file_index: Optional[int]
-    ):
-        try:
-            await log_access(interaction, file_index)
-        except Exception as e:
-            await interaction.response.defer()
-            logger.error(e)
-            await send_error_response(interaction, "Logs command encountered an error")
+        # self._tree.add_command(
+        #     discord.app_commands.Command(
+        #         name="logs",
+        #         description="Allows access to bot logs.",
+        #         callback=log_access,
+        #         nsfw=False,
+        #         parent=None,
+        #         auto_locale_strings=True,
+        #         extras={"test": "test"},
+        #     )
+        # )
 
     async def roster(self, interaction: discord.Interaction, message_url: str):
         await interaction.response.defer()

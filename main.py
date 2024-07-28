@@ -1,4 +1,5 @@
 import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
+
 import argparse
 import logging
 import sys
@@ -7,6 +8,7 @@ from typing import Dict
 import discord
 
 from ironforgedbot.client import DiscordClient
+from ironforgedbot.command_tree import IronForgedCommands
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import IngotsStorage
