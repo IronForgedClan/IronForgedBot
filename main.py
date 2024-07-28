@@ -41,6 +41,10 @@ if __name__ == "__main__":
     # set up singleton storage instance
     SheetsStorage.from_account_file("service.json", CONFIG.SHEET_ID)
 
+    # preload data
+    if BOSSES and CLUES and RAIDS and SKILLS:
+        pass
+
     client = DiscordClient(
         intents=intents,
         upload=args.upload_commands,
