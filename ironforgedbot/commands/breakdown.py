@@ -24,9 +24,7 @@ from ironforgedbot.common.responses import build_response_embed, send_error_resp
 logger = logging.getLogger(__name__)
 
 
-async def breakdown(
-    self, interaction: discord.Interaction, player: Optional[str] = None
-):
+async def breakdown(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute player score with complete source enumeration.
 
     Arguments:
@@ -67,7 +65,7 @@ async def breakdown(
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
     rank_color = get_rank_color_from_points(points_total)
-    rank_icon = find_emoji(self._discord_client.emojis, rank_name)
+    rank_icon = find_emoji(interaction, rank_name)
 
     rank_breakdown_embed = build_response_embed(
         f"{rank_icon} {member.display_name} | Rank Ladder",
@@ -76,7 +74,7 @@ async def breakdown(
     )
 
     for rank in RANKS:
-        icon = find_emoji(self._discord_client.emojis, rank)
+        icon = find_emoji(interaction, rank)
         rank_point_threshold = RANK_POINTS[rank.upper()].value
         rank_breakdown_embed.add_field(
             name=(
@@ -95,7 +93,7 @@ async def breakdown(
     if rank_name != RANKS.MYTH.value:
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
-        next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
+        next_rank_icon = find_emoji(interaction, next_rank_name)
         rank_breakdown_embed.add_field(
             name="Your Progress",
             value=(
@@ -114,7 +112,7 @@ async def breakdown(
     ordered_skills = sorted(data.skills, key=lambda x: x["display_order"])
 
     for skill in ordered_skills:
-        skill_icon = find_emoji(self._discord_client.emojis, skill["emoji_key"])
+        skill_icon = find_emoji(interaction, skill["emoji_key"])
         skill_breakdown_embed.add_field(
             name=f"{skill_icon} {skill['points']:,} points",
             value=f"{EMPTY_SPACE}{skill['xp']:,} xp",
@@ -157,7 +155,7 @@ async def breakdown(
         boss_point_counter += boss["points"]
 
         field_count += 1
-        boss_icon = find_emoji(self._discord_client.emojis, boss["emoji_key"])
+        boss_icon = find_emoji(interaction, boss["emoji_key"])
         working_embed.add_field(
             name=f"{boss_icon} {boss['points']:,} points",
             value=f"{EMPTY_SPACE}{boss['kc']:,} kc",
@@ -188,7 +186,7 @@ async def breakdown(
     raid_point_counter = 0
     for raid in data.raids:
         raid_point_counter += raid["points"]
-        raid_icon = find_emoji(self._discord_client.emojis, raid["emoji_key"])
+        raid_icon = find_emoji(interaction, raid["emoji_key"])
         raid_breakdown_embed.add_field(
             name=f"{raid_icon} {raid['points']:,} points",
             value=f"{EMPTY_SPACE}{raid['kc']:,} kc",
@@ -205,7 +203,7 @@ async def breakdown(
     )
 
     clue_point_counter = 0
-    clue_icon = find_emoji(self._discord_client.emojis, "cluescroll")
+    clue_icon = find_emoji(interaction, "cluescroll")
     for clue in data.clues:
         clue_point_counter += clue["points"]
         clue_breakdown_embed.add_field(

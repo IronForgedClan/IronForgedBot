@@ -64,11 +64,11 @@ async def score(self, interaction: discord.Interaction, player: Optional[str]):
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
     rank_color = get_rank_color_from_points(points_total)
-    rank_icon = find_emoji(self._discord_client.emojis, rank_name)
+    rank_icon = find_emoji(interaction, rank_name)
 
     next_rank_name = get_next_rank_from_points(points_total)
     next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
-    next_rank_icon = find_emoji(self._discord_client.emojis, next_rank_name)
+    next_rank_icon = find_emoji(interaction, next_rank_name)
 
     embed = build_response_embed(f"{rank_icon} {member.display_name}", "", rank_color)
     embed.add_field(
@@ -86,7 +86,7 @@ async def score(self, interaction: discord.Interaction, player: Optional[str]):
     embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
 
     if rank_name == RANKS.MYTH.value:
-        grass_emoji = find_emoji(self._discord_client.emojis, "grass")
+        grass_emoji = find_emoji(interaction, "grass")
         embed.add_field(
             name="",
             value=(

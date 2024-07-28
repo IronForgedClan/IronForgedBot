@@ -103,11 +103,15 @@ def calculate_percentage(part, whole) -> int:
     return round(100 * float(part) / float(whole))
 
 
-def find_emoji(list_: Sequence[discord.Emoji], target: str):
+def find_emoji(interaction: discord.Interaction, target: str):
     if target in emojiCache:
         return emojiCache[target]
 
-    for emoji in list_:
+    if interaction.guild is None:
+        logger.error(f"Requested emoji {target} but no guild found")
+        return ""
+
+    for emoji in interaction.guild.emojis:
         if emoji.available and emoji.name == target:
             emojiCache[emoji.name] = emoji
             return emoji

@@ -60,7 +60,7 @@ async def add_ingots(
         await send_error_response(interaction, f"Error updating ingots: {error}")
         return
 
-    ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
+    ingot_icon = find_emoji(interaction, "Ingot")
     await interaction.followup.send(
         f"Added {ingots:,} ingots to {player}; reason: {reason}. They now have {member.ingots:,} ingots {ingot_icon}"
     )
