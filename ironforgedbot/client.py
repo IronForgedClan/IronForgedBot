@@ -4,6 +4,7 @@ import sys
 from apscheduler.schedulers.background import BackgroundScheduler
 import discord
 
+from ironforgedbot.config import CONFIG
 from ironforgedbot.storage.types import IngotsStorage
 from ironforgedbot.tasks.activity import check_activity, check_activity_reminder
 from ironforgedbot.tasks.ranks import refresh_ranks
@@ -40,18 +41,12 @@ class DiscordClient(discord.Client):
         intents: discord.Intents,
         upload: bool,
         guild: discord.Object,
-        ranks_update_channel: str,
-        wom_api_key: str,
-        wom_group_id: int,
         storage: IngotsStorage,
     ):
         super().__init__(intents=intents)
         self.discord_guild = None
         self.upload = upload
         self.guild = guild
-        self.ranks_update_channel = ranks_update_channel
-        self.wom_api_key = wom_api_key
-        self.wom_group_id = wom_group_id
         self.storage = storage
 
     @property
@@ -87,7 +82,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
             refresh_ranks,
             "cron",
-            args=[self.discord_guild, self.ranks_update_channel, loop],
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
             hour=2,
             minute=0,
             second=0,
@@ -97,7 +92,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
             check_activity_reminder,
             "cron",
-            args=[self.discord_guild, self.ranks_update_channel, loop, self.storage],
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, self.storage],
             day_of_week="mon",
             hour=0,
             minute=0,
@@ -110,10 +105,10 @@ class DiscordClient(discord.Client):
             "cron",
             args=[
                 self.discord_guild,
-                self.ranks_update_channel,
+                CONFIG.RANKS_UPDATE_CHANNEL,
                 loop,
-                self.wom_api_key,
-                self.wom_group_id,
+                CONFIG.WOM_API_KEY,
+                CONFIG.WOM_GROUP_ID,
                 self.storage,
             ],
             day_of_week="mon",

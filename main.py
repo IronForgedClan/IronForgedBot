@@ -2,9 +2,6 @@ import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:ski
 
 import argparse
 import logging
-import sys
-from typing import Dict
-
 import discord
 
 from ironforgedbot.client import DiscordClient
@@ -49,9 +46,6 @@ if __name__ == "__main__":
         intents=intents,
         upload=args.upload_commands,
         guild=guild,
-        ranks_update_channel=CONFIG.RANKS_UPDATE_CHANNEL,
-        wom_api_key=CONFIG.WOM_API_KEY,
-        wom_group_id=int(CONFIG.WOM_GROUP_ID),
         storage=storage_client,
     )
     tree = discord.app_commands.CommandTree(client)
