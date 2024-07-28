@@ -12,17 +12,19 @@ class Config:
         load_dotenv()
 
         self.SHEET_ID: str = os.getenv("SHEET_ID", "")
-        self.GUILD_ID: str = os.getenv("GUILD_ID", "")
+        self.GUILD_ID: int = int(os.getenv("GUILD_ID", "0"))
         self.BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
-        self.WOM_GROUP_ID: str = os.getenv("WOM_GROUP_ID", "")
+        self.WOM_GROUP_ID: int = int(os.getenv("WOM_GROUP_ID", "0"))
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
-        self.RANKS_UPDATE_CHANNEL: str = os.getenv("RANKS_UPDATE_CHANNEL", "")
+        self.RANKS_UPDATE_CHANNEL: int = int(os.getenv("RANKS_UPDATE_CHANNEL", ""))
 
         self.validate_config()
 
     def validate_config(self):
         for key, value in vars(self).items():
             if isinstance(value, str) and not value:
+                raise ValueError(f"Configuration key '{key}' is missing or empty")
+            if isinstance(value, int) and value <= 0:
                 raise ValueError(f"Configuration key '{key}' is missing or empty")
 
 
