@@ -33,20 +33,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Fail out if any errors reading local config data
-    try:
-        if BOSSES is None or len(BOSSES) < 1:
-            raise Exception("Error loading boss data")
-        if CLUES is None or len(CLUES) < 1:
-            raise Exception("Error loading clue data")
-        if RAIDS is None or len(RAIDS) < 1:
-            raise Exception("Error loading raid data")
-        if SKILLS is None or len(SKILLS) < 1:
-            raise Exception("Error loading skill data")
-    except Exception as e:
-        logger.critical(e)
-        sys.exit(1)
-
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
     intents = discord.Intents.default()
     intents.members = True
