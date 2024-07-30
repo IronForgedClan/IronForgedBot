@@ -9,6 +9,7 @@ from ironforgedbot.storage.types import IngotsStorage
 from ironforgedbot.tasks.activity import check_activity, check_activity_reminder
 from ironforgedbot.tasks.ranks import refresh_ranks
 
+logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
