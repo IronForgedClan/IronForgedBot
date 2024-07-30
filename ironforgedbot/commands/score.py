@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import score_info
@@ -21,13 +22,21 @@ from ironforgedbot.common.responses import build_response_embed, send_error_resp
 logger = logging.getLogger(__name__)
 
 
-async def score(self, interaction: discord.Interaction, player: Optional[str]):
+async def score(interaction: discord.Interaction, player: Optional[str]):
     """Compute clan score for a Runescape player name.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
         player: Runescape playername to look up score for.
     """
+    await interaction.response.defer(thinking=True)
+
+    logger.info(
+        (
+            f"Handling '/score player:{player}' on behalf of "
+            f"{normalize_discord_string(interaction.user.display_name)}"
+        )
+    )
 
     if player is None:
         player = interaction.user.display_name
@@ -37,13 +46,6 @@ async def score(self, interaction: discord.Interaction, player: Optional[str]):
     except (ReferenceError, ValueError) as error:
         await send_error_response(interaction, str(error))
         return
-
-    logger.info(
-        (
-            f"Handling '/score player:{player}' on behalf of "
-            f"{normalize_discord_string(interaction.user.display_name)}"
-        )
-    )
 
     try:
         data = score_info(player)

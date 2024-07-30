@@ -9,14 +9,16 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.config import CONFIG
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError, Member
 
 
 logger = logging.getLogger(__name__)
 
 
-async def sync_members(self, interaction: discord.Interaction):
-    await interaction.response.defer()
+async def sync_members(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
 
     try:
         _, caller = validate_protected_request(
@@ -46,7 +48,7 @@ async def sync_members(self, interaction: discord.Interaction):
 
     # Then, get all current entries from storage.
     try:
-        existing = self._storage_client.read_members()
+        existing = STORAGE.read_members()
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading members: {error}"
@@ -74,7 +76,7 @@ async def sync_members(self, interaction: discord.Interaction):
             output += f"added user {normalize_discord_string(member.nick).lower()} because they joined\n"
 
     try:
-        self._storage_client.add_members(new_members, "User Joined Server")
+        STORAGE.add_members(new_members, "User Joined Server")
     except StorageError as e:
         await interaction.followup.send(f"Encountered error writing new members: {e}")
         return
@@ -86,7 +88,7 @@ async def sync_members(self, interaction: discord.Interaction):
             leaving_members.append(existing_member)
             output += f"removed user {existing_member.runescape_name} because they left the server\n"
     try:
-        self._storage_client.remove_members(leaving_members, "User Left Server")
+        STORAGE.remove_members(leaving_members, "User Left Server")
     except StorageError as e:
         await interaction.followup.send(f"Encountered error removing members: {e}")
         return
@@ -127,14 +129,14 @@ async def sync_members(self, interaction: discord.Interaction):
         output += f"updated RSN for {changed_member.runescape_name}\n"
 
     try:
-        self._storage_client.update_members(changed_members, "Name Change")
+        STORAGE.update_members(changed_members, "Name Change")
     except StorageError as e:
         await interaction.followup.send(
             f"Encountered error updating changed members: {e}"
         )
         return
 
-    path = os.path.join(self._tmp_dir_path, f"syncmembers_{caller}.txt")
+    path = os.path.join(CONFIG.TEMP_DIR, f"syncmembers_{caller}.txt")
     with open(path, "w") as f:
         f.write(output)
 

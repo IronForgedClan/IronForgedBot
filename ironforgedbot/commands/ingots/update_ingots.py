@@ -1,22 +1,22 @@
 import logging
+from typing import Optional
 
 import discord
 
 from ironforgedbot.common.helpers import find_emoji, validate_protected_request
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
-
 
 logger = logging.getLogger(__name__)
 
 
 async def update_ingots(
-    self,
     interaction: discord.Interaction,
     player: str,
     ingots: int,
-    reason: str = "None",
+    reason: Optional[str],
 ):
     """Set ingots for a Runescape alias.
 
@@ -25,6 +25,10 @@ async def update_ingots(
         player: Runescape username to view ingot count for.
         ingots: New ingot count for this user.
     """
+    await interaction.response.defer(thinking=True)
+
+    if not reason:
+        reason = "None"
 
     try:
         caller, player = validate_protected_request(
@@ -42,7 +46,7 @@ async def update_ingots(
     )
 
     try:
-        member = self._storage_client.read_member(player.lower())
+        member = STORAGE.read_member(player.lower())
     except StorageError as e:
         await interaction.followup.send(f"Encountered error reading member: {e}")
         return
@@ -54,12 +58,12 @@ async def update_ingots(
     member.ingots = ingots
 
     try:
-        self._storage_client.update_members([member], caller.display_name, note=reason)
+        STORAGE.update_members([member], caller.display_name, note=reason)
     except StorageError as e:
         await interaction.followup.send(f"Encountered error writing ingots: {e}")
         return
 
-    ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
+    ingot_icon = find_emoji(interaction, "Ingot")
     await interaction.followup.send(
         f"Set ingot count to {ingots:,} for {player}. Reason: {reason} {ingot_icon}"
     )

@@ -1,16 +1,18 @@
 import logging
+
 import discord
 
 from ironforgedbot.common.helpers import validate_user_request
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
-
 
 logger = logging.getLogger(__name__)
 
 
-async def raffle_view_tickets(self, interaction: discord.Interaction):
+async def raffle_view_tickets(interaction: discord.Interaction):
     """View calling user's current raffle ticket count."""
+    await interaction.response.defer(thinking=True)
 
     try:
         _, caller = validate_user_request(interaction, interaction.user.display_name)
@@ -21,7 +23,7 @@ async def raffle_view_tickets(self, interaction: discord.Interaction):
     logger.info(f"Handling '/raffletickets' on behalf of {caller}")
 
     try:
-        member = self._storage_client.read_member(caller)
+        member = STORAGE.read_member(caller)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading member from storage: {error}"
@@ -36,7 +38,7 @@ async def raffle_view_tickets(self, interaction: discord.Interaction):
         return
 
     try:
-        current_tickets = self._storage_client.read_raffle_tickets()
+        current_tickets = STORAGE.read_raffle_tickets()
     except StorageError as error:
         await send_error_response(
             interaction,

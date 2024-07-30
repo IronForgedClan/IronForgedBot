@@ -1,15 +1,18 @@
 import logging
+
 import discord
 
 from ironforgedbot.common.helpers import validate_user_request
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
-async def raffle_buy_tickets(self, interaction: discord.Interaction, tickets: int):
+async def raffle_buy_tickets(interaction: discord.Interaction, tickets: int):
     """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
+    await interaction.response.defer(thinking=True)
 
     try:
         _, caller = validate_user_request(interaction, interaction.user.display_name)
@@ -20,7 +23,7 @@ async def raffle_buy_tickets(self, interaction: discord.Interaction, tickets: in
     logger.info(f"Handling '/buyraffletickets {tickets}' on behalf of {caller}")
 
     try:
-        ongoing_raffle = self._storage_client.read_raffle()
+        ongoing_raffle = STORAGE.read_raffle()
     except StorageError as error:
         await send_error_response(
             interaction,
@@ -37,7 +40,7 @@ async def raffle_buy_tickets(self, interaction: discord.Interaction, tickets: in
 
     # First, read member to get Discord ID & ingot count
     try:
-        member = self._storage_client.read_member(caller)
+        member = STORAGE.read_member(caller)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading member from storage: {error}"
@@ -64,9 +67,7 @@ async def raffle_buy_tickets(self, interaction: discord.Interaction, tickets: in
     # We got this for, do the transactions
     member.ingots -= cost
     try:
-        self._storage_client.update_members(
-            [member], caller, note="Bought raffle tickets"
-        )
+        STORAGE.update_members([member], caller, note="Bought raffle tickets")
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error updating member ingot count: {error}"
@@ -74,7 +75,7 @@ async def raffle_buy_tickets(self, interaction: discord.Interaction, tickets: in
         return
 
     try:
-        self._storage_client.add_raffle_tickets(member.id, tickets)
+        STORAGE.add_raffle_tickets(member.id, tickets)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error adding raffle tickets: {error}"

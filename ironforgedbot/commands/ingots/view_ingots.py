@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+
 import discord
 
 from ironforgedbot.common.helpers import (
@@ -8,21 +9,21 @@ from ironforgedbot.common.helpers import (
     validate_user_request,
 )
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
-
 
 logger = logging.getLogger(__name__)
 
 
-async def view_ingots(
-    self, interaction: discord.Interaction, player: Optional[str] = None
-):
+async def view_ingots(interaction: discord.Interaction, player: Optional[str] = None):
     """View your ingots, or those for another player.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
         (optional) player: Runescape username to view ingot count for.
     """
+    await interaction.response.defer(thinking=True)
+    logging.info(interaction.user.id)
 
     if player is None:
         player = interaction.user.display_name
@@ -38,18 +39,18 @@ async def view_ingots(
     )
 
     try:
-        member = self._storage_client.read_member(player.lower())
+        member = STORAGE.read_member(player)
     except StorageError as error:
         await send_error_response(interaction, str(error))
         return
 
     if member is None:
         await send_error_response(
-            interaction, f"Member '{player}' not found in spreadsheet"
+            interaction, f"Member '{player}' not found in storage."
         )
         return
 
-    ingot_icon = find_emoji(self._discord_client.emojis, "Ingot")
+    ingot_icon = find_emoji(interaction, "Ingot")
     await interaction.followup.send(
         f"{player} has {member.ingots:,} ingots {ingot_icon}"
     )

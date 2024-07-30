@@ -1,21 +1,24 @@
 import logging
 import os
+from typing import Optional
+
 import discord
 
 from ironforgedbot.common.helpers import validate_playername, validate_protected_request
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.config import CONFIG
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
 async def add_ingots_bulk(
-    self,
     interaction: discord.Interaction,
     players: str,
     ingots: int,
-    reason: str = "None",
+    reason: Optional[str],
 ):
     """Add ingots to a Runescape alias.
 
@@ -24,6 +27,10 @@ async def add_ingots_bulk(
         player: Comma-separated list of Runescape usernames to add ingots to.
         ingots: number of ingots to add to this player.
     """
+    await interaction.response.defer(thinking=True)
+
+    if not reason:
+        reason = "None"
 
     try:
         _, caller = validate_protected_request(
@@ -49,7 +56,7 @@ async def add_ingots_bulk(
             await send_error_response(interaction, str(error))
 
     try:
-        members = self._storage_client.read_members()
+        members = STORAGE.read_members()
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading member '{error}'"
@@ -73,7 +80,7 @@ async def add_ingots_bulk(
             output.append(f"{player} not found in storage.")
 
     try:
-        self._storage_client.update_members(members_to_update, caller, note=reason)
+        STORAGE.update_members(members_to_update, caller, note=reason)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error writing ingots for '{error}'"
@@ -82,7 +89,7 @@ async def add_ingots_bulk(
 
     # Our output can be larger than the interaction followup max.
     # Send it in a file to accomodate this.
-    path = os.path.join(self._tmp_dir_path, f"addingotsbulk_{caller}.txt")
+    path = os.path.join(CONFIG.TEMP_DIR, f"addingotsbulk_{caller}.txt")
     with open(path, "w") as f:
         f.write("\n".join(output))
 

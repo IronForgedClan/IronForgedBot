@@ -1,4 +1,5 @@
 import logging
+
 import discord
 
 from ironforgedbot.commands.raffle.raffle_end import sub_raffle_end
@@ -11,11 +12,10 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
 
-
 logger = logging.getLogger(__name__)
 
 
-async def raffle_admin(self, interaction: discord.Interaction, subcommand: str):
+async def raffle_admin(interaction: discord.Interaction, subcommand: str):
     """Parent command for doing admin actions around raffles.
 
     Args:
@@ -24,6 +24,7 @@ async def raffle_admin(self, interaction: discord.Interaction, subcommand: str):
             purchasing, and 'choose_winner' will choose a winner & display
             their winnings (alongside clearing storage for the next raffle).
     """
+    await interaction.response.defer(thinking=True)
 
     try:
         validate_protected_request(
@@ -41,10 +42,10 @@ async def raffle_admin(self, interaction: discord.Interaction, subcommand: str):
         f"{normalize_discord_string(interaction.user.display_name).lower()}"
     )
     if subcommand.lower() == "start_raffle":
-        await sub_raffle_start(self, interaction)
+        await sub_raffle_start(interaction)
     elif subcommand.lower() == "end_raffle":
-        await sub_raffle_end(self, interaction)
+        await sub_raffle_end(interaction)
     elif subcommand.lower() == "choose_winner":
-        await sub_raffle_select_winner(self, interaction)
+        await sub_raffle_select_winner(interaction)
     else:
         await interaction.followup.send("provided subcommand is not implemented")

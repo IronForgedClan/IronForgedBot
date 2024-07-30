@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import sys
-from apscheduler.schedulers.background import BackgroundScheduler
+
 import discord
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.config import CONFIG
-from ironforgedbot.storage.types import IngotsStorage
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.tasks.activity import check_activity, check_activity_reminder
 from ironforgedbot.tasks.ranks import refresh_ranks
 
@@ -42,13 +43,11 @@ class DiscordClient(discord.Client):
         intents: discord.Intents,
         upload: bool,
         guild: discord.Object,
-        storage: IngotsStorage,
     ):
         super().__init__(intents=intents)
         self.discord_guild = None
         self.upload = upload
         self.guild = guild
-        self.storage = storage
 
     @property
     def tree(self):
@@ -68,11 +67,15 @@ class DiscordClient(discord.Client):
     async def on_ready(self):
         if not self.user:
             logger.critical("Error logging into discord server")
-            sys.exit()
+            sys.exit(1)
 
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
 
-        # Starting background jobs
+        self.setup_background_jobs()
+
+    def setup_background_jobs(self):
+        logger.debug("Initializing background jobs")
+
         loop = asyncio.get_running_loop()
 
         self.discord_guild = self.get_guild(self.guild.id)
@@ -93,7 +96,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
             check_activity_reminder,
             "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, self.storage],
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, STORAGE],
             day_of_week="mon",
             hour=0,
             minute=0,
@@ -110,7 +113,7 @@ class DiscordClient(discord.Client):
                 loop,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
-                self.storage,
+                STORAGE,
             ],
             day_of_week="mon",
             hour=1,
@@ -119,3 +122,5 @@ class DiscordClient(discord.Client):
             timezone="UTC",
         )
         scheduler.start()
+
+        logger.debug("Background jobs ready")

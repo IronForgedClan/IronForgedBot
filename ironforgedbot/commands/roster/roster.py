@@ -4,10 +4,21 @@ from typing import List
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_rank
-from ironforgedbot.common.helpers import normalize_discord_string, reply_with_file
+from ironforgedbot.common.helpers import (
+    normalize_discord_string,
+    reply_with_file,
+    validate_protected_request,
+)
 from ironforgedbot.common.ranks import RANKS
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
+from ironforgedbot.common.roles import (
+    ROLES,
+    extract_roles,
+    find_rank,
+    is_member,
+    is_prospect,
+)
+from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import IngotsStorage, Member
 
 logger = logging.getLogger(__name__)
@@ -66,11 +77,26 @@ class Signups(object):
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,
-    guild: discord.Guild,
-    storage: IngotsStorage,
 ):
+    await interaction.response.defer()
+
     try:
-        body = await _calc_roster(url, guild, storage)
+        validate_protected_request(
+            interaction, interaction.user.display_name, ROLES.LEADERSHIP
+        )
+    except (ReferenceError, ValueError) as error:
+        logger.info(
+            f"Member '{interaction.user.display_name}' tried using roster but does not have permission"
+        )
+        await send_error_response(interaction, str(error))
+        return
+
+    if not interaction.guild:
+        await send_error_response(interaction, "Error accessing guild information")
+        return
+
+    try:
+        body = await _calc_roster(url, interaction.guild)
     except Exception as e:
         logger.error(f"Roster generation error: {repr(e)}")
         await send_error_response(
@@ -82,9 +108,9 @@ async def cmd_roster(
     await reply_with_file(title, body, "roster.txt", interaction)
 
 
-async def _calc_roster(url: str, guild: discord.Guild, storage: IngotsStorage) -> str:
+async def _calc_roster(url: str, guild: discord.Guild) -> str:
     msg = await _get_message(url, guild)
-    members = storage.read_members()
+    members = STORAGE.read_members()
     signups = await _get_signups(msg, members)
     result = "====STAFF MESSAGE BELOW====\n"
 
