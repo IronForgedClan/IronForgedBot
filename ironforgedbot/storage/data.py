@@ -25,7 +25,7 @@ class Activity(TypedDict):
 
 def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
     with open(f"{file_name}", "r") as file:
-        logger.info(f"Reading file: {file_name}")
+        logger.debug(f"Reading file: {file_name}")
         data = json.load(file)
 
         if not isinstance(data, list):
@@ -45,7 +45,7 @@ def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
 
         output = cast(List[T], data)
         if output is None or len(output) < 1:
-            raise ValueError(f"{file_name}: output result of appears to be empty")
+            raise ValueError(f"{file_name}: output result is invalid")
 
         return output
 
@@ -55,6 +55,7 @@ try:
     CLUES = load_json_data("data/clues.json", Activity)
     RAIDS = load_json_data("data/raids.json", Activity)
     SKILLS = load_json_data("data/skills.json", Skill)
+    logger.info("Loaded local data successfully")
 except (json.JSONDecodeError, FileNotFoundError, TypeError, KeyError, ValueError) as e:
     logger.critical(e)
     sys.exit(1)
