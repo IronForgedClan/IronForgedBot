@@ -8,7 +8,7 @@ from ironforgedbot.commands.ingots.add_ingots import add_ingots
 from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
 from ironforgedbot.commands.ingots.update_ingots import update_ingots
 from ironforgedbot.commands.ingots.view_ingots import view_ingots
-from ironforgedbot.commands.log.log_access import log_access
+from ironforgedbot.commands.log_access import log_access
 from ironforgedbot.commands.raffle.raffle_admin import raffle_admin
 from ironforgedbot.commands.raffle.raffle_buy_tickets import raffle_buy_tickets
 from ironforgedbot.commands.raffle.raffle_tickets import raffle_view_tickets
