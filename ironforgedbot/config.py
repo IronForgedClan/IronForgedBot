@@ -11,12 +11,13 @@ class Config:
     def __init__(self):
         load_dotenv()
 
+        self.TEMP_DIR: str = os.getenv("TEMP_DIR", "./temp")
         self.SHEET_ID: str = os.getenv("SHEET_ID", "")
         self.GUILD_ID: int = int(os.getenv("GUILD_ID", "0"))
         self.BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
         self.WOM_GROUP_ID: int = int(os.getenv("WOM_GROUP_ID", "0"))
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
-        self.RANKS_UPDATE_CHANNEL: int = int(os.getenv("RANKS_UPDATE_CHANNEL", ""))
+        self.RANKS_UPDATE_CHANNEL: int = int(os.getenv("RANKS_UPDATE_CHANNEL", "0"))
 
         self.validate_config()
 

@@ -32,12 +32,10 @@ class IronForgedCommands:
         # TODO: replace sheets client with a storage interface &
         # pass in a sheets impl.
         storage_client: IngotsStorage,
-        tmp_dir_path: str,
     ):
         self._tree = tree
         self._discord_client = discord_client
         self._storage_client = storage_client
-        self._tmp_dir_path = tmp_dir_path
 
         self._tree.add_command(
             discord.app_commands.Command(

@@ -19,15 +19,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--upload_commands",
         action="store_true",
-        help="If supplied, will upload commands to discord server.",
+        help="Uploads commands to discord server.",
     )
-    parser.add_argument(
-        "--tmp_dir",
-        default="./commands_tmp",
-        required=False,
-        help="Directory path for where to store point break downs to upload to discord.",
-    )
-
     args = parser.parse_args()
 
     # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
