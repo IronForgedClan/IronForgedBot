@@ -1,25 +1,19 @@
-"""An implementation of IronForgedStorage backed by Google Sheets."""
-
-from datetime import datetime
-from google.oauth2 import service_account
-from googleapiclient.discovery import build, Resource
-from googleapiclient.errors import HttpError
 import logging
-from pytz import timezone
+import sys
+from datetime import datetime
 from typing import Dict, List, Optional, Union
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import Resource, build
+from googleapiclient.errors import HttpError
+from pytz import timezone
+
+from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.config import CONFIG
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 
+logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
-
-SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-# Skip header in read.
-SHEET_RANGE = "ClanIngots!A2:B"
-SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:C"
-RAFFLE_RANGE = "ClanRaffle!A2"
-RAFFLE_TICKETS_RANGE = "ClanRaffleTickets!A2:B"
-CHANGELOG_RANGE = "ChangeLog!A2:F"
-ABSENCE_RANGE = "AbsenceNotice!A2:C"
 
 
 class SheetsStorage(metaclass=IngotsStorage):
@@ -39,18 +33,21 @@ class SheetsStorage(metaclass=IngotsStorage):
                 sheets API.
             sheet_id: ID of sheets to connect to.
         """
+        self.SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:C"
+        self.RAFFLE_RANGE = "ClanRaffle!A2"
+        self.RAFFLE_TICKETS_RANGE = "ClanRaffleTickets!A2:B"
+        self.CHANGELOG_RANGE = "ChangeLog!A2:F"
+        self.ABSENCE_RANGE = "AbsenceNotice!A2:C"
+
         self._sheets_client = sheets_client
         self._sheet_id = sheet_id
-        if clock is None:
-            self._clock = datetime
-        else:
-            self._clock = clock
+        self._clock = clock or datetime
 
     @classmethod
     def from_account_file(cls, account_filepath: str, sheet_id: str) -> "SheetsStorage":
         """Build sheets Resource from service account file."""
         creds = service_account.Credentials.from_service_account_file(
-            account_filepath, scopes=SHEETS_SCOPES
+            account_filepath, scopes=["https://www.googleapis.com/auth/spreadsheets"]
         )
         service = build("sheets", "v4", credentials=creds)
 
@@ -61,7 +58,9 @@ class SheetsStorage(metaclass=IngotsStorage):
         members = self.read_members()
 
         for member in members:
-            if member.runescape_name == player:
+            if member.runescape_name.lower() == normalize_discord_string(
+                player.lower()
+            ):
                 return member
 
         return None
@@ -74,7 +73,10 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=SHEET_RANGE_WITH_DISCORD_IDS)
+                .get(
+                    spreadsheetId=self._sheet_id,
+                    range=self.SHEET_RANGE_WITH_DISCORD_IDS,
+                )
                 .execute()
             )
         except HttpError as e:
@@ -263,7 +265,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=RAFFLE_RANGE)
+                .get(spreadsheetId=self._sheet_id, range=self.RAFFLE_RANGE)
                 .execute()
             )
         except HttpError as e:
@@ -295,7 +297,7 @@ class SheetsStorage(metaclass=IngotsStorage):
                 .values()
                 .update(
                     spreadsheetId=self._sheet_id,
-                    range=RAFFLE_RANGE,
+                    range=self.RAFFLE_RANGE,
                     valueInputOption="RAW",
                     body=body,
                 )
@@ -332,7 +334,7 @@ class SheetsStorage(metaclass=IngotsStorage):
                 .values()
                 .update(
                     spreadsheetId=self._sheet_id,
-                    range=RAFFLE_RANGE,
+                    range=self.RAFFLE_RANGE,
                     valueInputOption="RAW",
                     body=body,
                 )
@@ -359,7 +361,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=RAFFLE_TICKETS_RANGE)
+                .get(spreadsheetId=self._sheet_id, range=self.RAFFLE_TICKETS_RANGE)
                 .execute()
             )
         except HttpError as e:
@@ -491,7 +493,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=ABSENCE_RANGE)
+                .get(spreadsheetId=self._sheet_id, range=self.ABSENCE_RANGE)
                 .execute()
             )
         except HttpError as e:
@@ -525,9 +527,17 @@ class SheetsStorage(metaclass=IngotsStorage):
             .values()
             .append(
                 spreadsheetId=self._sheet_id,
-                range=CHANGELOG_RANGE,
+                range=self.CHANGELOG_RANGE,
                 valueInputOption="RAW",
                 body=body,
             )
             .execute()
         )
+
+
+try:
+    STORAGE = SheetsStorage.from_account_file("service.json", CONFIG.SHEET_ID)
+    logger.info("Connected to spreadsheets api successfully")
+except Exception as e:
+    logger.critical(e)
+    sys.exit(1)
