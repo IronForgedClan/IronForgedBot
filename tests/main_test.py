@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 import discord
-from parameterized import parameterized
 
 import main
 from ironforgedbot.common.roles import ROLES
@@ -49,19 +48,7 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.guild = Mock()
         self.mock_interaction.guild.members = []
 
-    @parameterized.expand(
-        [
-            ({"SHEETID": "blorp", "GUILDID": "bleep", "BOT_TOKEN": "bloop"}, True),
-            ({"SHEETID": "blorp"}, False),
-            ({"GUILDID": "bleep"}, False),
-            ({"BOT_TOKEN": "bloop"}, False),
-        ]
-    )
-    def test_validate_initial_config(self, config, expected):
-        """Test that all required fields are present in config."""
-        self.assertEqual(main.validate_initial_config(config), expected)
-
-    @patch("main.validate_user_request")
+    @patch("ironforgedbot.commands.ingots.view_ingots.validate_user_request")
     async def test_ingots(self, mock_validate_user_request):
         """Test that ingots for given player are returned to user."""
         user = helper_create_member("johnnycache", ROLES.MEMBER)
