@@ -1,5 +1,4 @@
 import json
-import logging
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock
@@ -14,8 +13,6 @@ TIMEZONE = "America/Los_Angeles"
 
 
 class TestSheetsStorage(unittest.TestCase):
-    logging.disable(logging.CRITICAL)
-
     def test_read_member(self):
         sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
 

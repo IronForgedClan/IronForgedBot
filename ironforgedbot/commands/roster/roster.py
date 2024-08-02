@@ -10,6 +10,8 @@ from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
 from ironforgedbot.storage.types import IngotsStorage, Member
 
+logger = logging.getLogger(__name__)
+
 
 class Ranked(object):
     def __init__(self, name: str, prospect: bool, ingots: str):
@@ -34,7 +36,9 @@ class Signups(object):
         self.unknowns = []
         self.rank_failures = []
 
-    def add_ranked(self, member: discord.Member, rank: RANKS, prospect: bool, members: List[Member]):
+    def add_ranked(
+        self, member: discord.Member, rank: RANKS, prospect: bool, members: List[Member]
+    ):
         if rank not in self.known_ranks:
             self.ranked[rank] = []
             self.known_ranks[rank] = []
@@ -68,7 +72,7 @@ async def cmd_roster(
     try:
         body = await _calc_roster(url, guild, storage)
     except Exception as e:
-        logging.error(f"Roster generation error: {repr(e)}")
+        logger.error(f"Roster generation error: {repr(e)}")
         await send_error_response(
             interaction, "An error occurred generating the roster."
         )

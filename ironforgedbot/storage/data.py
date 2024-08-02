@@ -1,8 +1,9 @@
 import json
 import logging
-from typing import List, Type, TypedDict, TypeVar, cast, NotRequired
+from typing import List, NotRequired, Type, TypedDict, TypeVar, cast
 
 T = TypeVar("T", bound=TypedDict)
+logger = logging.getLogger(__name__)
 
 
 class Skill(TypedDict):
@@ -24,7 +25,7 @@ class Activity(TypedDict):
 def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
     try:
         with open(f"{file_name}", "r") as file:
-            logging.debug(f"Reading file: {file.name}")
+            logger.info(f"Reading file: {file_name}")
             data = json.load(file)
 
             if not isinstance(data, list):
@@ -45,10 +46,10 @@ def load_json_data(file_name: str, type: Type[T]) -> List[T] | None:
             return cast(List[T], data)
 
     except json.JSONDecodeError as e:
-        logging.debug(e.args[0])
-        logging.error("Error decoding json")
+        logger.debug(e.args[0])
+        logger.error("Error decoding json")
     except (TypeError, KeyError, FileNotFoundError) as e:
-        logging.error(e.args[0])
+        logger.error(e.args[0])
         return None
 
 

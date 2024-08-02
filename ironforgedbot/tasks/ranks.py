@@ -11,11 +11,15 @@ from ironforgedbot.common.ranks import RANKS, get_rank_from_points
 from ironforgedbot.common.roles import extract_roles, is_member, is_prospect, find_rank
 from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
 
+logger = logging.getLogger(__name__)
 
-def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio.BaseEventLoop):
+
+def refresh_ranks(
+    guild: discord.Guild, updates_channel_name: str, loop: asyncio.BaseEventLoop
+):
     updates_channel = can_start_task(guild, updates_channel_name)
     if updates_channel is None:
-        logging.error("Miss-configured task refresh_ranks")
+        logger.error("Miss-configured task refresh_ranks")
         return
 
     icons = _load_icons(guild)
@@ -36,21 +40,28 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
             # Check whether user is a member at all
             if is_member(member_roles) and not is_prospect(member_roles):
                 message = f"Found a member {nick} w/o the ranked role"
-                logging.warning(message)
-                asyncio.run_coroutine_threadsafe(_send_discord_message_plain(updates_channel, message), loop)
+                logger.warning(message)
+                asyncio.run_coroutine_threadsafe(
+                    _send_discord_message_plain(updates_channel, message), loop
+                )
             continue
 
         members_to_update[nick] = current_role
 
-    asyncio.run_coroutine_threadsafe(_send_discord_message_plain(
-            updates_channel, f'Starting daily ranks check for {len(members_to_update)} members'), loop)
+    asyncio.run_coroutine_threadsafe(
+        _send_discord_message_plain(
+            updates_channel,
+            f"Starting daily ranks check for {len(members_to_update)} members",
+        ),
+        loop,
+    )
 
     for member, current_role in members_to_update.items():
-        logging.info(f"Checking score for {member}, current rank {current_role}")
+        logger.info(f"Checking score for {member}, current rank {current_role}")
         try:
             current_points = points_total(member)
         except RuntimeError as e:
-            logging.error(f"Caught error while checking {member}: {e}")
+            logger.error(f"Caught error while checking {member}: {e}")
             continue
 
         actual_role = get_rank_from_points(current_points)
@@ -59,13 +70,17 @@ def refresh_ranks(guild: discord.Guild, updates_channel_name: str, loop: asyncio
                 f"{member} has upgraded their rank from {icons[current_role]} to {icons[actual_role]} "
                 f"with {current_points} points"
             )
-            logging.info(message)
-            asyncio.run_coroutine_threadsafe(_send_discord_message_plain(updates_channel, message), loop)
+            logger.info(message)
+            asyncio.run_coroutine_threadsafe(
+                _send_discord_message_plain(updates_channel, message), loop
+            )
 
         time.sleep(random.randint(1, 5))
 
-    asyncio.run_coroutine_threadsafe(_send_discord_message_plain(
-            updates_channel, f'Finished daily ranks check'), loop)
+    asyncio.run_coroutine_threadsafe(
+        _send_discord_message_plain(updates_channel, f"Finished daily ranks check"),
+        loop,
+    )
 
 
 def _load_icons(guild: discord.Guild):

@@ -1,11 +1,13 @@
+import logging
 from typing import List, NotRequired, Tuple, TypedDict
 
 import requests
-from apscheduler.executors.base import logging
 
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANKS, get_rank_from_points
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
+
+logger = logging.getLogger(__name__)
 
 HISCORES_PLAYER_URL = (
     "https://secure.runescape.com/m=hiscore_oldschool/index_lite.json?player={player}"
@@ -112,7 +114,7 @@ def _get_skills_info(score_data) -> List[SkillScore]:
         skill = next((skill for skill in SKILLS if skill["name"] == skill_name), None)
 
         if skill is None:
-            logging.info(f"Skill name '{skill_name}' not found")
+            logger.info(f"Skill name '{skill_name}' not found")
             continue
 
         skill_level = int(skill_data["level"]) if int(skill_data["level"]) > 1 else 1
@@ -206,6 +208,6 @@ def _get_activities_info(
             bosses.append(data)
             continue
 
-        logging.debug(f"Activity '{activity_name}' not handled")
+        logger.debug(f"Activity '{activity_name}' not handled")
 
     return clues, raids, bosses

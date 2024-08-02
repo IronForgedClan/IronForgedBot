@@ -15,7 +15,7 @@ _test_file = "test.json"
 
 
 class TestDataLoader(unittest.TestCase):
-    @patch("logging.error")
+    @patch("ironforgedbot.storage.data.logger.error")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -27,7 +27,7 @@ class TestDataLoader(unittest.TestCase):
         mock_file.assert_called_once_with(_test_file, "r")
         mock_log.assert_called_once_with("Error decoding json")
 
-    @patch("logging.error")
+    @patch("ironforgedbot.storage.data.logger.error")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -41,7 +41,7 @@ class TestDataLoader(unittest.TestCase):
             f"{_test_file}: does not contain an array/list"
         )
 
-    @patch("logging.error")
+    @patch("ironforgedbot.storage.data.logger.error")
     @patch("builtins.open", new_callable=mock_open, read_data='["hitpoints"]')
     def test_load_json_data_fail_no_object(self, mock_file, mock_log):
         result = load_json_data(_test_file, TestSkill)
@@ -49,7 +49,7 @@ class TestDataLoader(unittest.TestCase):
         mock_file.assert_called_once_with(_test_file, "r")
         mock_log.assert_called_once_with(f"{_test_file}: does not contain object/dict")
 
-    @patch("logging.error")
+    @patch("ironforgedbot.storage.data.logger.error")
     @patch("builtins.open", new_callable=mock_open, read_data='[{"name": "hitpoints"}]')
     def test_load_json_data_fail_missing_key(self, mock_file, mock_log):
         result = load_json_data(_test_file, TestSkill)
