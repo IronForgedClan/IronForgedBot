@@ -12,12 +12,12 @@ logger = logging.getLogger(__name__)
 @decorator
 async def protected_command(func, role=None, *args, **kwargs):
     if role is None:
-        logger.error("No role specified")
+        logger.error(f"No role specified for /{func.__name__}")
         return
 
     interaction = args[0]
     if not isinstance(interaction, discord.Interaction):
-        logger.error("Expected top see interaction as a first argument")
+        logger.error(f"Expected to see interaction as a first argument for /{func.__name__}")
         return
 
     logger.info(
@@ -31,7 +31,7 @@ async def protected_command(func, role=None, *args, **kwargs):
         )
     except (ReferenceError, ValueError) as error:
         logger.info(
-                f"Member '{interaction.user.display_name}' tried using roster but does not have permission"
+                f"Member '{interaction.user.display_name}' tried using /{func.__name__} but does not have permission"
         )
         await send_error_response(interaction, str(error))
         return
