@@ -14,7 +14,7 @@ from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
 logger = logging.getLogger(__name__)
 
 
-def refresh_ranks(
+def job_refresh_ranks(
     guild: discord.Guild, updates_channel_name: str, loop: asyncio.BaseEventLoop
 ):
     updates_channel = can_start_task(guild, updates_channel_name)
