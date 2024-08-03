@@ -71,7 +71,7 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
         logger.error(f"Encountered error writing new members: {error}")
         raise
 
-        # Okay, now for all the users who have left.
+    # Okay, now for all the users who have left.
     leaving_members = []
     for existing_member in existing:
         if existing_member.id not in member_ids:
@@ -84,7 +84,7 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
         logger.error(f"Encountered error removing members: {error}")
         raise
 
-        # Update all users that have changed their RSN.
+    # Update all users that have changed their RSN.
     changed_members = []
     for member in members:
         for existing_member in existing:

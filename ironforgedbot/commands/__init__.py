@@ -21,7 +21,7 @@ async def protected_command(func, role=None, *args, **kwargs):
         return
 
     logger.info(
-            f"Handling '/{func.__name__} :{args}' on behalf of {interaction.user.display_name}"
+            f"Handling '/{func.__name__}: {args}' on behalf of {interaction.user.display_name}"
     )
 
     await interaction.response.defer()
