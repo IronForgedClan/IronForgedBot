@@ -18,7 +18,7 @@ async def add_ingots_bulk(
     interaction: discord.Interaction,
     players: str,
     ingots: int,
-    reason: Optional[str],
+    reason: Optional[str] = None,
 ):
     """Add ingots to a Runescape alias.
 
