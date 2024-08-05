@@ -16,7 +16,7 @@ async def update_ingots(
     interaction: discord.Interaction,
     player: str,
     ingots: int,
-    reason: Optional[str],
+    reason: Optional[str] = None,
 ):
     """Set ingots for a Runescape alias.
 
