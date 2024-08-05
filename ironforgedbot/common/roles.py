@@ -17,6 +17,9 @@ class ROLES(StrEnum):
 def extract_roles(member: discord.Member) -> list[str]:
     roles = []
     for role in member.roles:
+        if role.name is None:
+            continue
+
         normalized_role = normalize_discord_string(role.name)
         if "" == normalized_role:
             continue
