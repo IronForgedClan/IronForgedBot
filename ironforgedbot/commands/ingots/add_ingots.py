@@ -16,7 +16,7 @@ async def add_ingots(
     interaction: discord.Interaction,
     player: str,
     ingots: int,
-    reason: Optional[str],
+    reason: Optional[str] = None,
 ):
     """Add ingots to a Runescape alias.
 
@@ -67,5 +67,5 @@ async def add_ingots(
 
     ingot_icon = find_emoji(interaction, "Ingot")
     await interaction.followup.send(
-        f"\nAdded `{ingots:,}` ingots to `{player}`; reason: {reason}. They now have {member.ingots:,} ingots {ingot_icon}"
+        f"\nAdded `{ingots:,}` ingots to `{player}`; reason: {reason}. They now have {member.ingots:,} ingots {ingot_icon}."
     )
