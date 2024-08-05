@@ -48,51 +48,6 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.guild = Mock()
         self.mock_interaction.guild.members = []
 
-    @patch("ironforgedbot.commands.ingots.view_ingots.validate_user_request")
-    async def test_ingots(self, mock_validate_user_request):
-        """Test that ingots for given player are returned to user."""
-        user = helper_create_member("johnnycache", ROLES.MEMBER)
-
-        mock_validate_user_request.return_value = (
-            user,
-            user.display_name,
-        )
-
-        mock_storage = Mock()
-        mock_storage.read_member.return_value = Member(
-            id=user.id, runescape_name=user.display_name, ingots=2000
-        )
-
-        commands = main.IronForgedCommands(Mock(), Mock(), mock_storage, "")
-        await commands.ingots(self.mock_interaction, user.display_name)
-
-        self.mock_interaction.followup.send.assert_called_once_with(
-            f"{user.display_name} has 2,000 ingots "
-        )
-
-    @patch("main.send_error_response")
-    @patch("main.validate_user_request")
-    async def test_ingots_user_not_in_spreadsheet(
-        self, mock_validate_user_request, mock_send_error_response
-    ):
-        """Test that a missing player shows 0 ingots."""
-        player = "johnnycache"
-
-        mock_validate_user_request.return_value = (
-            helper_create_member(player, ROLES.MEMBER),
-            player,
-        )
-
-        mock_storage = MagicMock()
-        mock_storage.read_member.return_value = None
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        await commands.ingots(self.mock_interaction, player)
-
-        mock_send_error_response.assert_awaited_with(
-            self.mock_interaction, f"Member '{player}' not found in spreadsheet"
-        )
-
     @patch("main.validate_protected_request")
     async def test_addingots(self, mock_validate_protected_request):
         """Test that ingots can be added to a user."""

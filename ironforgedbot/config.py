@@ -29,10 +29,9 @@ class Config:
                 raise ValueError(f"Configuration key '{key}' is missing or empty")
 
 
-if "unittest" not in sys.modules:
-    try:
-        CONFIG = Config()
-        logger.info("Loaded local configuration successfully")
-    except ValueError as e:
-        logger.critical(e)
-        sys.exit(1)
+try:
+    CONFIG = Config()
+    logger.info("Loaded local configuration successfully")
+except ValueError as e:
+    logger.critical(e)
+    sys.exit(1)
