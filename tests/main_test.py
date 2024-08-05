@@ -49,66 +49,6 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.guild.members = []
 
     @patch("main.send_error_response")
-    def test_raffletickets_no_nickname_set(self, mock_send_error_response):
-        guild = AsyncMock(discord.Guild)
-        caller = helper_create_member("", ROLES.MEMBER)
-        guild.members = [caller]
-
-        self.mock_interaction.user = caller
-        self.mock_interaction.guild = guild
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
-        self.loop.run_until_complete(commands.raffletickets(self.mock_interaction))
-
-        mock_send_error_response.assert_awaited_with(
-            self.mock_interaction, "RSN can only be 1-12 characters long"
-        )
-
-    @patch("main.send_error_response")
-    @patch("main.validate_user_request")
-    def test_raffletickets_user_not_found(
-        self, mock_validate_user_request, mock_send_error_response
-    ):
-        player = "johnnycache"
-
-        mock_validate_user_request.return_value = (
-            helper_create_member(player, ROLES.MEMBER),
-            player,
-        )
-
-        mock_storage = MagicMock()
-        mock_storage.read_member.return_value = None
-        mock_storage.read_raffle_tickets.return_value = {12345: 25}
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(commands.raffletickets(self.mock_interaction))
-
-        mock_send_error_response.assert_awaited_with(
-            self.mock_interaction,
-            f"{player} not found in storage, please reach out to leadership.",
-        )
-
-    @patch("main.validate_user_request")
-    def test_raffletickets(self, mock_validate_user_request):
-        player = "johnnycache"
-
-        mock_validate_user_request.return_value = (
-            helper_create_member(player, ROLES.MEMBER),
-            player,
-        )
-
-        mock_storage = MagicMock()
-        mock_storage.read_member.return_value = Member(id=12345, runescape_name=player)
-        mock_storage.read_raffle_tickets.return_value = {12345: 25}
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(commands.raffletickets(self.mock_interaction))
-
-        self.mock_interaction.followup.send.assert_called_once_with(
-            "johnnycache has 25 tickets!"
-        )
-
-    @patch("main.send_error_response")
     def test_buyraffletickets_missing_nickname(self, mock_send_error_response):
         guild = AsyncMock(discord.Guild)
         caller = helper_create_member("", ROLES.MEMBER)
