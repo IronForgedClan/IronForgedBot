@@ -162,6 +162,9 @@ async def _get_signups(msg: discord.Message, members: List[Member]) -> Signups:
     users = []
 
     for reaction in msg.reactions:
+        if not isinstance(reaction.emoji, discord.Emoji) and not isinstance(reaction.emoji, discord.PartialEmoji):
+            continue
+
         if reaction.emoji.name == "DWH":
             users = [user async for user in reaction.users()]
             break

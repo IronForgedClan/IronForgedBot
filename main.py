@@ -16,7 +16,7 @@ from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.commands.hiscore.constants import (
     EMPTY_SPACE,
 )
-from ironforgedbot.commands.log.log_access import log_access
+from ironforgedbot.commands.log.log_access import cmd_log_access
 from ironforgedbot.commands.roster.roster import cmd_roster
 from ironforgedbot.commands.syncmembers.syncmembers import cmd_sync_members
 from ironforgedbot.common.helpers import (
@@ -332,15 +332,8 @@ class IronForgedCommands:
         )
         self._tree.add_command(log_command)
 
-    async def log_access(
-        self, interaction: discord.Interaction, file_index: Optional[int]
-    ):
-        try:
-            await log_access(interaction, file_index)
-        except Exception as e:
-            await interaction.response.defer()
-            logger.error(e)
-            await send_error_response(interaction, "Logs command encountered an error")
+    async def log_access(self, interaction: discord.Interaction, file_index: Optional[int]):
+        await cmd_log_access(interaction, file_index)
 
     async def roster(self, interaction: discord.Interaction, message_url: str):
         await cmd_roster(interaction, message_url, self._discord_client.discord_guild, self._storage_client)
