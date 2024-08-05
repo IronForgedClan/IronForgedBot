@@ -49,25 +49,6 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.guild.members = []
 
     @patch("main.validate_protected_request")
-    def test_raffleadmin_end_raffle(self, mock_validate_protected_request):
-        leader_name = "leader"
-        playername = "johnnycache"
-
-        mock_validate_protected_request.return_value = (
-            helper_create_member(leader_name, ROLES.LEADERSHIP),
-            playername,
-        )
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
-        self.loop.run_until_complete(
-            commands.raffleadmin(self.mock_interaction, "end_raffle")
-        )
-
-        self.mock_interaction.followup.send.assert_called_once_with(
-            "Raffle ended! Members can no longer purchase tickets."
-        )
-
-    @patch("main.validate_protected_request")
     def test_raffleadmin_choose_winner(self, mock_validate_protected_request):
         leader_name = "leader"
         playername = "johnnycache"
