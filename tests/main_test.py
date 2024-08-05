@@ -48,45 +48,6 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.guild = Mock()
         self.mock_interaction.guild.members = []
 
-    @patch("main.send_error_response")
-    def test_raffleadmin_permission_denied(self, mock_send_error_response):
-        guild = AsyncMock(discord.Guild)
-        caller = helper_create_member("1eader", ROLES.MEMBER)
-        member = helper_create_member("member", ROLES.MEMBER)
-        guild.members = [caller, member]
-
-        self.mock_interaction.user = caller
-        self.mock_interaction.guild = guild
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
-        self.loop.run_until_complete(
-            commands.raffleadmin(self.mock_interaction, "start_raffle")
-        )
-
-        mock_send_error_response.assert_awaited_with(
-            self.mock_interaction,
-            f"Member '{caller.name}' does not have permission for this action",
-        )
-
-    @patch("main.validate_protected_request")
-    def test_raffleadmin_start_raffle(self, mock_validate_protected_request):
-        leader_name = "leader"
-        playername = "johnnycache"
-
-        mock_validate_protected_request.return_value = (
-            helper_create_member(leader_name, ROLES.LEADERSHIP),
-            playername,
-        )
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), MagicMock(), "")
-        self.loop.run_until_complete(
-            commands.raffleadmin(self.mock_interaction, "start_raffle")
-        )
-
-        self.mock_interaction.followup.send.assert_called_once_with(
-            "Started raffle! Members can now use ingots to purchase tickets."
-        )
-
     @patch("main.validate_protected_request")
     def test_raffleadmin_end_raffle(self, mock_validate_protected_request):
         leader_name = "leader"

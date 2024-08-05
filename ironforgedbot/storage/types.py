@@ -6,16 +6,21 @@ from typing import Dict, List, Optional
 class StorageError(Exception):
     """Base exception raised for storage operations."""
 
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
 
 @dataclass
 class Member:
     """A stored Discord member."""
+
     id: int
     runescape_name: str
     ingots: int = 0
 
     def __str__(self):
-        return f'Member: (ID: {self.id}, RSN: {self.runescape_name}, Ingots: {self.ingots})'
+        return f"Member: (ID: {self.id}, RSN: {self.runescape_name}, Ingots: {self.ingots})"
 
 
 class IngotsStorage(type):
@@ -40,7 +45,7 @@ class IngotsStorage(type):
     raffle functions from the interface. However, with sheets as the
     primary storage system, that interface is clunky enough that it is
     more difficult to update individual columns.
-"""
+    """
 
     @abstractmethod
     def read_member(self, player: str) -> Optional[Member]:
@@ -51,15 +56,21 @@ class IngotsStorage(type):
         """Read members from storage."""
 
     @abstractmethod
-    def add_members(self, members: List[Member], attribution: str, note: str = '') -> None:
+    def add_members(
+        self, members: List[Member], attribution: str, note: str = ""
+    ) -> None:
         """Adds new members to storage."""
 
     @abstractmethod
-    def update_members(self, members: List[Member], attribution: str, note: str = '') -> None:
+    def update_members(
+        self, members: List[Member], attribution: str, note: str = ""
+    ) -> None:
         """Updates metadata for the provided members."""
 
     @abstractmethod
-    def remove_members(self, members: List[Member], attribution: str, note: str = '') -> None:
+    def remove_members(
+        self, members: List[Member], attribution: str, note: str = ""
+    ) -> None:
         """Removes provided members from storage. Requires Member.id."""
 
     @abstractmethod
