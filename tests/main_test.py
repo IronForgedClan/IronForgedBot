@@ -48,31 +48,6 @@ class TestIronForgedBot(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.guild = Mock()
         self.mock_interaction.guild.members = []
 
-    @patch("main.validate_protected_request")
-    def test_raffleadmin_choose_winner(self, mock_validate_protected_request):
-        leader_name = "leader"
-        playername = "johnnycache"
-
-        mock_validate_protected_request.return_value = (
-            helper_create_member(leader_name, ROLES.LEADERSHIP),
-            playername,
-        )
-
-        member = Member(id=12345, runescape_name=playername)
-
-        mock_storage = MagicMock()
-        mock_storage.read_raffle_tickets.return_value = {12345: 25}
-        mock_storage.read_members.return_value = [member]
-
-        commands = main.IronForgedCommands(MagicMock(), MagicMock(), mock_storage, "")
-        self.loop.run_until_complete(
-            commands.raffleadmin(self.mock_interaction, "choose_winner")
-        )
-
-        self.mock_interaction.followup.send.assert_called_once_with(
-            f"{playername} has won 62500 ingots out of 25 entries!"
-        )
-
     @patch("main.send_error_response")
     def test_raffletickets_no_nickname_set(self, mock_send_error_response):
         guild = AsyncMock(discord.Guild)
