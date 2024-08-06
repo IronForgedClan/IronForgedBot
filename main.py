@@ -15,34 +15,55 @@ from ironforgedbot.storage.sheets import STORAGE
 logger = logging.getLogger(__name__)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="A discord bot for Iron Forged.")
+def init_bot():
+    if CONFIG and STORAGE and BOSSES and CLUES and RAIDS and SKILLS:
+        logger.info("Requirements loaded")
+
+    create_temp_dir(CONFIG.TEMP_DIR)
+
+    args = parse_cli_arguments()
+    intents = create_discord_intents()
+    client = create_client(intents, args.upload, CONFIG.GUILD_ID)
+
+    client.run(CONFIG.BOT_TOKEN)
+
+
+def parse_cli_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="A discord bot for the Iron Forged Old School RuneScape clan."
+    )
     parser.add_argument(
-        "--upload_commands",
+        "--upload",
         action="store_true",
         help="Uploads commands to discord server.",
     )
-    args = parser.parse_args()
 
-    # Preload hard requirements
-    if CONFIG and STORAGE and BOSSES and CLUES and RAIDS and SKILLS:
-        pass
+    return parser.parse_args()
 
+
+def create_temp_dir(path: str) -> None:
     try:
-        os.makedirs(CONFIG.TEMP_DIR, exist_ok=True)
-    except PermissionError:
-        logging.critical(f"Unable to create temp directory: {CONFIG.TEMP_DIR}")
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        logging.critical(f"Unable to create temp directory: {path}")
         sys.exit(1)
 
-    # TODO: We lock the bot down with oauth perms; can we shrink intents to match?
+
+def create_discord_intents() -> discord.Intents:
     intents = discord.Intents.default()
     intents.members = True
 
-    guild = discord.Object(id=CONFIG.GUILD_ID)
+    return intents
+
+
+def create_client(
+    intents: discord.Intents, upload: bool, guild_id: int
+) -> discord.Client:
+    guild = discord.Object(id=guild_id)
 
     client = DiscordClient(
         intents=intents,
-        upload=args.upload_commands,
+        upload=upload,
         guild=guild,
     )
     tree = discord.app_commands.CommandTree(client)
@@ -50,4 +71,8 @@ if __name__ == "__main__":
     IronForgedCommands(tree, client)
     client.tree = tree
 
-    client.run(CONFIG.BOT_TOKEN)
+    return client
+
+
+if __name__ == "__main__":
+    init_bot()
