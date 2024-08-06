@@ -65,11 +65,12 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
             )
             output.append(f"added user {normalize_discord_string(member.nick).lower()} because they joined")
 
-    try:
-        storage.add_members(new_members, "User Joined Server")
-    except StorageError as error:
-        logger.error(f"Encountered error writing new members: {error}")
-        raise
+    if len(new_members) > 0:
+        try:
+            storage.add_members(new_members, "User Joined Server")
+        except StorageError as error:
+            logger.error(f"Encountered error writing new members: {error}")
+            raise
 
     # Okay, now for all the users who have left.
     leaving_members = []
@@ -78,11 +79,12 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
             leaving_members.append(existing_member)
             output.append(f"removed user {existing_member.runescape_name} because they left the server")
 
-    try:
-        storage.remove_members(leaving_members, "User Left Server")
-    except StorageError as error:
-        logger.error(f"Encountered error removing members: {error}")
-        raise
+    if len(leaving_members) > 0:
+        try:
+            storage.remove_members(leaving_members, "User Left Server")
+        except StorageError as error:
+            logger.error(f"Encountered error removing members: {error}")
+            raise
 
     # Update all users that have changed their RSN.
     changed_members = []
@@ -111,13 +113,14 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
                                 )
                         )
 
-    for changed_member in changed_members:
-        output.append(f"updated RSN for {changed_member.runescape_name}")
+    if len(changed_members) > 0:
+        for changed_member in changed_members:
+            output.append(f"updated RSN for {changed_member.runescape_name}")
 
-    try:
-        storage.update_members(changed_members, "Name Change")
-    except StorageError as error:
-        logger.error(f"Encountered error updating changed members: {error}")
-        raise
+        try:
+            storage.update_members(changed_members, "Name Change")
+        except StorageError as error:
+            logger.error(f"Encountered error updating changed members: {error}")
+            raise
 
     return output
