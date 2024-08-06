@@ -1,14 +1,20 @@
 import random
+from typing import List, Optional
 from unittest.mock import AsyncMock, MagicMock
 import discord
 from ironforgedbot.common.roles import ROLES
 
 
-def create_mock_discord_interaction() -> discord.Interaction:
+def create_mock_discord_interaction(
+    members: Optional[List[discord.User]] = None,
+) -> discord.Interaction:
+    if not members:
+        members = []
+
     interaction = MagicMock(spec=discord.Interaction)
     interaction.followup = AsyncMock()
     interaction.response = AsyncMock()
-    interaction.guild.members = []
+    interaction.guild.members = members
 
     return interaction
 
