@@ -19,7 +19,7 @@ async def raffle_admin(interaction: discord.Interaction, subcommand: str):
     """Parent command for doing admin actions around raffles.
 
     Args:
-        subcommand: string of admin action to perform. Valid actions: [start_raffle, end_raffle, choose_winner].
+        subcommand: string of admin action to perform. Valid actions: [start, end, choose_winner].
             'start_raffle' will open purchasing of tickets, 'end_raffle' will close
             purchasing, and 'choose_winner' will choose a winner & display
             their winnings (alongside clearing storage for the next raffle).
@@ -41,9 +41,9 @@ async def raffle_admin(interaction: discord.Interaction, subcommand: str):
         f"Handling '/raffleadmin {subcommand}' on behalf of "
         f"{normalize_discord_string(interaction.user.display_name).lower()}"
     )
-    if subcommand.lower() == "start_raffle":
+    if subcommand.lower() == "start":
         await sub_raffle_start(interaction)
-    elif subcommand.lower() == "end_raffle":
+    elif subcommand.lower() == "end":
         await sub_raffle_end(interaction)
     elif subcommand.lower() == "choose_winner":
         await sub_raffle_select_winner(interaction)
