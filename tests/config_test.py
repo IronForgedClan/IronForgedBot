@@ -21,10 +21,9 @@ INVALID_INT_CONIG = copy.copy(VALID_CONFIG)
 INVALID_INT_CONIG["GUILD_ID"] = ""
 
 
-@patch("dotenv.load_dotenv")
 class TestConfig(unittest.TestCase):
     @patch.dict("os.environ", VALID_CONFIG)
-    def test_valid_config(self, _):
+    def test_valid_config(self):
         try:
             result = Config()
         except Exception as e:
@@ -42,7 +41,7 @@ class TestConfig(unittest.TestCase):
         )
 
     @patch.dict("os.environ", INVALID_STR_CONIG)
-    def test_raise_exception_bad_string(self, _):
+    def test_raise_exception_bad_string(self):
         with self.assertRaises(ValueError) as cm:
             Config()
 
@@ -51,7 +50,7 @@ class TestConfig(unittest.TestCase):
         )
 
     @patch.dict("os.environ", INVALID_INT_CONIG)
-    def test_raise_exception_bad_int(self, _):
+    def test_raise_exception_bad_int(self):
         with self.assertRaises(ValueError) as cm:
             Config()
 
