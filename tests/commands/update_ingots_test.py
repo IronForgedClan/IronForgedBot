@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.ingots.update_ingots import update_ingots
+from ironforgedbot.commands.ingots.update_ingots import cmd_update_ingots
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
@@ -30,7 +30,7 @@ class TestUpdateIngots(unittest.IsolatedAsyncioTestCase):
             id=player_id, runescape_name=playername, ingots=10000
         )
 
-        await update_ingots(interaction, playername, 4000)
+        await cmd_update_ingots(interaction, playername, 4000)
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=player_id, runescape_name=playername, ingots=4000)],
@@ -59,6 +59,6 @@ class TestUpdateIngots(unittest.IsolatedAsyncioTestCase):
         )
         mock_storage.read_member.return_value = None
 
-        await update_ingots(interaction, playername, 400)
+        await cmd_update_ingots(interaction, playername, 400)
 
         interaction.followup.send.assert_called_once_with(f"{playername} wasn't found.")

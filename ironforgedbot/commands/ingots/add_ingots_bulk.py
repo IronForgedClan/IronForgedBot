@@ -4,17 +4,19 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.common.helpers import validate_playername, validate_protected_request
+from ironforgedbot.common.helpers import normalize_discord_string, validate_playername
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.config import CONFIG
+from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
-async def add_ingots_bulk(
+@require_role(ROLES.LEADERSHIP)
+async def cmd_add_ingots_bulk(
     interaction: discord.Interaction,
     players: str,
     ingots: int,
@@ -32,28 +34,21 @@ async def add_ingots_bulk(
     if not reason:
         reason = "None"
 
-    try:
-        _, caller = validate_protected_request(
-            interaction, interaction.user.display_name, ROLES.LEADERSHIP
-        )
-    except (ReferenceError, ValueError) as error:
-        logger.info(
-            f"Member '{interaction.user.display_name}' tried addingingots does not have permission"
-        )
-        await send_error_response(interaction, str(error))
-        return
+    caller = normalize_discord_string(interaction.user.display_name)
 
     logger.info(
-        f"Handling '/addingotsbulk players:{players} ingots:{ingots} reason:{reason}' on behalf of {caller}"
+        f"Handling '/add_ingots_bulk players:{players} ingots:{ingots} reason:{reason}' on behalf of '{caller}'"
     )
 
     player_names = players.split(",")
-    player_names = [player.strip() for player in player_names]
+    sanitized_player_names = []
+
     for player in player_names:
         try:
-            validate_playername(player)
-        except ValueError as error:
-            await send_error_response(interaction, str(error))
+            _, name = validate_playername(interaction.guild, player.strip())
+            sanitized_player_names.append(name)
+        except ValueError as e:
+            await send_error_response(interaction, str(e))
 
     try:
         members = STORAGE.read_members()
@@ -65,10 +60,10 @@ async def add_ingots_bulk(
 
     output = []
     members_to_update = []
-    for player in player_names:
+    for player in sanitized_player_names:
         found = False
         for member in members:
-            if member.runescape_name == player.lower():
+            if member.runescape_name.lower() == player.lower():
                 found = True
                 member.ingots += ingots
                 members_to_update.append(member)

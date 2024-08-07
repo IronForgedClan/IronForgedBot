@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.sync_members import sync_members
+from ironforgedbot.commands.sync_members import cmd_sync_members
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import create_mock_discord_interaction, create_test_member
@@ -35,7 +35,7 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
             Member(id=13, runescape_name="member4", ingots=1000),
         ]
 
-        await sync_members(interaction)
+        await cmd_sync_members(interaction)
 
         mock_storage.add_members.assert_called_once_with(
             [Member(id=member3.id, runescape_name="member3", ingots=0)],

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.raffle.raffle_tickets import raffle_view_tickets
+from ironforgedbot.commands.raffle.raffle_tickets import cmd_raffle_tickets
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import create_mock_discord_interaction, create_test_member
@@ -23,7 +23,7 @@ class TestRaffleViewTickets(unittest.IsolatedAsyncioTestCase):
         mock_storage.read_member.return_value = member
         mock_storage.read_raffle_tickets.return_value = {member.id: 22}
 
-        await raffle_view_tickets(interaction)
+        await cmd_raffle_tickets(interaction)
 
         interaction.followup.send.assert_called_once_with("tester has 22 tickets!")
 
@@ -44,7 +44,7 @@ class TestRaffleViewTickets(unittest.IsolatedAsyncioTestCase):
         mock_storage.read_member.return_value = None
         mock_storage.read_raffle_tickets.return_value = {12345: 25}
 
-        await raffle_view_tickets(interaction)
+        await cmd_raffle_tickets(interaction)
 
         mock_send_error_response.assert_awaited_with(
             interaction,

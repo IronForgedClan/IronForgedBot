@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.raffle.raffle_buy_tickets import raffle_buy_tickets
+from ironforgedbot.commands.raffle.raffle_buy_tickets import cmd_buy_raffle_tickets
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import create_mock_discord_interaction, create_test_member
@@ -24,7 +24,7 @@ class TestRaffleBuyTickets(unittest.IsolatedAsyncioTestCase):
             id=12345, runescape_name=player, ingots=25000
         )
 
-        await raffle_buy_tickets(interaction, 1)
+        await cmd_buy_raffle_tickets(interaction, 1)
 
         interaction.followup.send.assert_called_once_with(
             f"{player} successfully bought 1 tickets for 5000 ingots!"
@@ -48,7 +48,7 @@ class TestRaffleBuyTickets(unittest.IsolatedAsyncioTestCase):
             id=12345, runescape_name=player, ingots=5000
         )
 
-        await raffle_buy_tickets(interaction, 5)
+        await cmd_buy_raffle_tickets(interaction, 5)
 
         interaction.followup.send.assert_called_once_with(
             f"""{player} does not have enough ingots for 5 tickets.

@@ -3,12 +3,10 @@ from typing import List
 
 import discord
 
-from ironforgedbot.commands import protected_command
 from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
-    validate_protected_request,
 )
 from ironforgedbot.common.ranks import RANKS
 from ironforgedbot.common.responses import send_error_response
@@ -19,6 +17,7 @@ from ironforgedbot.common.roles import (
     is_member,
     is_prospect,
 )
+from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import Member
 
@@ -75,23 +74,12 @@ class Signups(object):
         self.unknowns.append(normalize_discord_string(member.name))
 
 
-@protected_command(role=ROLES.LEADERSHIP)
+@require_role(ROLES.LEADERSHIP)
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,
 ):
     await interaction.response.defer()
-
-    try:
-        validate_protected_request(
-            interaction, interaction.user.display_name, ROLES.LEADERSHIP
-        )
-    except (ReferenceError, ValueError) as error:
-        logger.info(
-            f"Member '{interaction.user.display_name}' tried using roster but does not have permission"
-        )
-        await send_error_response(interaction, str(error))
-        return
 
     if not interaction.guild:
         await send_error_response(interaction, "Error accessing guild information")

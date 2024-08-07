@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.common.helpers import validate_user_request
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -10,17 +10,21 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-async def raffle_buy_tickets(interaction: discord.Interaction, tickets: int):
+async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int):
     """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
     await interaction.response.defer(thinking=True)
 
-    try:
-        _, caller = validate_user_request(interaction, interaction.user.display_name)
-    except (ReferenceError, ValueError) as error:
-        await send_error_response(interaction, str(error))
-        return
+    caller = normalize_discord_string(interaction.user.display_name)
+    logger.info(
+        f"Handling '/buy_raffle_tickets tickets:{tickets}' on behalf of {caller}"
+    )
 
-    logger.info(f"Handling '/buyraffletickets {tickets}' on behalf of {caller}")
+    if tickets <= 0:
+        await send_error_response(
+            interaction,
+            "`tickets` must be a positive number.",
+        )
+        return
 
     try:
         ongoing_raffle = STORAGE.read_raffle()
@@ -34,7 +38,7 @@ async def raffle_buy_tickets(interaction: discord.Interaction, tickets: int):
     if not ongoing_raffle:
         await send_error_response(
             interaction,
-            "FAILED_PRECONDITION: There is no ongoing raffle; tickets cannot be bought.",
+            "There is no ongoing raffle. Tickets cannot be bought.",
         )
         return
 

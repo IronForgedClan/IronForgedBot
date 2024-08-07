@@ -6,7 +6,7 @@ import discord
 from ironforgedbot.common.helpers import (
     find_emoji,
     normalize_discord_string,
-    validate_user_request,
+    validate_playername,
 )
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.storage.sheets import STORAGE
@@ -15,7 +15,7 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-async def view_ingots(interaction: discord.Interaction, player: Optional[str] = None):
+async def cmd_ingots(interaction: discord.Interaction, player: Optional[str] = None):
     """View your ingots, or those for another player.
 
     Arguments:
@@ -23,20 +23,18 @@ async def view_ingots(interaction: discord.Interaction, player: Optional[str] = 
         (optional) player: Runescape username to view ingot count for.
     """
     await interaction.response.defer(thinking=True)
-    logging.info(interaction.user.id)
 
     if player is None:
         player = interaction.user.display_name
 
     try:
-        _, player = validate_user_request(interaction, player)
-    except (ReferenceError, ValueError) as error:
-        await send_error_response(interaction, str(error))
-        return
+        member, player = validate_playername(interaction.guild, player)
+    except Exception as e:
+        return await send_error_response(interaction, str(e))
 
-    logger.info(
-        f"Handling '/ingots player:{player}' on behalf of {normalize_discord_string(interaction.user.display_name)}"
-    )
+    caller = normalize_discord_string(interaction.user.display_name)
+
+    logger.info(f"Handling '/ingots player:{player}' on behalf of '{caller}'")
 
     try:
         member = STORAGE.read_member(player)

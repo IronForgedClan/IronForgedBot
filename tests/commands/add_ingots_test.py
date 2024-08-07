@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.ingots.add_ingots import add_ingots
+from ironforgedbot.commands.ingots.add_ingots import cmd_add_ingots
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
@@ -30,7 +30,7 @@ class TestAddIngots(unittest.IsolatedAsyncioTestCase):
             id=player_id, runescape_name=playername, ingots=5000
         )
 
-        await add_ingots(interaction, playername, 5000)
+        await cmd_add_ingots(interaction, playername, 5000)
 
         mock_storage.update_members.assert_called_once_with(
             [Member(id=player_id, runescape_name=playername, ingots=10000)],
@@ -61,7 +61,7 @@ class TestAddIngots(unittest.IsolatedAsyncioTestCase):
 
         mock_storage.read_member.return_value = None
 
-        await add_ingots(interaction, playername, 5)
+        await cmd_add_ingots(interaction, playername, 5)
 
         mock_send_error_response.assert_awaited_with(
             interaction, f"Member '{playername}' not found in spreadsheet"

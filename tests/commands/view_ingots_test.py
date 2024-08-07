@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.ingots.view_ingots import view_ingots
+from ironforgedbot.commands.ingots.view_ingots import cmd_ingots
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
@@ -27,7 +27,7 @@ class TestViewIngots(unittest.IsolatedAsyncioTestCase):
             id=user.id, runescape_name=user.display_name, ingots=2000
         )
 
-        await view_ingots(interaction, user.display_name)
+        await cmd_ingots(interaction, user.display_name)
 
         interaction.followup.send.assert_called_once_with(
             f"{user.display_name} has 2,000 ingots "
@@ -50,7 +50,7 @@ class TestViewIngots(unittest.IsolatedAsyncioTestCase):
 
         mock_storage.read_member.return_value = None
 
-        await view_ingots(interaction, player)
+        await cmd_ingots(interaction, player)
 
         mock_send_error_response.assert_awaited_with(
             interaction, f"Member '{player}' not found in storage."

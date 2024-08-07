@@ -9,7 +9,7 @@ from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_emoji,
     normalize_discord_string,
-    validate_user_request,
+    validate_playername,
 )
 from ironforgedbot.common.ranks import (
     RANK_POINTS,
@@ -24,27 +24,26 @@ from ironforgedbot.common.responses import build_response_embed, send_error_resp
 logger = logging.getLogger(__name__)
 
 
-async def breakdown(interaction: discord.Interaction, player: Optional[str] = None):
+async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute player score with complete source enumeration.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
         (optional) player: Runescape username to break down clan score for.
     """
+    await interaction.response.defer(thinking=True)
 
     if player is None:
         player = interaction.user.display_name
 
     try:
-        member, player = validate_user_request(interaction, player)
-    except (ReferenceError, ValueError) as error:
-        await send_error_response(interaction, str(error))
-        return
+        member, player = validate_playername(interaction.guild, player)
+    except Exception as e:
+        return await send_error_response(interaction, str(e))
 
-    logger.info(
-        f"Handling '/breakdown player:{player}' on behalf of "
-        f"{normalize_discord_string(interaction.user.display_name)}"
-    )
+    caller = normalize_discord_string(interaction.user.display_name)
+
+    logger.info(f"Handling '/breakdown player:{player}' on behalf of '{caller}'")
 
     try:
         data = score_info(player)

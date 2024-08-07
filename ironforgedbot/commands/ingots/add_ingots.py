@@ -3,16 +3,22 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.common.helpers import find_emoji, validate_protected_request
+from ironforgedbot.common.helpers import (
+    find_emoji,
+    normalize_discord_string,
+    validate_playername,
+)
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
-async def add_ingots(
+@require_role(ROLES.LEADERSHIP)
+async def cmd_add_ingots(
     interaction: discord.Interaction,
     player: str,
     ingots: int,
@@ -31,18 +37,13 @@ async def add_ingots(
         reason = "None"
 
     try:
-        caller, player = validate_protected_request(
-            interaction, player, ROLES.LEADERSHIP
-        )
-    except (ReferenceError, ValueError) as error:
-        logger.info(
-            f"Member '{interaction.user.display_name}' tried addingingots does not have permission"
-        )
-        await send_error_response(interaction, str(error))
-        return
+        _, player = validate_playername(interaction.guild, player)
+    except Exception as e:
+        return await send_error_response(interaction, str(e))
 
+    caller = normalize_discord_string(interaction.user.display_name)
     logger.info(
-        f"Handling '/addingots player:{player} ingots:{ingots} reason:{reason}' on behalf of {interaction.user.display_name}"
+        f"Handling '/add_ingots player:{player} ingots:{ingots} reason:{reason}' on behalf of '{caller}'"
     )
 
     try:
@@ -53,14 +54,14 @@ async def add_ingots(
 
     if member is None:
         await send_error_response(
-            interaction, f"Member '{player}' not found in spreadsheet"
+            interaction, f"Member '{player}' not found in storage."
         )
         return
 
     member.ingots += ingots
 
     try:
-        STORAGE.update_members([member], caller.display_name, note=reason)
+        STORAGE.update_members([member], interaction.user.display_name, note=reason)
     except StorageError as error:
         await send_error_response(interaction, f"Error updating ingots: {error}")
         return

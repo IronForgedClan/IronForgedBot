@@ -2,7 +2,7 @@ import asyncio
 import unittest
 from unittest.mock import mock_open, patch
 
-from ironforgedbot.commands.ingots.add_ingots_bulk import add_ingots_bulk
+from ironforgedbot.commands.ingots.add_ingots_bulk import cmd_add_ingots_bulk
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
@@ -40,7 +40,7 @@ class TestAddIngotsBulk(unittest.TestCase):
         loop = asyncio.new_event_loop()
 
         loop.run_until_complete(
-            add_ingots_bulk(interaction, f"{player1},{player2}", 5000)
+            cmd_add_ingots_bulk(interaction, f"{player1},{player2}", 5000)
         )
 
         mock_storage.update_members.assert_called_once_with(
@@ -78,7 +78,7 @@ class TestAddIngotsBulk(unittest.TestCase):
 
         loop = asyncio.new_event_loop()
         loop.run_until_complete(
-            add_ingots_bulk(interaction, "johnnycache, skagul tosti", 5000)
+            cmd_add_ingots_bulk(interaction, "johnnycache, skagul tosti", 5000)
         )
 
         mock_storage.update_members.assert_called_once_with(
@@ -113,7 +113,7 @@ skagul tosti not found in storage."""
 
         loop = asyncio.new_event_loop()
 
-        loop.run_until_complete(add_ingots_bulk(interaction, bad_name, 5))
+        loop.run_until_complete(cmd_add_ingots_bulk(interaction, bad_name, 5))
 
         mock_send_error_response.assert_awaited_with(
             interaction, "RSN can only be 1-12 characters long"
