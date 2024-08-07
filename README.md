@@ -190,6 +190,14 @@ An `Activity` file looks something like this:
 
 ## Contributing
 
-This codebase uses the [Black](https://github.com/psf/black) formatter. Extensions available for all major editors. This is enforced through a workflow that runs on all pull requests into main.
+All contributions must:
+
+- Pass all tests in the test suite.
+- Code style must conform to the black formatter.
+- If the contribution adds new functionality, tests covering this must also be added.
+
+### Formatting
+
+This codebase uses the [Black](https://github.com/psf/black) formatter. Extensions available for many [popular editors](https://black.readthedocs.io/en/stable/integrations/editors.html). This is enforced through a workflow that runs on all pull requests into main.
 
 >By using Black, you agree to cede control over minutiae of hand-formatting. In return, Black gives you speed, determinism, and freedom from pycodestyle nagging about formatting. You will save time and mental energy for more important matters.
