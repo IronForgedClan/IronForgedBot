@@ -3,6 +3,7 @@ from typing import List
 
 import discord
 
+from ironforgedbot.commands import protected_command
 from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
@@ -19,7 +20,7 @@ from ironforgedbot.common.roles import (
     is_prospect,
 )
 from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import IngotsStorage, Member
+from ironforgedbot.storage.types import Member
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ class Signups(object):
         self.unknowns.append(normalize_discord_string(member.name))
 
 
+@protected_command(role=ROLES.LEADERSHIP)
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,
@@ -186,6 +188,11 @@ async def _get_signups(msg: discord.Message, members: List[Member]) -> Signups:
     users = []
 
     for reaction in msg.reactions:
+        if not isinstance(reaction.emoji, discord.Emoji) and not isinstance(
+            reaction.emoji, discord.PartialEmoji
+        ):
+            continue
+
         if reaction.emoji.name == "DWH":
             users = [user async for user in reaction.users()]
             break

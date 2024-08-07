@@ -21,7 +21,7 @@ DEFAULT_WOM_LIMIT = 50
 MONTHLY_EXP_THRESHOLD = 100_000
 
 
-def check_activity_reminder(
+def job_check_activity_reminder(
     guild: discord.Guild,
     updates_channel_name: str,
     loop: asyncio.BaseEventLoop,
@@ -57,7 +57,7 @@ def check_activity_reminder(
         )
 
 
-def check_activity(
+def job_check_activity(
     guild: discord.Guild,
     updates_channel_name: str,
     loop: asyncio.BaseEventLoop,
