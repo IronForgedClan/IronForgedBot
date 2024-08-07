@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 ### Secrets
 
-Secrets are written as key value pairs in the `./.env` file. This file in untracked and should never be checked in to source control.
+Secrets are written as key value pairs in the `.env` file.
 
 To create a `./.env` file from the example file run:
 
@@ -68,6 +68,9 @@ mv .env.example .env
 ```
 
 Now you can modify the `./.env` file with your values.
+
+> [!WARNING]
+> Never check your `.env` file into source control!
 
 #### Keys
 
