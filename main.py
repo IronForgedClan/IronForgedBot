@@ -35,6 +35,7 @@ def parse_cli_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--upload",
         action="store_true",
+        default=False,
         help="Uploads commands to discord server.",
     )
 
