@@ -7,7 +7,7 @@ import sys
 import discord
 
 from ironforgedbot.client import DiscordClient
-from ironforgedbot.command_tree import IronForgedCommands
+from ironforgedbot.command_tree import IronForgedCommandTree, IronForgedCommands
 from ironforgedbot.config import CONFIG
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import STORAGE
@@ -66,7 +66,7 @@ def create_client(
         upload=upload,
         guild=guild,
     )
-    tree = discord.app_commands.CommandTree(client)
+    tree = IronForgedCommandTree(client)
 
     IronForgedCommands(tree, client)
     client.tree = tree

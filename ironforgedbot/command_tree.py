@@ -19,10 +19,34 @@ from ironforgedbot.commands.sync_members import sync_members
 logger = logging.getLogger(__name__)
 
 
+class IronForgedCommandTree(discord.app_commands.CommandTree):
+    async def on_error(
+        self,
+        interaction: discord.Interaction,
+        error: discord.app_commands.AppCommandError,
+    ):
+        if isinstance(error, discord.app_commands.CheckFailure):
+            logger.warning(error)
+
+            await interaction.response.defer(thinking=True, ephemeral=True)
+            return await send_error_response(
+                interaction,
+                "You do not have permission to run that command.",
+            )
+
+        logger.critical(error)
+
+        await interaction.response.defer(thinking=True)
+        return await send_error_response(
+            interaction,
+            "An unhandled error has occured. Please alert a member of the Discord Team.",
+        )
+
+
 class IronForgedCommands:
     def __init__(
         self,
-        tree: discord.app_commands.CommandTree,
+        tree: IronForgedCommandTree,
         discord_client: DiscordClient,
     ):
         self._tree = tree
