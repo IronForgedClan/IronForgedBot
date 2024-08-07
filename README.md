@@ -26,7 +26,7 @@
 
 ## Setup
 
-This setup guide does not go over installing Python, setup of the application within Discord developer portal, or Google Sheets creation; and assumes use of a Linux terminal.
+This setup guide does not go over installing Python, setup of an application within Discord developer portal, or Google Sheets creation; and assumes use of a Linux terminal.
 
 Tested on Arch Linux with Python 3.12.4.
 
@@ -40,7 +40,7 @@ To create a virtual environment for this project, navigate to the project root a
 python -m venv .venv
 ```
 
-This will create a directory `./.venv`. To activate the environment, run:
+This will create a directory `.venv`. To activate the environment, run:
 
 ``` sh
 source .venv/bin/activate
@@ -51,7 +51,7 @@ source .venv/bin/activate
 
 ### Requirements
 
-The project requirements are listed in `./requirements.txt` file. To install run:
+The project requirements are listed in `requirements.txt` file. To install, run:
 
 ``` sh
 pip install -r requirements.txt
@@ -61,13 +61,13 @@ pip install -r requirements.txt
 
 Secrets are written as key value pairs in the `.env` file.
 
-To create a `./.env` file from the example file run:
+To create a `.env` file from the example file run:
 
 ``` sh
-mv .env.example .env
+cp .env.example .env
 ```
 
-Now you can modify the `./.env` file with your values.
+Now you can modify the example `.env` file with your values.
 
 > [!WARNING]
 > Never check your `.env` file into source control!
@@ -101,13 +101,13 @@ python main.py --upload
 
 ## Logs
 
-The default log level of the application is `INFO`. This can be changed in `./ironforgedbot/logging_config.py`.
+The default log level of the application is `INFO`. This can be changed in `ironforgedbot/logging_config.py`.
 
-Logs will output to the console, as well as to rotating files inside the `./logs` directory.
+Logs will output to the console, as well as to rotating files inside the `logs` directory.
 
 ## Testing
 
-All test files live within the `./tests` directory. The structure within this directory mirrors `./ironforgedbot`.
+All test files live within the `tests` directory. The structure within this directory mirrors `ironforgedbot`.
 
 To execute the entire test suite run:
 
@@ -138,10 +138,10 @@ to enable it. You might need to wait for a few minutes for chances to kick in.
 
 Upon startup, the bot will attempt to read four files inside the `./data` directory. These files are:
 
-- `./data/skills.json`
-- `./data/bosses.json`
-- `./data/clues.json`
-- `./data/raids.json`
+- `data/skills.json`
+- `data/bosses.json`
+- `data/clues.json`
+- `data/raids.json`
 
 These files contain information on how the bot will award points, control output order, and set emojis. They are in `json` format so as to be human readable, and easy to modify for someone non-technical. Once a file has been changed, the bot will need to be restarted to load the new values. No code changes necessary.
 
