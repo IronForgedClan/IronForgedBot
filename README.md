@@ -1,4 +1,4 @@
-<h1 align="center">Iron Forged Discord Bot</h1>
+<h1 align="center">Iron Forged Bot</h1>
 <p align="center">
 <img alt="Test Status" src="https://github.com/IronForgedClan/IronForgedBot/actions/workflows/integration.yml/badge.svg">
 <a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
@@ -9,7 +9,7 @@
 
 ## Commands
 
-| Slash Command         | Parameters                                                                                 | Permissions  | Information                                            |
+| Command               | Parameters                                                                                 | Permission   | Information                                            |
 |-----------------------|--------------------------------------------------------------------------------------------|--------------|--------------------------------------------------------|
 | `/score`              | Player (str) _Optional_                                                                    | Member       | Returns the score for the player                       |
 | `/breakdown`          | Player (str) _Optional_                                                                    | Member       | Returns an interactive breakdown of the player's score |
@@ -47,7 +47,7 @@ source .venv/bin/activate
 ```
 
 > [!NOTE]
-> You will need to do this every time you want to install a package, run the tests, or start the bot.
+> You will need to activate the virtual environment every time you start a new shell instance.
 
 ### Requirements
 
