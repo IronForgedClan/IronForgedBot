@@ -7,8 +7,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from ironforgedbot.config import CONFIG
 from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.tasks.activity import check_activity, check_activity_reminder
-from ironforgedbot.tasks.ranks import refresh_ranks
+from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
+from ironforgedbot.tasks.ranks import job_refresh_ranks
+from ironforgedbot.tasks.sync import job_sync_members
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ class DiscordClient(discord.Client):
         # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
         # from datetime import datetime
         scheduler.add_job(
-            refresh_ranks,
+            job_refresh_ranks,
             "cron",
             args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
             hour=2,
@@ -94,7 +95,7 @@ class DiscordClient(discord.Client):
         )
 
         scheduler.add_job(
-            check_activity_reminder,
+            job_check_activity_reminder,
             "cron",
             args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, STORAGE],
             day_of_week="mon",
@@ -105,7 +106,7 @@ class DiscordClient(discord.Client):
         )
 
         scheduler.add_job(
-            check_activity,
+            job_check_activity,
             "cron",
             args=[
                 self.discord_guild,
@@ -121,6 +122,17 @@ class DiscordClient(discord.Client):
             second=0,
             timezone="UTC",
         )
+
+        scheduler.add_job(
+            job_sync_members,
+            "cron",
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, STORAGE],
+            hour="*/3",
+            minute=50,
+            second=0,
+            timezone="UTC",
+        )
+
         scheduler.start()
 
         logger.debug("Background jobs ready")
