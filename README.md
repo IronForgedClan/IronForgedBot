@@ -1,8 +1,11 @@
-# Iron Forged Discord Bot
+<h1 align="center">Iron Forged Discord Bot</h1>
+<p align="center">
+<img alt="Test Status" src="https://github.com/IronForgedClan/IronForgedBot/actions/workflows/integration.yml/badge.svg">
+<a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
+<a href="https://github.com/psf/black"><img alt="Code style: Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+</p>
 
-![Tests Status](https://github.com/IronForgedClan/IronForgedBot/actions/workflows/integration.yml/badge.svg) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-
-A Discord bot for managing the Iron Forged Old School RuneScape clan.
+<p align="center">A Discord bot for managing the Iron Forged Old School RuneScape clan.</p>
 
 ## Commands
 
