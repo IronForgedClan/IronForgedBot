@@ -81,9 +81,7 @@ async def cmd_roster(
 ):
     await interaction.response.defer()
 
-    if not interaction.guild:
-        await send_error_response(interaction, "Error accessing guild information")
-        return
+    assert interaction.guild
 
     try:
         body = await _calc_roster(url, interaction.guild)

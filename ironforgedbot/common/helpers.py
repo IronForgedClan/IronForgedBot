@@ -73,9 +73,7 @@ def find_emoji(interaction: discord.Interaction, target: str):
     if target in emojiCache:
         return emojiCache[target]
 
-    if interaction.guild is None:
-        logger.error(f"Requested emoji {target} but no guild found")
-        return ""
+    assert interaction.guild
 
     for emoji in interaction.guild.emojis:
         if emoji.available and emoji.name == target:

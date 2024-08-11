@@ -18,13 +18,12 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLES.LEADERSHIP)
 async def cmd_sync_members(interaction: discord.Interaction):
-    if not interaction.guild:
-        raise ValueError("Unable to access guild")
-
     await interaction.response.defer(thinking=True)
 
     caller = normalize_discord_string(interaction.user.display_name)
     logger.info(f"Handling '/sync_members' on behalf of '{caller}'")
+
+    assert interaction.guild
 
     try:
         lines = sync_members(interaction.guild)
