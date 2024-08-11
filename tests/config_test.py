@@ -5,7 +5,6 @@ from unittest.mock import patch
 from ironforgedbot.config import Config
 from tests.helpers import VALID_CONFIG
 
-
 INVALID_STR_CONIG = copy.copy(VALID_CONFIG)
 INVALID_STR_CONIG["SHEET_ID"] = ""
 

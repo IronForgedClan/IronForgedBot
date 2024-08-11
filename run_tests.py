@@ -2,34 +2,29 @@ import logging
 import os
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from tests.helpers import VALID_CONFIG
 
 
-def patch_env():
-    env_patcher = patch.dict(os.environ, VALID_CONFIG)
-    env_patcher.start()
-    return env_patcher
-
-
-def run_tests():
+@patch(
+    "google.oauth2.service_account.Credentials.from_service_account_file",
+    new_callable=MagicMock,
+)
+@patch.dict(os.environ, VALID_CONFIG)
+def run_tests(_):
     logging.disable(logging.CRITICAL)
-    patcher = patch_env()
 
-    try:
-        test_loader = unittest.TestLoader()
-        test_suite = test_loader.discover("tests", "*_test.py")
+    test_loader = unittest.TestLoader()
+    test_suite = test_loader.discover("tests", "*_test.py")
 
-        test_runner = unittest.TextTestRunner()
-        result = test_runner.run(test_suite)
+    test_runner = unittest.TextTestRunner()
+    result = test_runner.run(test_suite)
 
-        if result.wasSuccessful():
-            return 0
-        else:
-            return 1
-    finally:
-        patcher.stop()
+    if result.wasSuccessful():
+        return 0
+    else:
+        return 1
 
 
 if __name__ == "__main__":
