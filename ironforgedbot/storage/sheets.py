@@ -16,6 +16,15 @@ logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
+SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SHEET_RANGE = "ClanIngots!A2:B"
+SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:C"
+RAFFLE_RANGE = "ClanRaffle!A2"
+RAFFLE_TICKETS_RANGE = "ClanRaffleTickets!A2:B"
+CHANGELOG_RANGE = "ChangeLog!A2:F"
+ABSENCE_RANGE = "AbsenceNotice!A2:C"
+
+
 class SheetsStorage(metaclass=IngotsStorage):
     """A storage implementation backed by Sheets.
 
@@ -25,7 +34,9 @@ class SheetsStorage(metaclass=IngotsStorage):
             update reason, manual note.
     """
 
-    def __init__(self, sheets_client: Resource, sheet_id: str, clock: datetime = None):
+    def __init__(
+        self, sheets_client: Resource, sheet_id: str, clock: Optional[datetime] = None
+    ):
         """Init.
 
         Arguments:
@@ -33,12 +44,6 @@ class SheetsStorage(metaclass=IngotsStorage):
                 sheets API.
             sheet_id: ID of sheets to connect to.
         """
-        self.SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:C"
-        self.RAFFLE_RANGE = "ClanRaffle!A2"
-        self.RAFFLE_TICKETS_RANGE = "ClanRaffleTickets!A2:B"
-        self.CHANGELOG_RANGE = "ChangeLog!A2:F"
-        self.ABSENCE_RANGE = "AbsenceNotice!A2:C"
-
         self._sheets_client = sheets_client
         self._sheet_id = sheet_id
         self._clock = clock or datetime
@@ -47,7 +52,7 @@ class SheetsStorage(metaclass=IngotsStorage):
     def from_account_file(cls, account_filepath: str, sheet_id: str) -> "SheetsStorage":
         """Build sheets Resource from service account file."""
         creds = service_account.Credentials.from_service_account_file(
-            account_filepath, scopes=["https://www.googleapis.com/auth/spreadsheets"]
+            account_filepath, scopes=SHEETS_SCOPES
         )
         service = build("sheets", "v4", credentials=creds)
 
@@ -67,15 +72,15 @@ class SheetsStorage(metaclass=IngotsStorage):
 
     def read_members(self) -> List[Member]:
         """Read currently written members."""
-        # Then, get all current entries from sheets.
         result = {}
+
         try:
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
                 .get(
                     spreadsheetId=self._sheet_id,
-                    range=self.SHEET_RANGE_WITH_DISCORD_IDS,
+                    range=SHEET_RANGE_WITH_DISCORD_IDS,
                 )
                 .execute()
             )
@@ -265,7 +270,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=self.RAFFLE_RANGE)
+                .get(spreadsheetId=self._sheet_id, range=RAFFLE_RANGE)
                 .execute()
             )
         except HttpError as e:
@@ -297,7 +302,7 @@ class SheetsStorage(metaclass=IngotsStorage):
                 .values()
                 .update(
                     spreadsheetId=self._sheet_id,
-                    range=self.RAFFLE_RANGE,
+                    range=RAFFLE_RANGE,
                     valueInputOption="RAW",
                     body=body,
                 )
@@ -334,7 +339,7 @@ class SheetsStorage(metaclass=IngotsStorage):
                 .values()
                 .update(
                     spreadsheetId=self._sheet_id,
-                    range=self.RAFFLE_RANGE,
+                    range=RAFFLE_RANGE,
                     valueInputOption="RAW",
                     body=body,
                 )
@@ -361,7 +366,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=self.RAFFLE_TICKETS_RANGE)
+                .get(spreadsheetId=self._sheet_id, range=RAFFLE_TICKETS_RANGE)
                 .execute()
             )
         except HttpError as e:
@@ -493,7 +498,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=self.ABSENCE_RANGE)
+                .get(spreadsheetId=self._sheet_id, range=ABSENCE_RANGE)
                 .execute()
             )
         except HttpError as e:
@@ -527,7 +532,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             .values()
             .append(
                 spreadsheetId=self._sheet_id,
-                range=self.CHANGELOG_RANGE,
+                range=CHANGELOG_RANGE,
                 valueInputOption="RAW",
                 body=body,
             )
