@@ -3,9 +3,9 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.sync_members import _sync_members
+from ironforgedbot.commands.admin.cmd_sync_members import _sync_members
 from ironforgedbot.common.helpers import fit_log_lines_into_discord_messages
-from ironforgedbot.storage.types import IngotsStorage, StorageError
+from ironforgedbot.storage.types import StorageError
 from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,6 @@ def job_sync_members(
     guild: discord.Guild,
     updates_channel_name: str,
     loop: asyncio.BaseEventLoop,
-    storage: IngotsStorage,
 ):
     updates_channel = can_start_task(guild, updates_channel_name)
     if updates_channel is None:
@@ -25,7 +24,7 @@ def job_sync_members(
     lines = []
 
     try:
-        lines = _sync_members(guild, storage)
+        lines = _sync_members(guild)
     except StorageError as error:
         error_message = f"Encountered error syncing members: {error}"
         logger.error(error_message)

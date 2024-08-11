@@ -97,7 +97,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
             job_check_activity_reminder,
             "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, STORAGE],
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
             day_of_week="mon",
             hour=0,
             minute=0,
@@ -114,7 +114,6 @@ class DiscordClient(discord.Client):
                 loop,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
-                STORAGE,
             ],
             day_of_week="mon",
             hour=1,
@@ -126,7 +125,7 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
             job_sync_members,
             "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop, STORAGE],
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
             hour="*/3",
             minute=50,
             second=0,
