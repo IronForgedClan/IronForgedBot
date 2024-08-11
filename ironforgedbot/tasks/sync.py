@@ -3,7 +3,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.admin.cmd_sync_members import _sync_members
+from ironforgedbot.commands.admin.cmd_sync_members import sync_members
 from ironforgedbot.common.helpers import fit_log_lines_into_discord_messages
 from ironforgedbot.storage.types import StorageError
 from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
@@ -24,7 +24,7 @@ def job_sync_members(
     lines = []
 
     try:
-        lines = _sync_members(guild)
+        lines = sync_members(guild)
     except StorageError as error:
         error_message = f"Encountered error syncing members: {error}"
         logger.error(error_message)

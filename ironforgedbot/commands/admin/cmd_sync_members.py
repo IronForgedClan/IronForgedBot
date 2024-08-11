@@ -27,7 +27,7 @@ async def cmd_sync_members(interaction: discord.Interaction):
     logger.info(f"Handling '/sync_members' on behalf of '{caller}'")
 
     try:
-        lines = _sync_members(interaction.guild)
+        lines = sync_members(interaction.guild)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error syncing members: {error}"
@@ -39,7 +39,7 @@ async def cmd_sync_members(interaction: discord.Interaction):
     await interaction.followup.send(discord_messages[0])
 
 
-def _sync_members(guild: discord.Guild) -> list[str]:
+def sync_members(guild: discord.Guild) -> list[str]:
     # Perform a cross join between current Discord members and
     # entries in the sheet.
     # First, read all members from Discord.
