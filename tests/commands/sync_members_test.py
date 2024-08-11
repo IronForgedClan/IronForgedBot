@@ -1,32 +1,34 @@
 import unittest
 from unittest.mock import patch
 
-from ironforgedbot.commands.sync_members import cmd_sync_members
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
-from tests.helpers import create_mock_discord_interaction, create_test_member
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    mock_require_role,
+)
+
+with patch(
+    "ironforgedbot.decorators.require_role",
+    mock_require_role,
+):
+    from ironforgedbot.commands.sync_members import cmd_sync_members
 
 
 class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.sync_members.STORAGE")
-    @patch("ironforgedbot.commands.sync_members.validate_protected_request")
-    async def test_sync_members(self, mock_validate_protected_request, mock_storage):
+    async def test_sync_members(self, mock_storage):
         """Test that sheet can be updated to only members in Discord."""
         caller = create_test_member("leader", ROLES.LEADERSHIP)
         member1 = create_test_member("member1", ROLES.MEMBER, "johnnycache")
         member2 = create_test_member("member2", ROLES.MEMBER)
-        member3 = create_test_member("member3", ROLES.MEMBER)
-        member5 = create_test_member("member5", ROLES.MEMBER, "")
-
-        mock_validate_protected_request.return_value = (
-            caller,
-            caller.display_name,
-        )
+        member3 = create_test_member("member3", ROLES.MEMBER, "member3")
+        member5 = create_test_member("member5", ROLES.MEMBER)
 
         interaction = create_mock_discord_interaction(
-            [member1, member2, member3, member5]
+            user=caller, members=[member1, member2, member3, member5]
         )
-        interaction.user = caller
 
         mock_storage.read_members.return_value = [
             Member(id=member1.id, runescape_name="member1", ingots=200),

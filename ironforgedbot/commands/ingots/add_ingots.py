@@ -36,6 +36,8 @@ async def cmd_add_ingots(
     if not reason:
         reason = "None"
 
+    assert interaction.guild
+
     try:
         _, player = validate_playername(interaction.guild, player)
     except Exception as e:

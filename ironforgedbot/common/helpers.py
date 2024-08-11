@@ -28,9 +28,7 @@ def normalize_discord_string(nick: str) -> str:
     return "".join(new_nick).strip()
 
 
-def validate_playername(
-    guild: discord.Guild | None, playername: str
-) -> Tuple[Member, str]:
+def validate_playername(guild: discord.Guild, playername: str) -> Tuple[Member, str]:
     if not guild:
         raise ValueError("Unable to access guild")
 
@@ -43,9 +41,7 @@ def validate_playername(
 
 
 def validate_member_has_role(member: Member, required_role: str) -> bool:
-    roles = member.roles
-
-    for role in roles:
+    for role in member.roles:
         if role.name.lower() == required_role.lower():
             return True
 

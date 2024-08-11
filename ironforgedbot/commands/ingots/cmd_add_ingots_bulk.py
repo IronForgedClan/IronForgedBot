@@ -43,6 +43,8 @@ async def cmd_add_ingots_bulk(
     player_names = players.split(",")
     sanitized_player_names = []
 
+    assert interaction.guild
+
     for player in player_names:
         try:
             _, name = validate_playername(interaction.guild, player.strip())

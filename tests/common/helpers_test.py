@@ -9,10 +9,9 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     validate_member_has_role,
     validate_playername,
-    validate_protected_request,
-    validate_user_request,
 )
 from ironforgedbot.common.roles import ROLES
+from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestHelpers(unittest.TestCase):
@@ -27,104 +26,43 @@ class TestHelpers(unittest.TestCase):
             "long_text with! symbols?$",
         )
 
-    def test_validate_user_request(self):
-        """Test validate user request happy path"""
-        interaction = Mock(discord.Interaction)
-        guild = Mock(discord.Guild)
-        member = Mock(discord.Member)
-        member.name = "tester"
-        member.display_name = member.name
-        member.nick = member.name
-        guild.members = [member]
-        interaction.guild = guild
-        interaction.is_expired.return_value = False
-
-        self.assertEqual(
-            validate_user_request(interaction, member.name), (member, member.name)
-        )
-
-    def test_validate_user_request_fails_when_no_guild(self):
-        """Test validate user request fails when unable to access guild"""
-        interaction = Mock()
-        interaction.guild = None
-
-        with self.assertRaises(ReferenceError) as context:
-            validate_user_request(interaction, "")
-
-        self.assertEqual(str(context.exception), "Error accessing server")
-
-    def test_validate_user_request_fails_when_interaction_expired(self):
-        """Test validate user request fails when interaction has expired"""
-        interaction = Mock()
-        interaction.guild = Mock()
-        interaction.is_expired = Mock()
-        interaction.is_expired.return_value = True
-
-        with self.assertRaises(ReferenceError) as context:
-            validate_user_request(interaction, "")
-
-        self.assertEqual(str(context.exception), "Interaction has expired")
-
-    def test_validate_protected_request(self):
-        """Test validate protected request happy path"""
-        interaction = Mock(discord.Interaction)
-        guild = Mock(discord.Guild)
-        role = Mock(discord.Role)
-        role.name = ROLES.LEADERSHIP
-        member = Mock(discord.Member)
-        member.name = "tester"
-        member.display_name = member.name
-        member.nick = member.name
-        member.roles = [role]
-        guild.members = [member]
-        interaction.user = member
-        interaction.guild = guild
-        interaction.is_expired.return_value = False
-
-        self.assertEqual(
-            validate_protected_request(interaction, member.name, ROLES.LEADERSHIP),
-            (member, member.name),
-        )
-
-    def test_validate_protected_request_fails_no_role(self):
-        """Test validate protected request fails when member does not have required role"""
-        interaction = Mock(discord.Interaction)
-        guild = Mock(discord.Guild)
-        member = Mock(discord.Member)
-        member.name = "tester"
-        member.display_name = member.name
-        member.nick = member.name
-        member.roles = []
-        guild.members = [member]
-        interaction.user = member
-        interaction.guild = guild
-        interaction.is_expired.return_value = False
-
-        with self.assertRaises(ValueError) as context:
-            validate_protected_request(interaction, member.name, "leadership")
-
-        self.assertEqual(
-            str(context.exception),
-            f"Member '{member.name}' does not have permission for this action",
-        )
-
     def test_validate_playername(self):
         """Test validate playername happy path"""
-        self.assertEqual(validate_playername("a"), "a")
-        self.assertEqual(validate_playername("abcde"), "abcde")
-        self.assertEqual(validate_playername("123456789012"), "123456789012")
+        member = create_test_member("tester", ROLES.MEMBER, "tester")
+        interaction = create_mock_discord_interaction([member])
+
+        assert interaction.guild
+
+        result_member, result_playername = validate_playername(
+            interaction.guild, member.display_name
+        )
+
+        self.assertEqual(result_member, member)
+        self.assertEqual(result_playername, member.display_name)
 
     def test_validate_playername_fails_too_short(self):
         """Test validate playername fails when too short"""
+        playername = ""
+        member = create_test_member(playername, ROLES.MEMBER)
+        interaction = create_mock_discord_interaction([member])
+
+        assert interaction.guild
+
         with self.assertRaises(ValueError) as context:
-            validate_playername("")
+            validate_playername(interaction.guild, playername)
 
         self.assertEqual(str(context.exception), "RSN can only be 1-12 characters long")
 
     def test_validate_playername_fails_too_long(self):
         """Test validate playername fails when too long"""
+        playername = "0123456789012"
+        member = create_test_member(playername, ROLES.MEMBER, playername)
+        interaction = create_mock_discord_interaction([member])
+
+        assert interaction.guild
+
         with self.assertRaises(ValueError) as context:
-            validate_playername("1234567890123")
+            validate_playername(interaction.guild, playername)
 
         self.assertEqual(str(context.exception), "RSN can only be 1-12 characters long")
 

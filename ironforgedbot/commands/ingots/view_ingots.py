@@ -27,6 +27,8 @@ async def cmd_ingots(interaction: discord.Interaction, player: Optional[str] = N
     if player is None:
         player = interaction.user.display_name
 
+    assert interaction.guild
+
     try:
         member, player = validate_playername(interaction.guild, player)
     except Exception as e:

@@ -5,7 +5,7 @@ import discord
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.breakdown import cmd_breakdown
 from ironforgedbot.commands.ingots.add_ingots import cmd_add_ingots
-from ironforgedbot.commands.ingots.add_ingots_bulk import cmd_add_ingots_bulk
+from ironforgedbot.commands.ingots.cmd_add_ingots_bulk import cmd_add_ingots_bulk
 from ironforgedbot.commands.ingots.update_ingots import cmd_update_ingots
 from ironforgedbot.commands.ingots.view_ingots import cmd_ingots
 from ironforgedbot.commands.raffle.raffle_admin import cmd_raffle_admin

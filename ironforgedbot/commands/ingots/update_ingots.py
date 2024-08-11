@@ -38,6 +38,8 @@ async def cmd_update_ingots(
 
     caller = normalize_discord_string(interaction.user.display_name)
 
+    assert interaction.guild
+
     try:
         _, player = validate_playername(interaction.guild, player)
     except Exception as e:

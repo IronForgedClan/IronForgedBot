@@ -1,16 +1,18 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+import discord
+
 from ironforgedbot.client import DiscordClient
 import main
 
 
 class TestMain(unittest.IsolatedAsyncioTestCase):
     @patch("main.IronForgedCommands")
-    @patch("main.discord.app_commands.CommandTree")
+    @patch("main.IronForgedCommandTree")
     @patch("main.DiscordClient", spec=True)
     def test_create_client(self, mock_client, mock_tree, mock_commands):
-        result = main.create_client(MagicMock(), MagicMock(), MagicMock())
+        result = main.create_client(MagicMock(spec=discord.Intents), False, 000000)
 
         mock_client.assert_called_once()
         mock_tree.assert_called_once()
