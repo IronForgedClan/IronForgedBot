@@ -5,7 +5,7 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.commands.hiscore.constants import EMPTY_SPACE
+from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.roles import ROLES

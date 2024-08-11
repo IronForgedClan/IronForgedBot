@@ -4,7 +4,7 @@ import discord
 from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.commands.hiscore.calculator import score_info
-from ironforgedbot.commands.hiscore.constants import EMPTY_SPACE
+from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_emoji,
@@ -35,6 +35,8 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     if player is None:
         player = interaction.user.display_name
+
+    assert interaction.guild
 
     try:
         member, player = validate_playername(interaction.guild, player)
