@@ -2,19 +2,20 @@ import logging
 
 import discord
 
-from ironforgedbot.client import DiscordClient
-from ironforgedbot.commands.breakdown import cmd_breakdown
-from ironforgedbot.commands.ingots.add_ingots import cmd_add_ingots
+from ironforgedbot.commands.hiscore.cmd_score import cmd_score
+from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
+from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
+from ironforgedbot.commands.ingots.cmd_add_ingots import cmd_add_ingots
 from ironforgedbot.commands.ingots.cmd_add_ingots_bulk import cmd_add_ingots_bulk
-from ironforgedbot.commands.ingots.update_ingots import cmd_update_ingots
-from ironforgedbot.commands.ingots.view_ingots import cmd_ingots
-from ironforgedbot.commands.raffle.raffle_admin import cmd_raffle_admin
-from ironforgedbot.commands.raffle.raffle_buy_tickets import cmd_buy_raffle_tickets
-from ironforgedbot.commands.raffle.raffle_tickets import cmd_raffle_tickets
-from ironforgedbot.commands.roster.roster import cmd_roster
-from ironforgedbot.commands.score import cmd_score
-from ironforgedbot.commands.sync_members import cmd_sync_members
-from ironforgedbot.commands.log_access import cmd_log
+from ironforgedbot.commands.ingots.cmd_update_ingots import cmd_update_ingots
+from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
+from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
+from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
+from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
+from ironforgedbot.commands.admin.cmd_log import cmd_log
+from ironforgedbot.commands.roster.cmd_roster import cmd_roster
+
+from ironforgedbot.client import DiscordClient
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ class IronForgedCommands:
             discord.app_commands.Command(
                 name="ingots",
                 description="Displays ingot total.",
-                callback=cmd_ingots,
+                callback=cmd_view_ingots,
             )
         )
         self._tree.add_command(

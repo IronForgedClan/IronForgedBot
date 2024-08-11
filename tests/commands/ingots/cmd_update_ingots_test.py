@@ -13,12 +13,12 @@ with patch(
     "ironforgedbot.decorators.require_role",
     mock_require_role,
 ):
-    from ironforgedbot.commands.ingots.update_ingots import cmd_update_ingots
+    from ironforgedbot.commands.ingots.cmd_update_ingots import cmd_update_ingots
 
 
 class TestUpdateIngots(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.ingots.update_ingots.validate_playername")
-    @patch("ironforgedbot.commands.ingots.update_ingots.STORAGE")
+    @patch("ironforgedbot.commands.ingots.cmd_update_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_update_ingots.STORAGE")
     async def test_update_ingots(self, mock_storage, mock_validate_playername):
         """Test that ingots can be written for a player."""
         caller = create_test_member("leader", ROLES.LEADERSHIP)
@@ -45,8 +45,8 @@ class TestUpdateIngots(unittest.IsolatedAsyncioTestCase):
             f"Set ingot count to 4,000 for {player.display_name}. Reason: None "
         )
 
-    @patch("ironforgedbot.commands.ingots.update_ingots.validate_playername")
-    @patch("ironforgedbot.commands.ingots.update_ingots.STORAGE")
+    @patch("ironforgedbot.commands.ingots.cmd_update_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_update_ingots.STORAGE")
     async def test_update_ingots_player_not_found(
         self, mock_storage, mock_validate_playername
     ):

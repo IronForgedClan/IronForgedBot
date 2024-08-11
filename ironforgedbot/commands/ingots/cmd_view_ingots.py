@@ -15,7 +15,9 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-async def cmd_ingots(interaction: discord.Interaction, player: Optional[str] = None):
+async def cmd_view_ingots(
+    interaction: discord.Interaction, player: Optional[str] = None
+):
     """View your ingots, or those for another player.
 
     Arguments:

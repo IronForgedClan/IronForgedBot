@@ -13,11 +13,11 @@ with patch(
     "ironforgedbot.decorators.require_role",
     mock_require_role,
 ):
-    from ironforgedbot.commands.sync_members import cmd_sync_members
+    from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
 
 
 class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.sync_members.STORAGE")
+    @patch("ironforgedbot.commands.admin.cmd_sync_members.STORAGE")
     async def test_sync_members(self, mock_storage):
         """Test that sheet can be updated to only members in Discord."""
         caller = create_test_member("leader", ROLES.LEADERSHIP)
