@@ -5,6 +5,16 @@ from unittest.mock import AsyncMock, Mock
 import discord
 from ironforgedbot.common.roles import ROLES
 
+VALID_CONFIG = {
+    "TEMP_DIR": "/tmp",
+    "SHEET_ID": "1111",
+    "GUILD_ID": "2222",
+    "BOT_TOKEN": "aaaaa",
+    "WOM_GROUP_ID": "3333",
+    "WOM_API_KEY": "xxxxx",
+    "RANKS_UPDATE_CHANNEL": "4444",
+}
+
 
 def create_mock_discord_interaction(
     members: Optional[List[discord.Member]] = None,

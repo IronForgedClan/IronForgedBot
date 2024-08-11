@@ -3,16 +3,8 @@ import copy
 from unittest.mock import patch
 
 from ironforgedbot.config import Config
+from tests.helpers import VALID_CONFIG
 
-VALID_CONFIG = {
-    "TEMP_DIR": "/tmp",
-    "SHEET_ID": "1111",
-    "GUILD_ID": "2222",
-    "BOT_TOKEN": "aaaaa",
-    "WOM_GROUP_ID": "3333",
-    "WOM_API_KEY": "xxxxx",
-    "RANKS_UPDATE_CHANNEL": "4444",
-}
 
 INVALID_STR_CONIG = copy.copy(VALID_CONFIG)
 INVALID_STR_CONIG["SHEET_ID"] = ""
