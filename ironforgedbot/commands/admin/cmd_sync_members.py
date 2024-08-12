@@ -34,6 +34,8 @@ async def cmd_sync_members(interaction: discord.Interaction):
         return
 
     discord_messages = fit_log_lines_into_discord_messages(lines)
+    if len(discord_messages) == 0:
+        discord_messages = fit_log_lines_into_discord_messages(["No changes found"])
     # We don't expect many changes here since it will co-exist with periodic updates
     await interaction.followup.send(discord_messages[0])
 
