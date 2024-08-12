@@ -61,7 +61,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         members = self.read_members()
 
         for member in members:
-            if member.runescape_name == player:
+            if member.runescape_name.lower() == player.lower():
                 return member
 
         return None
