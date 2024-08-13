@@ -4,6 +4,7 @@ from typing import Optional
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import score_info
+from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_emoji,
@@ -11,8 +12,10 @@ from ironforgedbot.common.helpers import (
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
+    GOD_ALIGNMENT,
     RANK_POINTS,
     RANKS,
+    get_god_alignment_from_member,
     get_next_rank_from_points,
     get_rank_color_from_points,
     get_rank_from_points,
@@ -33,6 +36,8 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
 
     if player is None:
         player = interaction.user.display_name
+
+    assert interaction.guild
 
     try:
         member, player = validate_playername(interaction.guild, player)
@@ -60,12 +65,19 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
-    rank_color = get_rank_color_from_points(points_total)
-    rank_icon = find_emoji(interaction, rank_name)
 
-    next_rank_name = get_next_rank_from_points(points_total)
-    next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
-    next_rank_icon = find_emoji(interaction, next_rank_name)
+    if rank_name == RANKS.GOD:
+        god_alignment = get_god_alignment_from_member(member)
+
+        rank_color = get_rank_color_from_points(points_total, god_alignment)
+        rank_icon = find_emoji(interaction, god_alignment or rank_name)
+    else:
+        rank_color = get_rank_color_from_points(points_total)
+        rank_icon = find_emoji(interaction, rank_name)
+
+        next_rank_name = get_next_rank_from_points(points_total)
+        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
+        next_rank_icon = find_emoji(interaction, next_rank_name)
 
     embed = build_response_embed(f"{rank_icon} {member.display_name}", "", rank_color)
     embed.add_field(
@@ -82,13 +94,24 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
     embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
 
-    if rank_name == RANKS.MYTH.value:
-        grass_emoji = find_emoji(interaction, "grass")
+    if rank_name == RANKS.GOD:
+        logging.info(f"trying to render god special for {god_alignment}")
+        match god_alignment:
+            case GOD_ALIGNMENT.SARADOMIN:
+                alignment_emoji = find_emoji(interaction, "Prayer")
+                alignment_emoji = ":pray:"
+            case GOD_ALIGNMENT.ZAMORAK:
+                alignment_emoji = ":fire:"
+            case GOD_ALIGNMENT.GUTHIX:
+                alignment_emoji = find_emoji(interaction, "grass")
+            case _:
+                alignment_emoji = ":nerd:"
+
         embed.add_field(
             name="",
             value=(
-                f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
-                f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
+                f"{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}"
+                f"{EMPTY_SPACE}{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}"
             ),
             inline=False,
         )
