@@ -114,7 +114,6 @@ def get_rank_color_from_points(
 
 def get_god_alignment_from_member(member: discord.Member) -> str | None:
     for role in member.roles:
-        logging.info(f"checking role: {role}")
         match role.name:
             case GOD_ALIGNMENT.SARADOMIN:
                 return role.name

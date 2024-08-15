@@ -81,7 +81,9 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         next_rank_icon = find_emoji(interaction, next_rank_name)
 
     embed = build_response_embed(
-        f"{rank_icon} {member.display_name} | Score: `{points_total:,}`", "", rank_color
+        f"{rank_icon} {member.display_name} | Score: {points_total:,}",
+        "",
+        rank_color,
     )
     embed.add_field(
         name="Skill Points",
