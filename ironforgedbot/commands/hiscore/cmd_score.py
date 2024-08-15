@@ -74,31 +74,30 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     else:
         rank_color = get_rank_color_from_points(points_total)
         rank_icon = find_emoji(interaction, rank_name)
+        rank_point_threshold = RANK_POINTS[rank_name.upper()]
 
         next_rank_name = get_next_rank_from_points(points_total)
-        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
+        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(interaction, next_rank_name)
 
-    embed = build_response_embed(f"{rank_icon} {member.display_name}", "", rank_color)
+    embed = build_response_embed(
+        f"{rank_icon} {member.display_name} | Score: `{points_total:,}`", "", rank_color
+    )
     embed.add_field(
         name="Skill Points",
-        value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
+        value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)})%",
         inline=True,
     )
     embed.add_field(
         name="Activity Points",
-        value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
+        value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)})%",
         inline=True,
     )
-    embed.add_field(name="", value="", inline=False)
-    embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
-    embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
 
     if rank_name == RANKS.GOD:
         logging.info(f"trying to render god special for {god_alignment}")
         match god_alignment:
             case GOD_ALIGNMENT.SARADOMIN:
-                alignment_emoji = find_emoji(interaction, "Prayer")
                 alignment_emoji = ":pray:"
             case GOD_ALIGNMENT.ZAMORAK:
                 alignment_emoji = ":fire:"
@@ -116,12 +115,11 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
             inline=False,
         )
     else:
-        embed.add_field(name="", value="", inline=False)
         embed.add_field(
             name="Rank Progress",
             value=(
-                f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
-                f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                f"{rank_icon} → {next_rank_icon} {points_total}/{next_rank_point_threshold} "
+                f"({calculate_percentage(points_total - int(rank_point_threshold), int(next_rank_point_threshold) - int(rank_point_threshold))}%)"
             ),
             inline=False,
         )
