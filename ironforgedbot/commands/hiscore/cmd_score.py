@@ -115,11 +115,14 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
             inline=False,
         )
     else:
+        percentage = calculate_percentage(
+            points_total - int(rank_point_threshold),
+            int(next_rank_point_threshold) - int(rank_point_threshold),
+        )
         embed.add_field(
             name="Rank Progress",
             value=(
-                f"{rank_icon} → {next_rank_icon} {points_total}/{next_rank_point_threshold} "
-                f"({calculate_percentage(points_total - int(rank_point_threshold), int(next_rank_point_threshold) - int(rank_point_threshold))}%)"
+                f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage}%)"
             ),
             inline=False,
         )
