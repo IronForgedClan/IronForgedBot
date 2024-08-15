@@ -12,8 +12,10 @@ from ironforgedbot.common.helpers import (
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
+    GOD_ALIGNMENT,
     RANK_POINTS,
     RANKS,
+    get_god_alignment_from_member,
     get_next_rank_from_points,
     get_rank_color_from_points,
     get_rank_from_points,
@@ -65,8 +67,15 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
-    rank_color = get_rank_color_from_points(points_total)
-    rank_icon = find_emoji(interaction, rank_name)
+
+    if rank_name == RANKS.GOD:
+        god_alignment = get_god_alignment_from_member(member)
+
+        rank_color = get_rank_color_from_points(points_total, god_alignment)
+        rank_icon = find_emoji(interaction, god_alignment or rank_name)
+    else:
+        rank_color = get_rank_color_from_points(points_total)
+        rank_icon = find_emoji(interaction, rank_name)
 
     rank_breakdown_embed = build_response_embed(
         f"{rank_icon} {member.display_name} | Rank Ladder",
@@ -81,8 +90,8 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             name=(
                 f"{icon} {rank}%s"
                 % (
-                    f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
-                    f"<-- _You are here_"
+                    f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
+                    f"<-- _{member.display_name}_"
                     if rank == rank_name
                     else ""
                 )
@@ -91,7 +100,23 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             inline=False,
         )
 
-    if rank_name != RANKS.MYTH.value:
+    if rank_name == RANKS.GOD:
+        match god_alignment:
+            case GOD_ALIGNMENT.SARADOMIN:
+                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.SARADOMIN} ({find_emoji(interaction, "Saradomin")})"
+            case GOD_ALIGNMENT.ZAMORAK:
+                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.ZAMORAK} ({find_emoji(interaction, "Zamorak")})"
+            case GOD_ALIGNMENT.GUTHIX:
+                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.GUTHIX} ({find_emoji(interaction, "Guthix")})"
+            case _:
+                alignment_msg = f"{find_emoji(interaction, "God")} Unaligned!"
+
+        rank_breakdown_embed.add_field(
+            name="God Alignment",
+            value=alignment_msg,
+            inline=False,
+        )
+    else:
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
         next_rank_icon = find_emoji(interaction, next_rank_name)
