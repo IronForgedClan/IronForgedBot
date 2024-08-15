@@ -85,12 +85,12 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     )
     embed.add_field(
         name="Skill Points",
-        value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)})%",
+        value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
         inline=True,
     )
     embed.add_field(
         name="Activity Points",
-        value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)})%",
+        value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
         inline=True,
     )
 
