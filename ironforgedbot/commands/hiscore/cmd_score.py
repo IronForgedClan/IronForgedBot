@@ -95,23 +95,25 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     )
 
     if rank_name == RANKS.GOD:
-        logging.info(f"trying to render god special for {god_alignment}")
         match god_alignment:
             case GOD_ALIGNMENT.SARADOMIN:
-                alignment_emoji = ":pray:"
+                icon = find_emoji(interaction, "Saradomin")
+                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
             case GOD_ALIGNMENT.ZAMORAK:
-                alignment_emoji = ":fire:"
+                icon = find_emoji(interaction, "Zamorak")
+                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
             case GOD_ALIGNMENT.GUTHIX:
-                alignment_emoji = find_emoji(interaction, "grass")
+                icon = find_emoji(interaction, "Guthix")
+                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
             case _:
-                alignment_emoji = ":nerd:"
+                icon = find_emoji(interaction, "grass")
+                alignment_emojis = (
+                    f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
+                )
 
         embed.add_field(
             name="",
-            value=(
-                f"{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}"
-                f"{EMPTY_SPACE}{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}{EMPTY_SPACE}{alignment_emoji}"
-            ),
+            value=f"{alignment_emojis}",
             inline=False,
         )
     else:
