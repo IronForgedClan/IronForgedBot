@@ -91,7 +91,7 @@ def _fetch_data(player_name: str):
         resp = requests.get(HISCORES_PLAYER_URL.format(player=player_name), timeout=15)
         if resp.status_code != 200:
             raise RuntimeError(
-                f"Looking up {player_name} on hiscores failed. Got status code {resp.status_code}"
+                f"Looking up '{player_name}' on hiscores failed. Got status code {resp.status_code}."
             )
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"Encountered an error calling Runescape API: {e}")
