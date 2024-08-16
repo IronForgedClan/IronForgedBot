@@ -6,9 +6,9 @@ import discord
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
     find_emoji,
     normalize_discord_string,
+    render_percentage,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
@@ -87,12 +87,12 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     )
     embed.add_field(
         name="Skill Points",
-        value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
+        value=f"{skill_points:,} ({render_percentage(skill_points, points_total)})",
         inline=True,
     )
     embed.add_field(
         name="Activity Points",
-        value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
+        value=f"{activity_points:,} ({render_percentage(activity_points, points_total)})",
         inline=True,
     )
 
@@ -119,14 +119,14 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
             inline=False,
         )
     else:
-        percentage = calculate_percentage(
+        percentage = render_percentage(
             points_total - int(rank_point_threshold),
             int(next_rank_point_threshold) - int(rank_point_threshold),
         )
         embed.add_field(
             name="Rank Progress",
             value=(
-                f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage}%)"
+                f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})"
             ),
             inline=False,
         )

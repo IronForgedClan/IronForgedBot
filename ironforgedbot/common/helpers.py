@@ -65,8 +65,19 @@ def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
     raise ValueError(f"Player '**{target_name}**' is not a member of this server")
 
 
-def calculate_percentage(part, whole) -> int:
-    return round(100 * float(part) / float(whole))
+def calculate_percentage(part, whole) -> float:
+    return 100 * float(part) / float(whole)
+
+
+def render_percentage(part, whole) -> str:
+    value = calculate_percentage(part, whole)
+
+    if value < 1:
+        return "<1%"
+    if value > 99:
+        return ">99%"
+
+    return f"{round(value)}%"
 
 
 def find_emoji(interaction: discord.Interaction, target: str):

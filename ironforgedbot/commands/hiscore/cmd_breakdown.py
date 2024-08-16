@@ -6,9 +6,9 @@ from reactionmenu import ViewButton, ViewMenu
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
     find_emoji,
     normalize_discord_string,
+    render_percentage,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
@@ -124,7 +124,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             name="Your Progress",
             value=(
                 f"{rank_icon} -> {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} "
-                f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                f"({render_percentage(points_total, next_rank_point_threshold)})"
             ),
             inline=False,
         )
