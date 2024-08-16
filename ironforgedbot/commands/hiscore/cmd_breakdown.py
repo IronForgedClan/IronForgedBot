@@ -85,7 +85,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     for rank in RANKS:
         icon = find_emoji(interaction, rank)
-        rank_point_threshold = RANK_POINTS[rank.upper()].value
+        point_threshold = RANK_POINTS[rank.upper()]
         rank_breakdown_embed.add_field(
             name=(
                 f"{icon} {rank}%s"
@@ -96,7 +96,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                     else ""
                 )
             ),
-            value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
+            value=f"{EMPTY_SPACE}{point_threshold:,}+ points",
             inline=False,
         )
 
@@ -117,15 +117,17 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             inline=False,
         )
     else:
+        rank_point_threshold = RANK_POINTS[rank_name.upper()]
         next_rank_name = get_next_rank_from_points(points_total)
-        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
+        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(interaction, next_rank_name)
+        percentage = render_percentage(
+            points_total - int(rank_point_threshold),
+            int(next_rank_point_threshold) - int(rank_point_threshold),
+        )
         rank_breakdown_embed.add_field(
             name="Your Progress",
-            value=(
-                f"{rank_icon} -> {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} "
-                f"({render_percentage(points_total, next_rank_point_threshold)})"
-            ),
+            value=f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})",
             inline=False,
         )
 
