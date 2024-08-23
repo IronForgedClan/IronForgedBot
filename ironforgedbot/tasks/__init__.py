@@ -1,5 +1,7 @@
 import discord
 
+from ironforgedbot.common.helpers import normalize_discord_string
+
 
 def can_start_task(guild: discord.Guild, updates_channel_name: str):
     if updates_channel_name is None or "" == updates_channel_name:
@@ -14,7 +16,7 @@ def can_start_task(guild: discord.Guild, updates_channel_name: str):
 
 def _find_channel(guild: discord.Guild, channel_name: str):
     for channel in guild.channels:
-        if channel.name.lower() == channel_name.lower():
+        if normalize_discord_string(channel.name).lower() == channel_name.lower():
             return channel
 
 
