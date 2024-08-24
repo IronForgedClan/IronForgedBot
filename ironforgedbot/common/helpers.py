@@ -1,10 +1,9 @@
 import logging
-from collections.abc import Sequence
 from io import BytesIO
 from typing import Tuple
 
 import discord
-from discord import Guild, Interaction, Member
+from discord import Guild, Member
 
 logger = logging.getLogger(__name__)
 
@@ -29,53 +28,20 @@ def normalize_discord_string(nick: str) -> str:
     return "".join(new_nick).strip()
 
 
-def validate_user_request(
-    interaction: Interaction, playername: str
-) -> Tuple[Member, str]:
-    if not interaction.guild:
-        logger.error(f"Error accessing guild ({interaction.id})")
-        raise ReferenceError("Error accessing server")
+def validate_playername(guild: discord.Guild, playername: str) -> Tuple[Member, str]:
+    if not guild:
+        raise ValueError("Unable to access guild")
 
-    if interaction.is_expired():
-        logger.info(f"Interaction has expired ({interaction.id})")
-        raise ReferenceError("Interaction has expired")
-
-    playername = validate_playername(playername)
-    member = find_member_by_nickname(interaction.guild, playername)
-
-    return member, playername
-
-
-def validate_playername(playername: str) -> str:
     playername = normalize_discord_string(playername)
 
     if len(playername) > 12 or len(playername) < 1:
-        logger.info(f"RSN length incorrect: '{playername}'")
         raise ValueError("RSN can only be 1-12 characters long")
 
-    return playername
-
-
-def validate_protected_request(
-    interaction: Interaction, playername: str, required_role: str
-) -> Tuple[Member, str]:
-    caller, _ = validate_user_request(interaction, interaction.user.display_name)
-    member, playername = validate_user_request(interaction, playername)
-
-    has_role = validate_member_has_role(caller, required_role)
-
-    if not has_role:
-        raise ValueError(
-            f"Member '{caller.display_name}' does not have permission for this action"
-        )
-
-    return member, playername
+    return find_member_by_nickname(guild, playername), playername
 
 
 def validate_member_has_role(member: Member, required_role: str) -> bool:
-    roles = member.roles
-
-    for role in roles:
+    for role in member.roles:
         if role.name.lower() == required_role.lower():
             return True
 
@@ -103,11 +69,13 @@ def calculate_percentage(part, whole) -> int:
     return round(100 * float(part) / float(whole))
 
 
-def find_emoji(list_: Sequence[discord.Emoji], target: str):
+def find_emoji(interaction: discord.Interaction, target: str):
     if target in emojiCache:
         return emojiCache[target]
 
-    for emoji in list_:
+    assert interaction.guild
+
+    for emoji in interaction.guild.emojis:
         if emoji.available and emoji.name == target:
             emojiCache[emoji.name] = emoji
             return emoji

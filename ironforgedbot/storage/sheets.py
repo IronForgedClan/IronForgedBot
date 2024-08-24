@@ -1,19 +1,22 @@
-"""An implementation of IronForgedStorage backed by Google Sheets."""
-
-from datetime import datetime
-from google.oauth2 import service_account
-from googleapiclient.discovery import build, Resource
-from googleapiclient.errors import HttpError
 import logging
-from pytz import timezone
+import sys
+from datetime import datetime
 from typing import Dict, List, Optional, Union
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import Resource, build
+from googleapiclient.errors import HttpError
+from pytz import timezone
+
+from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.config import CONFIG
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 
+logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
+
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-# Skip header in read.
 SHEET_RANGE = "ClanIngots!A2:B"
 SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:C"
 RAFFLE_RANGE = "ClanRaffle!A2"
@@ -31,7 +34,9 @@ class SheetsStorage(metaclass=IngotsStorage):
             update reason, manual note.
     """
 
-    def __init__(self, sheets_client: Resource, sheet_id: str, clock: datetime = None):
+    def __init__(
+        self, sheets_client: Resource, sheet_id: str, clock: Optional[datetime] = None
+    ):
         """Init.
 
         Arguments:
@@ -41,10 +46,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         """
         self._sheets_client = sheets_client
         self._sheet_id = sheet_id
-        if clock is None:
-            self._clock = datetime
-        else:
-            self._clock = clock
+        self._clock = clock or datetime
 
     @classmethod
     def from_account_file(cls, account_filepath: str, sheet_id: str) -> "SheetsStorage":
@@ -61,20 +63,25 @@ class SheetsStorage(metaclass=IngotsStorage):
         members = self.read_members()
 
         for member in members:
-            if member.runescape_name.lower() == player.lower():
+            if member.runescape_name.lower() == normalize_discord_string(
+                player.lower()
+            ):
                 return member
 
         return None
 
     def read_members(self) -> List[Member]:
         """Read currently written members."""
-        # Then, get all current entries from sheets.
         result = {}
+
         try:
             result = (
                 self._sheets_client.spreadsheets()
                 .values()
-                .get(spreadsheetId=self._sheet_id, range=SHEET_RANGE_WITH_DISCORD_IDS)
+                .get(
+                    spreadsheetId=self._sheet_id,
+                    range=SHEET_RANGE_WITH_DISCORD_IDS,
+                )
                 .execute()
             )
         except HttpError as e:
@@ -531,3 +538,11 @@ class SheetsStorage(metaclass=IngotsStorage):
             )
             .execute()
         )
+
+
+try:
+    STORAGE = SheetsStorage.from_account_file("service.json", CONFIG.SHEET_ID)
+    logger.info("Connected to spreadsheets api successfully")
+except Exception as e:
+    logger.critical(e)
+    sys.exit(1)

@@ -1,69 +1,129 @@
-# IronForgedBot
+<h1 align="center">Iron Forged Bot</h1>
+<p align="center">
+<img alt="Test Status" src="https://github.com/IronForgedClan/IronForgedBot/actions/workflows/integration.yml/badge.svg">
+<a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
+<a href="https://github.com/psf/black"><img alt="Code style: Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+</p>
 
-A bot for managing clan rankings and ingots in the Iron Forged Runescape Clan.
+<p align="center">A Discord bot for managing the Iron Forged Old School RuneScape clan.</p>
 
-Notable features:
+## Commands
 
-- Runs Runescape usernames through our own scoring algorithm, returning
-  a score and rank.
-- Manages per-member "ingots", a currency for buying Discord fun ranks.
-
-All features are implemented via Discord slashcommands.
-
-All documentation assumes a Debian Linux terminal. This may work on other OS',
-but YMMV.
+| Command               | Parameters                                                                                 | Permission   | Information                                            |
+|-----------------------|--------------------------------------------------------------------------------------------|--------------|--------------------------------------------------------|
+| `/score`              | Player (str) _Optional_                                                                    | Member       | Returns the score for the player                       |
+| `/breakdown`          | Player (str) _Optional_                                                                    | Member       | Returns an interactive breakdown of the player's score |
+| `/ingots`             | Player (str) _Optional_                                                                    | Member       | Returns ingot count for player                         |
+| `/add_ingots`         | Player (str), Ingots (int), Reason (str) _Optional_                                        | Leadership   | Adds to player's ingot total                           |
+| `/add_ingots_bulk`    | Players (str, comma separated list of player names), Ingots (int), Reason (str) _Optional_ | Leadership   | Adds to multiple player's ingot total                  |
+| `/update_ingots`      | Player (str), Ingots (int), Reason (str) _Optional_                                        | Leadership   | Updates player's ingot total                           |
+| `/raffle_admin`       | Subcommand (str, [start, end, choose_winner])                                              | Leadership   | Parent command for controlling raffle state            |
+| `/raffle_tickets`     | N/A                                                                                        | Member       | Returns raffle ticket count for user                   |
+| `/buy_raffle_tickets` | Tickets (int)                                                                              | Member       | Purchases raffle tickets for user                      |
+| `/sync_members`       | N/A                                                                                        | Leadership   | Synchronises Discord members with storage              |
+| `/roster`             | Url (str)                                                                                  | Leadership   | Produces a roster list of players                      |
+| `/logs`               | Index (int)                                                                                | Discord Team | Privately shares bot log files                         |
 
 ## Setup
 
-Main dependencies:
+This setup guide does not go over installing Python, setup of an application within Discord developer portal, or Google Sheets creation; and assumes use of a Linux terminal.
 
-- python 3.8 or higher (`sudo apt-get install python3`)
-- python3 pip (`sudo apt-get install python3-pip`)
-- The Rapptz/discord.py library (`python3 -m pip install -U discord.py`)
-- Parameterized for testing (`python3 -m pip install parameterized`)
-- Libraries for connecting to Google Sheets API (`pip install --upgrade
-google-api-python-client google-auth-httplib2 google-auth-oauthlib`)
+Tested on Arch Linux with Python 3.12.4.
 
-Secrets & tokens are written manually to ".env" in the base app directory.
-These are written as key:value pairs separated by "=". Required secrets:
+### Virtual Environment
 
-- SHEETID: Unique ID for sheet to connect to.
-- GUILDID: The integer of the Discord server the bot will join.
-- BOT_TOKEN: The unique token for your application bot from the Discord
-  Developer Portal.
+It is recommended to use Python's virtual environments when installing dependencies.
 
-You'll also need to add the bot role you create in the developer portal to
-your server. In the Developer Portal, under "OAuth2 > URL Generator",
-select the "bot" option and fill in the permissions. This will give you a
-URL you can go to and add the bot to any servers you have "manage members"
-permissions for.
+To create a virtual environment for this project, navigate to the project root and run:
+
+``` sh
+python -m venv .venv
+```
+
+This will create a directory `.venv`. To activate the environment, run:
+
+``` sh
+source .venv/bin/activate
+```
+
+> [!NOTE]
+> You will need to activate the virtual environment every time you start a new shell instance.
+
+### Requirements
+
+The project requirements are listed in `requirements.txt` file. To install, run:
+
+``` sh
+pip install -r requirements.txt
+```
+
+### Secrets
+
+Secrets are written as key value pairs in the `.env` file.
+
+To create a `.env` file from the example file run:
+
+``` sh
+cp .env.example .env
+```
+
+Now you can modify the example `.env` file with your values.
+
+> [!WARNING]
+> Never check your `.env` file into source control!
+
+#### Keys
+
+| Key                  | Explanation                                                                       |
+|----------------------|-----------------------------------------------------------------------------------|
+| TEMP_DIR             | The location on disk where temporary files are stored. Default value is `./temp`. |
+| SHEET_ID             | The ID of the Google Sheet.                                                       |
+| GUILD_ID             | The ID of the Discord guild.                                                      |
+| BOT_TOKEN            | The unique token for the application. Found on the Discord Developer Portal.      |
+| WOM_API_KEY          | The unique key for connecting to the Wise Old Man API.                            |
+| WOM_GROUP_ID         | The unique ID for the clan group on Wise Old Man.                                 |
+| RANKS_UPDATE_CHANNEL | The unique ID of the channel that rank update messages will be posted to.         |
+
 
 ## Running
 
-With everything installed, in the base dir of the application, it can be
-launched simply with `python3 main.py`. This will let it handle slashcommands
-in the server it is set to join.
+With everything installed, and in the base directory of the application, the bot can be started with:
 
-To upload new slashcommands to the server: `python3 main.py --upload_commands`.
+``` sh
+python main.py
+```
+
+To enable uploading of slash commands, you will need to pass the `--upload` argument when starting the bot:
+
+``` sh
+python main.py --upload
+```
+
+## Logs
+
+The default log level of the application is `INFO`. This can be changed in `ironforgedbot/logging_config.py`.
+
+Logs will output to the console, as well as to rotating files inside the `logs` directory.
 
 ## Testing
 
-Test files live within the `tests/` directory. There is a script `run_tests.py`
-that scans that directory and runs all the unit tests it finds.
+All test files live within the `tests` directory. The structure within this directory mirrors `ironforgedbot`.
 
-All test filenames must follow this pattern: `*_test.py`
+To execute the entire test suite run:
 
-There are two main ways to test:
+``` sh
+python run_tests.py
+```
 
-- Attaching to a personal Discord server, performing the full setup &
-  uploading the commands. This has some expensive setup, but will test the
-  entire system.
-- `python3 run_tests.py` will run all unit tests within the project.
+To execute a specific test file, run:
 
-You can also run a specific test file directly:
-`python3 -m unittest tests/example_test.py`
+``` sh
+python -m unittest tests/path/to/file.py
+```
 
-## Testing spreadsheets locally
+When creating new test files, the filename must follow this pattern `*_test.py`. And the class name must follow this pattern `Test*`.
+
+### Spreadsheets
 
 Go to GCP, in any of your projects, create a new SA -> Manage Keys -> Add -> JSON
 
@@ -76,12 +136,12 @@ to enable it. You might need to wait for a few minutes for chances to kick in.
 
 ## Data
 
-Upon startup, the bot will attempt to read four files inside the `/data` directory. These files are:
+Upon startup, the bot will attempt to read four files inside the `./data` directory. These files are:
 
-- `skills.json`
-- `bosses.json`
-- `clues.json`
-- `raids.json`
+- `data/skills.json`
+- `data/bosses.json`
+- `data/clues.json`
+- `data/raids.json`
 
 These files contain information on how the bot will award points, control output order, and set emojis. They are in `json` format so as to be human readable, and easy to modify for someone non-technical. Once a file has been changed, the bot will need to be restarted to load the new values. No code changes necessary.
 
@@ -133,5 +193,14 @@ An `Activity` file looks something like this:
 
 ## Contributing
 
-Codebase follows Google Python Style Guide. This is loosely enforced via
-pylint.
+All contributions must:
+
+- Pass all tests in the test suite.
+- Code style must conform to the black formatter.
+- If the contribution adds new functionality, tests covering this must also be added.
+
+### Formatting
+
+This codebase uses the [Black](https://github.com/psf/black) formatter. Extensions available for many [popular editors](https://black.readthedocs.io/en/stable/integrations/editors.html). This is enforced through a workflow that runs on all pull requests into main.
+
+>By using Black, you agree to cede control over minutiae of hand-formatting. In return, Black gives you speed, determinism, and freedom from pycodestyle nagging about formatting. You will save time and mental energy for more important matters.

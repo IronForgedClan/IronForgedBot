@@ -2,32 +2,45 @@ import logging
 
 import discord
 
-from ironforgedbot.commands import protected_command
-from ironforgedbot.common.helpers import validate_member_has_role, normalize_discord_string, \
-    fit_log_lines_into_discord_messages
+from ironforgedbot.common.helpers import (
+    validate_member_has_role,
+    normalize_discord_string,
+    fit_log_lines_into_discord_messages,
+)
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
-from ironforgedbot.storage.types import IngotsStorage, StorageError, Member
+from ironforgedbot.decorators import require_role
+from ironforgedbot.storage.sheets import STORAGE
+from ironforgedbot.storage.types import StorageError, Member
 
 logger = logging.getLogger(__name__)
 
 
-@protected_command(role=ROLES.LEADERSHIP)
-async def cmd_sync_members(interaction: discord.Interaction, guild: discord.Guild, storage: IngotsStorage):
+@require_role(ROLES.LEADERSHIP)
+async def cmd_sync_members(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+
+    caller = normalize_discord_string(interaction.user.display_name)
+    logger.info(f"Handling '/sync_members' on behalf of '{caller}'")
+
+    assert interaction.guild
+
     try:
-        lines = sync_members(guild, storage)
+        lines = sync_members(interaction.guild)
     except StorageError as error:
-        await send_error_response(interaction, f"Encountered error syncing members: {error}")
+        await send_error_response(
+            interaction, f"Encountered error syncing members: {error}"
+        )
         return
 
     discord_messages = fit_log_lines_into_discord_messages(lines)
-    if 0 == len(discord_messages):
+    if len(discord_messages) == 0:
         discord_messages = fit_log_lines_into_discord_messages(["No changes found"])
     # We don't expect many changes here since it will co-exist with periodic updates
     await interaction.followup.send(discord_messages[0])
 
 
-def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
+def sync_members(guild: discord.Guild) -> list[str]:
     # Perform a cross join between current Discord members and
     # entries in the sheet.
     # First, read all members from Discord.
@@ -42,7 +55,7 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
 
     # Then, get all current entries from storage.
     try:
-        existing = storage.read_members()
+        existing = STORAGE.read_members()
     except StorageError as error:
         logger.error(f"Encountered error reading members: {error}")
         raise
@@ -56,20 +69,24 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
         if member.id not in written_ids:
             # Don't allow users without a nickname into storage.
             if not member.nick or len(member.nick) < 1:
-                output.append(f"skipped user {member.name} because they don't have a nickname in Discord")
+                output.append(
+                    f"skipped user {member.name} because they don't have a nickname in Discord"
+                )
                 continue
             new_members.append(
-                    Member(
-                            id=int(member.id),
-                            runescape_name=normalize_discord_string(member.nick).lower(),
-                            ingots=0,
-                    )
+                Member(
+                    id=int(member.id),
+                    runescape_name=normalize_discord_string(member.nick).lower(),
+                    ingots=0,
+                )
             )
-            output.append(f"added user {normalize_discord_string(member.nick).lower()} because they joined")
+            output.append(
+                f"added user {normalize_discord_string(member.nick).lower()} because they joined"
+            )
 
     if len(new_members) > 0:
         try:
-            storage.add_members(new_members, "User Joined Server")
+            STORAGE.add_members(new_members, "User Joined Server")
         except StorageError as error:
             logger.error(f"Encountered error writing new members: {error}")
             raise
@@ -79,11 +96,13 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
     for existing_member in existing:
         if existing_member.id not in member_ids:
             leaving_members.append(existing_member)
-            output.append(f"removed user {existing_member.runescape_name} because they left the server")
+            output.append(
+                f"removed user {existing_member.runescape_name} because they left the server"
+            )
 
     if len(leaving_members) > 0:
         try:
-            storage.remove_members(leaving_members, "User Left Server")
+            STORAGE.remove_members(leaving_members, "User Left Server")
         except StorageError as error:
             logger.error(f"Encountered error removing members: {error}")
             raise
@@ -99,20 +118,27 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
                 if member.nick is None:
                     if member.name != existing_member.runescape_name:
                         changed_members.append(
-                                Member(
-                                        id=existing_member.id,
-                                        runescape_name=normalize_discord_string(member.name).lower(),
-                                        ingots=existing_member.ingots,
-                                )
+                            Member(
+                                id=existing_member.id,
+                                runescape_name=normalize_discord_string(
+                                    member.name
+                                ).lower(),
+                                ingots=existing_member.ingots,
+                            )
                         )
                 else:
-                    if normalize_discord_string(member.nick).lower() != existing_member.runescape_name:
+                    if (
+                        normalize_discord_string(member.nick).lower()
+                        != existing_member.runescape_name
+                    ):
                         changed_members.append(
-                                Member(
-                                        id=existing_member.id,
-                                        runescape_name=normalize_discord_string(member.nick).lower(),
-                                        ingots=existing_member.ingots,
-                                )
+                            Member(
+                                id=existing_member.id,
+                                runescape_name=normalize_discord_string(
+                                    member.nick
+                                ).lower(),
+                                ingots=existing_member.ingots,
+                            )
                         )
 
     if len(changed_members) > 0:
@@ -120,7 +146,7 @@ def sync_members(guild: discord.Guild, storage: IngotsStorage) -> list[str]:
             output.append(f"updated RSN for {changed_member.runescape_name}")
 
         try:
-            storage.update_members(changed_members, "Name Change")
+            STORAGE.update_members(changed_members, "Name Change")
         except StorageError as error:
             logger.error(f"Encountered error updating changed members: {error}")
             raise

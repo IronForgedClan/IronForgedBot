@@ -12,7 +12,8 @@ from ironforgedbot.common.helpers import (
     get_all_discord_members,
     fit_log_lines_into_discord_messages,
 )
-from ironforgedbot.storage.types import IngotsStorage, StorageError
+from ironforgedbot.storage.sheets import STORAGE
+from ironforgedbot.storage.types import StorageError
 from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,6 @@ def job_check_activity_reminder(
     guild: discord.Guild,
     updates_channel_name: str,
     loop: asyncio.BaseEventLoop,
-    storage: IngotsStorage,
 ):
     updates_channel = can_start_task(guild, updates_channel_name)
     if updates_channel is None:
@@ -33,7 +33,7 @@ def job_check_activity_reminder(
         return
 
     try:
-        absentees = storage.get_absentees()
+        absentees = STORAGE.get_absentees()
     except StorageError as e:
         logger.error(f"Failed to read absentees list: {e}")
         return
@@ -63,7 +63,6 @@ def job_check_activity(
     loop: asyncio.BaseEventLoop,
     wom_api_key: str,
     wom_group_id: int,
-    storage: IngotsStorage,
 ):
     updates_channel = can_start_task(guild, updates_channel_name)
     if updates_channel is None:
@@ -71,7 +70,7 @@ def job_check_activity(
         return
 
     try:
-        absentees = storage.get_absentees()
+        absentees = STORAGE.get_absentees()
     except StorageError as e:
         logger.error(f"Failed to read absentees list: {e}")
         return

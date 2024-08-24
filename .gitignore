@@ -160,8 +160,8 @@ cython_debug/
 #.idea/
 
 # Project-specific
-# commands_tmp/ holds txt files before uploading to discord.
-commands_tmp/
+# temp/ holds txt files before uploading to discord.
+temp/
 addingotsbulk_tmp/
 # Credentials file for Google Sheets API
 credentials.json

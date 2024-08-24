@@ -5,27 +5,33 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.commands import protected_command
-from ironforgedbot.commands.hiscore.constants import EMPTY_SPACE
+from ironforgedbot.common.constants import EMPTY_SPACE
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.decorators import require_role
 from ironforgedbot.logging_config import LOG_DIR
 
 logger = logging.getLogger(__name__)
 
 
-@protected_command(role=ROLES.DISCORD_TEAM)
-async def cmd_log_access(interaction: discord.Interaction, file_index: Optional[int]):
+@require_role(ROLES.DISCORD_TEAM)
+async def cmd_log(interaction: discord.Interaction, file_index: Optional[int]):
     """Allows access to logs through Discord.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
         file_index: Optional - The index of the file you want to view.
     """
+    await interaction.response.defer(thinking=True, ephemeral=True)
+
+    caller = normalize_discord_string(interaction.user.display_name)
+    logger.info(f"Handling '/logs file_index:{file_index}' on behalf of '{caller}'")
+
     embed = build_response_embed("🗃️ Bot Logs", "", discord.Color.blurple())
     logs = os.listdir(LOG_DIR)
 
-    if file_index is not None and 0 < file_index <= len(logs) - 1:
+    if file_index is not None and file_index > 0 and file_index <= len(logs) - 1:
         await interaction.followup.send(
             file=discord.File(f"{LOG_DIR}/{logs[file_index]}"), ephemeral=True
         )
