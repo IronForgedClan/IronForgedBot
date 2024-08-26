@@ -29,16 +29,10 @@ async def cmd_add_ingots_bulk(
         player: Comma-separated list of Runescape usernames to add ingots to.
         ingots: number of ingots to add to this player.
     """
-    await interaction.response.defer(thinking=True)
-
     if not reason:
         reason = "None"
 
     caller = normalize_discord_string(interaction.user.display_name)
-
-    logger.info(
-        f"Handling '/add_ingots_bulk players:{players} ingots:{ingots} reason:{reason}' on behalf of '{caller}'"
-    )
 
     player_names = players.split(",")
     sanitized_player_names = []

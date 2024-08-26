@@ -1,14 +1,16 @@
 import functools
 import logging
+from pprint import pformat
 
 import discord
 
 from ironforgedbot.common.helpers import validate_member_has_role
+from ironforgedbot.common.roles import ROLES
 
 logger = logging.getLogger(__name__)
 
 
-def require_role(role_name: str):
+def require_role(role_name: str, ephemeral=False):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -26,17 +28,21 @@ def require_role(role_name: str):
                     f"Unable to access guild information ({func.__name__})"
                 )
 
+            logger.info(f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}")
+
             member = interaction.guild.get_member(interaction.user.id)
             if not member:
                 raise ValueError(
                     f"Unable to verify caller's guild membership ({func.__name__})"
                 )
 
-            has_role = validate_member_has_role(member, role_name)
-            if not has_role:
-                raise discord.app_commands.CheckFailure(
-                    f"Member '{interaction.user.display_name}' tried using {func.__name__} but does not have permission"
-                )
+            if role_name != ROLES.ANY:
+                has_role = validate_member_has_role(member, role_name)
+                if not has_role:
+                    raise discord.app_commands.CheckFailure(f"Member '{interaction.user.display_name}' tried using "
+                                                            f"{func.__name__} but does not have permission")
+
+            await interaction.response.defer(thinking=True, ephemeral=ephemeral)
 
             await func(*args, **kwargs)
 

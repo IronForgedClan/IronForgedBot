@@ -12,6 +12,7 @@ class ROLES(StrEnum):
     DISCORD_TEAM = "Discord Team"
     MEMBER = "Member"
     PROSPECT = "Prospect"
+    ANY = "*"
 
 
 def extract_roles(member: discord.Member) -> list[str]:

@@ -4,19 +4,18 @@ import discord
 
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.common.roles import ROLES
+from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
+@require_role(ROLES.ANY)
 async def cmd_raffle_tickets(interaction: discord.Interaction):
     """View calling user's current raffle ticket count."""
-    await interaction.response.defer(thinking=True)
-
     caller = normalize_discord_string(interaction.user.display_name)
-
-    logger.info(f"Handling '/raffle_tickets' on behalf of {caller}")
 
     try:
         member = STORAGE.read_member(caller)

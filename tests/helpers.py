@@ -12,7 +12,7 @@ VALID_CONFIG = {
     "BOT_TOKEN": "aaaaa",
     "WOM_GROUP_ID": "3333",
     "WOM_API_KEY": "xxxxx",
-    "RANKS_UPDATE_CHANNEL": "4444",
+    "RANKS_UPDATE_CHANNEL": "test-channel",
 }
 
 
