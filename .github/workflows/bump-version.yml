@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -25,16 +27,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install bump2version
 
+      - name: Setup git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Create branch reference
+        run: |
+          BRANCH_NAME=${{ github.head_ref }}
+          git checkout -b $BRANCH_NAME || git checkout $BRANCH_NAME
+          git pull origin $BRANCH_NAME
+
       - name: Determine version bump type
         id: get_bump_type
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_BODY="${{ github.event.pull_request.body }}"
 
-          # Default to patch if no keywords are found
           BUMP_TYPE="patch"
 
-          # Check for version bump keywords in the title or body
           if [[ "$PR_TITLE" == *"#major"* ]] || [[ "$PR_BODY" == *"#major"* ]]; then
             BUMP_TYPE="major"
           elif [[ "$PR_TITLE" == *"#minor"* ]] || [[ "$PR_BODY" == *"#minor"* ]]; then
@@ -43,12 +54,9 @@ jobs:
 
           echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
 
-      - name: Bump version and commit
+      - name: Bump version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git pull
           bump2version $BUMP_TYPE
-          git push origin HEAD:refs/heads/${{ github.head_ref }}
+          git push origin $BRANCH_NAME
