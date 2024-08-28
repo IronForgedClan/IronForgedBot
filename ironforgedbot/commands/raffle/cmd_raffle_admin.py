@@ -3,7 +3,9 @@ import logging
 import discord
 
 from ironforgedbot.commands.raffle.cmd_raffle_end import sub_raffle_end
-from ironforgedbot.commands.raffle.cmd_raffle_select_winner import sub_raffle_select_winner
+from ironforgedbot.commands.raffle.cmd_raffle_select_winner import (
+    sub_raffle_select_winner,
+)
 from ironforgedbot.commands.raffle.cmd_raffle_start import sub_raffle_start
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.decorators import require_role

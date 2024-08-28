@@ -28,7 +28,9 @@ def require_role(role_name: str, ephemeral=False):
                     f"Unable to access guild information ({func.__name__})"
                 )
 
-            logger.info(f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}")
+            logger.info(
+                f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}"
+            )
 
             member = interaction.guild.get_member(interaction.user.id)
             if not member:
@@ -39,8 +41,10 @@ def require_role(role_name: str, ephemeral=False):
             if role_name != ROLES.ANY:
                 has_role = validate_member_has_role(member, role_name)
                 if not has_role:
-                    raise discord.app_commands.CheckFailure(f"Member '{interaction.user.display_name}' tried using "
-                                                            f"{func.__name__} but does not have permission")
+                    raise discord.app_commands.CheckFailure(
+                        f"Member '{interaction.user.display_name}' tried using "
+                        f"{func.__name__} but does not have permission"
+                    )
 
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)
 
