@@ -4,20 +4,18 @@ import discord
 
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.common.roles import ROLES
+from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
+@require_role(ROLES.ANY)
 async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int):
     """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
-    await interaction.response.defer(thinking=True)
-
     caller = normalize_discord_string(interaction.user.display_name)
-    logger.info(
-        f"Handling '/buy_raffle_tickets tickets:{tickets}' on behalf of {caller}"
-    )
 
     if tickets <= 0:
         await send_error_response(

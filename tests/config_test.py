@@ -28,7 +28,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(result.WOM_GROUP_ID, int(VALID_CONFIG["WOM_GROUP_ID"]))
         self.assertEqual(result.WOM_API_KEY, VALID_CONFIG["WOM_API_KEY"])
         self.assertEqual(
-            result.RANKS_UPDATE_CHANNEL, int(VALID_CONFIG["RANKS_UPDATE_CHANNEL"])
+            result.RANKS_UPDATE_CHANNEL, VALID_CONFIG["RANKS_UPDATE_CHANNEL"]
         )
 
     @patch.dict("os.environ", INVALID_STR_CONIG)

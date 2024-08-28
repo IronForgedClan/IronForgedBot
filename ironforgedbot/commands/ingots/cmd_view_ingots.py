@@ -3,18 +3,17 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.common.helpers import (
-    find_emoji,
-    normalize_discord_string,
-    validate_playername,
-)
+from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.common.roles import ROLES
+from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
 
+@require_role(ROLES.ANY)
 async def cmd_view_ingots(
     interaction: discord.Interaction, player: Optional[str] = None
 ):
@@ -24,8 +23,6 @@ async def cmd_view_ingots(
         interaction: Discord Interaction from CommandTree.
         (optional) player: Runescape username to view ingot count for.
     """
-    await interaction.response.defer(thinking=True)
-
     if player is None:
         player = interaction.user.display_name
 
@@ -35,10 +32,6 @@ async def cmd_view_ingots(
         member, player = validate_playername(interaction.guild, player)
     except Exception as e:
         return await send_error_response(interaction, str(e))
-
-    caller = normalize_discord_string(interaction.user.display_name)
-
-    logger.info(f"Handling '/ingots player:{player}' on behalf of '{caller}'")
 
     try:
         member = STORAGE.read_member(player)

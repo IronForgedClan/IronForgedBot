@@ -7,7 +7,6 @@ from ironforgedbot.commands.raffle.cmd_raffle_select_winner import (
     sub_raffle_select_winner,
 )
 from ironforgedbot.commands.raffle.cmd_raffle_start import sub_raffle_start
-from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.decorators import require_role
 
@@ -24,11 +23,6 @@ async def cmd_raffle_admin(interaction: discord.Interaction, command: str):
             purchasing, and 'choose_winner' will choose a winner & display
             their winnings (alongside clearing storage for the next raffle).
     """
-    await interaction.response.defer(thinking=True)
-
-    caller = normalize_discord_string(interaction.user.display_name)
-    logger.info(f"Handling '/raffle_admin command:{command}' on behalf of '{caller}'")
-
     if command.lower() == "start":
         await sub_raffle_start(interaction)
     elif command.lower() == "end":
