@@ -21,10 +21,13 @@ from ironforgedbot.common.ranks import (
     get_rank_from_points,
 )
 from ironforgedbot.common.responses import build_response_embed, send_error_response
+from ironforgedbot.common.roles import ROLES
+from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
 
 
+@require_role(ROLES.ANY)
 async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     """Compute clan score for a Runescape player name.
 
@@ -32,8 +35,6 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         interaction: Discord Interaction from CommandTree.
         player: Player to display score for.
     """
-    await interaction.response.defer(thinking=True)
-
     if player is None:
         player = interaction.user.display_name
 
@@ -43,9 +44,6 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         member, player = validate_playername(interaction.guild, player)
     except Exception as e:
         return await send_error_response(interaction, str(e))
-
-    caller = normalize_discord_string(interaction.user.display_name)
-    logger.info(f"Handling '/score player:{player}' on behalf of '{caller}'")
 
     try:
         data = score_info(player)

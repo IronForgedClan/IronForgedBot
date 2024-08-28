@@ -79,10 +79,6 @@ async def cmd_roster(
     interaction: discord.Interaction,
     url: str,
 ):
-    await interaction.response.defer()
-
-    assert interaction.guild
-
     try:
         body = await _calc_roster(url, interaction.guild)
     except Exception as e:

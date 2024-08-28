@@ -31,8 +31,6 @@ async def cmd_update_ingots(
         player: Runescape username to view ingot count for.
         ingots: New ingot count for this user.
     """
-    await interaction.response.defer(thinking=True)
-
     if not reason:
         reason = "None"
 
@@ -44,10 +42,6 @@ async def cmd_update_ingots(
         _, player = validate_playername(interaction.guild, player)
     except Exception as e:
         return await send_error_response(interaction, str(e))
-
-    logger.info(
-        f"Handling '/update_ingots player:{player} ingots:{ingots} reason:{reason}' on behalf of '{caller}'"
-    )
 
     try:
         member = STORAGE.read_member(player.lower())
