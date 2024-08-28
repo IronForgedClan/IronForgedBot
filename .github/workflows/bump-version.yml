@@ -36,6 +36,7 @@ jobs:
         run: |
           BRANCH_NAME=${{ github.head_ref }}
           git checkout -b $BRANCH_NAME || git checkout $BRANCH_NAME
+          git branch --set-upstream-to=origin/$BRANCH_NAME $BRANCH_NAME
           git pull origin $BRANCH_NAME
 
       - name: Determine version bump type
