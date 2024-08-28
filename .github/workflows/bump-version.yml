@@ -1,0 +1,54 @@
+name: Bump version number
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  bump_version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bump2version
+
+      - name: Determine version bump type
+        id: get_bump_type
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+
+          # Default to patch if no keywords are found
+          BUMP_TYPE="patch"
+
+          # Check for version bump keywords in the title or body
+          if [[ "$PR_TITLE" == *"#major"* ]] || [[ "$PR_BODY" == *"#major"* ]]; then
+            BUMP_TYPE="major"
+          elif [[ "$PR_TITLE" == *"#minor"* ]] || [[ "$PR_BODY" == *"#minor"* ]]; then
+            BUMP_TYPE="minor"
+          fi
+
+          echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
+
+      - name: Bump version and commit
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bump2version $BUMP_TYPE
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -am "Bump version to $(cat VERSION)"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
