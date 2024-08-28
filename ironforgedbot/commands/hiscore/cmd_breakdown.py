@@ -200,8 +200,8 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     )
 
     clue_point_counter = 0
-    clue_icon = find_emoji(interaction, "cluescroll")
     for clue in data.clues:
+        clue_icon = find_emoji(interaction, clue["emoji_key"])
         clue_point_counter += clue["points"]
         clue_breakdown_embed.add_field(
             name=f"{clue_icon} {clue['points']:,} points",
