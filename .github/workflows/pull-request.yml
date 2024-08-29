@@ -12,12 +12,12 @@ defaults:
 
 jobs:
     unit-test:
-        uses: ./github/workflows/unit-test.yml
+        uses: ./.github/workflows/unit-test.yml
 
     formatting:
         needs: unit-test
-        uses: ./github/workflows/formatting.yml
+        uses: ./.github/workflows/formatting.yml
 
     bump-version:
         needs: formatting
-        uses: ./github/workflows/bump-version.yml
+        uses: ./.github/workflows/bump-version.yml
