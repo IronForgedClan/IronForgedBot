@@ -2,7 +2,13 @@ name: pull-request
 
 on:
     pull_request:
-        branches: [main]
+        branches:
+            - main
+    workflow_dispatch:
+
+defaults:
+    run:
+        shell: bash
 
 jobs:
     unit-test:
