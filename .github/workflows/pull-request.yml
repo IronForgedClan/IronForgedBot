@@ -20,4 +20,6 @@ jobs:
 
     bump-version:
         needs: formatting
+        permissions:
+            contents: write
         uses: ./.github/workflows/bump-version.yml
