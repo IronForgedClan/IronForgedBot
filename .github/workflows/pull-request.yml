@@ -18,8 +18,15 @@ jobs:
         needs: unit-test
         uses: ./.github/workflows/formatting.yml
 
-    bump-version:
+    bump-version-approval-gate:
         needs: formatting
+        on: ubuntu-latest
+        steps:
+            - name: approved
+                run: write-host "Approved for version bump"
+
+    bump-version:
+        needs: bump-version-approval-gate
         permissions:
             contents: write
         uses: ./.github/workflows/bump-version.yml
