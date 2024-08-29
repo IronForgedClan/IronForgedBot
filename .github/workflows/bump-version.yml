@@ -37,7 +37,7 @@ jobs:
                   fi
 
             - name: Set up Python
-              uses: actions/setup-python@v4
+              uses: actions/setup-python@v5
               if: env.BUMP_TYPE != 'NONE'
               with:
                   python-version: "3.x"
