@@ -1,4 +1,4 @@
-name: Tag release
+name: tag-release
 
 on:
     push:
@@ -9,7 +9,7 @@ permissions:
     contents: write
 
 jobs:
-    tag-version:
+    tag-release:
         runs-on: ubuntu-latest
         if: startsWith(github.event.head_commit.message, 'Merge pull request') # Only run for merge commits
 
@@ -21,17 +21,26 @@ jobs:
               id: get_version
               run: |
                   CURRENT_VERSION=$(cat VERSION)
+                  echo "Current tag is: $CURRENT_VERSION"
                   echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
 
+            - name: Get latest version
+              run: |
+                  LATEST_TAG=$(git describe --tags --abbrev=0)
+                  echo "Latest tag is: $LATEST_TAG"
+                  echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
             - name: Create tag
+              if: env.CURRENT_VERSION != env.LATEST_TAG
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
               run: |
                   git config --global user.email "github-actions[bot]@users.noreply.github.com"
                   git config --global user.name "github-actions[bot]"
 
                   CURRENT_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
 
-                  git tag -a "v$CURRENT_VERSION" -m "Release version $CURRENT_VERSION on $CURRENT_DATETIME"
+                  git tag -a "v$CURRENT_VERSION" -m "Release version $CURRENT_VERSION on $CURRENT_DATETIME\n\n$COMMIT_MESSAGE"
 
                   git push origin "v$CURRENT_VERSION"
