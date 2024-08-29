@@ -1,0 +1,30 @@
+name: pull-request
+
+on:
+    pull_request:
+        branches:
+            - main
+        types:
+            - opened
+            - synchronize
+            - reopened
+            - closed
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    unit-test:
+        uses: ./.github/workflows/unit-test.yml
+
+    formatting:
+        needs: unit-test
+        uses: ./.github/workflows/formatting.yml
+
+    bump-version:
+        needs: formatting
+        if: github.event.pull_request.merged == true
+        permissions:
+            contents: write
+        uses: ./.github/workflows/bump-version.yml

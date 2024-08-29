@@ -1,15 +1,14 @@
-name: Formatting
+name: formatting
 
 on:
-  pull_request:
-    branches: [main]
+    workflow_call:
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: psf/black@stable
-        with:
-          options: "--check"
-          src: "./"
+    check-formatting:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: psf/black@stable
+              with:
+                  options: "--check"
+                  src: "./"
