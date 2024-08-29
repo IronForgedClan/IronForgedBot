@@ -8,7 +8,6 @@ on:
             - opened
             - synchronize
             - reopened
-            - submitted
 
 defaults:
     run:
@@ -24,7 +23,7 @@ jobs:
 
     bump-version:
         needs: formatting
-        if: github.event.review.state == 'approved'
+        #if: github.event.review.state == 'approved'
         permissions:
             contents: write
         uses: ./.github/workflows/bump-version.yml
