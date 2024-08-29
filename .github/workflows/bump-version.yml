@@ -38,18 +38,18 @@ jobs:
 
             - name: Set up Python
               uses: actions/setup-python@v4
-              if: $BUMP_TYPE != 'NONE'
+              if: env.BUMP_TYPE != 'NONE'
               with:
                   python-version: "3.x"
 
             - name: Install dependencies
-              if: $BUMP_TYPE != 'NONE'
+              if: env.BUMP_TYPE != 'NONE'
               run: |
                   python -m pip install --upgrade pip
                   pip install bump2version
 
             - name: Configure git
-              if: $BUMP_TYPE != 'NONE'
+              if: env.BUMP_TYPE != 'NONE'
               run: |
                   BRANCH_NAME=${{ github.head_ref }}
 
@@ -61,7 +61,7 @@ jobs:
                   git pull origin $BRANCH_NAME
 
             - name: Bump version
-              if: $BUMP_TYPE != 'NONE'
+              if: env.BUMP_TYPE != 'NONE'
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
