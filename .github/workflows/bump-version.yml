@@ -1,8 +1,7 @@
-name: Bump version number
+name: bump-version
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_call:
 
 permissions:
   contents: write
@@ -17,6 +16,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Determine bump type
+        id: get_bump_type
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                          "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/labels")
+          echo "Labels: $RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"name": "major version"'; then
+            echo "BUMP_TYPE=major" >> $GITHUB_ENV
+          elif echo "$RESPONSE" | grep -q '"name": "minor version"'; then
+            echo "BUMP_TYPE=minor" >> $GITHUB_ENV
+          elif echo "$RESPONSE" | grep -q '"name": "patch version"'; then
+            echo "BUMP_TYPE=patch" >> $GITHUB_ENV
+          else
+            echo "No version label detected, not bumping version number."
+            exit 0
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -27,33 +46,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install bump2version
 
-      - name: Setup git user
+      - name: Configure git
         run: |
+          BRANCH_NAME=${{ github.head_ref }}
+
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-      - name: Create branch reference
-        run: |
-          BRANCH_NAME=${{ github.head_ref }}
           git checkout -b $BRANCH_NAME || git checkout $BRANCH_NAME
           git branch --set-upstream-to=origin/$BRANCH_NAME $BRANCH_NAME
           git pull origin $BRANCH_NAME
-
-      - name: Determine version bump type
-        id: get_bump_type
-        run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
-
-          BUMP_TYPE="patch"
-
-          if [[ "$PR_TITLE" == *"#major"* ]] || [[ "$PR_BODY" == *"#major"* ]]; then
-            BUMP_TYPE="major"
-          elif [[ "$PR_TITLE" == *"#minor"* ]] || [[ "$PR_BODY" == *"#minor"* ]]; then
-            BUMP_TYPE="minor"
-          fi
-
-          echo "BUMP_TYPE=$BUMP_TYPE" >> $GITHUB_ENV
 
       - name: Bump version
         env:
