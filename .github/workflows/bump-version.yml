@@ -1,65 +1,69 @@
 name: bump-version
 
 on:
-  workflow_call:
+    workflow_call:
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  bump_version:
-    runs-on: ubuntu-latest
+    bump_version:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
-      - name: Determine bump type
-        id: get_bump_type
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          REPO=${{ github.repository }}
-          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                          "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/labels")
-          echo "Labels: $RESPONSE"
+            - name: Determine bump type
+              id: get_bump_type
+              run: |
+                  PR_NUMBER=${{ github.event.pull_request.number }}
+                  REPO=${{ github.repository }}
+                  RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                                  "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/labels")
+                  echo "Labels: $RESPONSE"
 
-          if echo "$RESPONSE" | grep -q '"name": "major version"'; then
-            echo "BUMP_TYPE=major" >> $GITHUB_ENV
-          elif echo "$RESPONSE" | grep -q '"name": "minor version"'; then
-            echo "BUMP_TYPE=minor" >> $GITHUB_ENV
-          elif echo "$RESPONSE" | grep -q '"name": "patch version"'; then
-            echo "BUMP_TYPE=patch" >> $GITHUB_ENV
-          else
-            echo "No version label detected, not bumping version number."
-            exit 0
-          fi
+                  if echo "$RESPONSE" | grep -q '"name": "major version"'; then
+                    echo "BUMP_TYPE=major" >> $GITHUB_ENV
+                  elif echo "$RESPONSE" | grep -q '"name": "minor version"'; then
+                    echo "BUMP_TYPE=minor" >> $GITHUB_ENV
+                  elif echo "$RESPONSE" | grep -q '"name": "patch version"'; then
+                    echo "BUMP_TYPE=patch" >> $GITHUB_ENV
+                  else
+                    echo "No version label detected, not bumping version number."
+                    echo "BUMP_TYPE=NONE" >> $GITHUB_ENV
+                  fi
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              if: $BUMP_TYPE != 'NONE'
+              with:
+                  python-version: "3.x"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install bump2version
+            - name: Install dependencies
+              if: $BUMP_TYPE != 'NONE'
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install bump2version
 
-      - name: Configure git
-        run: |
-          BRANCH_NAME=${{ github.head_ref }}
+            - name: Configure git
+              if: $BUMP_TYPE != 'NONE'
+              run: |
+                  BRANCH_NAME=${{ github.head_ref }}
 
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
 
-          git checkout -b $BRANCH_NAME || git checkout $BRANCH_NAME
-          git branch --set-upstream-to=origin/$BRANCH_NAME $BRANCH_NAME
-          git pull origin $BRANCH_NAME
+                  git checkout -b $BRANCH_NAME || git checkout $BRANCH_NAME
+                  git branch --set-upstream-to=origin/$BRANCH_NAME $BRANCH_NAME
+                  git pull origin $BRANCH_NAME
 
-      - name: Bump version
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          bump2version $BUMP_TYPE
-          git push origin $BRANCH_NAME
+            - name: Bump version
+              if: $BUMP_TYPE != 'NONE'
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  bump2version $BUMP_TYPE
+                  git push origin $BRANCH_NAME
