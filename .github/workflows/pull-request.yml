@@ -8,7 +8,7 @@ on:
             - opened
             - synchronize
             - reopened
-            - closed
+            - submitted
 
 defaults:
     run:
@@ -24,7 +24,7 @@ jobs:
 
     bump-version:
         needs: formatting
-        if: github.event.pull_request.merged == true
+        if: github.event.review.state == 'approved'
         permissions:
             contents: write
         uses: ./.github/workflows/bump-version.yml
