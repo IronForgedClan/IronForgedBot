@@ -18,6 +18,12 @@
         "kc_per_point": 8
     },
     {
+        "name": "Araxxor",
+        "display_order": 4,
+        "emoji_key": "Araxxor",
+        "kc_per_point": 10
+    },
+    {
         "name": "Artio",
         "display_order": 4,
         "emoji_key": "Artio",
