@@ -54,4 +54,4 @@ jobs:
                   DESCRIPTION=$(git log -1 --pretty=%B)
 
                   git tag -a "v$VERSION" -m "$DESCRIPTION"
-                  git push origin "$VERSION"
+                  git push origin "v$VERSION"
