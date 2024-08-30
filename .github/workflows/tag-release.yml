@@ -17,31 +17,38 @@ jobs:
             - name: Check out repository
               uses: actions/checkout@v4
 
-            - name: Get current version
-              id: get_version
-              run: |
-                  CURRENT_VERSION=$(cat VERSION)
-                  echo "PR tag is: $CURRENT_VERSION"
-                  echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
+            - name: Read version from VERSION file
+                id: read_version
+                run: |
+                    VERSION=$(cat VERSION)
+                    echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-            - name: Get latest version
-              run: |
-                  LATEST_TAG=$(git describe --tags --abbrev=0)
-                  LATEST_TAG=${LATEST_TAG:1}
-                  echo "Latest tag is: $LATEST_TAG"
-                  echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+            - name: Get latest Git tag
+                id: get_latest_tag
+                run: |
+                    git fetch --tags
+                    LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+                    echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
-            - name: Create tag
-              if: env.CURRENT_VERSION != env.LATEST_TAG
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-              run: |
-                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
-                  git config --global user.name "github-actions[bot]"
+            - name: Compare versions
+                id: compare_versions
+                run: |
+                    NEW_VERSION=$(echo $VERSION | sed 's/^v//')
+                    OLD_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
 
-                  CURRENT_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
+                    if [ "$(printf '%s\n' "$OLD_VERSION" "$NEW_VERSION" | sort -V | head -n1)" = "$OLD_VERSION" ] && [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
+                        echo "new_tag=true" >> $GITHUB_ENV
+                    else
+                        echo "new_tag=false" >> $GITHUB_ENV
 
-                  git tag -a "v$CURRENT_VERSION" -m "Release version $CURRENT_VERSION on $CURRENT_DATETIME\n\n$COMMIT_MESSAGE"
+            - name: Create a new tag
+                if: env.new_tag == 'true'
+                env:
+                    VERSION: ${{ env.VERSION }}
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
+                    PR_NUMBER=$(git log -1 --pretty=format:"%s" | grep -oE "#[0-9]+" | tr -d '#')
+                    PR_DESCRIPTION=$(gh pr view $PR_NUMBER --json body --jq '.body')
 
-                  git push origin "v$CURRENT_VERSION"
+                    git tag -a "$VERSION" -m "$PR_DESCRIPTION"
+                    git push origin "$VERSION"
