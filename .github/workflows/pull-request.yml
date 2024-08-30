@@ -22,7 +22,7 @@ jobs:
         uses: ./.github/workflows/formatting.yml
 
     bump-version:
-        needs: formatting
+        needs: [unit-test, formatting]
         #if: github.event.review.state == 'approved'
         permissions:
             contents: write
