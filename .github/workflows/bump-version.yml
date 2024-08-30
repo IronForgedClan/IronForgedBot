@@ -18,21 +18,23 @@ jobs:
 
             - name: Should bump version
               run: |
+                  SHOULD_BUMP=false
                   version1=$(cat VERSION)
                   version2=$(git describe --tags --abbrev=0)
 
-                  if [ "$(printf '%s\n' "$version1" "$version2" | sort -V | head -n 1)" = "$version1" ]; then
-                      if [ "$version1" = "$version2" ]; then
-                        echo "Version $version2 is equal to $version1."
-                        echo "SHOULD_BUMP=true" >> $GITHUB_ENV
-                      else
-                        echo "SHOULD_BUMP=false" >> $GITHUB_ENV
-                        echo "Version $version2 is greater than $version1."
-                      fi
+                  if [[ "$version1" == "$version2" ]]; then
+                        echo "PR version and live version are equal, will bump."
+                        SHOULD_BUMP = true
+                  elif [[ "$(printf '%s\n' "$version1" "$version2" | sort -V | head -n1)" == "$version1" ]]; then
+                        echo "Live version $version2 is higher than PR version $version1. Update pull request and try again, aborting."
+                        exit 1
                   else
-                      echo "Version $version2 is not greater than $version1."
-                      echo "SHOULD_BUMP=true" >> $GITHUB_ENV
+                        echo "PR version $version1 is higher than live version $version2, looks like we already bumped, won't try again."
+                        SHOULD_BUMP = false
                   fi
+
+                  echo "SHOULD_BUMP: $SHOULD_BUMP"
+                  echo "SHOULD_BUMP=$SHOULD_BUMP" >> $GITHUB_ENV
 
             - name: Determine bump type
               id: get_bump_type
