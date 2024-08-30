@@ -51,8 +51,7 @@ jobs:
                   git config --local user.email "github-actions[bot]@users.noreply.github.com"
                   git config --local user.name "github-actions[bot]"
 
-                  PR_NUMBER=$(git log -1 --pretty=format:"%s" | grep -oE "#[0-9]+" | tr -d '#')
-                  PR_DESCRIPTION=$(gh pr view $PR_NUMBER --json body --jq '.body')
+                  DESCRIPTION=$(git log -1 --pretty=format:"%s")
 
-                  git tag -a "$VERSION" -m "$PR_DESCRIPTION"
+                  git tag -a "v$VERSION" -m "$DESCRIPTION"
                   git push origin "$VERSION"
