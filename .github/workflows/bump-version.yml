@@ -19,9 +19,8 @@ jobs:
             - name: Should bump version
               run: |
                   bump="false"
-                  version1=$(cat VERSION)
-                  version2=$(git describe --tags --abbrev=0)
-                  version2=${version2:1} # removes 'v' from string
+                  version1=$(cat VERSION | sed 's/^v//')
+                  version2=$(git describe --tags --abbrev=0 | sed 's/^v//')
 
                   if [[ "$version1" == "$version2" ]]; then
                         echo "PR version and live version are equal, will bump."
