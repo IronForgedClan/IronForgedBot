@@ -35,11 +35,12 @@ jobs:
               run: |
                   NEW_VERSION=$(echo $VERSION | sed 's/^v//')
                   OLD_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
-                  
+
                   if [ "$(printf '%s\n' "$OLD_VERSION" "$NEW_VERSION" | sort -V | head -n1)" = "$OLD_VERSION" ] && [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
                       echo "new_tag=true" >> $GITHUB_ENV
                   else
                       echo "new_tag=false" >> $GITHUB_ENV
+                  fi
 
             - name: Create a new tag
               if: env.new_tag == 'true'
