@@ -11,7 +11,7 @@ permissions:
 jobs:
     tag-release:
         runs-on: ubuntu-latest
-        if: startsWith(github.event.head_commit.message, 'Merge pull request') # Only run for merge commits
+        if: startsWith(github.event.head_commit.message, 'Merge pull request')
 
         steps:
             - name: Check out repository
