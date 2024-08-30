@@ -29,9 +29,6 @@ def normalize_discord_string(nick: str) -> str:
 
 
 def validate_playername(guild: discord.Guild, playername: str) -> Tuple[Member, str]:
-    if not guild:
-        raise ValueError("Unable to access guild")
-
     playername = normalize_discord_string(playername)
 
     if len(playername) > 12 or len(playername) < 1:
