@@ -34,8 +34,12 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     if player is None:
         player = interaction.user.display_name
 
+    assert interaction.guild
+
     try:
-        member, player = validate_playername(interaction.guild, player)
+        member, player = validate_playername(
+            interaction.guild, player, must_be_member=False
+        )
     except Exception as e:
         return await send_error_response(interaction, str(e))
 
@@ -64,7 +68,9 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
     next_rank_icon = find_emoji(interaction, next_rank_name)
 
-    embed = build_response_embed(f"{rank_icon} {member.display_name}", "", rank_color)
+    display_name = member.display_name if member is not None else player
+
+    embed = build_response_embed(f"{rank_icon} {display_name}", "", rank_color)
     embed.add_field(
         name="Skill Points",
         value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
