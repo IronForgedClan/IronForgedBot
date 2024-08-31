@@ -4,14 +4,18 @@ from typing import Optional
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import score_info
+from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
     find_emoji,
+    normalize_discord_string,
+    render_percentage,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
+    GOD_ALIGNMENT,
     RANK_POINTS,
     RANKS,
+    get_god_alignment_from_member,
     get_next_rank_from_points,
     get_rank_color_from_points,
     get_rank_from_points,
@@ -43,6 +47,8 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     except Exception as e:
         return await send_error_response(interaction, str(e))
 
+    display_name = member.display_name if member is not None else player
+
     try:
         data = score_info(player)
     except RuntimeError as error:
@@ -61,47 +67,69 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
-    rank_color = get_rank_color_from_points(points_total)
-    rank_icon = find_emoji(interaction, rank_name)
 
-    next_rank_name = get_next_rank_from_points(points_total)
-    next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
-    next_rank_icon = find_emoji(interaction, next_rank_name)
+    if rank_name == RANKS.GOD:
+        god_alignment = get_god_alignment_from_member(member)
 
-    display_name = member.display_name if member is not None else player
+        rank_color = get_rank_color_from_points(points_total, god_alignment)
+        rank_icon = find_emoji(interaction, god_alignment or rank_name)
+    else:
+        rank_color = get_rank_color_from_points(points_total)
+        rank_icon = find_emoji(interaction, rank_name)
+        rank_point_threshold = RANK_POINTS[rank_name.upper()]
 
-    embed = build_response_embed(f"{rank_icon} {display_name}", "", rank_color)
+        next_rank_name = get_next_rank_from_points(points_total)
+        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
+        next_rank_icon = find_emoji(interaction, next_rank_name)
+
+    embed = build_response_embed(
+        f"{rank_icon} {display_name} | Score: {points_total:,}",
+        "",
+        rank_color,
+    )
+
     embed.add_field(
         name="Skill Points",
-        value=f"{skill_points:,} ({calculate_percentage(skill_points, points_total)}%)",
+        value=f"{skill_points:,} ({render_percentage(skill_points, points_total)})",
         inline=True,
     )
     embed.add_field(
         name="Activity Points",
-        value=f"{activity_points:,} ({calculate_percentage(activity_points, points_total)}%)",
+        value=f"{activity_points:,} ({render_percentage(activity_points, points_total)})",
         inline=True,
     )
-    embed.add_field(name="", value="", inline=False)
-    embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
-    embed.add_field(name="Rank", value=f"{rank_icon} {rank_name}", inline=True)
 
-    if rank_name == RANKS.MYTH.value:
-        grass_emoji = find_emoji(interaction, "grass")
+    if rank_name == RANKS.GOD:
+        match god_alignment:
+            case GOD_ALIGNMENT.SARADOMIN:
+                icon = find_emoji(interaction, "Saradomin")
+                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
+            case GOD_ALIGNMENT.ZAMORAK:
+                icon = find_emoji(interaction, "Zamorak")
+                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
+            case GOD_ALIGNMENT.GUTHIX:
+                icon = find_emoji(interaction, "Guthix")
+                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
+            case _:
+                icon = find_emoji(interaction, "grass")
+                alignment_emojis = (
+                    f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
+                )
+
         embed.add_field(
             name="",
-            value=(
-                f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
-                f"{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}{grass_emoji}"
-            ),
+            value=f"{alignment_emojis}",
             inline=False,
         )
     else:
-        embed.add_field(name="", value="", inline=False)
+        percentage = render_percentage(
+            points_total - int(rank_point_threshold),
+            int(next_rank_point_threshold) - int(rank_point_threshold),
+        )
         embed.add_field(
             name="Rank Progress",
             value=(
-                f"{rank_icon} -> {next_rank_icon} {points_total}/{next_rank_point_threshold} "
-                f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
+                f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})"
             ),
             inline=False,
         )

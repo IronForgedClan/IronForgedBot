@@ -7,13 +7,16 @@ from reactionmenu import ViewButton, ViewMenu
 from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
     find_emoji,
+    normalize_discord_string,
+    render_percentage,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
+    GOD_ALIGNMENT,
     RANK_POINTS,
     RANKS,
+    get_god_alignment_from_member,
     get_next_rank_from_points,
     get_rank_color_from_points,
     get_rank_from_points,
@@ -63,8 +66,15 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
-    rank_color = get_rank_color_from_points(points_total)
-    rank_icon = find_emoji(interaction, rank_name)
+
+    if rank_name == RANKS.GOD:
+        god_alignment = get_god_alignment_from_member(member)
+
+        rank_color = get_rank_color_from_points(points_total, god_alignment)
+        rank_icon = find_emoji(interaction, god_alignment or rank_name)
+    else:
+        rank_color = get_rank_color_from_points(points_total)
+        rank_icon = find_emoji(interaction, rank_name)
 
     display_name = member.display_name if member is not None else player
 
@@ -76,31 +86,49 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     for rank in RANKS:
         icon = find_emoji(interaction, rank)
-        rank_point_threshold = RANK_POINTS[rank.upper()].value
+        point_threshold = RANK_POINTS[rank.upper()]
         rank_breakdown_embed.add_field(
             name=(
                 f"{icon} {rank}%s"
                 % (
-                    f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
-                    f"<-- _You are here_"
+                    f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
+                    f"← _{member.display_name}_"
                     if rank == rank_name
                     else ""
                 )
             ),
-            value=f"{EMPTY_SPACE}{rank_point_threshold:,}+ points",
+            value=f"{EMPTY_SPACE}{point_threshold:,}+ points",
             inline=False,
         )
 
-    if rank_name != RANKS.MYTH.value:
+    if rank_name == RANKS.GOD:
+        match god_alignment:
+            case GOD_ALIGNMENT.SARADOMIN:
+                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.SARADOMIN} ({find_emoji(interaction, "Saradomin")})"
+            case GOD_ALIGNMENT.ZAMORAK:
+                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.ZAMORAK} ({find_emoji(interaction, "Zamorak")})"
+            case GOD_ALIGNMENT.GUTHIX:
+                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.GUTHIX} ({find_emoji(interaction, "Guthix")})"
+            case _:
+                alignment_msg = f"{find_emoji(interaction, "God")} Unaligned!"
+
+        rank_breakdown_embed.add_field(
+            name="God Alignment",
+            value=alignment_msg,
+            inline=False,
+        )
+    else:
+        rank_point_threshold = RANK_POINTS[rank_name.upper()]
         next_rank_name = get_next_rank_from_points(points_total)
-        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()].value
+        next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(interaction, next_rank_name)
+        percentage = render_percentage(
+            points_total - int(rank_point_threshold),
+            int(next_rank_point_threshold) - int(rank_point_threshold),
+        )
         rank_breakdown_embed.add_field(
             name="Your Progress",
-            value=(
-                f"{rank_icon} -> {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} "
-                f"({calculate_percentage(points_total, next_rank_point_threshold)}%)"
-            ),
+            value=f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})",
             inline=False,
         )
 

@@ -7,6 +7,7 @@ from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_member_by_nickname,
     normalize_discord_string,
+    render_percentage,
     validate_member_has_role,
     validate_playername,
 )
@@ -183,3 +184,13 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(calculate_percentage(10, 100), 10)
         self.assertEqual(calculate_percentage(50, 100), 50)
         self.assertEqual(calculate_percentage(0, 100), 0)
+        self.assertEqual(calculate_percentage(12.5, 100), 12.5)
+
+    def test_render_percentage(self):
+        """Test rendering percentage is correct"""
+        self.assertEqual(render_percentage(10, 100), "10%")
+        self.assertEqual(render_percentage(50, 100), "50%")
+        self.assertEqual(render_percentage(0, 100), "<1%")
+        self.assertEqual(render_percentage(12.6, 100), "13%")
+        self.assertEqual(render_percentage(12.4, 100), "12%")
+        self.assertEqual(render_percentage(99.9, 100), ">99%")
