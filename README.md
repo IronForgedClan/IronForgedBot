@@ -1,6 +1,6 @@
 <h1 align="center">Iron Forged Bot</h1>
 <p align="center">
-<img alt="Unit Tests" src="https://github.com/IronForgedClan/IronForgedBot/actions/workflows/unit-test.yml/badge.svg">
+<img alt="Latest Version" src="https://img.shields.io/github/v/tag/IronForgedClan/IronForgedBot?sort=semver&label=version&color=%20%2361ad38">
 <a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
