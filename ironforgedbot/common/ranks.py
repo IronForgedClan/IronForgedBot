@@ -1,9 +1,13 @@
+import logging
+from typing import Optional
+import discord
 from strenum import StrEnum
 from enum import IntEnum
 from discord import Color
 
 
 class RANKS(StrEnum):
+    GOD = "God"
     MYTH = "Myth"
     LEGEND = "Legend"
     DRAGON = "Dragon"
@@ -22,6 +26,7 @@ class RANKS(StrEnum):
 
 
 class RANK_POINTS(IntEnum):
+    GOD = 20_000
     MYTH = 13_000
     LEGEND = 9_000
     DRAGON = 5_000
@@ -31,7 +36,15 @@ class RANK_POINTS(IntEnum):
     IRON = 0
 
 
+class GOD_ALIGNMENT(StrEnum):
+    SARADOMIN = "Saradominist"
+    GUTHIX = "Guthixian"
+    ZAMORAK = "Zamorakian"
+
+
 def get_rank_from_points(points: int) -> str:
+    if points >= RANK_POINTS.GOD:
+        return RANKS.GOD
     if points >= RANK_POINTS.MYTH:
         return RANKS.MYTH
     if points >= RANK_POINTS.LEGEND:
@@ -49,8 +62,10 @@ def get_rank_from_points(points: int) -> str:
 
 # TODO: Probably a more elegant way to achieve this using RANK_POINTS enum
 def get_next_rank_from_points(points: int) -> str:
+    if points >= RANK_POINTS.GOD:
+        return RANKS.GOD
     if points >= RANK_POINTS.MYTH:
-        return RANKS.MYTH
+        return RANKS.GOD
     if points >= RANK_POINTS.LEGEND:
         return RANKS.MYTH
     if points >= RANK_POINTS.DRAGON:
@@ -64,25 +79,50 @@ def get_next_rank_from_points(points: int) -> str:
     return RANKS.MITHRIL
 
 
-def get_rank_color_from_points(points: int) -> Color:
+def get_rank_color_from_points(
+    points: int, god_alignment: Optional[str] = None
+) -> Color:
     rank = get_rank_from_points(points)
 
-    if rank == RANKS.MYTH:
-        return Color.from_str("#0ecea9")
+    if rank == RANKS.GOD:
+        match god_alignment:
+            case GOD_ALIGNMENT.SARADOMIN:
+                return Color.from_str("#2F2BFF")
+            case GOD_ALIGNMENT.ZAMORAK:
+                return Color.from_str("#F80101")
+            case GOD_ALIGNMENT.GUTHIX:
+                return Color.from_str("#2ECC71")
+            case _:
+                return Color.from_str("#FFFFFF")
 
-    if rank == RANKS.LEGEND:
-        return Color.from_str("#cecece")
+    match rank:
+        case RANKS.MYTH:
+            return Color.from_str("#0ECEA9")
+        case RANKS.LEGEND:
+            return Color.from_str("#CECECE")
+        case RANKS.DRAGON:
+            return Color.from_str("#A51C1C")
+        case RANKS.RUNE:
+            return Color.from_str("#11B9F8")
+        case RANKS.ADAMANT:
+            return Color.from_str("#25964F")
+        case RANKS.MITHRIL:
+            return Color.from_str("#7F54FC")
+        case _:
+            return Color.from_str("#707070")
 
-    if rank == RANKS.DRAGON:
-        return Color.from_str("#a51c1c")
 
-    if rank == RANKS.RUNE:
-        return Color.from_str("#11b9f8")
+def get_god_alignment_from_member(member: discord.Member | None) -> str | None:
+    if not member:
+        return None
 
-    if rank == RANKS.ADAMANT:
-        return Color.from_str("#25964f")
+    for role in member.roles:
+        match role.name:
+            case GOD_ALIGNMENT.SARADOMIN:
+                return role.name
+            case GOD_ALIGNMENT.ZAMORAK:
+                return role.name
+            case GOD_ALIGNMENT.GUTHIX:
+                return role.name
 
-    if rank == RANKS.MITHRIL:
-        return Color.from_str("#7f54fc")
-
-    return Color.from_str("#707070")
+    return None
