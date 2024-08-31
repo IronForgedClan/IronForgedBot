@@ -60,7 +60,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         user = create_test_member(playername, ROLES.MEMBER)
         interaction = create_mock_discord_interaction(user=user)
 
-        mock_validate_playername.side_effect = lambda _, name: (user, name)
+        mock_validate_playername.return_value = (user, playername)
 
         mock_score_info.return_value = mock_score_breakdown
 
@@ -96,7 +96,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         user = create_test_member(playername, ROLES.MEMBER)
         interaction = create_mock_discord_interaction(user=user)
 
-        mock_validate_playername.side_effect = lambda _, name: (user, name)
+        mock_validate_playername.return_value = (user, playername)
 
         mock_score_breakdown.skills[0]["points"] = 20_000
         mock_score_info.return_value = mock_score_breakdown
