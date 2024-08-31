@@ -92,7 +92,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                 f"{icon} {rank}%s"
                 % (
                     f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
-                    f"← _{member.display_name}_"
+                    f"← _{display_name}_"
                     if rank == rank_name
                     else ""
                 )
