@@ -39,7 +39,9 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     assert interaction.guild
 
     try:
-        member, player = validate_playername(interaction.guild, player)
+        member, player = validate_playername(
+            interaction.guild, player, must_be_member=False
+        )
     except Exception as e:
         return await send_error_response(interaction, str(e))
 
@@ -64,8 +66,10 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     rank_color = get_rank_color_from_points(points_total)
     rank_icon = find_emoji(interaction, rank_name)
 
+    display_name = member.display_name if member is not None else player
+
     rank_breakdown_embed = build_response_embed(
-        f"{rank_icon} {member.display_name} | Rank Ladder",
+        f"{rank_icon} {display_name} | Rank Ladder",
         "The **Iron Forged** player rank ladder.",
         rank_color,
     )
@@ -101,7 +105,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         )
 
     skill_breakdown_embed = build_response_embed(
-        f"{rank_icon} {member.display_name} | Skilling Points",
+        f"{rank_icon} {display_name} | Skilling Points",
         f"Breakdown of **{skill_points:,}** points awarded for skill xp.",
         rank_color,
     )
@@ -162,7 +166,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     boss_page_count = len(boss_embeds)
 
     for index, embed in enumerate(boss_embeds):
-        embed.title = f"{rank_icon} {member.display_name} | Bossing Points"
+        embed.title = f"{rank_icon} {display_name} | Bossing Points"
         embed.description = (
             f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
         )
@@ -175,7 +179,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                 embed.add_field(name="", value="")
 
     raid_breakdown_embed = build_response_embed(
-        f"{rank_icon} {member.display_name} | Raid Points",
+        f"{rank_icon} {display_name} | Raid Points",
         "",
         rank_color,
     )
@@ -194,7 +198,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     )
 
     clue_breakdown_embed = build_response_embed(
-        f"{rank_icon} {member.display_name} | Cluescroll Points",
+        f"{rank_icon} {display_name} | Cluescroll Points",
         "Points awarded for cluescroll completions.",
         rank_color,
     )
