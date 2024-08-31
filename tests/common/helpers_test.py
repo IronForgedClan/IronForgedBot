@@ -67,6 +67,42 @@ class TestHelpers(unittest.TestCase):
 
         self.assertEqual(str(context.exception), "RSN can only be 1-12 characters long")
 
+    def test_validate_playername_optional_member_returns_member_object_if_found(self):
+        """
+        Test that when validating playername where must_be_member is False.
+        It should still attempt to fetch and return Member object if possible
+        """
+        playername = "player"
+        member = create_test_member(playername, ROLES.MEMBER, playername)
+        interaction = create_mock_discord_interaction([member])
+
+        assert interaction.guild
+
+        result_member, result_playername = validate_playername(
+            interaction.guild, member.display_name, must_be_member=False
+        )
+
+        self.assertEqual(result_member, member)
+        self.assertEqual(result_playername, member.display_name)
+
+    def test_validate_playername_optional_member_returns_null_member_obj(self):
+        """
+        Test that when validating playername where must_be_member is False.
+        It should return None in place of Member object if not found
+        """
+        playername = "player"
+        unrelated_member = create_test_member("tester", ROLES.MEMBER)
+        interaction = create_mock_discord_interaction([unrelated_member])
+
+        assert interaction.guild
+
+        result_member, result_playername = validate_playername(
+            interaction.guild, playername, must_be_member=False
+        )
+
+        self.assertEqual(result_member, None)
+        self.assertEqual(result_playername, playername)
+
     def test_validate_member_has_role(self):
         """Test validate member has role happy path"""
         member = Mock(discord.Member)

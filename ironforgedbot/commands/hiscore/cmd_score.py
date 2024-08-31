@@ -41,9 +41,13 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     assert interaction.guild
 
     try:
-        member, player = validate_playername(interaction.guild, player)
+        member, player = validate_playername(
+            interaction.guild, player, must_be_member=False
+        )
     except Exception as e:
         return await send_error_response(interaction, str(e))
+
+    display_name = member.display_name if member is not None else player
 
     try:
         data = score_info(player)
@@ -79,10 +83,11 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         next_rank_icon = find_emoji(interaction, next_rank_name)
 
     embed = build_response_embed(
-        f"{rank_icon} {member.display_name} | Score: {points_total:,}",
+        f"{rank_icon} {display_name} | Score: {points_total:,}",
         "",
         rank_color,
     )
+
     embed.add_field(
         name="Skill Points",
         value=f"{skill_points:,} ({render_percentage(skill_points, points_total)})",

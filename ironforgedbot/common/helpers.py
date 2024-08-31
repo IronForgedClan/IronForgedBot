@@ -28,16 +28,23 @@ def normalize_discord_string(nick: str) -> str:
     return "".join(new_nick).strip()
 
 
-def validate_playername(guild: discord.Guild, playername: str) -> Tuple[Member, str]:
-    if not guild:
-        raise ValueError("Unable to access guild")
-
+def validate_playername(
+    guild: discord.Guild, playername: str, must_be_member: bool = True
+) -> Tuple[Member | None, str]:
     playername = normalize_discord_string(playername)
 
     if len(playername) > 12 or len(playername) < 1:
         raise ValueError("RSN can only be 1-12 characters long")
 
-    return find_member_by_nickname(guild, playername), playername
+    if must_be_member:
+        return find_member_by_nickname(guild, playername), playername
+
+    # If membership is optional, still attempt to grab member object.
+    # This allows correct username casing, server emojis etc
+    try:
+        return find_member_by_nickname(guild, playername), playername
+    except ValueError:
+        return None, playername
 
 
 def validate_member_has_role(member: Member, required_role: str) -> bool:

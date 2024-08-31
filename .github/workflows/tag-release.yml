@@ -1,0 +1,55 @@
+name: tag-release
+
+on:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: write
+
+jobs:
+    tag-release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+
+            - name: Read version from VERSION file
+              id: read_version
+              run: |
+                  VERSION=$(cat VERSION)
+                  echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+            - name: Get latest Git tag
+              id: get_latest_tag
+              run: |
+                  git fetch --tags
+                  LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+                  echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
+
+            - name: Compare versions
+              id: compare_versions
+              run: |
+                  NEW_VERSION=$(echo $VERSION | sed 's/^v//')
+                  OLD_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
+
+                  if [ "$(printf '%s\n' "$OLD_VERSION" "$NEW_VERSION" | sort -V | head -n1)" = "$OLD_VERSION" ] && [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
+                      echo "new_tag=true" >> $GITHUB_ENV
+                  else
+                      echo "new_tag=false" >> $GITHUB_ENV
+                  fi
+
+            - name: Create a new tag
+              if: env.new_tag == 'true'
+              env:
+                  VERSION: ${{ env.VERSION }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+
+                  DESCRIPTION=$(git log -1 --pretty=%B)
+
+                  git tag -a "v$VERSION" -m "$DESCRIPTION"
+                  git push origin "v$VERSION"
