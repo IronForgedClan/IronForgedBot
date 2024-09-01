@@ -24,18 +24,9 @@ jobs:
             contents: write
         uses: ./.github/workflows/tag-release.yml
 
-    staging-gate:
+    staging-deploy:
         needs: tag-release
         environment: staging
-        runs-on: ubuntu-latest
-        steps:
-            - name: approved
-              env:
-                  ENV_NAME: staging
-              run: write-host "Approve for '$ENV_NAME'"
-
-    staging-deploy:
-        needs: staging-gate
         uses: ./.github/workflows/deploy-environment.yml
         with:
             environment: staging
