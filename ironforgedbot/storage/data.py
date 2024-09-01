@@ -56,6 +56,6 @@ try:
     RAIDS = load_json_data("data/raids.json", Activity)
     SKILLS = load_json_data("data/skills.json", Skill)
     logger.info("Loaded local data successfully")
-except (json.JSONDecodeError, FileNotFoundError, TypeError, KeyError, ValueError) as e:
+except Exception as e:
     logger.critical(e)
     sys.exit(1)

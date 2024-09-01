@@ -109,3 +109,7 @@ class IngotsStorage(type):
     @abstractmethod
     def get_absentees(self) -> dict[str:str]:
         """Returns known list of absentees with <rsn:date> format"""
+
+    @abstractmethod
+    def shutdown(self) -> None:
+        """Closes open connections"""

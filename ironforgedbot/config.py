@@ -17,7 +17,9 @@ class Config:
         self.BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
         self.WOM_GROUP_ID: int = int(os.getenv("WOM_GROUP_ID") or 0)
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
-        self.RANKS_UPDATE_CHANNEL: str = os.getenv("RANKS_UPDATE_CHANNEL")
+        self.RANKS_UPDATE_CHANNEL: str = os.getenv("RANKS_UPDATE_CHANNEL", "")
+
+        self.BOT_VERSION: str = self.get_bot_version()
 
         self.validate_config()
 
@@ -28,10 +30,14 @@ class Config:
             if isinstance(value, int) and value <= 0:
                 raise ValueError(f"Configuration key '{key}' is missing or empty")
 
+    def get_bot_version(self) -> str:
+        with open("VERSION", "r") as file:
+            return file.read().strip()
+
 
 try:
     CONFIG = Config()
     logger.info("Loaded local configuration successfully")
-except ValueError as e:
+except Exception as e:
     logger.critical(e)
     sys.exit(1)

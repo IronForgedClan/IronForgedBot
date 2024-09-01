@@ -539,6 +539,10 @@ class SheetsStorage(metaclass=IngotsStorage):
             .execute()
         )
 
+    def shutdown(self):
+        logger.info("Closing sheets connection")
+        self._sheets_client.close()
+
 
 try:
     STORAGE = SheetsStorage.from_account_file("service.json", CONFIG.SHEET_ID)
