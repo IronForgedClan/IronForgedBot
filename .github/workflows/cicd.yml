@@ -1,0 +1,41 @@
+name: ci-cd
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    unit-test:
+        uses: ./.github/workflows/unit-test.yml
+
+    tag-release:
+        needs: unit-test
+        permissions:
+            contents: write
+        uses: ./.github/workflows/tag-release.yml
+
+    staging-gate:
+        needs: tag-release
+        environment: staging
+        runs-on: ubuntu-latest
+        steps:
+            - name: approved
+              env:
+                  ENV_NAME: staging
+              run: write-host "Approve for $($env.ENV_NAME)"
+
+    staging-deploy:
+        needs: staging-gate
+        uses: ./.github/workflows/deploy-environment.yml
+        with:
+            environment: staging
+        secrets: inherit

@@ -9,6 +9,7 @@ import discord
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.command_tree import IronForgedCommandTree, IronForgedCommands
 from ironforgedbot.config import CONFIG
+from ironforgedbot.signal_handler import SignalHandler
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import STORAGE
 
@@ -25,6 +26,7 @@ def init_bot():
     intents = create_discord_intents()
     client = create_client(intents, args.upload, CONFIG.GUILD_ID)
 
+    logger.info(f"Starting Iron Forged Bot v{CONFIG.BOT_VERSION}")
     client.run(CONFIG.BOT_TOKEN)
 
 
@@ -76,4 +78,5 @@ def create_client(
 
 
 if __name__ == "__main__":
+    SignalHandler()
     init_bot()

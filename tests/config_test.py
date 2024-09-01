@@ -1,6 +1,6 @@
 import unittest
 import copy
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 from ironforgedbot.config import Config
 from tests.helpers import VALID_CONFIG
@@ -48,3 +48,14 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(
             str(cm.exception), "Configuration key 'GUILD_ID' is missing or empty"
         )
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="5.4.3",
+    )
+    def test_read_version_number(self, mock_file):
+        result = Config()
+
+        mock_file.assert_called_with("VERSION", "r")
+        self.assertEqual(result.BOT_VERSION, "5.4.3")
