@@ -1,0 +1,66 @@
+name: deploy-environment
+
+on:
+    workflow_call:
+        inputs:
+            environment:
+                description: "Environment name"
+                required: true
+                type: string
+
+permissions:
+    id-token: write
+    contents: read
+
+defaults:
+    run:
+        shell: bash
+
+jobs:
+    send-update-warning:
+        runs-on: ubuntu-latest
+        environment: ${{inputs.environment}}
+        steps:
+            - name: send-warning-message
+              env:
+                  WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+              run: |
+                  curl -X POST -H "Content-Type: application/json" \
+                  -d '{"content": "🤖 Bot **offline** to install an update."}' \
+                  $DISCORD_WEBHOOK_URL
+
+    deploy-bot:
+        runs-on: ubuntu-latest
+        needs: send-update-warning
+        environment: ${{inputs.environment}}
+        steps:
+            - name: deploy-bot
+                uses: appleboy/ssh-action@v1.0.3
+                env:
+                    SERVICE_NAME: %{{ secrets.SERVICE_NAME }}
+                    BOT_DIR: %{{ secrets.BOT_DIR }}
+                with:
+                    host: ${{ secrets.SSH_HOST }}
+                    username: ${{ secrets.SSH_USER }}
+                    key: ${{ secrets.SSH_PRIVATE_KEY }}
+                    port: ${{ secrets.SSH_PORT }}
+                    script: |
+                        cd "$BOT_DIR"
+                        sudo systemctl stop "$SERVICE_NAME"
+                        git pull
+                        VERSION=$(cat VERSION)
+                        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+                        sudo systemctl start "$SERVICE_NAME"
+
+    send-update-success:
+        runs-on: ubuntu-latest
+        environment: ${{inputs.environment}}
+        steps:
+            - name: send-update-success
+              env:
+                  WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+                  CHANGELOG_CHANNEL_ID: ${{ secrets.CHANGELOG_CHANNEL_ID }}
+              run: |
+                  curl -X POST -H "Content-Type: application/json" \
+                  -d '{"content": "🤖 Bot **v$VERSION** online. For details check out <#$CHANGELOG_CHANNEL_ID>"}' \
+                  $DISCORD_WEBHOOK_URL
