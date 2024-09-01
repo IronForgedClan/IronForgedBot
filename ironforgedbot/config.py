@@ -17,7 +17,7 @@ class Config:
         self.BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
         self.WOM_GROUP_ID: int = int(os.getenv("WOM_GROUP_ID") or 0)
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
-        self.RANKS_UPDATE_CHANNEL: str = os.getenv("RANKS_UPDATE_CHANNEL")
+        self.RANKS_UPDATE_CHANNEL: str = os.getenv("RANKS_UPDATE_CHANNEL", "")
 
         self.validate_config()
 
