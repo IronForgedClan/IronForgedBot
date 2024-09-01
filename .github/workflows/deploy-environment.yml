@@ -39,15 +39,14 @@ jobs:
                   SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
                   BOT_DIR: ${{ secrets.BOT_DIR }}
               run: |
-                  ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-                  echo "Connected to the server!"
-                  cd "$BOT_DIR"
-                  sudo systemctl stop "$SERVICE_NAME"
-                  git pull
-                  VERSION=$(cat VERSION)
-                  echo "VERSION=${VERSION}" >> $GITHUB_ENV
-                  sudo systemctl start "$SERVICE_NAME"
-                  echo "Commands executed successfully!"
+                  ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+                    echo "Connected to the server!"
+                    cd \$BOT_DIR
+                    sudo systemctl stop \$SERVICE_NAME
+                    git pull
+                    sudo .venv/bin/pip install -r requirements.txt
+                    sudo systemctl start \$SERVICE_NAME
+                    echo "Commands executed successfully!"
                   EOF
 
             - name: send-update-success
@@ -56,5 +55,5 @@ jobs:
                   CHANGELOG_CHANNEL_ID: ${{ secrets.CHANGELOG_CHANNEL_ID }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "🤖 Bot **v$VERSION** online. For details check out <#$CHANGELOG_CHANNEL_ID>"}' \
-                  $DISCORD_WEBHOOK_URL
+                  -d '{"content": "🤖 Bot **ONLINE**. For details check out <#$CHANGELOG_CHANNEL_ID>"}' \
+                  $WEBHOOK_URL
