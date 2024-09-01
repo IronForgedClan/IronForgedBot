@@ -37,8 +37,8 @@ jobs:
             - name: deploy-bot
               uses: appleboy/ssh-action@v1.0.3
               env:
-                  SERVICE_NAME: %{{ secrets.SERVICE_NAME }}
-                  BOT_DIR: %{{ secrets.BOT_DIR }}
+                  SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+                  BOT_DIR: ${{ secrets.BOT_DIR }}
               with:
                   host: ${{ secrets.SSH_HOST }}
                   username: ${{ secrets.SSH_USER }}
