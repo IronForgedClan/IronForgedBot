@@ -26,7 +26,7 @@ jobs:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "🤖 Bot **offline** to install an update."}' \
+                  -d '{"content": "🤖 Bot going **OFFLINE** to install an update."}' \
                   $WEBHOOK_URL
 
             - name: set-up-ssh
@@ -35,25 +35,21 @@ jobs:
                   ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
             - name: deploy-bot
-              env:
-                  SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
-                  BOT_DIR: ${{ secrets.BOT_DIR }}
               run: |
                   ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
                     echo "Connected to the server!"
-                    cd \$BOT_DIR
-                    sudo systemctl stop \$SERVICE_NAME
+                    cd ${{ secrets.BOT_DIR  }}
+                    sudo systemctl stop ${{ secrets.SERVICE_NAME }}
                     git pull
                     sudo .venv/bin/pip install -r requirements.txt
-                    sudo systemctl start \$SERVICE_NAME
+                    sudo systemctl start ${{ secrets.SERVICE_NAME }}
                     echo "Commands executed successfully!"
                   EOF
 
             - name: send-update-success
               env:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
-                  CHANGELOG_CHANNEL_ID: ${{ secrets.CHANGELOG_CHANNEL_ID }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "🤖 Bot **ONLINE**. For details check out <#$CHANGELOG_CHANNEL_ID>"}' \
+                  -d '{"content": "🤖 Bot back **ONLINE**. For details check out <#${{ secrets.CHANGELOG_CHANNEL_ID }}>"}' \
                   $WEBHOOK_URL
