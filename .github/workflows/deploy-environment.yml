@@ -35,22 +35,22 @@ jobs:
         environment: ${{inputs.environment}}
         steps:
             - name: deploy-bot
-                uses: appleboy/ssh-action@v1.0.3
-                env:
-                    SERVICE_NAME: %{{ secrets.SERVICE_NAME }}
-                    BOT_DIR: %{{ secrets.BOT_DIR }}
-                with:
-                    host: ${{ secrets.SSH_HOST }}
-                    username: ${{ secrets.SSH_USER }}
-                    key: ${{ secrets.SSH_PRIVATE_KEY }}
-                    port: ${{ secrets.SSH_PORT }}
-                    script: |
-                        cd "$BOT_DIR"
-                        sudo systemctl stop "$SERVICE_NAME"
-                        git pull
-                        VERSION=$(cat VERSION)
-                        echo "VERSION=${VERSION}" >> $GITHUB_ENV
-                        sudo systemctl start "$SERVICE_NAME"
+              uses: appleboy/ssh-action@v1.0.3
+              env:
+                  SERVICE_NAME: %{{ secrets.SERVICE_NAME }}
+                  BOT_DIR: %{{ secrets.BOT_DIR }}
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  port: ${{ secrets.SSH_PORT }}
+                  script: |
+                      cd "$BOT_DIR"
+                      sudo systemctl stop "$SERVICE_NAME"
+                      git pull
+                      VERSION=$(cat VERSION)
+                      echo "VERSION=${VERSION}" >> $GITHUB_ENV
+                      sudo systemctl start "$SERVICE_NAME"
 
     send-update-success:
         runs-on: ubuntu-latest
