@@ -31,11 +31,8 @@ class Config:
                 raise ValueError(f"Configuration key '{key}' is missing or empty")
 
     def get_bot_version(self) -> str:
-        try:
-            with open("VERSION", "r") as file:
-                return file.read().strip()
-        except FileNotFoundError:
-            return "unknown"
+        with open("VERSION", "r") as file:
+            return file.read().strip()
 
 
 try:
