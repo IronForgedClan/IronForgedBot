@@ -19,6 +19,8 @@ class Config:
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
         self.RANKS_UPDATE_CHANNEL: str = os.getenv("RANKS_UPDATE_CHANNEL", "")
 
+        self.BOT_VERSION: str = self.get_bot_version()
+
         self.validate_config()
 
     def validate_config(self):
@@ -27,6 +29,13 @@ class Config:
                 raise ValueError(f"Configuration key '{key}' is missing or empty")
             if isinstance(value, int) and value <= 0:
                 raise ValueError(f"Configuration key '{key}' is missing or empty")
+
+    def get_bot_version(self) -> str:
+        try:
+            with open("VERSION", "r") as file:
+                return file.read().strip()
+        except FileNotFoundError:
+            return "unknown"
 
 
 try:

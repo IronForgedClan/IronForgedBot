@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 def init_bot():
-
     if CONFIG and STORAGE and BOSSES and CLUES and RAIDS and SKILLS:
         logger.info("Requirements loaded")
 
@@ -27,6 +26,7 @@ def init_bot():
     intents = create_discord_intents()
     client = create_client(intents, args.upload, CONFIG.GUILD_ID)
 
+    logger.info(f"Starting Iron Forged Bot v{CONFIG.BOT_VERSION}")
     client.run(CONFIG.BOT_TOKEN)
 
 
