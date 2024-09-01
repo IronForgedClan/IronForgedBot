@@ -26,7 +26,9 @@ jobs:
 
     staging-deploy:
         needs: tag-release
-        environment: staging
+        permissions:
+            id-token: write
+            contents: read
         uses: ./.github/workflows/deploy-environment.yml
         with:
             environment: staging
