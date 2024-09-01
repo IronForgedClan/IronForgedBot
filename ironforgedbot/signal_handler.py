@@ -1,10 +1,10 @@
 import logging
 import signal
 import sys
-
 from ironforgedbot.storage.sheets import STORAGE
 
 logger = logging.getLogger(__name__)
+
 
 class SignalHandler:
     def __init__(self):
