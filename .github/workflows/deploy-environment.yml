@@ -17,7 +17,7 @@ defaults:
         shell: bash
 
 jobs:
-    send-update-warning:
+    deploy-environment:
         runs-on: ubuntu-latest
         environment: ${{inputs.environment}}
         steps:
@@ -29,34 +29,27 @@ jobs:
                   -d '{"content": "🤖 Bot **offline** to install an update."}' \
                   $WEBHOOK_URL
 
-    deploy-bot:
-        runs-on: ubuntu-latest
-        needs: send-update-warning
-        environment: ${{inputs.environment}}
-        steps:
+            - name: set-up-ssh
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
             - name: deploy-bot
-              uses: appleboy/ssh-action@v1.0.3
               env:
                   SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
                   BOT_DIR: ${{ secrets.BOT_DIR }}
-              with:
-                  host: ${{ secrets.SSH_HOST }}
-                  username: ${{ secrets.SSH_USER }}
-                  key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  port: ${{ secrets.SSH_PORT }}
-                  script: |
-                      cd "$BOT_DIR"
-                      sudo systemctl stop "$SERVICE_NAME"
-                      git pull
-                      VERSION=$(cat VERSION)
-                      echo "VERSION=${VERSION}" >> $GITHUB_ENV
-                      sudo systemctl start "$SERVICE_NAME"
+              run: |
+                  ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+                  echo "Connected to the server!"
+                  cd "$BOT_DIR"
+                  sudo systemctl stop "$SERVICE_NAME"
+                  git pull
+                  VERSION=$(cat VERSION)
+                  echo "VERSION=${VERSION}" >> $GITHUB_ENV
+                  sudo systemctl start "$SERVICE_NAME"
+                  echo "Commands executed successfully!"
+                  EOF
 
-    send-update-success:
-        runs-on: ubuntu-latest
-        needs: deploy-bot
-        environment: ${{inputs.environment}}
-        steps:
             - name: send-update-success
               env:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
