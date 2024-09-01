@@ -47,12 +47,17 @@ jobs:
                     sudo systemctl start ${{ secrets.SERVICE_NAME }}
                     echo "Commands executed successfully!"
                   EOF
-                  echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+            - name: fetch-version-number
+              id: ssh_step
+              run: |
+                  VERSION=$(ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cat ${{ secrets.BOT_DIR}}/VERSION")
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
 
             - name: send-update-success
               env:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "🤖 Bot v$VERSION **🟢 ONLINE**. Check out <#${{ secrets.CHANGELOG_CHANNEL_ID }}> channel for details."}' \
+                  -d '{"content": "🤖 Bot v\$VERSION **🟢 ONLINE**. Check out <#${{ secrets.CHANGELOG_CHANNEL_ID }}> channel for details."}' \
                   $WEBHOOK_URL
