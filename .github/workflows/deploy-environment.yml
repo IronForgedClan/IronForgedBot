@@ -27,7 +27,7 @@ jobs:
               run: |
                   curl -X POST -H "Content-Type: application/json" \
                   -d '{"content": "🤖 Bot **offline** to install an update."}' \
-                  $DISCORD_WEBHOOK_URL
+                  $WEBHOOK_URL
 
     deploy-bot:
         runs-on: ubuntu-latest
