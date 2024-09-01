@@ -54,6 +54,7 @@ jobs:
 
     send-update-success:
         runs-on: ubuntu-latest
+        needs: deploy-bot
         environment: ${{inputs.environment}}
         steps:
             - name: send-update-success
