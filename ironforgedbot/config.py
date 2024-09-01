@@ -41,6 +41,6 @@ class Config:
 try:
     CONFIG = Config()
     logger.info("Loaded local configuration successfully")
-except ValueError as e:
+except Exception as e:
     logger.critical(e)
     sys.exit(1)
