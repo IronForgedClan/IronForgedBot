@@ -26,7 +26,7 @@ jobs:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "🤖 Bot going **OFFLINE** to install an update."}' \
+                  -d '{"content": "🤖 Bot going **🔴 OFFLINE** to install an update."}' \
                   $WEBHOOK_URL
 
             - name: set-up-ssh
@@ -40,16 +40,19 @@ jobs:
                     echo "Connected to the server!"
                     cd ${{ secrets.BOT_DIR  }}
                     sudo systemctl stop ${{ secrets.SERVICE_NAME }}
+                    sleep 20
                     git pull
                     sudo .venv/bin/pip install -r requirements.txt
+                    sleep 20
                     sudo systemctl start ${{ secrets.SERVICE_NAME }}
                     echo "Commands executed successfully!"
                   EOF
+                  echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
 
             - name: send-update-success
               env:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "🤖 Bot back **ONLINE**. For details check out <#${{ secrets.CHANGELOG_CHANNEL_ID }}>"}' \
+                  -d '{"content": "🤖 Bot v$VERSION **🟢 ONLINE**. Check out <#${{ secrets.CHANGELOG_CHANNEL_ID }}> channel for details."}' \
                   $WEBHOOK_URL
