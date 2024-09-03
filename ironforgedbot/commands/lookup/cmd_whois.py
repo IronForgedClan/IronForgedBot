@@ -64,21 +64,30 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
             inline=False,
         )
     else:
+        field_count = 0
         for change in details:
-            if not change.status == "approved":
+            if field_count == 24:
+                embed.add_field(
+                    name="",
+                    value=f"...and {len(details) - field_count} more not shown.",
+                    inline=False,
+                )
+                break
+
+            if not change.status == wom.NameChangeStatus.Approved:
                 continue
 
             if change.resolved_at is not None:
-                resolved = render_relative_time(change.resolved_at)
+                timestamp = render_relative_time(change.resolved_at)
             else:
-                resolved = "pending"
+                timestamp = "**pending**"
 
+            field_count += 1
             embed.add_field(
                 name="",
-                value=f"_{resolved}_: {change.old_name} → **{change.new_name}**",
+                value=f"_{timestamp}_: {change.old_name} → **{change.new_name}**",
                 inline=False,
             )
-            print(change)
 
-    await interaction.followup.send(embed=embed)
     await wom_client.close()
+    await interaction.followup.send(embed=embed)
