@@ -44,6 +44,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
     result = await wom_client.players.get_name_changes(player)
 
     if not result.is_ok:
+        await wom_client.close()
         return await send_error_response(
             interaction, "Error retrieving name change history"
         )
