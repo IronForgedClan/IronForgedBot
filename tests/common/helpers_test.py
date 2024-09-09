@@ -1,5 +1,7 @@
 import unittest
-from unittest.mock import Mock
+from datetime import datetime
+from dateutil import parser
+from unittest.mock import MagicMock, Mock, patch
 
 import discord
 
@@ -8,6 +10,7 @@ from ironforgedbot.common.helpers import (
     find_member_by_nickname,
     normalize_discord_string,
     render_percentage,
+    render_relative_time,
     validate_member_has_role,
     validate_playername,
 )
@@ -194,3 +197,51 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(render_percentage(12.6, 100), "13%")
         self.assertEqual(render_percentage(12.4, 100), "12%")
         self.assertEqual(render_percentage(99.9, 100), ">99%")
+
+    @patch("ironforgedbot.common.helpers.datetime")
+    def test_render_relative_time(self, mock_datetime):
+        """Test rendering of relative time is correct"""
+        mock_datetime.now.return_value = datetime(2024, 9, 8, 10, 27, 20)
+
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 8, 10, 27, 19)), "1 second ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 8, 10, 27, 0)), "20 seconds ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 8, 10, 26, 0)), "1 minute ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 8, 10, 20, 0)), "7 minutes ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 8, 9, 26, 25)), "1 hour ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 8, 1, 26, 25)), "9 hours ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 7, 9, 26, 25)), "1 day ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 5, 9, 26, 25)), "3 days ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 9, 1, 9, 26, 25)), "1 week ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 8, 15, 9, 26, 25)), "3 weeks ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 8, 7, 9, 26, 25)), "1 month ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2024, 3, 7, 9, 26, 25)), "6 months ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2023, 8, 7, 9, 26, 25)), "1 year ago"
+        )
+        self.assertEqual(
+            render_relative_time(datetime(2000, 8, 7, 9, 26, 25)), "24 years ago"
+        )

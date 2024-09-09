@@ -1,16 +1,13 @@
 import logging
 
 import discord
-import wom
 
-
-from ironforgedbot.common.constants import EMPTY_SPACE
+from wom import Client, NameChangeStatus
 from ironforgedbot.common.helpers import render_relative_time, validate_playername
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +32,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
     display_name = member.display_name if member is not None else player
 
     try:
-        wom_client = wom.Client(api_key=CONFIG.WOM_API_KEY, user_agent="IronForged")
+        wom_client = Client(api_key=CONFIG.WOM_API_KEY, user_agent="IronForged")
         await wom_client.start()
     except Exception as e:
         logger.critical(e)
@@ -43,7 +40,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
 
     result = await wom_client.players.get_name_changes(player)
 
-    if not result.is_ok:
+    if result.is_err:
         await wom_client.close()
         return await send_error_response(
             interaction, "Error retrieving name change history"
@@ -74,7 +71,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
                 )
                 break
 
-            if not change.status == wom.NameChangeStatus.Approved:
+            if not change.status == NameChangeStatus.Approved:
                 continue
 
             if change.resolved_at is not None:
@@ -84,8 +81,8 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
 
             field_count += 1
             embed.add_field(
-                name="",
-                value=f"_{timestamp}_: {change.old_name} → **{change.new_name}**",
+                name=f"_{timestamp}_",
+                value=f"~~{change.old_name}~~ → **{change.new_name}**",
                 inline=False,
             )
 
