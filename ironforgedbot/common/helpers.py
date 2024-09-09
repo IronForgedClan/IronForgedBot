@@ -73,6 +73,7 @@ def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
 
 
 def calculate_percentage(part, whole) -> float:
+    whole = 1 if whole == 0 else whole
     return 100 * float(part) / float(whole)
 
 
