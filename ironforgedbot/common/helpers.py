@@ -14,7 +14,7 @@ NEW_LINE = "\n"
 
 
 def normalize_discord_string(input: str) -> str:
-    """Strips Discord nickname down to plaintext."""
+    """Strips string down to plaintext."""
     if input is None or len(input) < 1:
         return ""
 
