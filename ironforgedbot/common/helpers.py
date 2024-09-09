@@ -13,19 +13,19 @@ MAX_DISCORD_MESSAGE_SIZE = 2_000 - len(QUOTES) - 1
 NEW_LINE = "\n"
 
 
-def normalize_discord_string(nick: str) -> str:
-    """Strips Discord nickname down to plaintext."""
-    if nick is None:
+def normalize_discord_string(input: str) -> str:
+    """Strips string down to plaintext."""
+    if input is None or len(input) < 1:
         return ""
 
-    if nick.isascii():
-        return nick
+    if input.isascii():
+        return input
 
-    new_nick = []
-    for letter in nick:
+    new_str = []
+    for letter in input:
         if letter.isascii():
-            new_nick.append(letter)
-    return "".join(new_nick).strip()
+            new_str.append(letter)
+    return "".join(new_str).strip()
 
 
 def validate_playername(
@@ -73,6 +73,7 @@ def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
 
 
 def calculate_percentage(part, whole) -> float:
+    whole = 1 if whole == 0 else whole
     return 100 * float(part) / float(whole)
 
 
