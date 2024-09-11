@@ -6,8 +6,6 @@ import discord
 import requests
 from discord import Guild, Member
 
-from ironforgedbot.config import CONFIG
-
 logger = logging.getLogger(__name__)
 
 
@@ -97,9 +95,9 @@ def render_percentage(part, whole) -> str:
 
 
 # TODO: Use discord.py implementation when v2.5 released
-def populate_emoji_cache(application_id: int):
+def populate_emoji_cache(application_id: int, token: str):
     headers = {
-        "Authorization": f"Bot {CONFIG.BOT_TOKEN}",
+        "Authorization": f"Bot {token}",
         "Content-Type": "application/json",
     }
     response = requests.get(
