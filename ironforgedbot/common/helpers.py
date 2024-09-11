@@ -1,13 +1,22 @@
 import logging
 from io import BytesIO
-from typing import Tuple
+from typing import Tuple, TypedDict
 
 import discord
+import requests
 from discord import Guild, Member
+
+from ironforgedbot.config import CONFIG
 
 logger = logging.getLogger(__name__)
 
-emojiCache = dict[str, discord.Emoji]()
+
+class EmojiCache(TypedDict):
+    id: int
+    animated: bool
+
+
+emojiCache: dict[str, EmojiCache] = {}
 QUOTES = "```"
 MAX_DISCORD_MESSAGE_SIZE = 2_000 - len(QUOTES) - 1
 NEW_LINE = "\n"
@@ -87,19 +96,52 @@ def render_percentage(part, whole) -> str:
     return f"{round(value)}%"
 
 
+# TODO: Use discord.py implementation when v2.5 released
+def populate_emoji_cache(application_id: int):
+    headers = {
+        "Authorization": f"Bot {CONFIG.BOT_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(
+        f"https://discord.com/api/applications/{application_id}/emojis",
+        headers=headers,
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    for emoji in data["items"]:
+        emojiCache[emoji["name"]] = {"id": emoji["id"], "animated": emoji["animated"]}
+
+    logger.info("Emoji cache loaded successfully")
+
+
+# TODO: when discord.py 2.5 releases remove interaction parameter
 def find_emoji(interaction: discord.Interaction, target: str):
+    emoji = None
+
     if target in emojiCache:
-        return emojiCache[target]
+        emoji = emojiCache[target]
 
     assert interaction.guild
 
-    for emoji in interaction.guild.emojis:
-        if emoji.available and emoji.name == target:
-            emojiCache[emoji.name] = emoji
-            return emoji
+    if emoji is None:
+        # fallback if not found in cache, search the guild
+        for guild_emoji in interaction.guild.emojis:
+            if guild_emoji.available and guild_emoji.name == target:
+                logger.warning(
+                    f"Requested emoji '{guild_emoji.name}' found in guild not cache"
+                )
+                emojiCache[guild_emoji.name] = {
+                    "id": guild_emoji.id,
+                    "animated": guild_emoji.animated,
+                }
+                emoji = emojiCache[guild_emoji.name]
 
-    logger.warning(f"Requested emoji '{target}' not found")
-    return ""
+    if emoji is None:
+        logger.warning(f"Requested emoji '{target}' not found")
+        return ""
+
+    return f"<{'a' if emoji['animated'] else ''}:{target}:{emoji['id']}>"
 
 
 def get_all_discord_members(guild: discord.Guild) -> list[str]:
