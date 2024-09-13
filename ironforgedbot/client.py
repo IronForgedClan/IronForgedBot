@@ -5,8 +5,8 @@ import sys
 import discord
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from ironforgedbot.common.helpers import populate_emoji_cache
 from ironforgedbot.config import CONFIG
-from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
 from ironforgedbot.tasks.ranks import job_refresh_ranks
 from ironforgedbot.tasks.sync import job_sync_members
@@ -64,6 +64,9 @@ class DiscordClient(discord.Client):
         if self.upload:
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
+
+        # TODO: Temporary. See function comment for details.
+        populate_emoji_cache(self.application_id or 0, CONFIG.BOT_TOKEN)
 
     async def on_ready(self):
         if not self.user:

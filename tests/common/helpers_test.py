@@ -188,6 +188,9 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(calculate_percentage(50, 100), 50)
         self.assertEqual(calculate_percentage(0, 100), 0)
         self.assertEqual(calculate_percentage(12.5, 100), 12.5)
+        self.assertEqual(calculate_percentage(0, 0), 0)
+        self.assertEqual(calculate_percentage(1, 0), 100)
+        self.assertEqual(calculate_percentage(0, 1), 0)
 
     def test_render_percentage(self):
         """Test rendering percentage is correct"""
