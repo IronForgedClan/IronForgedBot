@@ -7,7 +7,6 @@ from ironforgedbot.commands.hiscore.calculator import score_info
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
-    normalize_discord_string,
     render_percentage,
     validate_playername,
 )
