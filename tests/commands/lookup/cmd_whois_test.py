@@ -51,7 +51,7 @@ class WhoisTest(unittest.IsolatedAsyncioTestCase):
         expected_embed = discord.Embed(title=f"📋 {user.display_name} | Name History")
 
         expected_embed.add_field(
-            name="_sometime_", value="~~tester~~ → **test**", inline=False
+            name="", value="**sometime**: tester → test", inline=False
         )
 
         await cmd_whois(interaction, playername)

@@ -43,7 +43,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
     if result.is_err:
         await wom_client.close()
         return await send_error_response(
-            interaction, "Error retrieving name change history"
+            interaction, "Error getting name change history"
         )
 
     embed = build_response_embed(
@@ -57,7 +57,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
     if len(details) <= 0:
         embed.add_field(
             name="",
-            value="No name changes for this user found.",
+            value="No name changes found for this user.",
             inline=False,
         )
     else:
@@ -66,7 +66,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
             if field_count == 24:
                 embed.add_field(
                     name="",
-                    value=f"...and {len(details) - field_count} more not shown.",
+                    value=f"...and **{len(details) - field_count}** more not shown.",
                     inline=False,
                 )
                 break
@@ -81,8 +81,8 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
 
             field_count += 1
             embed.add_field(
-                name=f"_{timestamp}_",
-                value=f"~~{change.old_name}~~ → **{change.new_name}**",
+                name="",
+                value=f"**{timestamp}**: {change.old_name} → {change.new_name}",
                 inline=False,
             )
 
