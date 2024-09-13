@@ -8,6 +8,7 @@ from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.ingots.cmd_add_ingots import cmd_add_ingots
 from ironforgedbot.commands.ingots.cmd_add_ingots_bulk import cmd_add_ingots_bulk
 from ironforgedbot.commands.ingots.cmd_update_ingots import cmd_update_ingots
+from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
 from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
 from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
@@ -136,5 +137,12 @@ class IronForgedCommands:
                 name="logs",
                 description="Displays bot logs.",
                 callback=cmd_log,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="whois",
+                description="Get player's rsn history.",
+                callback=cmd_whois,
             )
         )
