@@ -141,9 +141,15 @@ class DiscordClient(discord.Client):
         scheduler.add_job(
             job_check_membership_discrepancies,
             "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
+            args=[
+                self.discord_guild,
+                CONFIG.RANKS_UPDATE_CHANNEL,
+                CONFIG.WOM_API_KEY,
+                CONFIG.WOM_GROUP_ID,
+                loop,
+            ],
             hour="*",
-            minute="*/2",
+            minute="*",
             second=0,
             timezone="UTC",
         )
