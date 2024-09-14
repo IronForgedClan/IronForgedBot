@@ -88,6 +88,8 @@ class DiscordClient(discord.Client):
         self.discord_guild = self.get_guild(self.guild.id)
         scheduler = BackgroundScheduler()
 
+        scheduler.start()
+
         # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
         # from datetime import datetime
         scheduler.add_job(
@@ -153,7 +155,5 @@ class DiscordClient(discord.Client):
             second=0,
             timezone="UTC",
         )
-
-        scheduler.start()
 
         logger.debug("Background jobs ready")
