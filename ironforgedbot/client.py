@@ -8,6 +8,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from ironforgedbot.common.helpers import populate_emoji_cache
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
+from ironforgedbot.tasks.membership_discrepancies import (
+    job_check_membership_discrepancies,
+)
 from ironforgedbot.tasks.ranks import job_refresh_ranks
 from ironforgedbot.tasks.sync import job_sync_members
 
@@ -131,6 +134,16 @@ class DiscordClient(discord.Client):
             args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
             hour="*/3",
             minute=50,
+            second=0,
+            timezone="UTC",
+        )
+
+        scheduler.add_job(
+            job_check_membership_discrepancies,
+            "cron",
+            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
+            hour="*",
+            minute="*/2",
             second=0,
             timezone="UTC",
         )
