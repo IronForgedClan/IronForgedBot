@@ -150,8 +150,9 @@ class DiscordClient(discord.Client):
                 CONFIG.WOM_GROUP_ID,
                 loop,
             ],
-            hour="*",
-            minute="*",
+            day_of_week="sun",
+            hour="12",
+            minute=0,
             second=0,
             timezone="UTC",
         )
