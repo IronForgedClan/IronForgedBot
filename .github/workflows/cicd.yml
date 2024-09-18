@@ -32,4 +32,12 @@ jobs:
         uses: ./.github/workflows/deploy-environment.yml
         with:
             environment: staging
-        secrets: inherit
+
+    live-deploy:
+        needs: staging-deploy
+        permissions:
+            id-token: write
+            contents: read
+        uses: ./.github/workflows/deploy-environment.yml
+        with:
+            environment: live
