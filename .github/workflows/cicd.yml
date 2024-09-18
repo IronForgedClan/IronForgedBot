@@ -32,6 +32,7 @@ jobs:
         uses: ./.github/workflows/deploy-environment.yml
         with:
             environment: staging
+        secrets: inherit
 
     live-deploy:
         needs: staging-deploy
@@ -41,3 +42,4 @@ jobs:
         uses: ./.github/workflows/deploy-environment.yml
         with:
             environment: live
+        secrets: inherit
