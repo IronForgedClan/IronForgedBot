@@ -1,20 +1,19 @@
-import asyncio
 import datetime
 import logging
 from typing import Optional
 
 import discord
 import wom
-from wom import Skills, Period, GroupRole
+from wom import GroupRole, Period, Skills
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
-    get_all_discord_members,
     fit_log_lines_into_discord_messages,
+    get_all_discord_members,
 )
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
-from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
+from ironforgedbot.tasks import _send_discord_message_plain, can_start_task
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +21,9 @@ DEFAULT_WOM_LIMIT = 50
 MONTHLY_EXP_THRESHOLD = 100_000
 
 
-def job_check_activity_reminder(
+async def job_check_activity_reminder(
     guild: discord.Guild,
     updates_channel_name: str,
-    loop: asyncio.BaseEventLoop,
 ):
     updates_channel = can_start_task(guild, updates_channel_name)
     if updates_channel is None:
@@ -38,12 +36,12 @@ def job_check_activity_reminder(
         logger.error(f"Failed to read absentees list: {e}")
         return
 
-    message = (
-        f"REMINDER: Going to execute weekly activity check in one hour, "
-        f"currently ignoring {len(absentees)} members. Update if necessary."
-    )
-    asyncio.run_coroutine_threadsafe(
-        _send_discord_message_plain(updates_channel, message), loop
+    await _send_discord_message_plain(
+        updates_channel,
+        (
+            f"REMINDER: Going to execute weekly activity check in one hour, "
+            f"currently ignoring {len(absentees)} members. Update if necessary."
+        ),
     )
 
     lines = []
@@ -52,15 +50,12 @@ def job_check_activity_reminder(
 
     discord_messages = fit_log_lines_into_discord_messages(lines)
     for msg in discord_messages:
-        asyncio.run_coroutine_threadsafe(
-            _send_discord_message_plain(updates_channel, msg), loop
-        )
+        await _send_discord_message_plain(updates_channel, msg)
 
 
-def job_check_activity(
+async def job_check_activity(
     guild: discord.Guild,
     updates_channel_name: str,
-    loop: asyncio.BaseEventLoop,
     wom_api_key: str,
     wom_group_id: int,
 ):
@@ -80,38 +75,28 @@ def job_check_activity(
     for absentee in absentees.keys():
         known_absentees.append(absentee.lower())
 
-    asyncio.run_coroutine_threadsafe(
-        _send_discord_message_plain(
-            updates_channel,
-            f"Starting weekly activity check for {len(all_members)} members "
-            f"with the threshold {int(MONTHLY_EXP_THRESHOLD / 1_000)}k/month",
-        ),
-        loop,
+    await _send_discord_message_plain(
+        updates_channel,
+        f"Starting weekly activity check for {len(all_members)} members "
+        f"with the threshold {int(MONTHLY_EXP_THRESHOLD / 1_000)}k/month",
     )
-    future = asyncio.run_coroutine_threadsafe(
-        _find_inactive_users(
-            wom_api_key, wom_group_id, updates_channel, known_absentees
-        ),
-        loop,
+
+    results = await _find_inactive_users(
+        wom_api_key, wom_group_id, updates_channel, known_absentees
     )
-    results = future.result()
+
     if results is None:
         return
 
     results = {k: v for k, v in sorted(results.items(), key=lambda item: item[1])}
     discord_messages = fit_log_lines_into_discord_messages(results.keys())
     for msg in discord_messages:
-        asyncio.run_coroutine_threadsafe(
-            _send_discord_message_plain(updates_channel, msg), loop
-        )
+        await _send_discord_message_plain(updates_channel, msg)
 
-    asyncio.run_coroutine_threadsafe(
-        _send_discord_message_plain(
-            updates_channel,
-            f"Finished weekly activity check, found {len(results)} under-performers "
-            f"and {len(absentees)} known absentees",
-        ),
-        loop,
+    await _send_discord_message_plain(
+        updates_channel,
+        f"Finished weekly activity check, found {len(results)} under-performers "
+        f"and {len(absentees)} known absentees",
     )
 
 

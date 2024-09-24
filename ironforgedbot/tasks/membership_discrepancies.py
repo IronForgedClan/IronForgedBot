@@ -1,15 +1,15 @@
-import asyncio
 import logging
 from typing import List, Tuple
+
 import discord
 import wom
-
 from wom import GroupRole
+
 from ironforgedbot.common.helpers import (
-    get_all_discord_members,
     fit_log_lines_into_discord_messages,
+    get_all_discord_members,
 )
-from ironforgedbot.tasks import can_start_task, _send_discord_message_plain
+from ironforgedbot.tasks import _send_discord_message_plain, can_start_task
 
 logger = logging.getLogger(__name__)
 
@@ -17,33 +17,28 @@ IGNORED_ROLES = [GroupRole.Administrator, GroupRole.Helper]
 IGNORED_USERS = ["x flavored"]
 
 
-def job_check_membership_discrepancies(
+async def job_check_membership_discrepancies(
     guild: discord.Guild,
     updates_channel_name: str,
     wom_api_key: str,
     wom_group_id: int,
-    loop: asyncio.BaseEventLoop,
 ):
     updates_channel = can_start_task(guild, updates_channel_name)
     if updates_channel is None:
-        logger.error("Miss-configured task job_check_membership_discrepancies")
+        logger.error("Bad configuration job_check_membership_discrepancies")
         return
 
-    asyncio.run_coroutine_threadsafe(
-        _send_discord_message_plain(
-            updates_channel, "Beginning membership discrepancy check..."
-        ),
-        loop,
+    await _send_discord_message_plain(
+        updates_channel, "Beginning membership discrepancy check..."
     )
 
     discord_members = get_all_discord_members(guild)
-    discord_members = [s.lower() for s in discord_members]
+    if len(discord_members) > 1:
+        discord_members = [s.lower() for s in discord_members]
 
-    get_wom_members = asyncio.run_coroutine_threadsafe(
-        _get_valid_wom_members(wom_api_key, wom_group_id, updates_channel),
-        loop,
+    wom_members, wom_ignore = await _get_valid_wom_members(
+        wom_api_key, wom_group_id, updates_channel
     )
-    wom_members, wom_ignore = get_wom_members.result()
 
     ignored = wom_ignore + IGNORED_USERS
     discord_members = [item for item in discord_members if item not in ignored]
@@ -54,11 +49,8 @@ def job_check_membership_discrepancies(
         or discord_members is None
         or len(discord_members) < 1
     ):
-        asyncio.run_coroutine_threadsafe(
-            _send_discord_message_plain(
-                updates_channel, "Error fetching member list, aborting."
-            ),
-            loop,
+        await _send_discord_message_plain(
+            updates_channel, "Error fetching member list, aborting."
         )
         return
 
@@ -70,17 +62,11 @@ def job_check_membership_discrepancies(
 
     discord_messages = fit_log_lines_into_discord_messages(only_discord + only_wom)
 
-    send_output_messages = asyncio.run_coroutine_threadsafe(
-        _return_output(updates_channel, discord_messages), loop
-    )
+    await _return_output(updates_channel, discord_messages)
 
-    if send_output_messages.result():
-        asyncio.run_coroutine_threadsafe(
-            _send_finished_message(
-                updates_channel, len(only_discord) - 1, len(only_wom) - 1
-            ),
-            loop,
-        )
+    await _send_finished_message(
+        updates_channel, len(only_discord) - 1, len(only_wom) - 1
+    )
 
 
 async def _send_finished_message(updates_channel, found_discord: int, found_wom: int):

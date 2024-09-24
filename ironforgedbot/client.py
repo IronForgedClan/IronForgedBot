@@ -1,9 +1,10 @@
-import asyncio
 import logging
 import sys
+import time
 
 import discord
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from ironforgedbot.common.helpers import populate_emoji_cache
 from ironforgedbot.config import CONFIG
@@ -80,81 +81,55 @@ class DiscordClient(discord.Client):
 
         self.setup_background_jobs()
 
+    def long_task(self):
+        logger.info("starting long task..")
+        time.sleep(30)
+        logger.info("finished long task..")
+
     def setup_background_jobs(self):
-        logger.debug("Initializing background jobs")
+        logger.debug("Initializing background jobs...")
 
-        loop = asyncio.get_running_loop()
+        discord_guild = self.get_guild(self.guild.id)
+        scheduler = AsyncIOScheduler()
 
-        self.discord_guild = self.get_guild(self.guild.id)
-        scheduler = BackgroundScheduler()
-
-        scheduler.start()
-
-        # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
-        # from datetime import datetime
         scheduler.add_job(
             job_refresh_ranks,
-            "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
-            hour=2,
-            minute=0,
-            second=0,
-            timezone="UTC",
+            CronTrigger(hour=2, minute=0, second=0, timezone="UTC"),
+            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
         )
 
         scheduler.add_job(
             job_check_activity_reminder,
-            "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
-            day_of_week="mon",
-            hour=0,
-            minute=0,
-            second=0,
-            timezone="UTC",
+            CronTrigger(day_of_week="mon", hour=0, minute=0, second=0, timezone="UTC"),
+            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
         )
 
         scheduler.add_job(
             job_check_activity,
-            "cron",
+            CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
             args=[
-                self.discord_guild,
+                discord_guild,
                 CONFIG.RANKS_UPDATE_CHANNEL,
-                loop,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ],
-            day_of_week="mon",
-            hour=1,
-            minute=0,
-            second=0,
-            timezone="UTC",
         )
 
         scheduler.add_job(
             job_sync_members,
-            "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
-            hour="*/3",
-            minute=50,
-            second=0,
-            timezone="UTC",
+            CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
+            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
         )
 
         scheduler.add_job(
             job_check_membership_discrepancies,
-            "cron",
+            CronTrigger(day_of_week="sun", hour=0, minute=0, second=0, timezone="UTC"),
             args=[
-                self.discord_guild,
+                discord_guild,
                 CONFIG.RANKS_UPDATE_CHANNEL,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
-                loop,
             ],
-            day_of_week="sun",
-            hour="12",
-            minute=0,
-            second=0,
-            timezone="UTC",
         )
 
-        logger.debug("Background jobs ready")
+        scheduler.start()
