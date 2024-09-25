@@ -63,8 +63,6 @@ class DiscordClient(discord.Client):
         self._tree = value
 
     async def setup_hook(self):
-        # Copy commands to the guild (Discord server)
-        # TODO: Move this to a separate CLI solely for uploading commands.
         if self.upload:
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
@@ -81,16 +79,15 @@ class DiscordClient(discord.Client):
 
         self.setup_background_jobs()
 
-    def long_task(self):
-        logger.info("starting long task..")
-        time.sleep(30)
-        logger.info("finished long task..")
-
     def setup_background_jobs(self):
-        logger.debug("Initializing background jobs...")
-
         discord_guild = self.get_guild(self.guild.id)
         scheduler = AsyncIOScheduler()
+
+        scheduler.add_job(
+            job_sync_members,
+            CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
+            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
+        )
 
         scheduler.add_job(
             job_refresh_ranks,
@@ -113,12 +110,6 @@ class DiscordClient(discord.Client):
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ],
-        )
-
-        scheduler.add_job(
-            job_sync_members,
-            CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
-            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
         )
 
         scheduler.add_job(
