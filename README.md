@@ -74,15 +74,15 @@ Now you can modify the example `.env` file with your values.
 
 #### Keys
 
-| Key                  | Explanation                                                                       |
-|----------------------|-----------------------------------------------------------------------------------|
-| TEMP_DIR             | The location on disk where temporary files are stored. Default value is `./temp`. |
-| SHEET_ID             | The ID of the Google Sheet.                                                       |
-| GUILD_ID             | The ID of the Discord guild.                                                      |
-| BOT_TOKEN            | The unique token for the application. Found on the Discord Developer Portal.      |
-| WOM_API_KEY          | The unique key for connecting to the Wise Old Man API.                            |
-| WOM_GROUP_ID         | The unique ID for the clan group on Wise Old Man.                                 |
-| RANKS_UPDATE_CHANNEL | The unique ID of the channel that rank update messages will be posted to.         |
+| Key                   | Explanation                                                                       |
+|-----------------------|-----------------------------------------------------------------------------------|
+| TEMP_DIR              | The location on disk where temporary files are stored. Default value is `./temp`. |
+| SHEET_ID              | The ID of the Google Sheet.                                                       |
+| GUILD_ID              | The ID of the Discord guild.                                                      |
+| BOT_TOKEN             | The unique token for the application. Found on the Discord Developer Portal.      |
+| WOM_API_KEY           | The unique key for connecting to the Wise Old Man API.                            |
+| WOM_GROUP_ID          | The unique ID for the clan group on Wise Old Man.                                 |
+| AUTOMATION_CHANNEL_ID | The unique ID of the channel that automation messages will sent.                  |
 
 
 ## Running
