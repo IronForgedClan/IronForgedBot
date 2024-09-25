@@ -116,17 +116,17 @@ def populate_emoji_cache(application_id: int, token: str):
     logger.info("Emoji cache loaded successfully")
 
 
-# TODO: when discord.py 2.5 releases remove interaction parameter
-def find_emoji(interaction: discord.Interaction, target: str):
+# TODO: when discord.py 2.5 releases remove interaction param and fallback
+def find_emoji(interaction: discord.Interaction | None, target: str):
     emoji = None
 
     if target in emojiCache:
         emoji = emojiCache[target]
 
-    assert interaction.guild
+    # fallback if not found in cache, search the guild
+    if emoji is None and interaction is not None:
+        assert interaction.guild
 
-    if emoji is None:
-        # fallback if not found in cache, search the guild
         for guild_emoji in interaction.guild.emojis:
             if guild_emoji.available and guild_emoji.name == target:
                 logger.warning(
@@ -209,3 +209,16 @@ def render_relative_time(target: datetime) -> str:
         return f"{delta.minutes} minute{'s' if delta.minutes > 1 else ''} ago"
     else:
         return f"{delta.seconds} second{'s' if delta.seconds != 1 else ''} ago"
+
+
+def get_text_channel(
+    guild: discord.Guild | None, channel_id: int
+) -> discord.TextChannel | None:
+    if not guild:
+        return None
+
+    for channel in guild.channels:
+        if channel.id == channel_id and channel.type == discord.ChannelType.text:
+            return channel
+
+    return None

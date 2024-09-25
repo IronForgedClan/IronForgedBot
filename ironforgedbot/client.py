@@ -1,12 +1,11 @@
 import logging
 import sys
-import time
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from ironforgedbot.common.helpers import populate_emoji_cache
+from ironforgedbot.common.helpers import get_text_channel, populate_emoji_cache
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
 from ironforgedbot.tasks.membership_discrepancies import (
@@ -77,28 +76,36 @@ class DiscordClient(discord.Client):
 
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
 
-        self.setup_background_jobs()
+        await self.setup_background_jobs()
 
-    def setup_background_jobs(self):
+    async def setup_background_jobs(self):
         discord_guild = self.get_guild(self.guild.id)
+        report_channel = get_text_channel(discord_guild, CONFIG.AUTOMATION_CHANNEL_ID)
+
+        if not report_channel:
+            logger.critical(
+                f"Error getting automation report channel: {CONFIG.AUTOMATION_CHANNEL_ID}"
+            )
+            sys.exit(1)
+
         scheduler = AsyncIOScheduler()
 
         scheduler.add_job(
             job_sync_members,
             CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
-            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
+            args=[discord_guild, report_channel],
         )
 
         scheduler.add_job(
             job_refresh_ranks,
             CronTrigger(hour=2, minute=0, second=0, timezone="UTC"),
-            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
+            args=[discord_guild, report_channel],
         )
 
         scheduler.add_job(
             job_check_activity_reminder,
             CronTrigger(day_of_week="mon", hour=0, minute=0, second=0, timezone="UTC"),
-            args=[discord_guild, CONFIG.RANKS_UPDATE_CHANNEL],
+            args=[report_channel],
         )
 
         scheduler.add_job(
@@ -106,7 +113,7 @@ class DiscordClient(discord.Client):
             CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
             args=[
                 discord_guild,
-                CONFIG.RANKS_UPDATE_CHANNEL,
+                report_channel,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ],
@@ -117,10 +124,14 @@ class DiscordClient(discord.Client):
             CronTrigger(day_of_week="sun", hour=0, minute=0, second=0, timezone="UTC"),
             args=[
                 discord_guild,
-                CONFIG.RANKS_UPDATE_CHANNEL,
+                report_channel,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ],
         )
 
         scheduler.start()
+
+        await report_channel.send(
+            f"Bot {CONFIG.BOT_VERSION} will use this channel for automation reports."
+        )

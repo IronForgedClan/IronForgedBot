@@ -5,34 +5,28 @@ import discord
 from ironforgedbot.commands.admin.cmd_sync_members import sync_members
 from ironforgedbot.common.helpers import fit_log_lines_into_discord_messages
 from ironforgedbot.storage.types import StorageError
-from ironforgedbot.tasks import _send_discord_message_plain, can_start_task
 
 logger = logging.getLogger(__name__)
 
 
 async def job_sync_members(
     guild: discord.Guild,
-    updates_channel_name: str,
+    report_channel: discord.TextChannel,
 ):
-    updates_channel = can_start_task(guild, updates_channel_name)
-    if updates_channel is None:
-        logger.error("Miss-configured task sync_members")
-        return
-
-    lines = []
+    await report_channel.send("Beginning member sync...")
 
     try:
-        lines = sync_members(guild)
+        members_change = sync_members(guild)
     except StorageError as error:
-        error_message = f"Encountered error syncing members: {error}"
-        logger.error(error_message)
-        await _send_discord_message_plain(updates_channel, error_message)
+        logger.error(error)
+        await report_channel.send("Error syncing members.")
 
-    if 0 == len(lines):
+    if len(members_change) == 0:
+        await report_channel.send("No changes detected.")
         return
 
-    await _send_discord_message_plain(updates_channel, "Finished sync members job")
-
-    discord_messages = fit_log_lines_into_discord_messages(lines)
+    discord_messages = fit_log_lines_into_discord_messages(members_change)
     for msg in discord_messages:
-        await _send_discord_message_plain(updates_channel, msg)
+        await report_channel.send(msg)
+
+    await report_channel.send("Finished member sync.")
