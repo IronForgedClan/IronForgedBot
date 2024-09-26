@@ -29,8 +29,8 @@ async def job_check_activity_reminder(report_channel: discord.TextChannel):
 
     await report_channel.send(
         (
-            f"**REMINDER:** Executing weekly activity check in one hour.\n"
-            f"Ignoring **{len(absentees)}** member(s). Update if necessary."
+            f"**REMINDER:**\nExecuting activity check in one hour.\n"
+            f"Ignoring **{len(absentees)}** member(s). Update storage if necessary."
         )
     )
 
@@ -44,7 +44,6 @@ async def job_check_activity_reminder(report_channel: discord.TextChannel):
 
 
 async def job_check_activity(
-    guild: discord.Guild,
     report_channel: discord.TextChannel,
     wom_api_key: str,
     wom_group_id: int,
@@ -57,14 +56,12 @@ async def job_check_activity(
 
     await report_channel.send("Beginning activity check...")
 
-    all_members = get_all_discord_members(guild)
     known_absentees = []
     for absentee in absentees.keys():
         known_absentees.append(absentee.lower())
 
     await report_channel.send(
-        f"Found **{len(all_members)}** member(s).\n"
-        f"Found **{len(known_absentees)}** known absent member(s).\n"
+        f"Found **{len(known_absentees)}** absent member(s).\n"
         f"Threshold: **{MONTHLY_EXP_THRESHOLD:,}** xp/month.",
     )
 
@@ -81,7 +78,10 @@ async def job_check_activity(
         await report_channel.send(msg)
 
     await report_channel.send(
-        f"Finished weekly activity check.\nFound **{len(results)}** under-performers."
+        (
+            f"Finished activity check.\nFound **{len(results)}** "
+            "member(s) that do not meet requirements."
+        )
     )
 
 

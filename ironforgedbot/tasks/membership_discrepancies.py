@@ -9,7 +9,6 @@ from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
     get_all_discord_members,
 )
-from ironforgedbot.tasks import _send_discord_message_plain, can_start_task
 
 logger = logging.getLogger(__name__)
 
@@ -19,25 +18,18 @@ IGNORED_USERS = ["x flavored"]
 
 async def job_check_membership_discrepancies(
     guild: discord.Guild,
-    updates_channel_name: str,
+    report_channel: discord.TextChannel,
     wom_api_key: str,
     wom_group_id: int,
 ):
-    updates_channel = can_start_task(guild, updates_channel_name)
-    if updates_channel is None:
-        logger.error("Bad configuration job_check_membership_discrepancies")
-        return
-
-    await _send_discord_message_plain(
-        updates_channel, "Beginning membership discrepancy check..."
-    )
+    await report_channel.send("Beginning membership discrepancy check...")
 
     discord_members = get_all_discord_members(guild)
     if len(discord_members) > 1:
         discord_members = [s.lower() for s in discord_members]
 
     wom_members, wom_ignore = await _get_valid_wom_members(
-        wom_api_key, wom_group_id, updates_channel
+        wom_api_key, wom_group_id, report_channel
     )
 
     ignored = wom_ignore + IGNORED_USERS
@@ -49,10 +41,12 @@ async def job_check_membership_discrepancies(
         or discord_members is None
         or len(discord_members) < 1
     ):
-        await _send_discord_message_plain(
-            updates_channel, "Error fetching member list, aborting."
-        )
+        await report_channel.send("Error fetching member list, aborting.")
         return
+
+    await report_channel.send(
+        f"Found **{len(discord_members)}** discord members\nFound **{len(wom_members)}** wom members..."
+    )
 
     only_discord = sorted(list(set(discord_members) - set(wom_members)))
     only_wom = sorted(list(set(wom_members) - set(discord_members)))
@@ -62,26 +56,13 @@ async def job_check_membership_discrepancies(
 
     discord_messages = fit_log_lines_into_discord_messages(only_discord + only_wom)
 
-    await _return_output(updates_channel, discord_messages)
+    for message in discord_messages:
+        await report_channel.send(message)
 
-    await _send_finished_message(
-        updates_channel, len(only_discord) - 1, len(only_wom) - 1
+    await report_channel.send(
+        f"Finished weekly membership discrepancy check.\nFound **{len(discord_members) - 1}** member(s) "
+        f"only on discord, and **{len(wom_members) - 1}** member(s) only on wom.",
     )
-
-
-async def _send_finished_message(updates_channel, found_discord: int, found_wom: int):
-    await _send_discord_message_plain(
-        updates_channel,
-        f"Finished weekly membership discrepancy check.\nFound **{found_discord}** member(s) "
-        f"only on discord, and **{found_wom}** member(s) only on wom.",
-    )
-
-
-async def _return_output(updates_channel, messages):
-    for message in messages:
-        await updates_channel.send(content=message)
-
-    return True
 
 
 async def _get_valid_wom_members(
