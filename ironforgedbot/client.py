@@ -132,5 +132,5 @@ class DiscordClient(discord.Client):
         scheduler.start()
 
         await report_channel.send(
-            f"Bot {CONFIG.BOT_VERSION} will use this channel for automation reports."
+            f"Bot **v{CONFIG.BOT_VERSION}** is online and configured to use this channel for automation reports."
         )
