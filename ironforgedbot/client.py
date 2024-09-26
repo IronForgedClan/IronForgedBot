@@ -112,7 +112,6 @@ class DiscordClient(discord.Client):
             job_check_activity,
             CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
             args=[
-                discord_guild,
                 report_channel,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
