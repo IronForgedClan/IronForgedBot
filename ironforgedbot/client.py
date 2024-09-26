@@ -5,7 +5,11 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from ironforgedbot.common.helpers import get_text_channel, populate_emoji_cache
+from ironforgedbot.common.helpers import (
+    get_text_channel,
+    populate_emoji_cache,
+)
+from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
 from ironforgedbot.tasks.membership_discrepancies import (
@@ -134,3 +138,15 @@ class DiscordClient(discord.Client):
         await report_channel.send(
             f"Bot **v{CONFIG.BOT_VERSION}** is online and configured to use this channel for automation reports."
         )
+
+        jobs = scheduler.get_jobs()
+        embed = build_response_embed(
+            "💾 Active Jobs",
+            "Schedule runs according to UTC timezone.",
+            discord.Colour.blue(),
+        )
+
+        for job in jobs:
+            embed.add_field(name=str(job.name), value=str(job.trigger), inline=False)
+
+        await report_channel.send(embed=embed)
