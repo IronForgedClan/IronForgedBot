@@ -2,21 +2,21 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.hiscore.cmd_score import cmd_score
+from ironforgedbot.client import DiscordClient
+from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
+from ironforgedbot.commands.admin.cmd_log import cmd_log
+from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
-from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
+from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.ingots.cmd_add_ingots import cmd_add_ingots
 from ironforgedbot.commands.ingots.cmd_add_ingots_bulk import cmd_add_ingots_bulk
 from ironforgedbot.commands.ingots.cmd_update_ingots import cmd_update_ingots
+from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
 from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
 from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
-from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
-from ironforgedbot.commands.admin.cmd_log import cmd_log
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
-
-from ironforgedbot.client import DiscordClient
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
@@ -144,5 +144,12 @@ class IronForgedCommands:
                 name="whois",
                 description="Get player's rsn history.",
                 callback=cmd_whois,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="activity_check",
+                description="Manually runs the activity check automation.",
+                callback=cmd_activity_check,
             )
         )
