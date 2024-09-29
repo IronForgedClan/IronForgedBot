@@ -9,7 +9,6 @@ from ironforgedbot.common.helpers import (
     get_text_channel,
     populate_emoji_cache,
 )
-from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.check_activity import (
     job_check_activity,
@@ -139,17 +138,6 @@ class DiscordClient(discord.Client):
         scheduler.start()
 
         await report_channel.send(
-            f"Bot **v{CONFIG.BOT_VERSION}** is online and configured to use this channel for automation reports."
+            f"🟢 Bot **v{CONFIG.BOT_VERSION}** is **online** and configured to use this channel for"
+            f" **{len(scheduler.get_jobs())}** automation reports. View pinned message for details."
         )
-
-        jobs = scheduler.get_jobs()
-        embed = build_response_embed(
-            "💾 Active Jobs",
-            "Jobs are scheduled in the UTC timezone.",
-            discord.Colour.blue(),
-        )
-
-        for job in jobs:
-            embed.add_field(name=str(job.name), value=str(job.trigger), inline=False)
-
-        await report_channel.send(embed=embed)
