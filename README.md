@@ -23,6 +23,7 @@
 | `/sync_members`       | N/A                                                                                        | Leadership   | Synchronises Discord members with storage              |
 | `/roster`             | Url (str)                                                                                  | Leadership   | Produces a roster list of players                      |
 | `/logs`               | Index (int)                                                                                | Discord Team | Privately shares bot log files                         |
+| `/activity_check`     | N/A                                                                                        | Leadership   | Manually starts the activity check automation          |
 
 ## Setup
 
