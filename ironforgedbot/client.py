@@ -1,15 +1,24 @@
-import asyncio
 import logging
 import sys
 
 import discord
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
-from ironforgedbot.common.helpers import populate_emoji_cache
+from ironforgedbot.common.helpers import (
+    get_text_channel,
+    populate_emoji_cache,
+)
 from ironforgedbot.config import CONFIG
-from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
-from ironforgedbot.tasks.ranks import job_refresh_ranks
-from ironforgedbot.tasks.sync import job_sync_members
+from ironforgedbot.tasks.check_activity import (
+    job_check_activity,
+    job_check_activity_reminder,
+)
+from ironforgedbot.tasks.membership_discrepancies import (
+    job_check_membership_discrepancies,
+)
+from ironforgedbot.tasks.refresh_ranks import job_refresh_ranks
+from ironforgedbot.tasks.sync_members import job_sync_members
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -59,8 +68,6 @@ class DiscordClient(discord.Client):
         self._tree = value
 
     async def setup_hook(self):
-        # Copy commands to the guild (Discord server)
-        # TODO: Move this to a separate CLI solely for uploading commands.
         if self.upload:
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
@@ -75,66 +82,62 @@ class DiscordClient(discord.Client):
 
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
 
-        self.setup_background_jobs()
+        await self.setup_background_jobs()
 
-    def setup_background_jobs(self):
-        logger.debug("Initializing background jobs")
+    async def setup_background_jobs(self):
+        discord_guild = self.get_guild(self.guild.id)
+        report_channel = get_text_channel(discord_guild, CONFIG.AUTOMATION_CHANNEL_ID)
 
-        loop = asyncio.get_running_loop()
+        if not report_channel:
+            logger.critical(
+                f"Error getting automation report channel: {CONFIG.AUTOMATION_CHANNEL_ID}"
+            )
+            sys.exit(1)
 
-        self.discord_guild = self.get_guild(self.guild.id)
-        scheduler = BackgroundScheduler()
+        scheduler = AsyncIOScheduler()
 
-        # Use 'interval' with minutes | seconds = x for testing or next_run_time=datetime.now()
-        # from datetime import datetime
+        scheduler.add_job(
+            job_sync_members,
+            CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
+            args=[discord_guild, report_channel],
+        )
+
         scheduler.add_job(
             job_refresh_ranks,
-            "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
-            hour=2,
-            minute=0,
-            second=0,
-            timezone="UTC",
+            CronTrigger(hour=2, minute=0, second=0, timezone="UTC"),
+            args=[discord_guild, report_channel],
         )
 
         scheduler.add_job(
             job_check_activity_reminder,
-            "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
-            day_of_week="mon",
-            hour=0,
-            minute=0,
-            second=0,
-            timezone="UTC",
+            CronTrigger(day_of_week="mon", hour=0, minute=0, second=0, timezone="UTC"),
+            args=[report_channel],
         )
 
         scheduler.add_job(
             job_check_activity,
-            "cron",
+            CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
             args=[
-                self.discord_guild,
-                CONFIG.RANKS_UPDATE_CHANNEL,
-                loop,
+                report_channel,
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ],
-            day_of_week="mon",
-            hour=1,
-            minute=0,
-            second=0,
-            timezone="UTC",
         )
 
         scheduler.add_job(
-            job_sync_members,
-            "cron",
-            args=[self.discord_guild, CONFIG.RANKS_UPDATE_CHANNEL, loop],
-            hour="*/3",
-            minute=50,
-            second=0,
-            timezone="UTC",
+            job_check_membership_discrepancies,
+            CronTrigger(day_of_week="sun", hour=0, minute=0, second=0, timezone="UTC"),
+            args=[
+                discord_guild,
+                report_channel,
+                CONFIG.WOM_API_KEY,
+                CONFIG.WOM_GROUP_ID,
+            ],
         )
 
         scheduler.start()
 
-        logger.debug("Background jobs ready")
+        await report_channel.send(
+            f"🟢 Bot **v{CONFIG.BOT_VERSION}** is **online** and configured to use this channel for"
+            f" **{len(scheduler.get_jobs())}** automation reports. View pinned message for details."
+        )
