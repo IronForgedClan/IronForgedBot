@@ -68,7 +68,7 @@ def create_mock_wom_client() -> wom.Client:
     return client
 
 
-def mock_require_role(_: str):
+def mock_require_role(role_name: str, ephemeral: bool):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
