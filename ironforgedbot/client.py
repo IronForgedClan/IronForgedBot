@@ -142,7 +142,7 @@ class DiscordClient(discord.Client):
         jobs = scheduler.get_jobs()
         embed = build_response_embed(
             "💾 Active Jobs",
-            "Schedule runs according to UTC timezone.",
+            "Jobs are scheduled in the UTC timezone.",
             discord.Colour.blue(),
         )
 

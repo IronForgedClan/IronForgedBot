@@ -2,8 +2,7 @@ import logging
 from typing import List, Tuple
 
 import discord
-import wom
-from wom import GroupRole
+from wom import GroupRole, Client
 
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
@@ -55,12 +54,11 @@ async def job_check_membership_discrepancies(
     only_wom.insert(0, "Member(s) found only on wom:")
 
     discord_messages = fit_log_lines_into_discord_messages(only_discord + only_wom)
-
     for message in discord_messages:
         await report_channel.send(message)
 
     await report_channel.send(
-        f"Finished weekly membership discrepancy check.\nFound **{len(discord_members) - 1}** member(s) "
+        f"Finished membership discrepancy check.\nFound **{len(discord_members) - 1}** member(s) "
         f"only on discord, and **{len(wom_members) - 1}** member(s) only on wom.",
     )
 
@@ -68,17 +66,17 @@ async def job_check_membership_discrepancies(
 async def _get_valid_wom_members(
     wom_api_key: str, wom_group_id: int, updates_channel
 ) -> Tuple[List[str] | None, List[str]]:
-    wom_client = wom.Client(api_key=wom_api_key, user_agent="IronForged")
+    wom_client = Client(api_key=wom_api_key, user_agent="IronForged")
     await wom_client.start()
 
     wom_group_result = await wom_client.groups.get_details(wom_group_id)
-    if wom_group_result.is_ok:
-        wom_group = wom_group_result.unwrap()
-    else:
-        message = f"Got error, fetching WOM group: {wom_group_result.unwrap_err()}"
-        logger.error(message)
-        await updates_channel.send(content=message)
+
+    if wom_group_result.is_err:
+        logger.critical(wom_group_result.unwrap_err())
+        await updates_channel.send("Error fetching WOM group details.")
         return None, []
+
+    wom_group = wom_group_result.unwrap()
 
     members: List[str] = []
     ignore_members: List[str] = []

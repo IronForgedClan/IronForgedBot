@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 from io import BytesIO
-from typing import Tuple, TypedDict
+from typing import List, Tuple, TypedDict
 
 import discord
 import requests
@@ -145,7 +145,7 @@ def find_emoji(interaction: discord.Interaction | None, target: str):
     return f"<{'a' if emoji['animated'] else ''}:{target}:{emoji['id']}>"
 
 
-def get_all_discord_members(guild: discord.Guild) -> list[str]:
+def get_all_discord_members(guild: discord.Guild) -> List[str]:
     known_members = []
     for member in guild.members:
         if member.bot or member.nick is None or "" == member.nick:
@@ -166,7 +166,7 @@ def get_all_discord_members(guild: discord.Guild) -> list[str]:
     return known_members
 
 
-def fit_log_lines_into_discord_messages(lines: list[str]) -> list[str]:
+def fit_log_lines_into_discord_messages(lines: List[str]) -> List[str]:
     messages = []
     current_message = QUOTES + NEW_LINE
 

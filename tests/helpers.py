@@ -3,6 +3,7 @@ import random
 from typing import List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
+import wom
 from ironforgedbot.common.roles import ROLES
 
 VALID_CONFIG = {
@@ -29,12 +30,19 @@ def create_mock_discord_interaction(
     interaction = Mock(spec=discord.Interaction)
     interaction.followup = AsyncMock()
     interaction.response = AsyncMock()
-    interaction.guild = Mock(spec=discord.Guild)
-    interaction.guild.members = members
-    interaction.guild.emojis = []
+    interaction.guild = create_mock_discord_guild(members)
     interaction.user = user
 
     return interaction
+
+
+def create_mock_discord_guild(
+    members: Optional[List[discord.Member]] = None,
+) -> discord.Guild:
+    guild = Mock(spec=discord.Guild)
+    guild.members = members or []
+    guild.emojis = []
+    return guild
 
 
 def create_test_member(
@@ -51,6 +59,13 @@ def create_test_member(
     mock_member.display_name = nick or name
 
     return mock_member
+
+
+def create_mock_wom_client() -> wom.Client:
+    client = Mock(spec=wom.Client)
+    client.start = AsyncMock()
+
+    return client
 
 
 def mock_require_role(_: str):
