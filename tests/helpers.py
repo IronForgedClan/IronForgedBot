@@ -3,6 +3,7 @@ import random
 from typing import List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
+import wom
 from ironforgedbot.common.roles import ROLES
 
 VALID_CONFIG = {
@@ -12,7 +13,7 @@ VALID_CONFIG = {
     "BOT_TOKEN": "aaaaa",
     "WOM_GROUP_ID": "3333",
     "WOM_API_KEY": "xxxxx",
-    "RANKS_UPDATE_CHANNEL": "test-channel",
+    "AUTOMATION_CHANNEL_ID": "123456",
 }
 
 
@@ -29,12 +30,19 @@ def create_mock_discord_interaction(
     interaction = Mock(spec=discord.Interaction)
     interaction.followup = AsyncMock()
     interaction.response = AsyncMock()
-    interaction.guild = Mock(spec=discord.Guild)
-    interaction.guild.members = members
-    interaction.guild.emojis = []
+    interaction.guild = create_mock_discord_guild(members)
     interaction.user = user
 
     return interaction
+
+
+def create_mock_discord_guild(
+    members: Optional[List[discord.Member]] = None,
+) -> discord.Guild:
+    guild = Mock(spec=discord.Guild)
+    guild.members = members or []
+    guild.emojis = []
+    return guild
 
 
 def create_test_member(
@@ -53,7 +61,14 @@ def create_test_member(
     return mock_member
 
 
-def mock_require_role(_: str):
+def create_mock_wom_client() -> wom.Client:
+    client = Mock(spec=wom.Client)
+    client.start = AsyncMock()
+
+    return client
+
+
+def mock_require_role(role_name: str, ephemeral: Optional[bool] = False):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
