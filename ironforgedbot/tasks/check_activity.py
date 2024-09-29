@@ -8,7 +8,6 @@ from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
-    get_all_discord_members,
 )
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError

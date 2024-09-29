@@ -11,12 +11,15 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.config import CONFIG
-from ironforgedbot.tasks.activity import job_check_activity, job_check_activity_reminder
+from ironforgedbot.tasks.check_activity import (
+    job_check_activity,
+    job_check_activity_reminder,
+)
 from ironforgedbot.tasks.membership_discrepancies import (
     job_check_membership_discrepancies,
 )
-from ironforgedbot.tasks.ranks import job_refresh_ranks
-from ironforgedbot.tasks.sync import job_sync_members
+from ironforgedbot.tasks.refresh_ranks import job_refresh_ranks
+from ironforgedbot.tasks.sync_members import job_sync_members
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
