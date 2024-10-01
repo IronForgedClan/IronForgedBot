@@ -1,6 +1,6 @@
+import asyncio
 import logging
 import random
-import time
 
 import discord
 
@@ -52,6 +52,6 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             logger.info(message)
             await report_channel.send(message)
 
-        time.sleep(random.randint(1, 5))
+        await asyncio.sleep(random.randrange(1, 7))
 
     await report_channel.send("Finished rank check.")
