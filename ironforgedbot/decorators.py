@@ -56,7 +56,7 @@ def require_role(role_name: str, ephemeral=False):
     return decorator
 
 
-def retry_on_exception(retries):
+def retry_on_exception(retries=3):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -67,7 +67,7 @@ def retry_on_exception(retries):
                     if attempt < retries - 1:
                         sleep_time = randrange(1, 7)
                         logger.warning(
-                            f"Failed attempt {attempt + 1} for {func.__name__}, "
+                            f"Fail #{attempt + 1} for {func.__name__}, "
                             f"retrying after {sleep_time}s sleep..."
                         )
                         await asyncio.sleep(sleep_time)
