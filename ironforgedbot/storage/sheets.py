@@ -2,17 +2,15 @@ import asyncio
 import logging
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import Resource, build
-from googleapiclient.errors import HttpError
-from pytz import timezone
 import pytz
-from requests import request
 
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.config import CONFIG
+from ironforgedbot.decorators import retry_on_exception
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 
 logging.getLogger("googleapiclient").setLevel(logging.ERROR)
@@ -66,49 +64,35 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         return est_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")
 
-    async def _get_sheet_data(self, spreadsheet_id, range_name, retries=3) -> list[Any]:
+    @retry_on_exception(retries=5)
+    async def _get_sheet_data(self, spreadsheet_id, range_name):
         """Performs a thread-safe fetch of sheet data.
 
         Arguments:
             spreadsheet_id: int
             range_name: str
-            retries: optional
         """
         async with self._lock:
-            request = (
+            query = (
                 self._sheets_client.spreadsheets()
                 .values()
                 .get(spreadsheetId=spreadsheet_id, range=range_name)
             )
 
-            for attempt in range(retries):
-                try:
-                    result = await asyncio.to_thread(request.execute)
-                    return result.get("values", [])
-                except Exception as e:
-                    if attempt < retries - 1:
-                        logger.warning(
-                            f"Failed read_members attempt {attempt}, retrying..."
-                        )
-                        await asyncio.sleep(5)
-                    else:
-                        logger.critical(e)
-                        raise StorageError(
-                            "An error occured contacting Google Sheets API."
-                        )
-        return []
+            result = await asyncio.to_thread(query.execute)
+            return result.get("values", None)
 
-    async def _update_sheet_data(self, spreadsheet_id, range_name, body, retries=3):
-        """Performs a thread-safe update to the sheet.
+    @retry_on_exception(retries=5)
+    async def _update_sheet_data(self, spreadsheet_id, range_name, body):
+        """Performs a thread-safe update to sheet data.
 
         Arguments:
             spreadsheet_id: int
             range_name: str
             body: any
-            retries: optional
         """
         async with self._lock:
-            request = (
+            query = (
                 self._sheets_client.spreadsheets()
                 .values()
                 .update(
@@ -119,23 +103,30 @@ class SheetsStorage(metaclass=IngotsStorage):
                 )
             )
 
-            for attempt in range(retries):
-                try:
-                    if attempt < 1:
-                        raise Exception
-                    result = await asyncio.to_thread(request.execute)
-                    return result
-                except Exception as e:
-                    if attempt < retries - 1:
-                        logger.warning(
-                            f"Failed read_members attempt {attempt}, retrying..."
-                        )
-                        await asyncio.sleep(5)
-                    else:
-                        logger.critical(e)
-                        raise StorageError(
-                            "An error occured contacting Google Sheets API."
-                        )
+            return await asyncio.to_thread(query.execute)
+
+    @retry_on_exception(retries=5)
+    async def _append_sheet_data(self, spreadsheet_id, range_name, body):
+        """Performs a thread-safe append to sheet data.
+
+        Arguments:
+            spreadsheet_id: int
+            range_name: str
+            body: any
+        """
+        async with self._lock:
+            query = (
+                self._sheets_client.spreadsheets()
+                .values()
+                .append(
+                    spreadsheetId=spreadsheet_id,
+                    range=range_name,
+                    valueInputOption="RAW",
+                    body=body,
+                )
+            )
+
+            return await asyncio.to_thread(query.execute)
 
     async def _log_change(self, changes: list[list[Union[str, int]]]):
         """Records data change to ChangeLog sheet.
@@ -144,9 +135,8 @@ class SheetsStorage(metaclass=IngotsStorage):
             changes: Values to prepend to current changelog. Expected
                 format: [user, timestamp, old value, new value, mutator, note]
         """
-        await self._update_sheet_data(
-            self._sheet_id, CHANGELOG_RANGE, {"values": changes}
-        )
+        body = {"values": changes}
+        await self._append_sheet_data(self._sheet_id, CHANGELOG_RANGE, body)
 
     async def read_member(self, player: str) -> Member | None:
         """Read member by runescape name."""

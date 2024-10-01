@@ -1,6 +1,8 @@
+import asyncio
 import functools
 import logging
 from pprint import pformat
+from random import randrange
 
 import discord
 
@@ -49,6 +51,30 @@ def require_role(role_name: str, ephemeral=False):
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)
 
             await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def retry_on_exception(retries):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    if attempt < retries - 1:
+                        sleep_time = randrange(1, 7)
+                        logger.warning(
+                            f"Failed attempt {attempt + 1} for {func.__name__}, "
+                            f"retrying after {sleep_time}s sleep..."
+                        )
+                        await asyncio.sleep(sleep_time)
+                    else:
+                        logger.critical(e)
+                        raise e
 
         return wrapper
 
