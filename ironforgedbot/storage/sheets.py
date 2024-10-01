@@ -323,13 +323,14 @@ class SheetsStorage(metaclass=IngotsStorage):
         # Unlike the ingots table, this is expected to get emptied.
         # So we have to account for an empty response.
         tickets = {}
-        for value in result:
-            if len(value) >= 2:
-                if value[0] == "":
-                    continue
-                if value[1] == "":
-                    value[1] = 0
-                tickets[int(value[0])] = int(value[1])
+        if result:
+            for value in result:
+                if len(value) >= 2:
+                    if value[0] == "":
+                        continue
+                    if value[1] == "":
+                        value[1] = 0
+                    tickets[int(value[0])] = int(value[1])
 
         return tickets
 
