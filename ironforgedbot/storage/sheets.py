@@ -398,27 +398,10 @@ class SheetsStorage(metaclass=IngotsStorage):
         await self._update_sheet_data(self._sheet_id, write_range, body)
         await self._log_change(changes)
 
-    async def get_absentees(self) -> dict[str:str]:
+    async def get_absentees(self) -> dict[str, str]:
         """Returns known list of absentees with <rsn:date> format"""
-        retries = 3
-        for attempt in range(retries):
-            try:
-                result = await asyncio.to_thread(
-                    self._sheets_client.spreadsheets()
-                    .values()
-                    .get(spreadsheetId=self._sheet_id, range=ABSENCE_RANGE)
-                    .execute()
-                )
-            except Exception as e:
-                if attempt < retries - 1:
-                    logger.warning(f"Failed read_raffle attempt {attempt}, retrying...")
-                    await asyncio.sleep(5)
-                else:
-                    raise StorageError(
-                        f"Encountered error reading Absentees from sheets: {e}"
-                    )
+        values = await self._get_sheet_data(self._sheet_id, ABSENCE_RANGE)
 
-        values = result.get("values", [])
         results = {}
         for value in values:
             date = "Unknown"
