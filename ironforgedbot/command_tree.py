@@ -31,6 +31,7 @@ class IronForgedCommandTree(discord.app_commands.CommandTree):
         logger.critical(error)
 
         if isinstance(error, discord.app_commands.CheckFailure):
+            await interaction.response.defer(thinking=True, ephemeral=True)
             return await send_error_response(
                 interaction,
                 "You do not have permission to run that command.",

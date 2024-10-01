@@ -40,7 +40,6 @@ def require_role(role_name: str, ephemeral=False):
                     f"Unable to verify caller's guild membership ({func.__name__})"
                 )
 
-            await interaction.response.defer(thinking=True, ephemeral=ephemeral)
             if role_name != ROLES.ANY:
                 has_role = validate_member_has_role(member, role_name)
                 if not has_role:
@@ -49,6 +48,7 @@ def require_role(role_name: str, ephemeral=False):
                         f"{func.__name__} but does not have permission"
                     )
 
+            await interaction.response.defer(thinking=True, ephemeral=ephemeral)
             await func(*args, **kwargs)
 
         return wrapper
