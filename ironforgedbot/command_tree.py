@@ -28,18 +28,14 @@ class IronForgedCommandTree(discord.app_commands.CommandTree):
         interaction: discord.Interaction,
         error: discord.app_commands.AppCommandError,
     ):
-        if isinstance(error, discord.app_commands.CheckFailure):
-            logger.warning(error)
+        logger.critical(error)
 
-            await interaction.response.defer(thinking=True, ephemeral=True)
+        if isinstance(error, discord.app_commands.CheckFailure):
             return await send_error_response(
                 interaction,
                 "You do not have permission to run that command.",
             )
 
-        logger.critical(error)
-
-        await interaction.response.defer(thinking=True)
         return await send_error_response(
             interaction,
             "An unhandled error has occured. Please alert a member of the Discord Team.",
