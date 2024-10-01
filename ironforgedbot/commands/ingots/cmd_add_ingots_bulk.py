@@ -47,7 +47,7 @@ async def cmd_add_ingots_bulk(
             await send_error_response(interaction, str(e))
 
     try:
-        members = STORAGE.read_members()
+        members = await STORAGE.read_members()
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading member '{error}'"
@@ -71,7 +71,7 @@ async def cmd_add_ingots_bulk(
             output.append(f"{player} not found in storage.")
 
     try:
-        STORAGE.update_members(members_to_update, caller, note=reason)
+        await STORAGE.update_members(members_to_update, caller, note=reason)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error writing ingots for '{error}'"

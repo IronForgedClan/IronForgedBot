@@ -11,7 +11,7 @@ from ironforgedbot.storage.types import StorageError
 async def sub_raffle_select_winner(interaction: discord.Interaction):
     """Chooses a winner & winning amount. Clears storage of all tickets."""
     try:
-        current_tickets = STORAGE.read_raffle_tickets()
+        current_tickets = await STORAGE.read_raffle_tickets()
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error ending raffle: {error}"
@@ -19,7 +19,7 @@ async def sub_raffle_select_winner(interaction: discord.Interaction):
         return
 
     try:
-        members = STORAGE.read_members()
+        members = await STORAGE.read_members()
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading current members: {error}"
@@ -49,7 +49,7 @@ async def sub_raffle_select_winner(interaction: discord.Interaction):
     )
 
     try:
-        STORAGE.delete_raffle_tickets(
+        await STORAGE.delete_raffle_tickets(
             normalize_discord_string(interaction.user.display_name).lower()
         )
     except StorageError as error:
