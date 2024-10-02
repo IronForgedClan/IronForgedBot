@@ -16,7 +16,7 @@ async def job_sync_members(
     await report_channel.send("Beginning member sync...")
 
     try:
-        members_change = sync_members(guild)
+        members_change = await sync_members(guild)
     except StorageError as error:
         logger.error(error)
         await report_channel.send("Error syncing members.")

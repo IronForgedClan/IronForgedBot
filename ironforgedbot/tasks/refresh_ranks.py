@@ -5,7 +5,11 @@ import random
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import points_total
-from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
+from ironforgedbot.common.helpers import (
+    find_emoji,
+    find_member_by_nickname,
+    normalize_discord_string,
+)
 from ironforgedbot.common.ranks import get_rank_from_points
 from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
 
@@ -44,14 +48,15 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             continue
 
         correct_rank = get_rank_from_points(current_points)
+        m = find_member_by_nickname(guild, member)
         if current_rank != str(correct_rank):
             message = (
-                f"{member} has upgraded their rank from {find_emoji(None, current_rank)} "
-                f"to {find_emoji(None, correct_rank)} with {current_points:,} points"
+                f"{m.mention} has upgraded their rank from {find_emoji(None, current_rank)} "
+                f"→ {find_emoji(None, correct_rank)} with **{current_points:,}** points."
             )
             logger.info(message)
             await report_channel.send(message)
 
-        await asyncio.sleep(random.randrange(1, 7))
+        await asyncio.sleep(random.randrange(1, 5))
 
     await report_channel.send("Finished rank check.")

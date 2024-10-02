@@ -20,7 +20,7 @@ MONTHLY_EXP_THRESHOLD = 100_000
 
 async def job_check_activity_reminder(report_channel: discord.TextChannel):
     try:
-        absentees = STORAGE.get_absentees()
+        absentees = await STORAGE.get_absentees()
     except StorageError as e:
         logger.error(f"Failed to read absentees list: {e}")
         await report_channel.send("Failed to read absentee list")
