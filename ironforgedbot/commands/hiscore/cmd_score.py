@@ -49,7 +49,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     display_name = member.display_name if member is not None else player
 
     try:
-        data = score_info(player)
+        data = await score_info(player)
     except RuntimeError as error:
         await send_error_response(interaction, str(error))
         return

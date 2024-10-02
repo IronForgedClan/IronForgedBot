@@ -48,7 +48,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         return await send_error_response(interaction, str(e))
 
     try:
-        data = score_info(player)
+        data = await score_info(player)
     except RuntimeError as error:
         await send_error_response(interaction, str(error))
         return

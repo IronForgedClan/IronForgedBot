@@ -1,10 +1,9 @@
 import logging
 from typing import List, NotRequired, Tuple, TypedDict
 
-import requests
-
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANKS, get_rank_from_points
+from ironforgedbot.http import HTTP
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)
@@ -48,11 +47,11 @@ class ScoreBreakdown:
         self.bosses = bosses
 
 
-def score_info(
+async def score_info(
     player_name: str,
 ) -> ScoreBreakdown:
     player_name = normalize_discord_string(player_name)
-    data = _fetch_data(player_name)
+    data = await HTTP.get(HISCORES_PLAYER_URL.format(player=player_name))
 
     skills = _get_skills_info(data)
     clues, raids, bosses = _get_activities_info(data)
@@ -60,10 +59,10 @@ def score_info(
     return ScoreBreakdown(skills, clues, raids, bosses)
 
 
-def points_total(player_name: str) -> int:
+async def points_total(player_name: str) -> int:
     player_name = normalize_discord_string(player_name)
 
-    data = score_info(player_name)
+    data = await score_info(player_name)
     activities = data.clues + data.raids + data.bosses
 
     points = 0
@@ -84,19 +83,6 @@ def get_rank(player_name: str) -> RANKS:
         raise e
 
     return RANKS(get_rank_from_points(total_points))
-
-
-def _fetch_data(player_name: str):
-    try:
-        resp = requests.get(HISCORES_PLAYER_URL.format(player=player_name), timeout=15)
-        if resp.status_code != 200:
-            raise RuntimeError(
-                f"Looking up '{player_name}' on hiscores failed. Got status code {resp.status_code}."
-            )
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Encountered an error calling Runescape API: {e}")
-
-    return resp.json()
 
 
 def _get_skills_info(score_data) -> List[SkillScore]:
