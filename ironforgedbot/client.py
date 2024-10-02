@@ -73,7 +73,7 @@ class DiscordClient(discord.Client):
             await self._tree.sync(guild=self.guild)
 
         # TODO: Temporary. See function comment for details.
-        populate_emoji_cache(self.application_id or 0, CONFIG.BOT_TOKEN)
+        await populate_emoji_cache(self.application_id or 0, CONFIG.BOT_TOKEN)
 
     async def on_ready(self):
         if not self.user:
