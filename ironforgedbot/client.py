@@ -5,6 +5,7 @@ import sys
 
 import discord
 
+from ironforgedbot.state import state
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.automations import IronForgedAutomations
 from ironforgedbot.common.helpers import (
@@ -72,6 +73,7 @@ class DiscordClient(discord.Client):
     async def graceful_shutdown(self):
         """Emit the shutdown event and close the bot gracefully."""
         logger.info("Starting graceful shutdown...")
+        state.is_shutting_down = True
 
         # Emit shutdown event for all services
         await event_emitter.emit("shutdown")
