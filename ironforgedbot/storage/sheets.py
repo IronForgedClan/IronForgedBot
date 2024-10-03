@@ -48,7 +48,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         self._sheet_id = sheet_id
         self._lock = asyncio.Lock()
 
-        event_emitter.on("shutdown", self.shutdown)
+        event_emitter.on("shutdown", self.shutdown, priority=2)
 
     @classmethod
     def from_account_file(cls, account_filepath: str, sheet_id: str) -> "SheetsStorage":

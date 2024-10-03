@@ -88,13 +88,13 @@ class DiscordClient(discord.Client):
         await populate_emoji_cache(self.application_id or 0, CONFIG.BOT_TOKEN)
 
     async def on_connect(self):
-        logger.info("Bot connected to the Discord websocket")
+        logger.info("Bot connected to Discord")
 
     async def on_reconnect(self):
-        logger.info("Bot re-connected to the Discord websocket")
+        logger.info("Bot re-connected to Discord")
 
     async def on_disconnect(self):
-        logger.critical("Bot has disconnected from the Discord websocket")
+        logger.info("Bot has disconnected from Discord")
 
     async def on_ready(self):
         if not self.user:

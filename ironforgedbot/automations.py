@@ -27,23 +27,25 @@ class IronForgedAutomations:
         self.loop = asyncio.get_event_loop()
         self.scheduler = AsyncIOScheduler()
         self.discord_guild = discord_guild
-        self.report_channel = get_text_channel(
+
+        report_channel = get_text_channel(
             self.discord_guild, CONFIG.AUTOMATION_CHANNEL_ID
         )
 
-        if not self.report_channel:
+        if not report_channel:
             logger.critical(
                 f"Error getting automation report channel: {CONFIG.AUTOMATION_CHANNEL_ID}"
             )
             sys.exit(1)
 
-        asyncio.create_task(self.setup_automations())
+        self.report_channel = report_channel
 
-        event_emitter.on("shutdown", self.cleanup)
+        asyncio.create_task(self.setup_automations())
+        event_emitter.on("shutdown", self.cleanup, priority=1)
 
     async def cleanup(self):
         logger.info("Clearing all jobs...")
-        await self.report_channel.send("Shutting down...")
+        await self.report_channel.send("🔴 Bot shutting down...")
         self.scheduler.remove_all_jobs()
 
     async def setup_automations(self):
