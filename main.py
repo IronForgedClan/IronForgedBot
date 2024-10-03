@@ -7,10 +7,9 @@ import sys
 import discord
 
 from ironforgedbot.client import DiscordClient
-from ironforgedbot.command_tree import IronForgedCommandTree, IronForgedCommands
+from ironforgedbot.command_tree import IronForgedCommands, IronForgedCommandTree
 from ironforgedbot.config import CONFIG
 from ironforgedbot.http import HTTP
-from ironforgedbot.signal_handler import SignalHandler
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 from ironforgedbot.storage.sheets import STORAGE
 
@@ -79,5 +78,4 @@ def create_client(
 
 
 if __name__ == "__main__":
-    SignalHandler()
     init_bot()

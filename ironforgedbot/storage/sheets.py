@@ -8,6 +8,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import Resource, build
 import pytz
 
+from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import retry_on_exception
@@ -46,6 +47,8 @@ class SheetsStorage(metaclass=IngotsStorage):
         self._sheets_client = sheets_client
         self._sheet_id = sheet_id
         self._lock = asyncio.Lock()
+
+        event_emitter.on("shutdown", self.shutdown)
 
     @classmethod
     def from_account_file(cls, account_filepath: str, sheet_id: str) -> "SheetsStorage":
@@ -411,9 +414,10 @@ class SheetsStorage(metaclass=IngotsStorage):
 
         return results
 
-    def shutdown(self):
-        logger.info("Closing sheets connection")
-        self._sheets_client.close()
+    async def shutdown(self):
+        async with self._lock:
+            logger.info("Closing sheets connection...")
+            self._sheets_client.close()
 
 
 try:

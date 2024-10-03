@@ -2,12 +2,16 @@ import logging
 import sys
 import aiohttp
 
+from ironforgedbot.event_emitter import event_emitter
+
 logger = logging.getLogger(__name__)
 
 
 class AsyncHttpClient:
     def __init__(self):
         self.session = None
+
+        event_emitter.on("shutdown", self.cleanup)
 
     async def _initialize_session(self):
         """Initialize the aiohttp session."""
@@ -37,9 +41,9 @@ class AsyncHttpClient:
             logger.error(f"HTTP request failed: {e}")
             return None
 
-    async def close(self):
-        """Close the aiohttp session."""
+    async def cleanup(self):
         if self.session:
+            logger.info("Closing http session...")
             await self.session.close()
 
 
