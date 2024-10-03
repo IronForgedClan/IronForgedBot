@@ -51,6 +51,7 @@ class DiscordClient(discord.Client):
         self.discord_guild = None
         self.upload = upload
         self.guild = guild
+        self.automations = None
 
         self.loop = asyncio.get_event_loop()
 
@@ -74,6 +75,9 @@ class DiscordClient(discord.Client):
         """Emit the shutdown event and close the bot gracefully."""
         logger.info("Starting graceful shutdown...")
         state.is_shutting_down = True
+
+        if self.automations:
+            await self.automations.stop()
 
         # Emit shutdown event for all services
         await event_emitter.emit("shutdown")
@@ -105,4 +109,4 @@ class DiscordClient(discord.Client):
 
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
 
-        IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
+        self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
