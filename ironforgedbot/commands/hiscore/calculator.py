@@ -59,7 +59,7 @@ async def score_info(
     return ScoreBreakdown(skills, clues, raids, bosses)
 
 
-async def points_total(player_name: str) -> int:
+async def get_player_points_total(player_name: str) -> int:
     player_name = normalize_discord_string(player_name)
 
     data = await score_info(player_name)
@@ -76,9 +76,9 @@ async def points_total(player_name: str) -> int:
     return points
 
 
-def get_rank(player_name: str) -> RANKS:
+async def get_rank(player_name: str) -> RANKS:
     try:
-        total_points = points_total(player_name)
+        total_points = await get_player_points_total(player_name)
     except RuntimeError as e:
         raise e
 

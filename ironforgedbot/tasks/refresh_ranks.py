@@ -4,7 +4,7 @@ import random
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import points_total
+from ironforgedbot.commands.hiscore.calculator import get_player_points_total
 from ironforgedbot.common.helpers import (
     find_emoji,
     find_member_by_nickname,
@@ -42,7 +42,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
     for member, current_rank in members_to_update.items():
         try:
-            current_points = points_total(member)
+            current_points = await get_player_points_total(member)
         except RuntimeError as e:
             logger.error(f"Error while checking {member}: {e}")
             continue
@@ -54,7 +54,6 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                 f"{m.mention} has upgraded their rank from {find_emoji(None, current_rank)} "
                 f"→ {find_emoji(None, correct_rank)} with **{current_points:,}** points."
             )
-            logger.info(message)
             await report_channel.send(message)
 
         await asyncio.sleep(random.randrange(1, 5))
