@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.raffle.cmd_raffle_start import sub_raffle_start
 from ironforgedbot.common.roles import ROLES
@@ -8,7 +8,9 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestRaffleStart(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_start.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_start.STORAGE", new_callable=AsyncMock
+    )
     async def test_sub_start_raffle(self, mock_storage):
         interaction = create_mock_discord_interaction()
 
@@ -23,7 +25,9 @@ class TestRaffleStart(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.commands.raffle.cmd_raffle_start.send_error_response")
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_start.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_start.STORAGE", new_callable=AsyncMock
+    )
     async def test_sub_start_raffle_handles_error(
         self, mock_storage, mock_send_error_response
     ):

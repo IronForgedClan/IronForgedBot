@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
 from ironforgedbot.common.roles import ROLES
@@ -8,7 +8,10 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestRaffleViewTickets(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_tickets.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_tickets.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_raffle_tickets(self, mock_storage):
         caller = create_test_member("tester", ROLES.MEMBER)
         interaction = create_mock_discord_interaction(user=caller)
@@ -24,7 +27,10 @@ class TestRaffleViewTickets(unittest.IsolatedAsyncioTestCase):
             f"{caller.display_name} has 22 tickets!"
         )
 
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_tickets.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_tickets.STORAGE",
+        new_callable=AsyncMock,
+    )
     @patch("ironforgedbot.commands.raffle.cmd_raffle_tickets.send_error_response")
     async def test_raffle_tickets_user_not_found(
         self, mock_send_error_response, mock_storage
