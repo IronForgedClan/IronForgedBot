@@ -54,14 +54,14 @@ class Signups(object):
             self.ranked[rank] = []
             self.known_ranks[rank] = []
 
-        nick = normalize_discord_string(member.nick)
+        nick = normalize_discord_string(member.display_name)
         if nick not in self.known_ranks:
             self.known_ranks[rank].append(nick)
             ranked = Ranked(nick, prospect, _get_ingots(member.id, members))
             self.ranked[rank].append(ranked)
 
     def add_prospect(self, member: discord.Member, members: List[Member]):
-        nick = normalize_discord_string(member.nick)
+        nick = normalize_discord_string(member.display_name)
         try:
             rank = get_rank(nick)
         except RuntimeError:
@@ -80,7 +80,7 @@ async def cmd_roster(
     url: str,
 ):
     try:
-        body = await _calc_roster(url, interaction.guild)
+        body = await _calc_roster(interaction, url)
     except Exception as e:
         logger.error(f"Roster generation error: {repr(e)}")
         await send_error_response(
@@ -92,10 +92,11 @@ async def cmd_roster(
     await reply_with_file(title, body, "roster.txt", interaction)
 
 
-async def _calc_roster(url: str, guild: discord.Guild) -> str:
-    msg = await _get_message(url, guild)
-    members = STORAGE.read_members()
-    signups = await _get_signups(msg, members)
+async def _calc_roster(interaction: discord.Interaction, url: str) -> str:
+    assert interaction.guild
+    msg = await _get_message(url, interaction.guild)
+    members = await STORAGE.read_members()
+    signups = await _get_signups(interaction, msg, members)
     result = "====STAFF MESSAGE BELOW====\n"
 
     result += _add_rank(signups, RANKS.MYTH, False)
@@ -160,42 +161,60 @@ async def _get_message(url: str, guild: discord.Guild) -> discord.Message:
     link_parts = url.split("/")
     channel_id = int(link_parts[-2])
     msg_id = int(link_parts[-1])
+
     channel = guild.get_channel(channel_id)
-    msg = await channel.fetch_message(msg_id)
-    return msg
+    if not isinstance(channel, discord.TextChannel) or channel is None:
+        raise ReferenceError("Invalid channel")
+
+    return await channel.fetch_message(msg_id)
 
 
-async def _get_signups(msg: discord.Message, members: List[Member]) -> Signups:
+async def _get_signups(
+    interaction: discord.Interaction, msg: discord.Message, members: List[Member]
+) -> Signups:
     res = Signups()
-    users = []
 
-    for reaction in msg.reactions:
-        if not isinstance(reaction.emoji, discord.Emoji) and not isinstance(
-            reaction.emoji, discord.PartialEmoji
+    reaction = None
+    for r in msg.reactions:
+        if not isinstance(r.emoji, discord.Emoji) and not isinstance(
+            r.emoji, discord.PartialEmoji
         ):
             continue
 
-        if reaction.emoji.name == "DWH":
-            users = [user async for user in reaction.users()]
-            break
+        if r.emoji.name == "DWH":
+            reaction = r
 
-    if 0 == len(users):
-        raise Exception("No reactions found for the message")
+    if reaction is None:
+        raise ReferenceError("Message has no reactions")
 
-    for user in users:
-        member_roles = extract_roles(user)
+    reactors = []
+    async for user in reaction.users():
+        reactors.append(user)
+
+    if len(reactors) < 1:
+        raise Exception("Error finding reactors to this message")
+
+    assert interaction.guild
+
+    for member in reactors:
+        guild_member = interaction.guild.get_member(member.id)
+        if guild_member is None:
+            res.add_unknowns(member)
+            continue
+
+        member_roles = extract_roles(member)
         if not is_member(member_roles):
-            res.add_unknowns(user)
+            res.add_unknowns(member)
             continue
 
         if is_prospect(member_roles):
-            res.add_prospect(user, members)
+            res.add_prospect(member, members)
             continue
 
         rank = find_rank(member_roles)
         if rank is None:
             rank = RANKS.IRON
 
-        res.add_ranked(user, rank, False, members)
+        res.add_ranked(member, rank, False, members)
 
     return res
