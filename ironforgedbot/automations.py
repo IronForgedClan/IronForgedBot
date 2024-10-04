@@ -80,22 +80,22 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
             ),
-            CronTrigger(minute="*"),
-            # CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
+            # CronTrigger(minute="*"),
+            CronTrigger(hour="*/3", minute=50, second=0, timezone="UTC"),
         )
 
         self.scheduler.add_job(
             self._job_wrapper(
                 job_refresh_ranks, self.discord_guild, self.report_channel
             ),
-            CronTrigger(minute="*"),
-            # CronTrigger(hour=2, minute=0, second=0, timezone="UTC"),
+            # CronTrigger(minute="*"),
+            CronTrigger(hour=2, minute=0, second=0, timezone="UTC"),
         )
 
         self.scheduler.add_job(
             self._job_wrapper(job_check_activity_reminder, self.report_channel),
-            CronTrigger(minute="*"),
-            # CronTrigger(day_of_week="mon", hour=0, minute=0, second=0, timezone="UTC"),
+            # CronTrigger(minute="*"),
+            CronTrigger(day_of_week="mon", hour=0, minute=0, second=0, timezone="UTC"),
         )
 
         self.scheduler.add_job(
@@ -105,8 +105,8 @@ class IronForgedAutomations:
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ),
-            CronTrigger(minute="*"),
-            # CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
+            # CronTrigger(minute="*"),
+            CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
         )
 
         self.scheduler.add_job(
@@ -117,8 +117,8 @@ class IronForgedAutomations:
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ),
-            CronTrigger(minute="*"),
-            # CronTrigger(day_of_week="sun", hour=0, minute=0, second=0, timezone="UTC"),
+            # CronTrigger(minute="*"),
+            CronTrigger(day_of_week="sun", hour=0, minute=0, second=0, timezone="UTC"),
         )
 
         await self.report_channel.send(
