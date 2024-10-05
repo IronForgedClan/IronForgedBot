@@ -69,7 +69,7 @@ class DiscordClient(discord.Client):
     def handle_signal(self, signum, frame):
         """Signal handler to initiate shutdown."""
         logger.info(f"Received signal {signum}, initiating shutdown...")
-        self.loop.create_task(self.graceful_shutdown())
+        self.loop.call_soon_threadsafe(self.loop.create_task, self.graceful_shutdown())
 
     async def graceful_shutdown(self):
         """Emit the shutdown event and close the bot gracefully."""
