@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
@@ -93,4 +93,28 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             str(context.exception),
             f"Member '{mock_member.display_name}' tried using {mock_func.__name__} but does not have permission",
+        )
+
+    @patch("ironforgedbot.decorators.state")
+    async def test_ignore_command_if_shutting_down(self, mock_state):
+        mock_state.is_shutting_down.return_value = True
+
+        mock_func = AsyncMock()
+
+        mock_member = create_test_member("tester", ROLES.MEMBER)
+        mock_interaction = Mock(spec=discord.Interaction)
+
+        mock_guild = Mock(spec=discord.Guild)
+        mock_guild.get_member.return_value = mock_member
+
+        mock_interaction.guild = mock_guild
+        mock_interaction.user = mock_member
+        mock_interaction.response.send_message = AsyncMock()
+
+        decorated_func = require_role(ROLES.LEADERSHIP)(mock_func)
+        await decorated_func(mock_interaction)
+
+        mock_func.assert_not_awaited()
+        mock_interaction.response.send_message.assert_called_with(
+            "## Bad Timing!!\nThe bot is shutting down, please try again when the bot comes back online."
         )

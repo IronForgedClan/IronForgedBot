@@ -158,3 +158,23 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         await cmd_score(interaction, playername)
 
         mock_send_error_response.assert_awaited_once()
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.score_info")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.send_prospect_response")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
+    async def test_cmd_score_prospect_response(
+        self,
+        mock_validate_playername,
+        mock_send_prospect_response,
+        mock_score_info,
+    ):
+        playername = "tester"
+        user = create_test_member(playername, ROLES.PROSPECT)
+        interaction = create_mock_discord_interaction(user=user)
+
+        mock_validate_playername.return_value = (user, playername)
+        mock_score_info.return_value = mock_score_breakdown
+
+        await cmd_score(interaction, playername)
+
+        mock_send_prospect_response.assert_awaited_once()
