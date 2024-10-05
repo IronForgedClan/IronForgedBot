@@ -8,6 +8,7 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
     render_percentage,
+    validate_member_has_role,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
@@ -19,8 +20,12 @@ from ironforgedbot.common.ranks import (
     get_rank_color_from_points,
     get_rank_from_points,
 )
-from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.responses import (
+    build_response_embed,
+    send_error_response,
+    send_prospect_response,
+)
+from ironforgedbot.common.roles import ROLES, extract_roles, is_prospect
 from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
@@ -80,6 +85,12 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(interaction, next_rank_name)
+
+    if member and member.roles:
+        if validate_member_has_role(member, ROLES.PROSPECT):
+            return await send_prospect_response(
+                interaction, rank_name, rank_icon, member
+            )
 
     embed = build_response_embed(
         f"{rank_icon} {display_name} | Score: {points_total:,}",
