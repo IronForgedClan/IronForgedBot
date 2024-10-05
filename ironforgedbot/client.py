@@ -5,13 +5,13 @@ import sys
 
 import discord
 
-from ironforgedbot.state import state
-from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.automations import IronForgedAutomations
 from ironforgedbot.common.helpers import (
     populate_emoji_cache,
 )
 from ironforgedbot.config import CONFIG
+from ironforgedbot.event_emitter import event_emitter
+from ironforgedbot.state import state
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -71,19 +71,54 @@ class DiscordClient(discord.Client):
         logger.info(f"Received signal {signum}, initiating shutdown...")
         self.loop.call_soon_threadsafe(self.loop.create_task, self.graceful_shutdown())
 
+    def is_discord_internal_task(self, task):
+        """Check if task is an internal discord.Client task."""
+        coro = task.get_coro()
+
+        if hasattr(coro, "__qualname__"):
+            # Internal discord.py task coroutines often have this format.
+            if "Client.run.<locals>.runner" in coro.__qualname__:
+                return True
+
+        return False
+
     async def graceful_shutdown(self):
         """Emit the shutdown event and close the bot gracefully."""
         logger.info("Starting graceful shutdown...")
         state.is_shutting_down = True
 
+        pending_tasks = [
+            task
+            for task in asyncio.all_tasks()
+            if task is not asyncio.current_task()
+            and not self.is_discord_internal_task(task)
+        ]
+
+        if pending_tasks:
+            logger.info(
+                f"Found {len(pending_tasks)} pending tasks. Waiting for them to complete..."
+            )
+            try:
+                timeout_seconds = 60
+                await asyncio.wait_for(
+                    asyncio.gather(*pending_tasks, return_exceptions=True),
+                    timeout=timeout_seconds,
+                )
+                logger.info(
+                    f"All outstanding tasks completed within the {timeout_seconds}s timeout."
+                )
+            except asyncio.TimeoutError:
+                logger.warning("Timeout occurred while waiting for outstanding tasks.")
+
+            logger.info("All outstanding tasks have completed.")
+
         if self.automations:
             await self.automations.stop()
 
-        # Emit shutdown event for all services
         await event_emitter.emit("shutdown")
 
         logger.info("All services cleaned up. Closing Discord connection.")
-        await self.close()  # Disconnect the bot from Discord
+        await self.close()
 
     async def setup_hook(self):
         if self.upload:
