@@ -95,9 +95,7 @@ class DiscordClient(discord.Client):
         ]
 
         if pending_tasks:
-            logger.info(
-                f"Found {len(pending_tasks)} pending tasks. Waiting for them to complete..."
-            )
+            logger.info(f"Found {len(pending_tasks)} pending tasks. Waiting...")
             try:
                 timeout_seconds = 60
                 await asyncio.wait_for(
@@ -109,8 +107,6 @@ class DiscordClient(discord.Client):
                 )
             except asyncio.TimeoutError:
                 logger.warning("Timeout occurred while waiting for outstanding tasks.")
-
-            logger.info("All outstanding tasks have completed.")
 
         if self.automations:
             await self.automations.stop()
