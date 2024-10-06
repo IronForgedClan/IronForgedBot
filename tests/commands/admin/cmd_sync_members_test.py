@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
@@ -17,7 +17,9 @@ with patch(
 
 
 class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.admin.cmd_sync_members.STORAGE")
+    @patch(
+        "ironforgedbot.commands.admin.cmd_sync_members.STORAGE", new_callable=AsyncMock
+    )
     async def test_sync_members(self, mock_storage):
         """Test that sheet can be updated to only members in Discord."""
         caller = create_test_member("leader", ROLES.LEADERSHIP)

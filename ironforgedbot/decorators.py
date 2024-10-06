@@ -1,9 +1,12 @@
+import asyncio
 import functools
 import logging
 from pprint import pformat
+from random import randrange
 
 import discord
 
+from ironforgedbot.state import state
 from ironforgedbot.common.helpers import validate_member_has_role
 from ironforgedbot.common.roles import ROLES
 
@@ -32,6 +35,13 @@ def require_role(role_name: str, ephemeral=False):
                 f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}"
             )
 
+            if state.is_shutting_down:
+                logger.warning("Bot has begun shut down. Ignoring command.")
+                await interaction.response.send_message(
+                    "## Bad Timing!!\nThe bot is shutting down, please try again when the bot comes back online."
+                )
+                return
+
             member = interaction.guild.get_member(interaction.user.id)
             if not member:
                 raise ValueError(
@@ -47,8 +57,31 @@ def require_role(role_name: str, ephemeral=False):
                     )
 
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)
-
             await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def retry_on_exception(retries=3):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    if attempt < retries - 1:
+                        sleep_time = randrange(1, 7)
+                        logger.warning(
+                            f"Fail #{attempt + 1} for {func.__name__}, "
+                            f"retrying after {sleep_time}s sleep..."
+                        )
+                        await asyncio.sleep(sleep_time)
+                    else:
+                        logger.critical(e)
+                        raise e
 
         return wrapper
 

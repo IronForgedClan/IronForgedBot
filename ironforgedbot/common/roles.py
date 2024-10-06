@@ -17,6 +17,9 @@ class ROLES(StrEnum):
 
 def extract_roles(member: discord.Member) -> list[str]:
     roles = []
+    if not member or not member.roles:
+        return []
+
     for role in member.roles:
         if role.name is None:
             continue

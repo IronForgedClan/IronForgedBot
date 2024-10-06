@@ -1,7 +1,8 @@
 import json
+import os
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytz
 from googleapiclient.discovery import build
@@ -12,8 +13,15 @@ from ironforgedbot.storage.types import Member, StorageError
 TIMEZONE = "America/Los_Angeles"
 
 
-class TestSheetsStorage(unittest.TestCase):
-    def test_read_member(self):
+class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        os.environ["TZ"] = "UTC"
+        import time
+
+        time.tzset()
+
+    async def test_read_member(self):
         sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
 
         http = HttpMock(headers={"status": "200"})
@@ -24,9 +32,9 @@ class TestSheetsStorage(unittest.TestCase):
 
         expected = Member(id=123456, runescape_name="johnnycache", ingots=2000)
 
-        self.assertEqual(client.read_member("johnnycache"), expected)
+        self.assertEqual(await client.read_member("johnnycache"), expected)
 
-    def test_read_member_not_found(self):
+    async def test_read_member_not_found(self):
         sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
 
         http = HttpMock(headers={"status": "200"})
@@ -35,9 +43,9 @@ class TestSheetsStorage(unittest.TestCase):
 
         client = SheetsStorage(sheets_client, "")
 
-        self.assertEqual(client.read_member("kennylogs"), None)
+        self.assertEqual(await client.read_member("kennylogs"), None)
 
-    def test_read_members(self):
+    async def test_read_members(self):
         sheets_read_response = {
             "values": [
                 ["johnnycache", "2000", "123456"],
@@ -56,9 +64,12 @@ class TestSheetsStorage(unittest.TestCase):
             Member(id=654321, runescape_name="kennylogs", ingots=4000),
         ]
 
-        self.assertEqual(client.read_members(), expected)
+        self.assertEqual(await client.read_members(), expected)
 
-    def test_add_members(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_add_members(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
+
         sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
 
         http = HttpMockSequence(
@@ -70,17 +81,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-
-        # Sat Aug 26 06:33:20 PM PDT 2023
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.add_members(
+        await client.add_members(
             [Member(id=654321, runescape_name="kennylogs")], "User Joined Server"
         )
 
@@ -103,7 +106,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             "kennylogs",
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             0,
                             0,
                             "User Joined Server",
@@ -114,7 +117,9 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_update_members(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_update_members(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         johnnycache = Member(id=123456, runescape_name="johnnycache", ingots=2000)
         kennylogs = Member(id=123456, runescape_name="kennylogs", ingots=2000)
         sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
@@ -128,16 +133,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-        # Sat Aug 26 06:33:20 PM PDT 2023
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.update_members(
+        await client.update_members(
             [Member(id=123456, runescape_name="kennylogs", ingots=2000)], "leader"
         )
 
@@ -153,7 +151,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             "johnnycache",
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             str(johnnycache),
                             str(kennylogs),
                             "leader",
@@ -164,7 +162,9 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_remove_members(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_remove_members(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         johnnycache = Member(id=123456, runescape_name="johnnycache", ingots=2000)
         sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
 
@@ -177,16 +177,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-        # Sat Aug 26 06:33:20 PM PDT 2023
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.remove_members([johnnycache], "User Left Server")
+        await client.remove_members([johnnycache], "User Left Server")
 
         self.assertEqual(
             http.request_sequence[1][2], json.dumps({"values": [["", "", ""]]})
@@ -199,7 +192,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             "johnnycache",
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             str(johnnycache),
                             0,
                             "User Left Server",
@@ -210,7 +203,9 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_start_raffle(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_start_raffle(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         sheets_read_response = {"values": [["False"]]}
 
         http = HttpMockSequence(
@@ -222,15 +217,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.start_raffle("johnnycache")
+        await client.start_raffle("johnnycache")
 
         self.assertEqual(
             http.request_sequence[1][2], json.dumps({"values": [["True"]]})
@@ -243,7 +232,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             "",
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             "False",
                             "True",
                             "johnnycache",
@@ -254,7 +243,7 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_start_raffle_already_ongoing(self):
+    async def test_start_raffle_already_ongoing(self):
         sheets_read_response = {"values": [["True"]]}
 
         http = HttpMock(headers={"status": "200"})
@@ -264,9 +253,11 @@ class TestSheetsStorage(unittest.TestCase):
         client = SheetsStorage(sheets_client, "")
 
         with self.assertRaises(StorageError):
-            client.start_raffle("johnnycache")
+            await client.start_raffle("johnnycache")
 
-    def test_end_raffle(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_end_raffle(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         sheets_read_response = {"values": [["True"]]}
 
         http = HttpMockSequence(
@@ -278,15 +269,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.end_raffle("johnnycache")
+        await client.end_raffle("johnnycache")
 
         self.assertEqual(
             http.request_sequence[1][2], json.dumps({"values": [["False"]]})
@@ -299,7 +284,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             "",
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             "True",
                             "False",
                             "johnnycache",
@@ -310,7 +295,7 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_end_raffle_none_ongoing(self):
+    async def test_end_raffle_none_ongoing(self):
         sheets_read_response = {"values": [["False"]]}
 
         http = HttpMock(headers={"status": "200"})
@@ -320,9 +305,9 @@ class TestSheetsStorage(unittest.TestCase):
         client = SheetsStorage(sheets_client, "")
 
         with self.assertRaises(StorageError):
-            client.end_raffle("johnnycache")
+            await client.end_raffle("johnnycache")
 
-    def test_read_raffle_tickets(self):
+    async def test_read_raffle_tickets(self):
         sheets_read_response = {"values": [["12345", "20"]]}
 
         http = HttpMock(headers={"status": "200"})
@@ -331,9 +316,11 @@ class TestSheetsStorage(unittest.TestCase):
 
         client = SheetsStorage(sheets_client, "")
 
-        self.assertEqual({12345: 20}, client.read_raffle_tickets())
+        self.assertEqual({12345: 20}, await client.read_raffle_tickets())
 
-    def test_add_raffle_tickets(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_add_raffle_tickets(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         sheets_read_response = {"values": [["12345", "20"]]}
 
         http = HttpMockSequence(
@@ -345,15 +332,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.add_raffle_tickets(12345, 5)
+        await client.add_raffle_tickets(12345, 5)
 
         self.assertEqual(
             http.request_sequence[1][2], json.dumps({"values": [["12345", "25"]]})
@@ -366,7 +347,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             12345,
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             20,
                             25,
                             12345,
@@ -377,7 +358,9 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_add_raffle_tickets_first_buy(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_add_raffle_tickets_first_buy(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         sheets_read_response = {"values": [[]]}
 
         http = HttpMockSequence(
@@ -389,15 +372,9 @@ class TestSheetsStorage(unittest.TestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+        client = SheetsStorage(sheets_client, "")
 
-        mock_datetime = MagicMock()
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
-
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
-
-        client.add_raffle_tickets(12345, 5)
+        await client.add_raffle_tickets(12345, 5)
 
         self.assertEqual(
             http.request_sequence[1][2], json.dumps({"values": [["12345", "5"]]})
@@ -410,7 +387,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             12345,
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             0,
                             5,
                             12345,
@@ -421,7 +398,9 @@ class TestSheetsStorage(unittest.TestCase):
             ),
         )
 
-    def test_delete_raffle_tickets(self):
+    @patch("ironforgedbot.storage.sheets.datetime")
+    async def test_delete_raffle_tickets(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
         sheets_read_response = {"values": [["12345", "20"]]}
 
         http = HttpMockSequence(
@@ -439,9 +418,9 @@ class TestSheetsStorage(unittest.TestCase):
             1693100000, tz=pytz.timezone(TIMEZONE)
         )
 
-        client = SheetsStorage(sheets_client, "", clock=mock_datetime)
+        client = SheetsStorage(sheets_client, "")
 
-        client.delete_raffle_tickets("johnnycache")
+        await client.delete_raffle_tickets("johnnycache")
 
         self.assertEqual(
             http.request_sequence[1][2], json.dumps({"values": [["", ""]]})
@@ -454,7 +433,7 @@ class TestSheetsStorage(unittest.TestCase):
                     "values": [
                         [
                             "",
-                            "08/26/2023, 18:33:20",
+                            "2023-08-26 18:33:20 EDT-0400",
                             "",
                             "",
                             "johnnycache",

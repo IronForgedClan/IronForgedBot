@@ -8,6 +8,8 @@ import requests
 from discord import Guild, Member
 from dateutil.relativedelta import relativedelta
 
+from ironforgedbot.http import HTTP
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,22 +100,27 @@ def render_percentage(part, whole) -> str:
 
 
 # TODO: Use discord.py implementation when v2.5 released
-def populate_emoji_cache(application_id: int, token: str):
+async def populate_emoji_cache(application_id: int, token: str):
     headers = {
         "Authorization": f"Bot {token}",
         "Content-Type": "application/json",
     }
-    response = requests.get(
-        f"https://discord.com/api/applications/{application_id}/emojis",
+
+    data = await HTTP.get(
+        url=f"https://discord.com/api/applications/{application_id}/emojis",
         headers=headers,
     )
-    response.raise_for_status()
-    data = response.json()
 
-    for emoji in data["items"]:
-        emojiCache[emoji["name"]] = {"id": emoji["id"], "animated": emoji["animated"]}
+    if data:
+        for emoji in data["items"]:
+            emojiCache[emoji["name"]] = {
+                "id": emoji["id"],
+                "animated": emoji["animated"],
+            }
 
-    logger.info("Emoji cache loaded successfully")
+        logger.info("Emoji cache loaded successfully")
+    else:
+        logger.critical("Error populating emoji cache")
 
 
 # TODO: when discord.py 2.5 releases remove interaction param and fallback

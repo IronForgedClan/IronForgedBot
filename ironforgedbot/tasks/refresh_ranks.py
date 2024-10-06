@@ -1,11 +1,15 @@
+import asyncio
 import logging
 import random
-import time
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import points_total
-from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
+from ironforgedbot.commands.hiscore.calculator import get_player_points_total
+from ironforgedbot.common.helpers import (
+    find_emoji,
+    find_member_by_nickname,
+    normalize_discord_string,
+)
 from ironforgedbot.common.ranks import get_rank_from_points
 from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
 
@@ -38,20 +42,20 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
     for member, current_rank in members_to_update.items():
         try:
-            current_points = points_total(member)
+            current_points = await get_player_points_total(member)
         except RuntimeError as e:
             logger.error(f"Error while checking {member}: {e}")
             continue
 
         correct_rank = get_rank_from_points(current_points)
+        m = find_member_by_nickname(guild, member)
         if current_rank != str(correct_rank):
             message = (
-                f"{member} has upgraded their rank from {find_emoji(None, current_rank)} "
-                f"to {find_emoji(None, correct_rank)} with {current_points:,} points"
+                f"{m.mention} has upgraded their rank from {find_emoji(None, current_rank)} "
+                f"→ {find_emoji(None, correct_rank)} with **{current_points:,}** points."
             )
-            logger.info(message)
             await report_channel.send(message)
 
-        time.sleep(random.randint(1, 5))
+        await asyncio.sleep(random.randrange(1, 5))
 
     await report_channel.send("Finished rank check.")

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
@@ -19,7 +19,9 @@ with patch(
 
 class TestAddIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_add_ingots.validate_playername")
-    @patch("ironforgedbot.commands.ingots.cmd_add_ingots.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_add_ingots.STORAGE", new_callable=AsyncMock
+    )
     async def test_add_ingots(self, mock_storage, mock_validate_playername):
         """Test that ingots can be added to a user."""
         caller = create_test_member("leader", ROLES.LEADERSHIP)
@@ -49,7 +51,9 @@ class TestAddIngots(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.commands.ingots.cmd_add_ingots.validate_playername")
-    @patch("ironforgedbot.commands.ingots.cmd_add_ingots.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_add_ingots.STORAGE", new_callable=AsyncMock
+    )
     @patch("ironforgedbot.commands.ingots.cmd_add_ingots.send_error_response")
     async def test_addingots_player_not_found(
         self, mock_send_error_response, mock_storage, mock_validate_playername

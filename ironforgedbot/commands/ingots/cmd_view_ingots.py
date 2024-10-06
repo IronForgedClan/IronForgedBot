@@ -34,7 +34,7 @@ async def cmd_view_ingots(
         return await send_error_response(interaction, str(e))
 
     try:
-        member = STORAGE.read_member(player)
+        member = await STORAGE.read_member(player)
     except StorageError as error:
         await send_error_response(interaction, str(error))
         return

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.raffle.cmd_raffle_select_winner import (
     sub_raffle_select_winner,
@@ -9,7 +9,10 @@ from tests.helpers import create_mock_discord_interaction
 
 
 class TestRaffleSelectWinner(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_select_winner.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_select_winner.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_sub_select_winner(self, mock_storage):
         interaction = create_mock_discord_interaction()
 
@@ -25,7 +28,10 @@ class TestRaffleSelectWinner(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.commands.raffle.cmd_raffle_select_winner.send_error_response")
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_select_winner.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_select_winner.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_sub_select_winner_error_clearing_tickets(
         self, mock_storage, mock_send_error_response
     ):

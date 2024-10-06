@@ -12,7 +12,7 @@ async def sub_raffle_start(interaction: discord.Interaction):
     Expects provided interaction to have already deferred the response.
     """
     try:
-        STORAGE.start_raffle(
+        await STORAGE.start_raffle(
             normalize_discord_string(interaction.user.display_name).lower()
         )
     except StorageError as error:
