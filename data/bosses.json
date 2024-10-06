@@ -18,6 +18,12 @@
         "kc_per_point": 8
     },
     {
+        "name": "Amoxliatl",
+        "display_order": 4,
+        "emoji_key": "Amoxliatl",
+        "kc_per_point": 60
+    },
+    {
         "name": "Araxxor",
         "display_order": 4,
         "emoji_key": "Araxxor",

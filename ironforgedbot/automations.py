@@ -2,11 +2,11 @@ import asyncio
 import logging
 import sys
 from typing import Optional
+
+import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-import discord
 
-from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.check_activity import (
