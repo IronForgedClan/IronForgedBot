@@ -8,6 +8,7 @@ class BotState:
 
     def __init__(self):
         self.is_shutting_down = False
+        self.trick_or_treat_jackpot_claimed = False
 
 
 state = BotState()
