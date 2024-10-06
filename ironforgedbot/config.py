@@ -19,15 +19,18 @@ class Config:
         self.WOM_GROUP_ID: int = int(os.getenv("WOM_GROUP_ID") or 0)
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
         self.AUTOMATION_CHANNEL_ID: int = int(os.getenv("AUTOMATION_CHANNEL_ID") or 0)
+        self.TRICK_OR_TREAT: bool = os.getenv("TRICK_OR_TREAT", "False") == "True"
 
         self.validate_config()
 
     def validate_config(self):
         for key, value in vars(self).items():
+            if isinstance(value, bool):
+                continue
             if isinstance(value, str) and not value:
-                raise ValueError(f"Configuration key '{key}' is missing or empty")
+                raise ValueError(f"Configuration key '{key}' (str) is missing or empty")
             if isinstance(value, int) and value <= 0:
-                raise ValueError(f"Configuration key '{key}' is missing or empty")
+                raise ValueError(f"Configuration key '{key}' (int) is missing or empty")
 
     def get_bot_version(self) -> str:
         with open("VERSION", "r") as file:
