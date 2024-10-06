@@ -18,7 +18,7 @@ async def cmd_raffle_tickets(interaction: discord.Interaction):
     caller = normalize_discord_string(interaction.user.display_name)
 
     try:
-        member = STORAGE.read_member(caller)
+        member = await STORAGE.read_member(caller)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading member from storage: {error}"
@@ -33,7 +33,7 @@ async def cmd_raffle_tickets(interaction: discord.Interaction):
         return
 
     try:
-        current_tickets = STORAGE.read_raffle_tickets()
+        current_tickets = await STORAGE.read_raffle_tickets()
     except StorageError as error:
         await send_error_response(
             interaction,

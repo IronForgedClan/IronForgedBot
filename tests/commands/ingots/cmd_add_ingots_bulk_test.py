@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import mock_open, patch
+from unittest.mock import AsyncMock, mock_open, patch
 
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.storage.types import Member
@@ -19,7 +19,10 @@ with patch(
 class TestAddIngotsBulk(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_add_ingots_bulk.validate_playername")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("ironforgedbot.commands.ingots.cmd_add_ingots_bulk.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_add_ingots_bulk.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_addingots_bulk(
         self, mock_storage, mock_open, mock_validate_playername
     ):
@@ -59,7 +62,10 @@ class TestAddIngotsBulk(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_add_ingots_bulk.validate_playername")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("ironforgedbot.commands.ingots.cmd_add_ingots_bulk.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_add_ingots_bulk.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_addingots_bulk_whitespace_stripped(
         self, mock_storage, mock_open, mock_validate_playername
     ):
@@ -90,7 +96,10 @@ class TestAddIngotsBulk(unittest.IsolatedAsyncioTestCase):
 skagul tosti not found in storage."""
         )
 
-    @patch("ironforgedbot.commands.ingots.cmd_add_ingots_bulk.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_add_ingots_bulk.STORAGE",
+        new_callable=AsyncMock,
+    )
     @patch("ironforgedbot.commands.ingots.cmd_add_ingots_bulk.send_error_response")
     async def test_addingots_bulk_player_fail_validation(
         self, mock_send_error_response, mock_storage

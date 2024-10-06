@@ -21,7 +21,7 @@ async def cmd_sync_members(interaction: discord.Interaction):
     assert interaction.guild
 
     try:
-        lines = sync_members(interaction.guild)
+        lines = await sync_members(interaction.guild)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error syncing members: {error}"
@@ -35,7 +35,7 @@ async def cmd_sync_members(interaction: discord.Interaction):
     await interaction.followup.send(discord_messages[0])
 
 
-def sync_members(guild: discord.Guild) -> list[str]:
+async def sync_members(guild: discord.Guild) -> list[str]:
     # Perform a cross join between current Discord members and
     # entries in the sheet.
     # First, read all members from Discord.
@@ -50,7 +50,7 @@ def sync_members(guild: discord.Guild) -> list[str]:
 
     # Then, get all current entries from storage.
     try:
-        existing = STORAGE.read_members()
+        existing = await STORAGE.read_members()
     except StorageError as error:
         logger.error(f"Encountered error reading members: {error}")
         raise
@@ -81,7 +81,7 @@ def sync_members(guild: discord.Guild) -> list[str]:
 
     if len(new_members) > 0:
         try:
-            STORAGE.add_members(new_members, "User Joined Server")
+            await STORAGE.add_members(new_members, "User Joined Server")
         except StorageError as error:
             logger.error(f"Encountered error writing new members: {error}")
             raise
@@ -97,7 +97,7 @@ def sync_members(guild: discord.Guild) -> list[str]:
 
     if len(leaving_members) > 0:
         try:
-            STORAGE.remove_members(leaving_members, "User Left Server")
+            await STORAGE.remove_members(leaving_members, "User Left Server")
         except StorageError as error:
             logger.error(f"Encountered error removing members: {error}")
             raise
@@ -141,7 +141,7 @@ def sync_members(guild: discord.Guild) -> list[str]:
             output.append(f"updated RSN for {changed_member.runescape_name}")
 
         try:
-            STORAGE.update_members(changed_members, "Name Change")
+            await STORAGE.update_members(changed_members, "Name Change")
         except StorageError as error:
             logger.error(f"Encountered error updating changed members: {error}")
             raise

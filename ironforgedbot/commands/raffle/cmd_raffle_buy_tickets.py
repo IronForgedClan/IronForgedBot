@@ -25,7 +25,7 @@ async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int)
         return
 
     try:
-        ongoing_raffle = STORAGE.read_raffle()
+        ongoing_raffle = await STORAGE.read_raffle()
     except StorageError as error:
         await send_error_response(
             interaction,
@@ -42,7 +42,7 @@ async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int)
 
     # First, read member to get Discord ID & ingot count
     try:
-        member = STORAGE.read_member(caller)
+        member = await STORAGE.read_member(caller)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error reading member from storage: {error}"
@@ -69,7 +69,7 @@ async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int)
     # We got this for, do the transactions
     member.ingots -= cost
     try:
-        STORAGE.update_members([member], caller, note="Bought raffle tickets")
+        await STORAGE.update_members([member], caller, note="Bought raffle tickets")
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error updating member ingot count: {error}"
@@ -77,7 +77,7 @@ async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int)
         return
 
     try:
-        STORAGE.add_raffle_tickets(member.id, tickets)
+        await STORAGE.add_raffle_tickets(member.id, tickets)
     except StorageError as error:
         await send_error_response(
             interaction, f"Encountered error adding raffle tickets: {error}"

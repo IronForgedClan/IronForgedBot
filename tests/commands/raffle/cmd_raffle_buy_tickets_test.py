@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
 from ironforgedbot.common.roles import ROLES
@@ -8,7 +8,10 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestRaffleBuyTickets(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_buy_tickets.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_buy_tickets.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_buy_raffle_tickets(self, mock_storage):
         caller = create_test_member("tester", ROLES.MEMBER)
         interaction = create_mock_discord_interaction(user=caller)
@@ -24,7 +27,10 @@ class TestRaffleBuyTickets(unittest.IsolatedAsyncioTestCase):
             f"{caller.display_name} successfully bought 1 tickets for 5000 ingots!"
         )
 
-    @patch("ironforgedbot.commands.raffle.cmd_raffle_buy_tickets.STORAGE")
+    @patch(
+        "ironforgedbot.commands.raffle.cmd_raffle_buy_tickets.STORAGE",
+        new_callable=AsyncMock,
+    )
     async def test_buy_raffle_tickets_not_enough_ingots(self, mock_storage):
         caller = create_test_member("tester", ROLES.MEMBER)
         interaction = create_mock_discord_interaction(user=caller)

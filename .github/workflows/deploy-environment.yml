@@ -37,15 +37,12 @@ jobs:
             - name: deploy-bot
               run: |
                   ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
-                    echo "Connected to the server!"
                     cd ${{ secrets.BOT_DIR  }}
                     sudo systemctl stop ${{ secrets.SERVICE_NAME }}
-                    sleep 10
+                    sleep 65
                     git pull
                     sudo .venv/bin/pip install -r requirements.txt
-                    sleep 5
                     sudo systemctl start ${{ secrets.SERVICE_NAME }}
-                    echo "Commands executed successfully!"
                   EOF
 
             - name: fetch-version-number

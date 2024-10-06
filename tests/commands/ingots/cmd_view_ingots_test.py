@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.common.roles import ROLES
@@ -12,7 +12,9 @@ from tests.helpers import (
 
 class TestViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
-    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_view_ingots.STORAGE", new_callable=AsyncMock
+    )
     async def test_ingots(self, mock_storage, mock_validate_playername):
         """Test that a player's ingot total is returned to user."""
         interaction = create_mock_discord_interaction()
@@ -33,7 +35,9 @@ class TestViewIngots(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
-    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.STORAGE")
+    @patch(
+        "ironforgedbot.commands.ingots.cmd_view_ingots.STORAGE", new_callable=AsyncMock
+    )
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.send_error_response")
     async def test_ingots_user_not_in_spreadsheet(
         self, mock_send_error_response, mock_storage, mock_validate_playername

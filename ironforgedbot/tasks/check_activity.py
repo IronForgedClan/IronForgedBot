@@ -8,6 +8,7 @@ from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
+    render_relative_time,
 )
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -20,7 +21,7 @@ MONTHLY_EXP_THRESHOLD = 100_000
 
 async def job_check_activity_reminder(report_channel: discord.TextChannel):
     try:
-        absentees = STORAGE.get_absentees()
+        absentees = await STORAGE.get_absentees()
     except StorageError as e:
         logger.error(f"Failed to read absentees list: {e}")
         await report_channel.send("Failed to read absentee list")
@@ -48,7 +49,7 @@ async def job_check_activity(
     wom_group_id: int,
 ):
     try:
-        absentees = STORAGE.get_absentees()
+        absentees = await STORAGE.get_absentees()
     except StorageError as e:
         logger.error(f"Failed to read absentees list: {e}")
         return
@@ -139,12 +140,16 @@ async def _find_inactive_users(
                     else:
                         role = str(wom_member.membership.role).title()
 
-                    days_since_progression = (
-                        datetime.datetime.now() - member_gains.player.last_changed_at
-                    ).days
+                    if member_gains.player.last_changed_at:
+                        days_since_progression = render_relative_time(
+                            member_gains.player.last_changed_at
+                        )
+                    else:
+                        days_since_progression = "unknown"
+
                     data = (
                         f"{member_gains.player.username} ({role}) gained {int(member_gains.data.gained / 1_000)}k, "
-                        f"last progressed {days_since_progression} days ago "
+                        f"last progressed {days_since_progression} "
                         f"({member_gains.player.last_changed_at.strftime('%Y-%m-%d')})"
                     )
                     results[data] = member_gains.data.gained

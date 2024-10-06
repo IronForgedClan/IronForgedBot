@@ -9,6 +9,7 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
     render_percentage,
+    validate_member_has_role,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
@@ -20,8 +21,12 @@ from ironforgedbot.common.ranks import (
     get_rank_color_from_points,
     get_rank_from_points,
 )
-from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.responses import (
+    build_response_embed,
+    send_error_response,
+    send_prospect_response,
+)
+from ironforgedbot.common.roles import ROLES, extract_roles, is_prospect
 from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
@@ -48,7 +53,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         return await send_error_response(interaction, str(e))
 
     try:
-        data = score_info(player)
+        data = await score_info(player)
     except RuntimeError as error:
         await send_error_response(interaction, str(error))
         return
@@ -74,6 +79,12 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     else:
         rank_color = get_rank_color_from_points(points_total)
         rank_icon = find_emoji(interaction, rank_name)
+
+    if member and member.roles:
+        if validate_member_has_role(member, ROLES.PROSPECT):
+            return await send_prospect_response(
+                interaction, rank_name, rank_icon, member
+            )
 
     display_name = member.display_name if member is not None else player
 

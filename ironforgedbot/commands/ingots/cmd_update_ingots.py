@@ -44,7 +44,7 @@ async def cmd_update_ingots(
         return await send_error_response(interaction, str(e))
 
     try:
-        member = STORAGE.read_member(player.lower())
+        member = await STORAGE.read_member(player.lower())
     except StorageError as e:
         await interaction.followup.send(f"Encountered error reading member: {e}")
         return
@@ -56,7 +56,7 @@ async def cmd_update_ingots(
     member.ingots = ingots
 
     try:
-        STORAGE.update_members([member], caller, note=reason)
+        await STORAGE.update_members([member], caller, note=reason)
     except StorageError as e:
         await interaction.followup.send(f"Encountered error writing ingots: {e}")
         return
