@@ -26,7 +26,7 @@ from ironforgedbot.common.responses import (
     send_error_response,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLES, extract_roles, is_prospect
+from ironforgedbot.common.roles import ROLES
 from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
