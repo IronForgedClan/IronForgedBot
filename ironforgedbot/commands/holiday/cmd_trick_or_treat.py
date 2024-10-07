@@ -40,18 +40,48 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
     action = random.choices(trick_or_treat, weights)[0]
 
     positive_ingot_messages = [
-        "I give you {ingots}, and you give me your undying loyalty.\nOh you agree? That was easy.",
-        "Congratulations on your life changing payout of {ingots}.",
-        "You don't deserve this, but I'm feeling generous. Here is {ingots}, get yourself something nice.",
-        "So if I give you {ingots}, you will trim my armour?\n\n**Deal!**",
-        "With the recipt of {ingots}, you pledge to tattoo the Iron Forged logo on your forehead.\n\nNo takesy-backsies.",
+        "Fine. **{ingots}** is a small price to pay to get out of this interaction.",
+        "Congratulations on your life changing payout of **{ingots}**.",
+        "You don't deserve this, but I'm feeling generous.\nHere is **{ingots}**, get yourself something nice.",
+        "**{ingots}** to trim my armour? You got yourself a deal :handshake:",
+        "And now with the recipt of **{ingots}** ingots the contract is official.\nI hope you read the fine print.",
+        "I am printing **{ingots}** out of thin air just to make you happy.\nThis devalues all ingots a little bit, I hope you're happy.",
+        "If I dropped **{ingots}** north of the Edgeville ditch, would you pick them up?\nAsking for a friend.",
+        "When Kodiak's back was turned, I stole **{ingots}** from his account.\nNow they are yours, and you're as guilty as I am.",
+        "You have been credited **{ingots}**.\nThank you for playing, human.",
+        "On behalf of everyone at Iron Forged I just want to say ~~fuc~~... **congratulations**!!\nWe are all so happy for you.\n**{ingots}**.",
+        "Just take **{ingots}** and get out of my sight.",
+        "**JACKPOT!!!!!!!**\nOh no, it's only **{ingots}**. False alarm.",
+        "**{ingots}** gz.",
+        "Gzzzzzzzzzzz!! Winnings: **{ingots}**.",
+        "The RNG Gods smile upon you this day, adventurer. **{ingots}**.",
+        "You are now thinking about blinking..\nAnd ingots **{ingots}**.",
+        "You've been working hard lately. I've noticed.\nTake **{ingots}**",
+        "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
     ]
 
     negative_ingot_messages = [
-        "You gambled against the house and lost {ingots}... duh!",
-        "Your account has been found guilty of RWT. You will now pay the {ingot} penalty.\nWe shall never speak of this again.",
-        "The odds of losing exactly {ingots} is astronomical. Really, you should be proud.",
+        "You gambled against the house and lost **{ingots}**...\nIt's me. I am the house.",
+        "Your profile has been found guilty of botting.\nThe fine is **{ingots}**.\nPayment is mandatory.\nYour guilt is undeinable.",
+        "The odds of losing exactly **{ingots}** is truly astronomical.\nReally, you should be proud.",
+        "...aaaaaaand it's gone. **{ingots}**",
+        "Quick, look behind you! _*yoink*_ **{ingots}**",
+        "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
+        "You chose...\n\n...poorly **{ingots}**.",
+        "Sorry champ, **{ingots}**.",
+        "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
+        "If you stop reading now, you can pretend you actually won.\n**{ingots}**",
+        "**{ingots}**. How cruel of me.",
+        "**WRONG {ingots}**, try again.",
+        "Ha! **{ingots}**",
+        "The RNG Gods are laughing at you **{ingots}**.",
+        "**{ingots}** ouch bud.",
+        "Unluck pal, **{ingots}**.",
+        "You are a loser.\nAlso, you lost **{ingots}** ingots.",
     ]
+
+    ingot_icon = find_emoji(interaction, "Ingot")
+    ingot_balance_message = "\n\n**{username}** now has **{total}** ingots."
 
     match action:
         case TrickOrTreat.JOKE:
@@ -60,61 +90,102 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
             return await send_gif(interaction)
         case TrickOrTreat.REMOVE_INGOTS_LOW:
             quantity = (random.randrange(1, 100, 1) * 10) * -1
-
             quantity_removed, ingot_total = await adjust_ingots(
                 interaction, quantity, interaction.guild.get_member(interaction.user.id)
             )
 
-            ingot_icon = find_emoji(interaction, "Ingot")
+            message = ""
+            if random.random() < 0.2:
+                message = random.choice(negative_ingot_messages).format(
+                    ingots=f"{ingot_icon}{quantity_removed:,}"
+                )
+            else:
+                message = f"You are a loser: **{ingot_icon}{quantity_removed:,}**."
+
             embed = _build_embed(
                 (
-                    f"**Trick!** 💀\nYou gambled, and __lost__ **{ingot_icon}{abs(quantity_removed):,}**"
-                    f"... sucks to be you, bud."
-                    f"\n\n{interaction.user.display_name} now has **{ingot_total:,}** ingots."
+                    message
+                    + ingot_balance_message.format(
+                        username=interaction.user.display_name,
+                        total=f"{ingot_icon}{ingot_total:,}",
+                    )
                 )
             )
             return await interaction.followup.send(embed=embed)
         case TrickOrTreat.ADD_INGOTS_LOW:
             quantity = random.randrange(1, 100, 1) * 10
-
             quantity_added, ingot_total = await adjust_ingots(
                 interaction, quantity, interaction.guild.get_member(interaction.user.id)
             )
 
-            ingot_icon = find_emoji(interaction, "Ingot")
+            message = ""
+            if random.random() < 0.3:
+                message = random.choice(positive_ingot_messages).format(
+                    ingots=f"{ingot_icon}{quantity_added:,}"
+                )
+            else:
+                message = f"You are a winner! **{ingot_icon}{quantity_added:,}**\ngzzz"
+
             embed = _build_embed(
                 (
-                    f"**Treat!** 🥳\nNow, if I give you **{ingot_icon}{quantity_added:,}**,"
-                    "promise me you won't spend them all at once!"
-                    f"\n\n{interaction.user.display_name} now has **{ingot_total:,}** ingots."
+                    message
+                    + ingot_balance_message.format(
+                        username=interaction.user.display_name,
+                        total=f"{ingot_icon}{ingot_total:,}",
+                    )
                 )
-            )
-            return await interaction.followup.send(embed=embed)
-        case TrickOrTreat.ADD_INGOTS_HIGH:
-            quantity = random.randrange(100, 250, 1) * 10
-
-            quantity_added, ingot_total = await adjust_ingots(
-                interaction, quantity, interaction.guild.get_member(interaction.user.id)
-            )
-
-            ingot_icon = find_emoji(interaction, "Ingot")
-            embed = _build_embed(
-                f"**Treat!** 🎉\nYou won a massive payout of **{ingot_icon}{quantity_added:,}**... gzzzzzz!"
-                f"\n\n{interaction.user.display_name} now has **{ingot_total:,}** ingots."
             )
             return await interaction.followup.send(embed=embed)
         case TrickOrTreat.REMOVE_INGOTS_HIGH:
             quantity = (random.randrange(100, 250, 1) * 10) * -1
-
             quantity_removed, ingot_total = await adjust_ingots(
                 interaction, quantity, interaction.guild.get_member(interaction.user.id)
             )
 
-            ingot_icon = find_emoji(interaction, "Ingot")
+            message = ""
+            if random.random() < 0.6:
+                message = random.choice(negative_ingot_messages).format(
+                    ingots=f"{ingot_icon}{quantity_removed:,}"
+                )
+            else:
+                message = (
+                    f"Unlucky bud, I'm taking **{ingot_icon}{quantity_removed:,}**."
+                )
+
             embed = _build_embed(
                 (
-                    f"**Trick!** 💀\nYou lost **{ingot_icon}{abs(quantity_removed):,}**... ouch, bud. Big yikes my guy."
-                    f"\n\n{interaction.user.display_name} now has **{ingot_total:,}** ingots."
+                    message
+                    + ingot_balance_message.format(
+                        username=interaction.user.display_name,
+                        total=f"{ingot_icon}{ingot_total:,}",
+                    )
+                )
+            )
+            return await interaction.followup.send(embed=embed)
+
+        case TrickOrTreat.ADD_INGOTS_HIGH:
+            quantity = random.randrange(150, 250, 1) * 10
+            quantity_added, ingot_total = await adjust_ingots(
+                interaction, quantity, interaction.guild.get_member(interaction.user.id)
+            )
+
+            message = ""
+            if random.random() < 0.3:
+                message = random.choice(positive_ingot_messages).format(
+                    ingots=f"{ingot_icon}{quantity_added:,}"
+                )
+            else:
+                message = (
+                    f"We have a winner!! **{ingot_icon}{quantity_added:,}** big gzzzzz!"
+                )
+
+            embed = _build_embed(
+                (
+                    message
+                    + ingot_balance_message.format(
+                        username=interaction.user.display_name,
+                        total=f"{ingot_icon}{ingot_total:,}",
+                    )
                 )
             )
             return await interaction.followup.send(embed=embed)
@@ -129,17 +200,21 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
                     f"Member '{interaction.user.display_name}' not found in storage.",
                 )
 
-            ingot_icon = find_emoji(interaction, "Ingot")
             embed = ""
             if member.ingots < 1:
                 embed = _build_embed(
-                    "**Trick!** 💀\nYou lost... well, you would have lost ingots if you had any to lose.\n"
+                    "You lost... well, you would have lost ingots if you had any to lose.\n"
                     "Attend some events, or throw me a bond or something, you're making us look bad. 💀"
                 )
             else:
                 embed = _build_embed(
-                    f"**Trick!** 💀\nYou lost **{ingot_icon}{member.ingots:,}**... oof, that's gotta sting."
-                    f"\n\n{interaction.user.display_name} now has **0** ingots."
+                    (
+                        f"You lost **{ingot_icon}{member.ingots:,}**... now that's gotta sting."
+                        + ingot_balance_message.format(
+                            username=interaction.user.display_name,
+                            total=f"{ingot_icon}0",
+                        )
+                    )
                 )
             return await interaction.followup.send(embed=embed)
 
@@ -147,9 +222,9 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
             if state.trick_or_treat_jackpot_claimed:
                 embed = _build_embed(
                     (
-                        "**Treat!** 🎉\nOr, well, it would have been... but you have been deemed unworthy.\n"
+                        "**Treat!** Or, well, it would have been... but you have been deemed unworthy.\n"
                         "I don't know what to tell you, I don't make the rules. 🤷‍♂️"
-                        "\n\nHave a consolation pumpkin: 🎃"
+                        "\n\nHave a consolation pumpkin 🎃"
                     )
                 )
                 return await interaction.followup.send(embed=embed)
@@ -162,21 +237,38 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
 
             state.trick_or_treat_jackpot_claimed = True
 
-            ingot_icon = find_emoji(interaction, "Ingot")
             embed = _build_embed(
                 (
                     f"**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day {interaction.user.mention}!\n"
-                    f"You have been blessed with **{ingot_icon}{quantity_added:,}** ingots...\n"
-                    "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-                    "wave2:rainbow:gzzzzzzzzzzzzzzzzzzzzzzzz!!"
-                    f"\n\n{interaction.user.display_name} now rich, with **{ingot_total:,}** ingots total."
+                    f"You have been blessed with the biggest payout I am authorized to give.\n\n"
+                    f"A cool **{ingot_icon}{quantity_added:,}** ingots wired directly into your bank account.\n\n"
+                    "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n"
+                    "`wave2:rainbow:gzzzzzzzzzzzzzzzzzzzzzzzzzzzzz`"
+                    + ingot_balance_message.format(
+                        username=interaction.user.display_name,
+                        total=f"{ingot_icon}{ingot_total:,}",
+                    )
                 )
             )
             return await interaction.followup.send(embed=embed)
 
 
 def _build_embed(content: str) -> discord.Embed:
-    return build_response_embed("", content, discord.Color.orange())
+    thumbnails = [
+        "https://oldschool.runescape.wiki/images/Pumpkin_detail.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack_lantern_mask_detail.png/1280px-Jack_lantern_mask_detail.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lantern.png/1280px-Jack-O-Lantern.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lanterns.png/1280px-Jack-O-Lanterns.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lantern_%282%29.png/800px-Jack-O-Lantern_%282%29.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lantern_%285%29.png/1024px-Jack-O-Lantern_%285%29.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lantern_%286%29.png/1280px-Jack-O-Lantern_%286%29.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lantern_%288%29.png/1280px-Jack-O-Lantern_%288%29.png",
+        "https://oldschool.runescape.wiki/images/thumb/Jack-O-Lantern_%289%29.png/1024px-Jack-O-Lantern_%289%29.png",
+        "https://oldschool.runescape.wiki/images/thumb/Skull_%28item%29_detail.png/1024px-Skull_%28item%29_detail.png",
+    ]
+    embed = build_response_embed("", content, discord.Color.orange())
+    embed.set_thumbnail(url=random.choice(thumbnails))
+    return embed
 
 
 async def send_joke(interaction: discord.Interaction):
