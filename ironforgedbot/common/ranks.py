@@ -1,9 +1,9 @@
-import logging
-from typing import Optional
-import discord
-from strenum import StrEnum
 from enum import IntEnum
+from typing import Optional
+
+import discord
 from discord import Color
+from strenum import StrEnum
 
 
 class RANKS(StrEnum):
