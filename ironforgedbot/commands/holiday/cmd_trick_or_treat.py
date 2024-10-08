@@ -279,8 +279,13 @@ def _build_embed(content: str) -> discord.Embed:
         "https://oldschool.runescape.wiki/images/thumb/Black_demon_mask_detail.png/1280px-Black_demon_mask_detail.png",
         "https://oldschool.runescape.wiki/images/thumb/Death.png/1280px-Death.png",
     ]
+
+    available_thumbnails = [s for s in thumbnails if s not in thumbnail_history]
+    chosen_thumbnail = random.choice(available_thumbnails)
+    _add_to_history(chosen_thumbnail, thumbnail_history)
+
     embed = build_response_embed("", content, discord.Color.orange())
-    embed.set_thumbnail(url=random.choice(thumbnails))
+    embed.set_thumbnail(url=chosen_thumbnail)
     return embed
 
 
@@ -363,7 +368,7 @@ async def adjust_ingots(
     return quantity, member.ingots
 
 
-def _add_to_history(item, list):
+def _add_to_history(item, list: list, limit=5):
     list.append(item)
-    if len(list) > 3:
+    if len(list) > limit:
         list.pop(0)
