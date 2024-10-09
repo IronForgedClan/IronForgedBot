@@ -152,7 +152,7 @@ class IronForgedCommands:
                 callback=cmd_activity_check,
             )
         )
-        if CONFIG.TRICK_OR_TREAT:
+        if CONFIG.TRICK_OR_TREAT_ENABLED:
             self._tree.add_command(
                 discord.app_commands.Command(
                     name="trick_or_treat",
