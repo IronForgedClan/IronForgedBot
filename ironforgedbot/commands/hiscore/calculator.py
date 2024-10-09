@@ -86,7 +86,7 @@ async def get_rank(player_name: str) -> RANKS:
 
 
 def _get_skills_info(score_data) -> List[SkillScore]:
-    if SKILLS is None:
+    if SKILLS is None or score_data is None or score_data["skills"] is None:
         raise RuntimeError("Unable to read skills data")
 
     output = []

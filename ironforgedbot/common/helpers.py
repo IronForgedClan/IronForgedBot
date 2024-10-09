@@ -199,7 +199,7 @@ async def reply_with_file(
 
 
 def render_relative_time(target: datetime) -> str:
-    delta = relativedelta(datetime.now(), target)
+    delta = relativedelta(datetime.now().astimezone(), target)
 
     if delta.years > 0:
         return f"{delta.years} year{'s' if delta.years > 1 else ''} ago"
