@@ -1,0 +1,13 @@
+python-dotenv
+discord.py
+requests
+google-auth
+google-api-python-client
+pytz
+StrEnum
+apscheduler
+reactionmenu
+wom.py
+concurrent-log-handler
+python-dateutil
+aiohttp

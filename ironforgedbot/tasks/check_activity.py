@@ -1,9 +1,8 @@
-import datetime
 import logging
 
 import discord
 import wom
-from wom import GroupRole, Period, Skills
+from wom import GroupRole, Metric, Period
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
@@ -110,7 +109,7 @@ async def _find_inactive_users(
     while not is_done:
         result = await wom_client.groups.get_gains(
             wom_group_id,
-            metric=Skills.Overall,
+            metric=Metric.Overall,
             period=Period.Month,
             limit=DEFAULT_WOM_LIMIT,
             offset=offset,
@@ -127,22 +126,22 @@ async def _find_inactive_users(
                     if wom_member.player.username.lower() in absentees:
                         continue
 
-                    if wom_member.membership.role is None:
+                    if wom_member.role is None:
                         role = "Unknown"
-                    elif wom_member.membership.role == GroupRole.Helper:
+                    elif wom_member.role == GroupRole.Helper:
                         role = "Alt"
-                    elif wom_member.membership.role == GroupRole.Dogsbody:
+                    elif wom_member.role == GroupRole.Dogsbody:
                         continue
-                    elif wom_member.membership.role == GroupRole.Gold:
+                    elif wom_member.role == GroupRole.Gold:
                         role = "Staff"
-                    elif wom_member.membership.role == GroupRole.Collector:
+                    elif wom_member.role == GroupRole.Collector:
                         role = "Mod"
                     else:
-                        role = str(wom_member.membership.role).title()
+                        role = str(wom_member.role).title()
 
-                    if member_gains.player.last_changed_at:
+                    if wom_member.player.last_changed_at:
                         days_since_progression = render_relative_time(
-                            member_gains.player.last_changed_at
+                            wom_member.player.last_changed_at
                         )
                     else:
                         days_since_progression = "unknown"

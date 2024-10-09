@@ -43,8 +43,11 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
     for member, current_rank in members_to_update.items():
         try:
             current_points = await get_player_points_total(member)
-        except RuntimeError as e:
-            logger.error(f"Error while checking {member}: {e}")
+        except Exception as e:
+            logger.error(f"Error processing {member}: {e}")
+            await report_channel.send(
+                f"Error calculating points for **{member}**. Is their rsn correct?"
+            )
             continue
 
         correct_rank = get_rank_from_points(current_points)

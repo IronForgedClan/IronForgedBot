@@ -1,6 +1,7 @@
 import logging
 
 import discord
+import traceback
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
@@ -30,7 +31,7 @@ class IronForgedCommandTree(discord.app_commands.CommandTree):
         interaction: discord.Interaction,
         error: discord.app_commands.AppCommandError,
     ):
-        logger.critical(error)
+        logger.critical(f"Error: {error}\n%s", traceback.format_exc())
 
         if isinstance(error, discord.app_commands.CheckFailure):
             await interaction.response.defer(thinking=True, ephemeral=True)
