@@ -6,7 +6,7 @@
 #
 aiohappyeyeballs==2.4.3
     # via aiohttp
-aiohttp==3.10.8
+aiohttp==3.10.9
     # via
     #   -r requirements.in
     #   discord-py
@@ -16,9 +16,7 @@ aiosignal==1.3.1
 apscheduler==3.10.4
     # via -r requirements.in
 attrs==24.2.0
-    # via
-    #   aiohttp
-    #   wom-py
+    # via aiohttp
 cachetools==5.5.0
     # via google-auth
 certifi==2024.8.30
@@ -37,9 +35,9 @@ frozenlist==1.4.1
     #   aiosignal
 google-api-core==2.21.0
     # via google-api-python-client
-google-api-python-client==2.115.0
+google-api-python-client==2.149.0
     # via -r requirements.in
-google-auth==2.27.0
+google-auth==2.35.0
     # via
     #   -r requirements.in
     #   google-api-core
@@ -57,6 +55,8 @@ idna==3.10
     # via
     #   requests
     #   yarl
+msgspec==0.18.6
+    # via wom-py
 multidict==6.1.0
     # via
     #   aiohttp
@@ -84,13 +84,13 @@ python-dateutil==2.9.0.post0
     # via -r requirements.in
 python-dotenv==1.0.1
     # via -r requirements.in
-pytz==2023.3.post1
+pytz==2024.2
     # via
     #   -r requirements.in
     #   apscheduler
 reactionmenu==3.1.7
     # via -r requirements.in
-requests==2.32.2
+requests==2.32.3
     # via
     #   -r requirements.in
     #   google-api-core
@@ -108,7 +108,7 @@ uritemplate==4.1.1
     # via google-api-python-client
 urllib3==2.2.3
     # via requests
-wom-py==0.9.5
+wom-py==1.0.1
     # via -r requirements.in
 yarl==1.14.0
     # via aiohttp
