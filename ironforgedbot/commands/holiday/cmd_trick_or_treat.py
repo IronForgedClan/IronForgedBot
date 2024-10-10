@@ -8,7 +8,8 @@ import discord
 from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLES
-from ironforgedbot.decorators import require_role
+from ironforgedbot.config import CONFIG
+from ironforgedbot.decorators import require_channel, require_role
 from ironforgedbot.state import state
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -34,6 +35,7 @@ class TrickOrTreat(Enum):
         return self.value
 
 
+@require_channel([CONFIG.TRICK_OR_TREAT_CHANNEL_ID])
 @require_role(ROLES.ANY)
 async def cmd_trick_or_treat(interaction: discord.Interaction):
     assert interaction.guild
@@ -44,7 +46,7 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
         "Oh fine.\n**{ingots}** is a small price to pay to get out of this interaction.",
         "Congratulations on your life changing payout of... _*drumroll*_\n**{ingots}**!",
         "I'm feeling generous.\nTake **{ingots}** ingots and get yourself something nice.",
-        "**{ingots}** to trim my armour? Bargain!\nYou got yourself a deal. :handshake:",
+        "**{ingots}** to trim my armour?\nYou got yourself a deal. :handshake:",
         "...and with the recipt of **{ingots}** ingots, the contract is official.\nI hope you read the fine print.",
         "I am printing **{ingots}** out of thin air just to make you happy.\nThis devalues all ingots a little bit, I hope you're happy.",
         "If I dropped **{ingots}** north of the Edgeville ditch...\nwould you pick them up? Asking for a friend.",
