@@ -37,7 +37,7 @@ class TestConfig(unittest.TestCase):
             Config()
 
         self.assertEqual(
-            str(cm.exception), "Configuration key 'SHEET_ID' is missing or empty"
+            str(cm.exception), "Configuration key 'SHEET_ID' (str) is missing or empty"
         )
 
     @patch.dict("os.environ", INVALID_INT_CONIG)
@@ -46,7 +46,7 @@ class TestConfig(unittest.TestCase):
             Config()
 
         self.assertEqual(
-            str(cm.exception), "Configuration key 'GUILD_ID' is missing or empty"
+            str(cm.exception), "Configuration key 'GUILD_ID' (int) is missing or empty"
         )
 
     @patch(

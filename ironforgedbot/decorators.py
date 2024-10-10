@@ -6,6 +6,7 @@ from random import randrange
 
 import discord
 
+from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.state import state
 from ironforgedbot.common.helpers import validate_member_has_role
 from ironforgedbot.common.roles import ROLES
@@ -57,6 +58,38 @@ def require_role(role_name: str, ephemeral=False):
                     )
 
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)
+            await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def require_channel(channel_ids: list[int]):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            interaction = args[0]
+            if not isinstance(interaction, discord.Interaction):
+                raise ReferenceError(
+                    f"Expected discord.Interaction as first argument ({func.__name__})"
+                )
+
+            if interaction.channel_id not in channel_ids:
+                logger.info(
+                    f"Member '{interaction.user.display_name}' tried to use '{func.__name__}' "
+                    f"in an invalid channel '{interaction.channel_id}'"
+                )
+                await interaction.response.defer(thinking=True, ephemeral=True)
+
+                message = (
+                    "Command cannot be used in this channel.\n\n**Supported channels:**"
+                )
+                for channel in channel_ids:
+                    message += f"\n- <#{channel}>"
+
+                return await send_error_response(interaction, message)
+
             await func(*args, **kwargs)
 
         return wrapper
