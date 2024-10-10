@@ -1,10 +1,10 @@
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import discord
 
 from ironforgedbot.common.roles import ROLES
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators import require_channel, require_role, retry_on_exception
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
@@ -194,3 +194,38 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_randrange.call_count, 2)
         mock_sleep.assert_called_with(5)
+
+    async def test_require_channel(self):
+        channel_id = 555
+        mock_func = AsyncMock()
+        mock_interaction = create_mock_discord_interaction(channel_id=channel_id)
+
+        decorated_func = require_channel([channel_id, 12345, 54321])(mock_func)
+        await decorated_func(mock_interaction)
+
+        mock_func.assert_awaited_once()
+
+    async def test_require_channel_fails_interaction_not_first_arg(self):
+        mock_func = AsyncMock()
+        decorated_func = require_channel([12345])(mock_func)
+
+        with self.assertRaises(ReferenceError) as context:
+            await decorated_func("")
+
+        self.assertEqual(
+            str(context.exception),
+            f"Expected discord.Interaction as first argument ({mock_func.__name__})",
+        )
+
+    @patch("ironforgedbot.decorators.send_error_response")
+    async def test_require_channel_fails_invalid_channel_id(
+        self, mock_send_error_response
+    ):
+        mock_func = AsyncMock()
+        mock_interaction = create_mock_discord_interaction(channel_id=123)
+        decorated_func = require_channel([12345, 54321])(mock_func)
+
+        await decorated_func(mock_interaction)
+
+        mock_send_error_response.assert_awaited_once()
+        mock_func.assert_not_awaited()
