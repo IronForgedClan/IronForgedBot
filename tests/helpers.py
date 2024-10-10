@@ -14,12 +14,15 @@ VALID_CONFIG = {
     "WOM_GROUP_ID": "3333",
     "WOM_API_KEY": "xxxxx",
     "AUTOMATION_CHANNEL_ID": "123456",
+    "TRICK_OR_TREAT_ENABLED": "False",
+    "TRICK_OR_TREAT_CHANNEL_ID": "",
 }
 
 
 def create_mock_discord_interaction(
     members: Optional[List[discord.Member]] = None,
     user: Optional[discord.Member] = None,
+    channel_id: Optional[int] = None,
 ) -> discord.Interaction:
     if not members:
         members = []
@@ -32,6 +35,9 @@ def create_mock_discord_interaction(
     interaction.response = AsyncMock()
     interaction.guild = create_mock_discord_guild(members)
     interaction.user = user
+
+    if channel_id:
+        interaction.channel_id = channel_id
 
     return interaction
 
