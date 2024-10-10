@@ -1,12 +1,11 @@
-from datetime import datetime
 import logging
+from datetime import datetime
 from io import BytesIO
 from typing import List, Tuple, TypedDict
 
 import discord
-import requests
-from discord import Guild, Member
 from dateutil.relativedelta import relativedelta
+from discord import Guild, Member
 
 from ironforgedbot.http import HTTP
 

@@ -58,10 +58,10 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
         "**{ingots}**\ngz.",
         "Gzzzzzzzzzzz!!\nWinnings: **{ingots}**.",
         "The RNG Gods smile upon you this day, adventurer.\nYou won **{ingots}** ingots.",
-        "You are now thinking about blinking..\nAnd ingots **{ingots}**.\n_Blingots_.",
-        "You've been working hard lately. I've noticed.\nTake **{ingots}**",
+        "You are now thinking about blinking..\n...and ingots **{ingots}**.\n_blingots_.",
+        "You've been working hard lately. I've noticed.\nHave **{ingots}** ingots.",
         "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
-        "Tell your boss to do one. You're rich now!\n**{ingots}** ingot payday.",
+        "You're rich now!\n**{ingots}** ingot payday.",
     ]
 
     negative_ingot_messages = [
@@ -72,7 +72,7 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
         "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
         "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
         "You chose...\n\n...poorly **{ingots}**.",
-        "Sorry champ, **{ingots}**.\n:frowning:",
+        "Sorry champ..\n**{ingots}** :frowning:",
         "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
         "If you stop reading now, you can pretend you actually won.\n**{ingots}** :hear_no_evil:",
         "**{ingots}**...\nSorry.",
@@ -107,9 +107,7 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
                     ingots=f"{ingot_icon}{quantity_removed:,}"
                 )
             else:
-                message = (
-                    f"Trick! **{ingot_icon}{quantity_removed:,}**.\n:jack_o_lantern:"
-                )
+                message = f"Trick! :skull:\n\n**{ingot_icon}{quantity_removed:,}**"
 
             embed = _build_embed(
                 (
@@ -133,9 +131,7 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
                     ingots=f"{ingot_icon}{quantity_added:,}"
                 )
             else:
-                message = (
-                    f"Nice! You won **{ingot_icon}{quantity_added:,}** ingots!\ngzzz!"
-                )
+                message = f"Nice! You won **{ingot_icon}{quantity_added:,}** ingots!\ngzzzzzzzzzzzzz!"
 
             embed = _build_embed(
                 (
@@ -184,7 +180,7 @@ async def cmd_trick_or_treat(interaction: discord.Interaction):
                     ingots=f"{ingot_icon}{quantity_added:,}"
                 )
             else:
-                message = f":tada: Woohoo! You won **{ingot_icon}{quantity_added:,}** ingots!\ngzzzzzzzzz!"
+                message = f":tada: You won **{ingot_icon}{quantity_added:,}** ingots!\ngzzzzzzzzzzzzz :jack-o-lantern:"
 
             embed = _build_embed(
                 (
@@ -284,7 +280,7 @@ def _build_embed(content: str) -> discord.Embed:
 
     available_thumbnails = [s for s in thumbnails if s not in thumbnail_history]
     chosen_thumbnail = random.choice(available_thumbnails)
-    _add_to_history(chosen_thumbnail, thumbnail_history)
+    _add_to_history(chosen_thumbnail, thumbnail_history, 8)
 
     embed = build_response_embed("", content, discord.Color.orange())
     embed.set_thumbnail(url=chosen_thumbnail)
@@ -328,7 +324,7 @@ async def send_gif(interaction: discord.Interaction):
 
     available_gifs = [s for s in gifs if s not in gif_history]
     chosen_gif = random.choice(available_gifs)
-    _add_to_history(chosen_gif, gif_history)
+    _add_to_history(chosen_gif, gif_history, 10)
 
     await interaction.followup.send(chosen_gif)
 
