@@ -148,7 +148,7 @@ class TrickOrTreatHandler:
             return None, None
 
         if new_total < 1:
-            quantity = member.ingots
+            quantity = member.ingots * -1
             member.ingots = 0
         else:
             member.ingots = new_total
