@@ -32,53 +32,55 @@ class TrickOrTreatHandler:
         self.thumbnail_history = []
 
     def _get_random_positive_message(self) -> str:
-        positive_ingot_messages = [
-            "Oh fine.\n**{ingots}** is a small price to pay to get out of this interaction.",
-            "Congratulations on your life changing payout of... _*drumroll*_\n**{ingots}**!",
-            "I'm feeling generous.\nTake **{ingots}** ingots and get yourself something nice.",
-            "**{ingots}** to trim my armour?\nYou got yourself a deal. :handshake:",
-            "...and with the recipt of **{ingots}** ingots, the contract is official.\nI hope you read the fine print.",
-            "I am printing **{ingots}** out of thin air just to make you happy.\nThis devalues all ingots a little bit, I hope you're happy.",
-            "If I dropped **{ingots}** north of the Edgeville ditch...\nwould you pick them up? Asking for a friend.",
-            "When Kodiak's back was turned, I stole **{ingots}** from his account.\nNow they are yours, and you're as guilty as I am.",
-            "You have been credited **{ingots}**.\nThank you for playing, human.",
-            "On behalf of everyone at Iron Forged I just want to say ~~fuc~~... **congratulations**!!\nWe are all so happy for you. **{ingots}**.",
-            "_Sigh_\nJust take **{ingots}** ingots and get out of my sight.",
-            "**JACKPOT!!!!!!!**\nOh no, it's only **{ingots}**. False alarm.",
-            "**{ingots}**\ngz.",
-            "Gzzzzzzzzzzz!!\nWinnings: **{ingots}**.",
-            "The RNG Gods smile upon you this day, adventurer.\nYou won **{ingots}** ingots.",
-            "You are now thinking about blinking..\n...and ingots **{ingots}**.\n_blingots_.",
-            "You've been working hard lately. I've noticed.\nHave **{ingots}** ingots.",
-            "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
-            "You're rich now!\n**{ingots}** ingot payday.",
-        ]
-        return random.choice(positive_ingot_messages)
+        return random.choice(
+            [
+                "Oh fine.\n**{ingots}** is a small price to pay to get out of this interaction.",
+                "Congratulations on your life changing payout of... _*drumroll*_\n**{ingots}**!",
+                "I'm feeling generous.\nTake **{ingots}** ingots and get yourself something nice.",
+                "**{ingots}** to trim my armour?\nYou got yourself a deal. :handshake:",
+                "...and with the recipt of **{ingots}** ingots, the contract is official.\nI hope you read the fine print.",
+                "I'm printing **{ingots}** out of thin air just for you.\nThis devalues all ingots a little bit, I hope you're happy.",
+                "If I dropped **{ingots}** north of the Edgeville ditch...\nwould you pick them up? Asking for a friend.",
+                "When Kodiak's back was turned, I stole **{ingots}** from his account.\nNow they are yours, and you're as guilty as I am.",
+                "You have been credited **{ingots}**.\nThank you for playing, human.",
+                "On behalf of everyone at Iron Forged I just want to say ~~fuc~~... **congratulations**!!\nWe are all so happy for you. **{ingots}**.",
+                "_Sigh_\nJust take **{ingots}** ingots and get out of my sight.",
+                "**JACKPOT!!!!!!!**\nOh no, it's only **{ingots}**. False alarm.",
+                "**{ingots}**\ngz.",
+                "Gzzzzzzzzzzz!!\nWinnings: **{ingots}**.",
+                "The RNG Gods smile upon you this day, adventurer.\nYou won **{ingots}** ingots.",
+                "You are now thinking about blinking..\n...and ingots **{ingots}**.\n_blingots_.",
+                "You've been working hard lately. I've noticed.\nHave **{ingots}** ingots.",
+                "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
+                "You're rich now!\n**{ingots}** ingot payday.",
+            ]
+        )
 
     def _get_random_negative_message(self) -> str:
-        negative_ingot_messages = [
-            "You gambled against the house and lost **{ingots}**...\nIt's me. I am the house.",
-            "Your profile has been found guilty of botting.\nThe fine is **{ingots}**.\nPayment is mandatory.\nYour guilt is undeniable.",
-            "The odds of losing exactly **{ingots}** is truly astronomical.\nReally, you should be proud.",
-            "...aaaaaaand it's gone. **{ingots}**\n:wave:",
-            "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
-            "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
-            "You chose...\n\n...poorly **{ingots}**.",
-            "Sorry champ..\n**{ingots}** :frowning:",
-            "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
-            "If you stop reading now, you can pretend you actually won.\n**{ingots}** :hear_no_evil:",
-            "**{ingots}**...\nSorry.",
-            "**WRONG {ingots}**, try again.\n:person_gesturing_no:",
-            "Ha! **{ingots}**\n:person_shrugging:",
-            "The RNG Gods are laughing at you, adventurer...\nYou lost **{ingots}** ingots.",
-            "**{ingots}** ouch bud.\n:grimacing:",
-            "Unluck pal, **{ingots}**.\n:badger:",
-            "You are a loser.\n\nAlso, you lost **{ingots}** ingots.",
-            "I took no pleasure in deducting **{ingots}** from you.\n... :joy:",
-            "The worst part about losing **{ingots}**, isn't the ingot loss.\nIt's the public humiliation. :clown:",
-            "It's nothing personal.\nI'm just following my programming **{ingots}**.",
-        ]
-        return random.choice(negative_ingot_messages)
+        return random.choice(
+            [
+                "You gambled against the house and lost **{ingots}**...\nIt's me. I am the house.",
+                "Your profile has been found guilty of botting.\nThe fine is **{ingots}**.\nPayment is mandatory.\nYour guilt is undeniable.",
+                "The odds of losing exactly **{ingots}** is truly astronomical.\nReally, you should be proud.",
+                "...aaaaaaand it's gone. **{ingots}**\n:wave:",
+                "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
+                "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
+                "You chose...\n\n...poorly **{ingots}**.",
+                "Sorry champ..\n**{ingots}** :frowning:",
+                "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
+                "If you stop reading now, you can pretend you actually won.\n**{ingots}** :hear_no_evil:",
+                "**{ingots}**...\nSorry.",
+                "**WRONG {ingots}**, try again.\n:person_gesturing_no:",
+                "Ha! **{ingots}**\n:person_shrugging:",
+                "The RNG Gods are laughing at you, adventurer...\nYou lost **{ingots}** ingots.",
+                "**{ingots}** ouch bud.\n:grimacing:",
+                "Unluck pal, **{ingots}**.\n:badger:",
+                "You are a loser.\n\nAlso, you lost **{ingots}** ingots.",
+                "I took no pleasure in deducting **{ingots}** from you.\n... :joy:",
+                "The worst part about losing **{ingots}**, isn't the ingot loss.\nIt's the public humiliation. :clown:",
+                "It's nothing personal.\nI'm just following my programming **{ingots}**.",
+            ]
+        )
 
     def _get_balance_message(self, username: str, balance: int) -> str:
         return f"\n\n**{username}** now has **{self.ingot_icon}{balance:,}** ingots."
@@ -111,7 +113,7 @@ class TrickOrTreatHandler:
     def _build_no_ingots_error_response(self, username: str) -> discord.Embed:
         return self._build_embed(
             (
-                "You lost... well, you would have lost ingots if you had any to lose.\n"
+                f"You lost... well, you would have lost {self.ingot_icon} ingots if you had any to lose.\n"
                 + "Attend some events, throw us a bond or _something_.\nYou're making me look bad. 💀"
                 + self._get_balance_message(username, 0)
             )
@@ -166,7 +168,6 @@ class TrickOrTreatHandler:
 
     async def random_result(self, interaction: discord.Interaction):
         action = random.choices(list(TrickOrTreat), weights=self.weights)[0]
-        action = TrickOrTreat.REMOVE_INGOTS_LOW
 
         match action:
             case TrickOrTreat.JACKPOT_INGOTS:
@@ -312,13 +313,12 @@ class TrickOrTreatHandler:
             interaction, quantity, interaction.guild.get_member(interaction.user.id)
         )
 
-        if not quantity_removed and not ingot_total:
-            await interaction.followup.send(
+        if quantity_removed is None and ingot_total is None:
+            return await interaction.followup.send(
                 embed=self._build_no_ingots_error_response(
                     interaction.user.display_name
                 )
             )
-            return
 
         message = ""
         if random.random() < 0.2:
