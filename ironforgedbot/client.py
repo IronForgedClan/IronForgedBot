@@ -11,7 +11,7 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.config import CONFIG
 from ironforgedbot.event_emitter import event_emitter
-from ironforgedbot.state import state
+from ironforgedbot.state import STATE
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -117,6 +117,8 @@ class DiscordClient(discord.Client):
         await self.close()
 
     async def setup_hook(self):
+        await STATE.load_state()
+
         if self.upload:
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
