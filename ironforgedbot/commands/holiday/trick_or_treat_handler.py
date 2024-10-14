@@ -7,7 +7,7 @@ import discord
 
 from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.state import state
+from ironforgedbot.state import STATE
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
@@ -187,7 +187,7 @@ class TrickOrTreatHandler:
 
     async def result_jackpot(self, interaction: discord.Interaction):
         assert interaction.guild
-        if state.trick_or_treat_jackpot_claimed:
+        if STATE.state["trick_or_treat_jackpot_claimed"]:
             embed = self._build_embed(
                 (
                     "**Treat!** Or, well, it would have been... but you have been deemed unworthy.\n"
@@ -203,7 +203,7 @@ class TrickOrTreatHandler:
             interaction.guild.get_member(interaction.user.id),
         )
 
-        state.trick_or_treat_jackpot_claimed = True
+        STATE.state["trick_or_treat_jackpot_claimed"] = True
 
         embed = self._build_embed(
             (

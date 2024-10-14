@@ -7,7 +7,7 @@ from random import randrange
 import discord
 
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.state import state
+from ironforgedbot.state import STATE
 from ironforgedbot.common.helpers import validate_member_has_role
 from ironforgedbot.common.roles import ROLES
 
@@ -36,7 +36,7 @@ def require_role(role_name: str, ephemeral=False):
                 f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}"
             )
 
-            if state.is_shutting_down:
+            if STATE.state["is_shutting_down"]:
                 logger.warning("Bot has begun shut down. Ignoring command.")
                 await interaction.response.send_message(
                     "## Bad Timing!!\nThe bot is shutting down, please try again when the bot comes back online."

@@ -85,7 +85,7 @@ class DiscordClient(discord.Client):
     async def graceful_shutdown(self):
         """Emit the shutdown event and close the bot gracefully."""
         logger.info("Starting graceful shutdown...")
-        state.is_shutting_down = True
+        STATE.state["is_shutting_down"] = True
 
         pending_tasks = [
             task
