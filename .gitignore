@@ -172,3 +172,4 @@ logs/*
 *.log*
 
 .idea
+state.json
