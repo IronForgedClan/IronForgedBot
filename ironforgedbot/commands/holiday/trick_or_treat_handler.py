@@ -7,6 +7,7 @@ import discord
 
 from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
 from ironforgedbot.common.responses import build_response_embed, send_error_response
+from ironforgedbot.decorators import singleton
 from ironforgedbot.state import STATE
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -24,6 +25,7 @@ class TrickOrTreat(Enum):
     JACKPOT_INGOTS = 10_000
 
 
+@singleton
 class TrickOrTreatHandler:
     def __init__(self):
         self.weights = [1 / item.value for item in TrickOrTreat]
