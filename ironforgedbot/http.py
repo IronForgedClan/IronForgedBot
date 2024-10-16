@@ -11,7 +11,7 @@ class AsyncHttpClient:
     def __init__(self):
         self.session = None
 
-        event_emitter.on("shutdown", self.cleanup, priority=2)
+        event_emitter.on("shutdown", self.cleanup, priority=20)
 
     async def _initialize_session(self):
         """Initialize the aiohttp session."""
