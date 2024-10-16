@@ -24,6 +24,7 @@
 | `/roster`             | Url (str)                                                                                  | Leadership   | Produces a roster list of players                      |
 | `/logs`               | Index (int)                                                                                | Discord Team | Privately shares bot log files                         |
 | `/activity_check`     | N/A                                                                                        | Leadership   | Manually starts the activity check automation          |
+| `/trick_or_treat`     | N/A                                                                                        | Member       | Holiday special command                                |
 
 ## Setup
 
@@ -75,15 +76,17 @@ Now you can modify the example `.env` file with your values.
 
 #### Keys
 
-| Key                   | Explanation                                                                       |
-|-----------------------|-----------------------------------------------------------------------------------|
-| TEMP_DIR              | The location on disk where temporary files are stored. Default value is `./temp`. |
-| SHEET_ID              | The ID of the Google Sheet.                                                       |
-| GUILD_ID              | The ID of the Discord guild.                                                      |
-| BOT_TOKEN             | The unique token for the application. Found on the Discord Developer Portal.      |
-| WOM_API_KEY           | The unique key for connecting to the Wise Old Man API.                            |
-| WOM_GROUP_ID          | The unique ID for the clan group on Wise Old Man.                                 |
-| AUTOMATION_CHANNEL_ID | The unique ID of the channel that automation messages will sent.                  |
+| Key                       | Explanation                                                                       |
+|---------------------------|-----------------------------------------------------------------------------------|
+| TEMP_DIR                  | The location on disk where temporary files are stored. Default value is `./temp`. |
+| SHEET_ID                  | The ID of the Google Sheet.                                                       |
+| GUILD_ID                  | The ID of the Discord guild.                                                      |
+| BOT_TOKEN                 | The unique token for the application. Found on the Discord Developer Portal.      |
+| WOM_API_KEY               | The unique key for connecting to the Wise Old Man API.                            |
+| WOM_GROUP_ID              | The unique ID for the clan group on Wise Old Man.                                 |
+| AUTOMATION_CHANNEL_ID     | The unique ID of the channel that automation messages will sent.                  |
+| TRICK_OR_TREAT_ENABLED    | Boolean flag that determines if the command should be uploaded.                   |
+| TRICK_OR_TREAT_CHANNEL_ID | The channel ID where the trick or treat command can be run.                       |
 
 
 ## Running
