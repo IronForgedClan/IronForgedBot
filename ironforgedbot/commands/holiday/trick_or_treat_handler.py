@@ -32,57 +32,78 @@ class TrickOrTreatHandler:
         self.ingot_icon = find_emoji(None, "Ingot")
         self.gif_history = []
         self.thumbnail_history = []
+        self.positive_message_history = []
+        self.negative_message_history = []
 
     def _get_random_positive_message(self) -> str:
-        return random.choice(
-            [
-                "Oh fine.\n**{ingots}** is a small price to pay to get out of this interaction.",
-                "Congratulations on your life changing payout of... _*drumroll*_\n**{ingots}**!",
-                "I'm feeling generous.\nTake **{ingots}** ingots and get yourself something nice.",
-                "**{ingots}** to trim my armour?\nYou got yourself a deal. :handshake:",
-                "...and with the recipt of **{ingots}** ingots, the contract is official.\nI hope you read the fine print.",
-                "I'm printing **{ingots}** out of thin air just for you.\nThis devalues all ingots a little bit, I hope you're happy.",
-                "If I dropped **{ingots}** north of the Edgeville ditch...\nwould you pick them up? Asking for a friend.",
-                "When Kodiak's back was turned, I stole **{ingots}** from his account.\nNow they are yours, and you're as guilty as I am.",
-                "You have been credited **{ingots}**.\nThank you for playing, human.",
-                "On behalf of everyone at Iron Forged I just want to say ~~fuc~~... **congratulations**!!\nWe are all so happy for you. **{ingots}**.",
-                "_Sigh_\nJust take **{ingots}** ingots and get out of my sight.",
-                "**JACKPOT!!!!!!!**\nOh no, it's only **{ingots}**. False alarm.",
-                "**{ingots}**\ngz.",
-                "Gzzzzzzzzzzz!!\nWinnings: **{ingots}**.",
-                "The RNG Gods smile upon you this day, adventurer.\nYou won **{ingots}** ingots.",
-                "You are now thinking about blinking..\n...and ingots **{ingots}**.\n_blingots_.",
-                "You've been working hard lately. I've noticed.\nHave **{ingots}** ingots.",
-                "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
-                "You're rich now!\n**{ingots}** ingot payday.",
-            ]
+        if random.random() >= 0.5:
+            return ":tada: Treat! **{ingots}**!\ngzzzzzzzzzzzzz :jack_o_lantern:"
+
+        options = [
+            "Oh fine.\n**{ingots}** is a small price to pay to get out of this interaction.",
+            "Congratulations on your life changing payout of... _*drumroll*_\n**{ingots}**!",
+            "I'm feeling generous.\nTake **{ingots}** ingots and get yourself something nice.",
+            "**{ingots}** to trim my armour?\nYou got yourself a deal. :handshake:",
+            "...and with the recipt of **{ingots}** ingots, the contract is official.\nI hope you read the fine print.",
+            "I'm printing **{ingots}** out of thin air just for you.\nThis devalues all ingots a little bit, I hope you're happy.",
+            "If I dropped **{ingots}** north of the Edgeville ditch...\nwould you pick them up? Asking for a friend.",
+            "When Kodiak's back was turned, I stole **{ingots}** from his account.\nNow they are yours, and you're as guilty as I am.",
+            "You have been credited **{ingots}**.\nThank you for playing, human.",
+            "On behalf of everyone at Iron Forged I just want to say ~~fuc~~... **congratulations**!!\nWe are all so happy for you. **{ingots}**.",
+            "_Sigh_\nJust take **{ingots}** ingots and get out of my sight.",
+            "**JACKPOT!!!!!!!**\nOh no, it's only **{ingots}**. False alarm.",
+            "**{ingots}**\ngz.",
+            "Gzzzzzzzzzzz!!\nWinnings: **{ingots}**.",
+            "The RNG Gods smile upon you this day, adventurer.\nYou won **{ingots}** ingots.",
+            "You are now thinking about blinking..\n...and ingots **{ingots}**.\n_blingots_.",
+            "You've been working hard lately. I've noticed.\nHave **{ingots}** ingots.",
+            "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
+            "You're rich now!\n**{ingots}** ingot payday.",
+        ]
+
+        logger.info(self.positive_message_history)
+
+        chosen = random.choice(
+            [s for s in options if s not in self.positive_message_history]
         )
+        self._add_to_history(chosen, self.positive_message_history, 5)
+
+        return chosen
 
     def _get_random_negative_message(self) -> str:
-        return random.choice(
-            [
-                "You gambled against the house and lost **{ingots}**...\nIt's me. I am the house.",
-                "Your profile has been found guilty of botting.\nThe fine is **{ingots}**.\nPayment is mandatory.\nYour guilt is undeniable.",
-                "The odds of losing exactly **{ingots}** is truly astronomical.\nReally, you should be proud.",
-                "...aaaaaaand it's gone. **{ingots}**\n:wave:",
-                "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
-                "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
-                "You chose...\n\n...poorly **{ingots}**.",
-                "Sorry champ..\n**{ingots}** :frowning:",
-                "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
-                "If you stop reading now, you can pretend you actually won.\n**{ingots}** :hear_no_evil:",
-                "**{ingots}**...\nSorry.",
-                "**WRONG {ingots}**, try again.\n:person_gesturing_no:",
-                "Ha! **{ingots}**\n:person_shrugging:",
-                "The RNG Gods are laughing at you, adventurer...\nYou lost **{ingots}** ingots.",
-                "**{ingots}** ouch bud.\n:grimacing:",
-                "Unluck pal, **{ingots}**.\n:badger:",
-                "You are a loser.\n\nAlso, you lost **{ingots}** ingots.",
-                "I took no pleasure in deducting **{ingots}** from you.\n... :joy:",
-                "The worst part about losing **{ingots}**, isn't the ingot loss.\nIt's the public humiliation. :clown:",
-                "It's nothing personal.\nI'm just following my programming **{ingots}**.",
-            ]
+        if random.random() >= 0.5:
+            return "Trick!\nUnlucky pal **{ingots}** ingots."
+
+        options = [
+            "You gambled against the house and lost **{ingots}**...\nIt's me. I am the house.",
+            "Your profile has been found guilty of botting.\nThe fine is **{ingots}**.\nPayment is mandatory.\nYour guilt is undeniable.",
+            "The odds of losing exactly **{ingots}** is truly astronomical.\nReally, you should be proud.",
+            "...aaaaaaand it's gone. **{ingots}**\n:wave:",
+            "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
+            "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
+            "You chose...\n\n...poorly **{ingots}**.",
+            "Sorry champ..\n**{ingots}** :frowning:",
+            "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
+            "If you stop reading now, you can pretend you actually won.\n**{ingots}** :hear_no_evil:",
+            "**{ingots}**...\nSorry.",
+            "**WRONG {ingots}**, try again.\n:person_gesturing_no:",
+            "Ha! **{ingots}**\n:person_shrugging:",
+            "The RNG Gods are laughing at you, adventurer...\nYou lost **{ingots}** ingots.",
+            "**{ingots}** ouch bud.\n:grimacing:",
+            "Unluck pal, **{ingots}**.\n:badger:",
+            "You are a loser.\n\nAlso, you lost **{ingots}** ingots.",
+            "I took no pleasure in deducting **{ingots}** from you.\n... :joy:",
+            "The worst part about losing **{ingots}**, isn't the ingot loss.\nIt's the public humiliation. :clown:",
+            "It's nothing personal.\nI'm just following my programming **{ingots}**.",
+        ]
+
+        logger.info(self.negative_message_history)
+        chosen = random.choice(
+            [s for s in options if s not in self.negative_message_history]
         )
+        self._add_to_history(chosen, self.negative_message_history, 5)
+
+        return chosen
 
     def _get_balance_message(self, username: str, balance: int) -> str:
         return f"\n\n**{username}** now has **{self.ingot_icon}{balance:,}** ingots."
@@ -169,9 +190,7 @@ class TrickOrTreatHandler:
         return quantity, member.ingots
 
     async def random_result(self, interaction: discord.Interaction):
-        action = random.choices(list(TrickOrTreat), weights=self.weights)[0]
-
-        match action:
+        match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await self.result_jackpot(interaction)
             case TrickOrTreat.REMOVE_ALL_INGOTS_TRICK:
@@ -257,7 +276,7 @@ class TrickOrTreatHandler:
             interaction, quantity, interaction.guild.get_member(interaction.user.id)
         )
 
-        if not quantity_removed or not ingot_total:
+        if quantity_removed is None and ingot_total is None:
             await interaction.followup.send(
                 embed=self._build_no_ingots_error_response(
                     interaction.user.display_name
@@ -265,13 +284,9 @@ class TrickOrTreatHandler:
             )
             return
 
-        message = ""
-        if random.random() < 0.6:
-            message = self._get_random_negative_message().format(
-                ingots=f"{self.ingot_icon}{quantity_removed:,}"
-            )
-        else:
-            message = f"Unlucky pal.\nI'm taking **{self.ingot_icon}{quantity_removed:,}** ingots."
+        message = self._get_random_negative_message().format(
+            ingots=f"{self.ingot_icon}{quantity_removed:,}"
+        )
 
         embed = self._build_embed(
             (
@@ -290,13 +305,9 @@ class TrickOrTreatHandler:
             interaction, quantity, interaction.guild.get_member(interaction.user.id)
         )
 
-        message = ""
-        if random.random() < 0.3:
-            message = self._get_random_positive_message().format(
-                ingots=f"{self.ingot_icon}{quantity_added:,}"
-            )
-        else:
-            message = f":tada: You won **{self.ingot_icon}{quantity_added:,}** ingots!\ngzzzzzzzzzzzzz :jack_o_lantern:"
+        message = self._get_random_positive_message().format(
+            ingots=f"{self.ingot_icon}{quantity_added:,}"
+        )
 
         embed = self._build_embed(
             (
@@ -322,13 +333,9 @@ class TrickOrTreatHandler:
                 )
             )
 
-        message = ""
-        if random.random() < 0.2:
-            message = self._get_random_negative_message().format(
-                ingots=f"{self.ingot_icon}{quantity_removed:,}"
-            )
-        else:
-            message = f"Trick! :skull:\n\n**{self.ingot_icon}{quantity_removed:,}**"
+        message = self._get_random_negative_message().format(
+            ingots=f"{self.ingot_icon}{quantity_removed:,}"
+        )
 
         embed = self._build_embed(
             (
@@ -347,13 +354,9 @@ class TrickOrTreatHandler:
             interaction, quantity, interaction.guild.get_member(interaction.user.id)
         )
 
-        message = ""
-        if random.random() < 0.3:
-            message = self._get_random_positive_message().format(
-                ingots=f"{self.ingot_icon}{quantity_added:,}"
-            )
-        else:
-            message = f"Nice! You won **{self.ingot_icon}{quantity_added:,}** ingots!\ngzzzzzzzzzzzzz!"
+        message = self._get_random_positive_message().format(
+            ingots=f"{self.ingot_icon}{quantity_added:,}"
+        )
 
         embed = self._build_embed(
             (
@@ -398,9 +401,50 @@ class TrickOrTreatHandler:
             "https://giphy.com/embed/QuxqWk7m9ffxyfoa0a",
             "https://giphy.com/embed/kBrY0BlY4C4jhBeubb",
             "https://giphy.com/embed/qTD9EXZRgI1y0",
+            "https://giphy.com/embed/l0MYryZTmQgvHI5TG",
+            "https://giphy.com/embed/1qj43zb19qDsjLxMao",
+            "https://giphy.com/embed/bEVKYB487Lqxy",
+            "https://giphy.com/embed/28aGE5xerXkbK",
+            "https://giphy.com/embed/Ee4Y8s4Lr3c0o",
+            "https://giphy.com/embed/gBMjDoJW2CwU",
+            "https://giphy.com/embed/oFVr84BOpjyiA",
+            "https://giphy.com/embed/JBN6hII6XhuWk",
+            "https://giphy.com/embed/jquDWJfPUMCiI",
+            "https://giphy.com/embed/14fb6qSKwFLbGg",
+            "https://giphy.com/embed/xU9TT471DTGJq",
+            "https://giphy.com/embed/mQC0dMQwoQ4Fy",
+            "https://giphy.com/embed/l0HlS0dxEOuJA6U0M",
+            "https://giphy.com/embed/l2SqgYw7UPfayhIMo",
+            "https://giphy.com/embed/LHJBeMDuSIfYY",
+            "https://giphy.com/embed/IcifS1qG3YFlS",
+            "https://giphy.com/embed/6YpKCYnlojXRS",
+            "https://giphy.com/embed/GsJO3Yy0DCvEk",
+            "https://giphy.com/embed/YRSQuXoJacEpO",
+            "https://giphy.com/embed/8bXtRaK3rHvxe",
+            "https://giphy.com/embed/eomy8S00ljwjK",
+            "https://giphy.com/embed/l0FebdLg2Z2ZO5LNe",
+            "https://giphy.com/embed/l0MYryZTmQgvHI5TG",
+            "https://giphy.com/embed/u5h5GqU0maLWE",
+            "https://giphy.com/embed/l0NwLUVdksjwmtgLC",
+            "https://giphy.com/embed/fjxl5lo5rZMre",
+            "https://giphy.com/embed/G83E9hh3TkC9a",
+            "https://giphy.com/embed/HaWGrXhclEQso",
+            "https://giphy.com/embed/LwP7B9qCPfwLC",
+            "https://giphy.com/embed/MuHxTqxKayPFS",
+            "https://giphy.com/embed/xT0GqIleDVzqm7HE8o",
+            "https://giphy.com/embed/l41Yl108BMSthoqXu",
+            "https://giphy.com/embed/26BRAwxj0wEa6efFC",
+            "https://giphy.com/embed/jIsgja3R661b2",
+            "https://giphy.com/embed/OPcrwxFDZE5uU",
+            "https://giphy.com/embed/LNLpm8hhY2yc7GPXB9",
+            "https://giphy.com/embed/Zxp6dJwqiTyo0",
+            "https://giphy.com/embed/3ohzdYjwEQuR1J7dte",
+            "https://giphy.com/embed/13KV2vJLM4p2SI",
+            "https://giphy.com/embed/l3V0d6rmSuzSwcb0Q",
+            "https://giphy.com/embed/V3UvgjfbbZ3X2",
         ]
 
         chosen_gif = random.choice([s for s in gifs if s not in self.gif_history])
-        self._add_to_history(chosen_gif, self.gif_history, 10)
+        self._add_to_history(chosen_gif, self.gif_history, 30)
 
         return await interaction.followup.send(chosen_gif)
