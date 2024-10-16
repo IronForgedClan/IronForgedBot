@@ -100,7 +100,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
             f"Member '{mock_member.display_name}' tried using {mock_func.__name__} but does not have permission",
         )
 
-    @patch("ironforgedbot.decorators.state")
+    @patch("ironforgedbot.decorators.STATE")
     async def test_require_role_ignore_command_if_shutting_down(self, mock_state):
         mock_state.state["is_shutting_down"].return_value = True
 
