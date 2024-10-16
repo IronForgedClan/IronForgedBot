@@ -4,7 +4,12 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import discord
 
 from ironforgedbot.common.roles import ROLES
-from ironforgedbot.decorators import require_channel, require_role, retry_on_exception
+from ironforgedbot.decorators import (
+    require_channel,
+    require_role,
+    retry_on_exception,
+    singleton,
+)
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
@@ -95,9 +100,9 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
             f"Member '{mock_member.display_name}' tried using {mock_func.__name__} but does not have permission",
         )
 
-    @patch("ironforgedbot.decorators.state")
-    async def test_ignore_command_if_shutting_down(self, mock_state):
-        mock_state.is_shutting_down.return_value = True
+    @patch("ironforgedbot.decorators.STATE")
+    async def test_require_role_ignore_command_if_shutting_down(self, mock_state):
+        mock_state.state["is_shutting_down"].return_value = True
 
         mock_func = AsyncMock()
 
@@ -119,6 +124,8 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
             "## Bad Timing!!\nThe bot is shutting down, please try again when the bot comes back online."
         )
 
+
+class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception(self, mock_sleep):
         msg = "Success!"
@@ -195,6 +202,8 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_randrange.call_count, 2)
         mock_sleep.assert_called_with(5)
 
+
+class TestRequireChannelDecorator(unittest.IsolatedAsyncioTestCase):
     async def test_require_channel(self):
         channel_id = 555
         mock_func = AsyncMock()
@@ -229,3 +238,42 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         mock_send_error_response.assert_awaited_once()
         mock_func.assert_not_awaited()
+
+
+@singleton
+class TestSingleton:
+    def __init__(self, value):
+        self.value = value
+        self.internal_state = {}
+
+    async def set_value(self, key, value):
+        self.internal_state[key] = value
+
+    async def get_value(self, key):
+        return self.internal_state.get(key, None)
+
+
+class TestSingletonDecorator(unittest.IsolatedAsyncioTestCase):
+    async def test_singleton_instance_creation(self):
+        """Test that only one instance is created."""
+        instance1 = await TestSingleton(10)
+        instance2 = await TestSingleton(20)
+
+        self.assertIs(instance1, instance2)
+
+    async def test_singleton_internal_state(self):
+        instance1 = await TestSingleton(10)
+        await instance1.set_value("key1", "value")
+        instance2 = await TestSingleton(20)
+
+        value = await instance2.get_value("key1")
+
+        self.assertEqual(value, "value")
+        self.assertIs(instance1, instance2)
+
+    async def test_singleton_instance_initialization(self):
+        instance1 = await TestSingleton(10)
+        instance2 = await TestSingleton(20)
+
+        self.assertEqual(instance1.value, 10)
+        self.assertEqual(instance1.value, instance2.value)

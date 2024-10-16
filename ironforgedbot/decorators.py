@@ -7,7 +7,7 @@ from random import randrange
 import discord
 
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.state import state
+from ironforgedbot.state import STATE
 from ironforgedbot.common.helpers import validate_member_has_role
 from ironforgedbot.common.roles import ROLES
 
@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 def require_role(role_name: str, ephemeral=False):
+    """Makes sure that the interaction user has the required role"""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -36,7 +38,7 @@ def require_role(role_name: str, ephemeral=False):
                 f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}"
             )
 
-            if state.is_shutting_down:
+            if STATE.state["is_shutting_down"]:
                 logger.warning("Bot has begun shut down. Ignoring command.")
                 await interaction.response.send_message(
                     "## Bad Timing!!\nThe bot is shutting down, please try again when the bot comes back online."
@@ -66,6 +68,8 @@ def require_role(role_name: str, ephemeral=False):
 
 
 def require_channel(channel_ids: list[int]):
+    """Makes sure that the interaction is happening in a whitelisted channel"""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -98,6 +102,8 @@ def require_channel(channel_ids: list[int]):
 
 
 def retry_on_exception(retries=3):
+    """Retries function upon any exception up to retry limit"""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -119,3 +125,24 @@ def retry_on_exception(retries=3):
         return wrapper
 
     return decorator
+
+
+def singleton(cls):
+    """A threadsafe singleton implementation"""
+    instances = {}
+    lock = asyncio.Lock()
+
+    async def get_instance(*args, **kwargs):
+        async with lock:
+            if cls not in instances:
+                instances[cls] = cls(*args, **kwargs)
+            return instances[cls]
+
+    async def async_new(*args, **kwargs):
+        return await get_instance(*args, **kwargs)
+
+    class Wrapper:
+        def __new__(cls, *args, **kwargs):
+            return async_new(*args, **kwargs)
+
+    return Wrapper

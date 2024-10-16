@@ -18,7 +18,7 @@ class IronForgedLogger:
         )
 
         self.configure_logging()
-        event_emitter.on("shutdown", self.cleanup, priority=10)
+        event_emitter.on("shutdown", self.cleanup, priority=100)
 
     def configure_logging(self):
         if not os.path.exists(self.log_dir):
