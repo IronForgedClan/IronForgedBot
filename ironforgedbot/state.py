@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class BotStateDict(TypedDict):
     is_shutting_down: bool
+    rate_limit: dict
     trick_or_treat_jackpot_claimed: bool
 
 
@@ -28,6 +29,7 @@ class BotState:
     def __init__(self):
         self.state: BotStateDict = {
             "is_shutting_down": False,
+            "rate_limit": dict(),
             "trick_or_treat_jackpot_claimed": False,
         }
 
