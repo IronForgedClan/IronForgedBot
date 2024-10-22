@@ -5,12 +5,13 @@ import discord
 from ironforgedbot.commands.holiday.trick_or_treat_handler import TrickOrTreatHandler
 from ironforgedbot.common.roles import ROLES
 from ironforgedbot.config import CONFIG
-from ironforgedbot.decorators import require_channel, require_role
+from ironforgedbot.decorators import rate_limit, require_channel, require_role
 
 logger = logging.getLogger(__name__)
 
 
 @require_channel([CONFIG.TRICK_OR_TREAT_CHANNEL_ID])
+@rate_limit(1, 3600)
 @require_role(ROLES.ANY)
 async def cmd_trick_or_treat(interaction: discord.Interaction):
     handler = await TrickOrTreatHandler()
