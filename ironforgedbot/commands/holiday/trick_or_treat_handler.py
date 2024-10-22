@@ -63,7 +63,7 @@ class TrickOrTreatHandler:
             "Hey bud!\n**{ingots}** you deserve this.",
             "Good day adventurer. I come to you with gifts.\n**{ingots}** fresh from the mine.",
             "**{ingots}** just for you,\nbud.",
-            "**{ingots}** from my buddy **test**\njust for you!",
+            "**{ingots}** from my bud **test run btw**\ndirectly to you!",
         ]
 
         chosen = random.choice(
