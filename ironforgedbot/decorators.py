@@ -142,7 +142,9 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
 
             assert interaction.command
             command_name = interaction.command.name
-            user_id = interaction.user.id
+            user_id = str(
+                interaction.user.id
+            )  # when serializing state to json keys are strings
             now = time.time()
 
             # make sure we have a dict for this command
@@ -163,7 +165,7 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
             if len(timestamps) >= rate:
                 await interaction.response.defer(thinking=True, ephemeral=True)
                 retry_after = seconds - (now - timestamps[0])
-                mins = int(retry_after // 60)  # Convert seconds to minutes
+                mins = int(retry_after // 60)
                 secs = int(retry_after % 60)
                 message = (
                     "**Woah, tiger.** You are using this command too quickly.\n\n"
