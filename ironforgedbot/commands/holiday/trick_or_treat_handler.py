@@ -719,6 +719,6 @@ class TrickOrTreatHandler:
         ]
 
         chosen_gif = random.choice([s for s in gifs if s not in self.gif_history])
-        self._add_to_history(chosen_gif, self.gif_history, 30)
+        self._add_to_history(chosen_gif, self.gif_history, 100)
 
         return await interaction.followup.send(chosen_gif)
