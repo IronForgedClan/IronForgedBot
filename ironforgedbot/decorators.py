@@ -167,6 +167,12 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
                 retry_after = seconds - (now - timestamps[0])
                 mins = int(retry_after // 60)
                 secs = int(retry_after % 60)
+
+                logger.info(
+                    f"Member '{interaction.user.display_name}' tried to use a rate limited command "
+                    f"'{func.__name__}'. {mins}m and {secs}s remaining on cooldown."
+                )
+
                 message = (
                     "**Woah, tiger.** You are using this command too quickly.\n\n"
                     f"Try again in **{mins}** minutes and **{secs}** seconds."
