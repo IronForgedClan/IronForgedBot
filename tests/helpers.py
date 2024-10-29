@@ -83,3 +83,44 @@ def mock_require_role(role_name: str, ephemeral: Optional[bool] = False):
         return wrapper
 
     return decorator
+
+
+def mock_require_channel(channel_ids: list):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def mock_rate_limit(rate: int, limit: int):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def mock_singleton():
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+async def get_url_status_code(session, url, timeout=5):
+    try:
+        async with session.get(url, timeout=timeout) as response:
+            return response.status
+    except Exception as e:
+        return str(e)

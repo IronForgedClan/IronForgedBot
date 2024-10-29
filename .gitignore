@@ -173,3 +173,7 @@ logs/*
 
 .idea
 state.json
+.env.live
+.env.staging
+service.json.live
+service.json.staging
