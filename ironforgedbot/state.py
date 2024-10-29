@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class BotStateDict(TypedDict):
     is_shutting_down: bool
+    rate_limit: dict
     trick_or_treat_jackpot_claimed: bool
 
 
@@ -28,6 +29,7 @@ class BotState:
     def __init__(self):
         self.state: BotStateDict = {
             "is_shutting_down": False,
+            "rate_limit": dict(),
             "trick_or_treat_jackpot_claimed": False,
         }
 
@@ -48,10 +50,15 @@ class BotState:
         if os.path.exists(self._file_path):
             try:
                 async with aiofiles.open(self._file_path, "r") as file:
-                    content = await file.read()
-                    self.state = json.loads(content)
+                    content = json.loads(await file.read())
 
-                logger.info(f"State loaded from {self._file_path}")
+                    if content.keys() != self.state.keys():
+                        logger.warning("Invalid state file, using default state object")
+                        return
+
+                    self.state = content
+
+                logger.info(f"State loaded from: {self._file_path}")
             except Exception as e:
                 logger.critical(f"Error loading state: {e}")
         else:

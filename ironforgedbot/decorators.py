@@ -1,15 +1,16 @@
 import asyncio
 import functools
 import logging
+import time
 from pprint import pformat
 from random import randrange
 
 import discord
 
-from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.state import STATE
 from ironforgedbot.common.helpers import validate_member_has_role
+from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,69 @@ def retry_on_exception(retries=3):
                     else:
                         logger.critical(e)
                         raise e
+
+        return wrapper
+
+    return decorator
+
+
+def rate_limit(rate: int = 1, seconds: int = 3600):
+    """Limits how often a command can be called by an individual user"""
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            interaction = args[0]
+            if not isinstance(interaction, discord.Interaction):
+                raise ReferenceError(
+                    f"Expected discord.Interaction as first argument ({func.__name__})"
+                )
+
+            assert interaction.command
+            command_name = interaction.command.name
+            user_id = str(
+                interaction.user.id
+            )  # when serializing state to json keys are strings
+            now = time.time()
+
+            # make sure we have a dict for this command
+            if command_name not in STATE.state["rate_limit"]:
+                STATE.state["rate_limit"][command_name] = {}
+
+            command_limits = STATE.state["rate_limit"][command_name]
+
+            # make sure we have an array for this user id
+            if user_id not in command_limits:
+                command_limits[user_id] = []
+
+            # remove timestamps older than the cooldown period
+            timestamps = command_limits[user_id]
+            timestamps = [t for t in timestamps if now - t < seconds]
+            command_limits[user_id] = timestamps
+
+            if len(timestamps) >= rate:
+                await interaction.response.defer(thinking=True, ephemeral=True)
+                retry_after = seconds - (now - timestamps[0])
+                mins = int(retry_after // 60)
+                secs = int(retry_after % 60)
+
+                logger.info(
+                    f"Member '{interaction.user.display_name}' tried to use a rate limited command "
+                    f"'{func.__name__}'. {mins}m and {secs}s remaining on cooldown."
+                )
+
+                message = (
+                    "**Woah, tiger.** You are using this command too quickly.\n\n"
+                    f"Try again in **{mins}** minutes and **{secs}** seconds."
+                )
+                return await send_error_response(interaction, message)
+
+            timestamps.append(now)
+
+            command_limits[user_id] = timestamps
+            STATE.state["rate_limit"][command_name] = command_limits
+
+            await func(*args, **kwargs)
 
         return wrapper
 

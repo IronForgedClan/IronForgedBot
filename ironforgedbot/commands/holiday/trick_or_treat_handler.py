@@ -435,9 +435,12 @@ class TrickOrTreatHandler:
             "You've been working hard lately. I've noticed.\nHave **{ingots}** ingots.",
             "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
             "You're rich now!\n**{ingots}** ingot payday.",
+            "Good job bud!\n**{ingots}**.",
+            "Hey bud!\n**{ingots}** you deserve this.",
+            "Good day adventurer. I come to you with gifts.\n**{ingots}** fresh from the mine.",
+            "**{ingots}** just for you,\nbud.",
+            "**{ingots}** from my bud **test run btw**\ndirectly to you!",
         ]
-
-        logger.info(self.positive_message_history)
 
         chosen = random.choice(
             [s for s in options if s not in self.positive_message_history]
@@ -448,13 +451,27 @@ class TrickOrTreatHandler:
 
     def _get_random_negative_message(self) -> str:
         if random.random() >= 0.5:
-            return "Trick!\nUnlucky pal **{ingots}** ingots."
+            annoyance = [
+                "bud",
+                "buddy",
+                "pal",
+                "champ",
+                "boss",
+                "chief",
+                "friend",
+                "mate",
+                "kid",
+                "kiddo",
+            ]
+            return (
+                "Trick!\nUnlucky " + random.choice(annoyance) + " **{ingots}** ingots."
+            )
 
         options = [
             "You gambled against the house and lost **{ingots}**...\nIt's me. I am the house.",
             "Your profile has been found guilty of botting.\nThe fine is **{ingots}**.\nPayment is mandatory.\nYour guilt is undeniable.",
             "The odds of losing exactly **{ingots}** is truly astronomical.\nReally, you should be proud.",
-            "...aaaaaaand it's gone. **{ingots}**\n:wave:",
+            "...aaaaaaand it's gone.\n**{ingots}** :wave:",
             "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
             "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
             "You chose...\n\n...poorly **{ingots}**.",
@@ -463,7 +480,7 @@ class TrickOrTreatHandler:
             "If you stop reading now, you can pretend you actually won.\n**{ingots}** :hear_no_evil:",
             "**{ingots}**...\nSorry.",
             "**WRONG {ingots}**, try again.\n:person_gesturing_no:",
-            "Ha! **{ingots}**\n:person_shrugging:",
+            "Ha!\n**{ingots}** :person_shrugging:",
             "The RNG Gods are laughing at you, adventurer...\nYou lost **{ingots}** ingots.",
             "**{ingots}** ouch bud.\n:grimacing:",
             "Unluck pal, **{ingots}**.\n:badger:",
@@ -471,9 +488,14 @@ class TrickOrTreatHandler:
             "I took no pleasure in deducting **{ingots}** from you.\n... :joy:",
             "The worst part about losing **{ingots}**, isn't the ingot loss.\nIt's the public humiliation. :clown:",
             "It's nothing personal.\nI'm just following my programming **{ingots}**.",
+            "Sorry bud...\n**{ingots}**",
+            "Sorry buddy...\n**{ingots}**",
+            "Unlucky bud...\n**{ingots}**",
+            "Sucks to be you, champ.\n**{ingots}**",
+            "My electricity bill is due...\nIt's your turn **{ingots}**.",
+            "I see dead ingots.\n**{ingots}** :ghost:",
         ]
 
-        logger.info(self.negative_message_history)
         chosen = random.choice(
             [s for s in options if s not in self.negative_message_history]
         )
