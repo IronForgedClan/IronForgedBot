@@ -141,6 +141,10 @@ class SheetsStorage(metaclass=IngotsStorage):
         body = {"values": changes}
         await self._append_sheet_data(self._sheet_id, CHANGELOG_RANGE, body)
 
+    async def read_changelog(self):
+        """Returns entire changelog table."""
+        return await self._get_sheet_data(self._sheet_id, CHANGELOG_RANGE)
+
     async def read_member(self, player: str) -> Member | None:
         """Read member by runescape name."""
         members = await self.read_members()
