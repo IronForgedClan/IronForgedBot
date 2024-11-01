@@ -15,6 +15,7 @@ class RANKS(StrEnum):
     ADAMANT = "Adamant"
     MITHRIL = "Mithril"
     IRON = "Iron"
+    PROSPECT = "Prospect"
 
     @classmethod
     def has_value(cls, value):
@@ -58,6 +59,35 @@ def get_rank_from_points(points: int) -> str:
     if points >= RANK_POINTS.MITHRIL:
         return RANKS.MITHRIL
     return RANKS.IRON
+
+
+def get_rank_from_member(member: discord.Member | None) -> RANKS | str | None:
+    if not member:
+        return None
+
+    for role in member.roles:
+        match role.name:
+            case RANKS.PROSPECT:
+                return RANKS.PROSPECT
+            case RANKS.IRON:
+                return RANKS.IRON
+            case RANKS.MITHRIL:
+                return RANKS.MITHRIL
+            case RANKS.ADAMANT:
+                return RANKS.ADAMANT
+            case RANKS.RUNE:
+                return RANKS.RUNE
+            case RANKS.DRAGON:
+                return RANKS.DRAGON
+            case RANKS.LEGEND:
+                return RANKS.LEGEND
+            case RANKS.MYTH:
+                return RANKS.MYTH
+            case RANKS.GOD:
+                alignment = get_god_alignment_from_member(member)
+                return alignment if alignment else RANKS.GOD
+
+    return None
 
 
 # TODO: Probably a more elegant way to achieve this using RANK_POINTS enum
