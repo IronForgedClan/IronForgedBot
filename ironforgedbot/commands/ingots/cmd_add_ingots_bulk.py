@@ -1,7 +1,6 @@
 import io
 import logging
 from datetime import datetime
-from typing import Optional
 
 import discord
 from tabulate import tabulate
@@ -28,7 +27,7 @@ async def cmd_add_ingots_bulk(
     interaction: discord.Interaction,
     players: str,
     ingots: int,
-    reason: Optional[str] = None,
+    reason: str,
 ):
     """Add ingots to a Runescape alias.
 
@@ -37,8 +36,6 @@ async def cmd_add_ingots_bulk(
         player: Comma-separated list of Runescape usernames to add ingots to.
         ingots: number of ingots to add to this player.
     """
-    if not reason:
-        reason = "None"
 
     is_positive = True if ingots > 0 else False
     caller = normalize_discord_string(interaction.user.display_name)
