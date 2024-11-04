@@ -1,13 +1,21 @@
+import io
 import logging
-import os
+from datetime import datetime
 from typing import Optional
 
 import discord
+from tabulate import tabulate
 
-from ironforgedbot.common.helpers import normalize_discord_string, validate_playername
-from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.common.helpers import (
+    find_emoji,
+    normalize_discord_string,
+    validate_playername,
+)
+from ironforgedbot.common.responses import (
+    build_ingot_response_embed,
+    send_error_response,
+)
 from ironforgedbot.common.roles import ROLES
-from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -32,60 +40,109 @@ async def cmd_add_ingots_bulk(
     if not reason:
         reason = "None"
 
+    is_positive = True if ingots > 0 else False
     caller = normalize_discord_string(interaction.user.display_name)
-
     player_names = players.split(",")
     sanitized_player_names = []
+    output = []
 
     assert interaction.guild
 
+    unknown_names = []
     for player in player_names:
         try:
             _, name = validate_playername(interaction.guild, player.strip())
             sanitized_player_names.append(name)
-        except ValueError as e:
-            await send_error_response(interaction, str(e))
+        except ValueError as _:
+            unknown_names.append(player)
+
+    if len(unknown_names) > 0:
+        unknown_output = ""
+        for name in unknown_names:
+            output.append([name, 0, "unknown"])
+            unknown_output += f"Member **{name}** cannot be found.\n"
+
+        await send_error_response(interaction, unknown_output)
 
     try:
         members = await STORAGE.read_members()
     except StorageError as error:
-        await send_error_response(
-            interaction, f"Encountered error reading member '{error}'"
-        )
-        return
+        logger.error(error)
+        return await send_error_response(interaction, "Error fetching member data.")
 
-    output = []
     members_to_update = []
     for player in sanitized_player_names:
-        found = False
         for member in members:
             if member.runescape_name.lower() == player.lower():
-                found = True
-                member.ingots += ingots
+                new_total = member.ingots + ingots
+                if new_total < 0:
+                    error_table = tabulate(
+                        [
+                            ["Available:", f"{member.ingots:,}"],
+                            ["Change:", f"{ingots:,}"],
+                        ],
+                        tablefmt="plain",
+                    )
+                    await send_error_response(
+                        interaction,
+                        (
+                            f"Member **{player}** does not have enough ingots.\n"
+                            f"```{error_table}```"
+                        ),
+                    )
+                    output.append(
+                        [
+                            player,
+                            0,
+                            f"{member.ingots:,}",
+                        ]
+                    )
+                    break
+
+                member.ingots = new_total
                 members_to_update.append(member)
                 output.append(
-                    f"Added {ingots:,} ingots to {player}. They now have {member.ingots:,} ingots"
+                    [
+                        player,
+                        f"{'+' if is_positive else ''}{ingots:,}",
+                        f"{member.ingots:,}",
+                    ]
                 )
                 break
-        if not found:
-            output.append(f"{player} not found in storage.")
 
     try:
         await STORAGE.update_members(members_to_update, caller, note=reason)
     except StorageError as error:
-        await send_error_response(
-            interaction, f"Encountered error writing ingots for '{error}'"
-        )
-        return
+        logger.error(error)
+        return await send_error_response(interaction, "Error updating ingot values.")
 
-    # Our output can be larger than the interaction followup max.
-    # Send it in a file to accomodate this.
-    path = os.path.join(CONFIG.TEMP_DIR, f"addingotsbulk_{caller}.txt")
-    with open(path, "w") as f:
-        f.write("\n".join(output))
+    ingot_icon = find_emoji(None, "Ingot")
+    table = tabulate(output, headers=["Player", "Change", "Total"], tablefmt="github")
+    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
 
-    with open(path, "rb") as f:
-        discord_file = discord.File(f, filename="addingotsbulk.txt")
-        await interaction.followup.send(
-            f"Added ingots to multiple members! Reason: {reason}", file=discord_file
+    if len(output) >= 9:
+        discord_file = discord.File(
+            fp=io.BytesIO(table.encode("utf-8")),
+            description="example description",
+            filename=f"add_ingots_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
         )
+
+        return await interaction.followup.send(
+            (
+                f"## {result_title}\n"
+                f"**Change:** _{'+' if is_positive else ''}{ingots:,}_\n"
+                f"**Reason:** _{reason}_"
+            ),
+            file=discord_file,
+        )
+
+    embed = build_ingot_response_embed(
+        f"{result_title}",
+        (
+            f"**Change:** _{'+' if is_positive else ''}{ingots:,}_\n"
+            f"**Reason:** _{reason}_"
+        ),
+    )
+
+    embed.add_field(name="", value=f"```{table}```")
+    return await interaction.followup.send(embed=embed)
