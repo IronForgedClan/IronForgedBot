@@ -29,14 +29,14 @@ async def cmd_add_ingots_bulk(
     ingots: int,
     reason: str,
 ):
-    """Add ingots to a Runescape alias.
+    """Add or remove player ingots.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
-        player: Comma-separated list of Runescape usernames to add ingots to.
-        ingots: number of ingots to add to this player.
+        players: Comma-separated list of playernames.
+        ingots: Number of ingots to change.
+        reason: Short string detailing the reason for change.
     """
-
     is_positive = True if ingots > 0 else False
     caller = normalize_discord_string(interaction.user.display_name)
     player_names = players.split(",")
@@ -45,17 +45,17 @@ async def cmd_add_ingots_bulk(
 
     assert interaction.guild
 
-    unknown_names = []
+    unverified_names = []
     for player in player_names:
         try:
             _, name = validate_playername(interaction.guild, player.strip())
             sanitized_player_names.append(name)
         except ValueError as _:
-            unknown_names.append(player)
+            unverified_names.append(player)
 
-    if len(unknown_names) > 0:
+    if len(unverified_names) > 0:
         unknown_output = ""
-        for name in unknown_names:
+        for name in unverified_names:
             output.append([name, 0, "unknown"])
             unknown_output += f"Member **{name}** cannot be found.\n"
 
@@ -115,7 +115,7 @@ async def cmd_add_ingots_bulk(
 
     ingot_icon = find_emoji(None, "Ingot")
     table = tabulate(output, headers=["Player", "Change", "Total"], tablefmt="github")
-    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
+    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Results"
 
     if len(output) >= 9:
         discord_file = discord.File(
