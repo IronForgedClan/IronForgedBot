@@ -70,7 +70,7 @@ async def cmd_add_remove_ingots(
         logger.error(error)
         return await send_error_response(interaction, "Error reading member data.")
 
-    for player in sanitized_player_names:
+    for player in sorted(sanitized_player_names):
         for member in members:
             if member.runescape_name.lower() == player.lower():
                 new_total = member.ingots + ingots
