@@ -10,8 +10,7 @@ from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
-from ironforgedbot.commands.ingots.cmd_add_ingots import cmd_add_ingots
-from ironforgedbot.commands.ingots.cmd_add_ingots_bulk import cmd_add_ingots_bulk
+from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 from ironforgedbot.commands.ingots.cmd_update_ingots import cmd_update_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
@@ -78,16 +77,9 @@ class IronForgedCommands:
         )
         self._tree.add_command(
             discord.app_commands.Command(
-                name="add_ingots",
+                name="add_remove_ingots",
                 description="Add or remove member's ingots.",
-                callback=cmd_add_ingots,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="add_ingots_bulk",
-                description="Add or remove ingots for multiple members.",
-                callback=cmd_add_ingots_bulk,
+                callback=cmd_add_remove_ingots,
             )
         )
         self._tree.add_command(

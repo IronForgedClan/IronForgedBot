@@ -23,13 +23,13 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLES.LEADERSHIP)
-async def cmd_add_ingots_bulk(
+async def cmd_add_remove_ingots(
     interaction: discord.Interaction,
     players: str,
     ingots: int,
     reason: str,
 ):
-    """Add or remove player ingots.
+    """Add or remove player(s) ingots.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
