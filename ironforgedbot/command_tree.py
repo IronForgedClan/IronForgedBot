@@ -78,7 +78,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="add_remove_ingots",
-                description="Add or remove member's ingots.",
+                description="Add or remove ingots to one or multiple member's accounts.",
                 callback=cmd_add_remove_ingots,
             )
         )
