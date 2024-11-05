@@ -39,27 +39,19 @@ async def cmd_add_ingots_bulk(
     """
     is_positive = True if ingots > 0 else False
     caller = normalize_discord_string(interaction.user.display_name)
-    player_names = players.split(",")
-    sanitized_player_names = []
     output = []
 
     assert interaction.guild
 
-    unverified_names = []
+    player_names = players.split(",")
+    sanitized_player_names = []
+
     for player in player_names:
         try:
             _, name = validate_playername(interaction.guild, player.strip())
             sanitized_player_names.append(name)
         except ValueError as _:
-            unverified_names.append(player)
-
-    if len(unverified_names) > 0:
-        unknown_output = ""
-        for name in unverified_names:
             output.append([name, 0, "unknown"])
-            unknown_output += f"Member **{name}** cannot be found.\n"
-
-        await send_error_response(interaction, unknown_output)
 
     try:
         members = await STORAGE.read_members()
@@ -115,7 +107,7 @@ async def cmd_add_ingots_bulk(
 
     ingot_icon = find_emoji(None, "Ingot")
     table = tabulate(output, headers=["Player", "Change", "Total"], tablefmt="github")
-    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Results"
+    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingot Results"
 
     if len(output) >= 9:
         discord_file = discord.File(
