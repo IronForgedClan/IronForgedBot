@@ -38,29 +38,37 @@ async def cmd_add_remove_ingots(
         reason: Short string detailing the reason for change.
     """
     is_positive = True if ingots > 0 else False
-    caller = normalize_discord_string(interaction.user.display_name)
-    player_names = players.split(",")
     total_change = 0
-    sanitized_player_names = []
+    sanitized_player_names = set()
     members_to_update = []
-    output = []
+    output_data = []
 
     assert interaction.guild
 
-    for player in player_names:
+    for player in players.split(","):
+        player = player.strip()
+
+        if len(player) < 1:
+            continue
+
         try:
+            if player in sanitized_player_names:
+                logger.info(f"Ignoring duplicate player: {player}")
+                continue
+
             _, name = validate_playername(
-                interaction.guild, player.strip(), must_be_member=True
+                interaction.guild, player, must_be_member=True
             )
-            sanitized_player_names.append(name)
+            sanitized_player_names.add(name)
         except ValueError as _:
-            output.append([player, 0, "unknown"])
+            logger.info(f"Ignoring unknown player: {player}")
+            output_data.append([player, 0, "unknown"])
 
     try:
         members = await STORAGE.read_members()
     except StorageError as error:
         logger.error(error)
-        return await send_error_response(interaction, "Error fetching member data.")
+        return await send_error_response(interaction, "Error reading member data.")
 
     for player in sanitized_player_names:
         for member in members:
@@ -81,7 +89,7 @@ async def cmd_add_remove_ingots(
                             f"```{error_table}```"
                         ),
                     )
-                    output.append(
+                    output_data.append(
                         [
                             player,
                             0,
@@ -93,7 +101,7 @@ async def cmd_add_remove_ingots(
                 total_change += ingots
                 member.ingots = new_total
                 members_to_update.append(member)
-                output.append(
+                output_data.append(
                     [
                         player,
                         f"{'+' if is_positive else ''}{ingots:,}",
@@ -103,18 +111,26 @@ async def cmd_add_remove_ingots(
                 break
 
     try:
-        await STORAGE.update_members(members_to_update, caller, note=reason)
+        await STORAGE.update_members(
+            members_to_update,
+            normalize_discord_string(interaction.user.display_name),
+            note=reason,
+        )
     except StorageError as error:
         logger.error(error)
         return await send_error_response(interaction, "Error updating ingot values.")
 
     ingot_icon = find_emoji(None, "Ingot")
     result_table = tabulate(
-        output, headers=["Player", "Change", "Total"], tablefmt="github"
+        output_data, headers=["Player", "Change", "Total"], tablefmt="github"
     )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingot Results"
+    result_content = (
+        f"**Total Change:** {'+' if is_positive else ''}{total_change:,}\n"
+        f"**Reason:** _{reason}_"
+    )
 
-    if len(output) >= 9:
+    if len(output_data) >= 9:
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),
             description="example description",
@@ -122,21 +138,11 @@ async def cmd_add_remove_ingots(
         )
 
         return await interaction.followup.send(
-            (
-                f"## {result_title}\n"
-                f"**Total Change:** _{'+' if is_positive else ''}{total_change:,}_\n"
-                f"**Reason:** _{reason}_"
-            ),
+            f"## {result_title}\n{result_content}",
             file=discord_file,
         )
 
-    embed = build_ingot_response_embed(
-        f"{result_title}",
-        (
-            f"**Total Change:** _{'+' if is_positive else ''}{total_change:,}_\n"
-            f"**Reason:** _{reason}_"
-        ),
-    )
+    embed = build_ingot_response_embed(result_title, result_content)
 
     embed.add_field(name="", value=f"```{result_table}```")
     return await interaction.followup.send(embed=embed)
