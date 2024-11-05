@@ -39,12 +39,13 @@ async def cmd_add_remove_ingots(
     """
     is_positive = True if ingots > 0 else False
     caller = normalize_discord_string(interaction.user.display_name)
+    player_names = players.split(",")
+    total_change = 0
+    sanitized_player_names = []
+    members_to_update = []
     output = []
 
     assert interaction.guild
-
-    player_names = players.split(",")
-    sanitized_player_names = []
 
     for player in player_names:
         try:
@@ -61,7 +62,6 @@ async def cmd_add_remove_ingots(
         logger.error(error)
         return await send_error_response(interaction, "Error fetching member data.")
 
-    members_to_update = []
     for player in sanitized_player_names:
         for member in members:
             if member.runescape_name.lower() == player.lower():
@@ -90,6 +90,7 @@ async def cmd_add_remove_ingots(
                     )
                     break
 
+                total_change += ingots
                 member.ingots = new_total
                 members_to_update.append(member)
                 output.append(
@@ -108,12 +109,14 @@ async def cmd_add_remove_ingots(
         return await send_error_response(interaction, "Error updating ingot values.")
 
     ingot_icon = find_emoji(None, "Ingot")
-    table = tabulate(output, headers=["Player", "Change", "Total"], tablefmt="github")
+    result_table = tabulate(
+        output, headers=["Player", "Change", "Total"], tablefmt="github"
+    )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingot Results"
 
     if len(output) >= 9:
         discord_file = discord.File(
-            fp=io.BytesIO(table.encode("utf-8")),
+            fp=io.BytesIO(result_table.encode("utf-8")),
             description="example description",
             filename=f"add_ingots_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
         )
@@ -121,7 +124,7 @@ async def cmd_add_remove_ingots(
         return await interaction.followup.send(
             (
                 f"## {result_title}\n"
-                f"**Change:** _{'+' if is_positive else ''}{ingots:,}_\n"
+                f"**Total Change:** _{'+' if is_positive else ''}{total_change:,}_\n"
                 f"**Reason:** _{reason}_"
             ),
             file=discord_file,
@@ -130,10 +133,10 @@ async def cmd_add_remove_ingots(
     embed = build_ingot_response_embed(
         f"{result_title}",
         (
-            f"**Change:** _{'+' if is_positive else ''}{ingots:,}_\n"
+            f"**Total Change:** _{'+' if is_positive else ''}{total_change:,}_\n"
             f"**Reason:** _{reason}_"
         ),
     )
 
-    embed.add_field(name="", value=f"```{table}```")
+    embed.add_field(name="", value=f"```{result_table}```")
     return await interaction.followup.send(embed=embed)
