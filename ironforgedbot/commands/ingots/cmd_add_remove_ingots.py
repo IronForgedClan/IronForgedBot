@@ -48,10 +48,12 @@ async def cmd_add_remove_ingots(
 
     for player in player_names:
         try:
-            _, name = validate_playername(interaction.guild, player.strip())
+            _, name = validate_playername(
+                interaction.guild, player.strip(), must_be_member=True
+            )
             sanitized_player_names.append(name)
         except ValueError as _:
-            output.append([name, 0, "unknown"])
+            output.append([player, 0, "unknown"])
 
     try:
         members = await STORAGE.read_members()
