@@ -11,7 +11,6 @@ from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
-from ironforgedbot.commands.ingots.cmd_update_ingots import cmd_update_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
@@ -80,13 +79,6 @@ class IronForgedCommands:
                 name="add_remove_ingots",
                 description="Add or remove ingots to one or multiple member's accounts.",
                 callback=cmd_add_remove_ingots,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="update_ingots",
-                description="Set a members's ingot total to a new value.",
-                callback=cmd_update_ingots,
             )
         )
         self._tree.add_command(
