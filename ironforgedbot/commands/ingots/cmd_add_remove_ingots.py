@@ -119,8 +119,9 @@ async def cmd_add_remove_ingots(
         return await send_error_response(interaction, "Error updating ingot values.")
 
     ingot_icon = find_emoji(None, "Ingot")
+    sorted_output_data = sorted(output_data, key=lambda row: row[0])
     result_table = tabulate(
-        output_data, headers=["Player", "Change", "Total"], tablefmt="github"
+        sorted_output_data, headers=["Player", "Change", "Total"], tablefmt="github"
     )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingot Results"
     result_content = (
