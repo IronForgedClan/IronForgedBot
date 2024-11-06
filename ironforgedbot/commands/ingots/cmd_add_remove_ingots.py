@@ -133,7 +133,7 @@ async def cmd_add_remove_ingots(
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),
             description="example description",
-            filename=f"add_ingots_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
+            filename=f"ingot_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
         )
 
         return await interaction.followup.send(
