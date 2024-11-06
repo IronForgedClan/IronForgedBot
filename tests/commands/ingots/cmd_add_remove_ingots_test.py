@@ -303,9 +303,9 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         )
         expected_result_table = tabulate(
             [
-                ["foo", "0", "unknown"],
                 [target1.display_name, "+5,000", "10,000"],
                 [target2.display_name, "+5,000", "15,000"],
+                ["foo", "0", "unknown"],
             ],
             headers=["Player", "Change", "Total"],
             tablefmt="github",
@@ -365,13 +365,13 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         )
 
         expected_error_table = tabulate(
-            [["Available:", "5,000"], ["Change:", "-10,000"]], tablefmt="plain"
+            [["Available:", "5,000"], ["Requested:", "-10,000"]], tablefmt="plain"
         )
         mock_send_error_response.assert_awaited_with(
             interaction,
             (
                 f"Member **{target1.display_name}** does not have enough ingots.\n"
-                f"```{expected_error_table}```"
+                f"No action taken.\n```{expected_error_table}```"
             ),
         )
 

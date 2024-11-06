@@ -76,7 +76,7 @@ async def cmd_add_remove_ingots(
                     error_table = tabulate(
                         [
                             ["Available:", f"{member.ingots:,}"],
-                            ["Change:", f"{ingots:,}"],
+                            ["Requested:", f"{ingots:,}"],
                         ],
                         tablefmt="plain",
                     )
@@ -84,7 +84,7 @@ async def cmd_add_remove_ingots(
                         interaction,
                         (
                             f"Member **{player}** does not have enough ingots.\n"
-                            f"```{error_table}```"
+                            f"No action taken.\n```{error_table}```"
                         ),
                     )
                     output_data.append(
