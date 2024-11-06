@@ -56,9 +56,7 @@ async def cmd_add_remove_ingots(
                 logger.info(f"Ignoring duplicate player: {player}")
                 continue
 
-            _, name = validate_playername(
-                interaction.guild, player, must_be_member=True
-            )
+            _, name = validate_playername(interaction.guild, player)
             sanitized_player_names.add(name)
         except ValueError as _:
             logger.info(f"Ignoring unknown player: {player}")
