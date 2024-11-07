@@ -14,9 +14,7 @@
 | `/score`              | Player (str) _Optional_                                                                    | Member       | Returns the score for the player                       |
 | `/breakdown`          | Player (str) _Optional_                                                                    | Member       | Returns an interactive breakdown of the player's score |
 | `/ingots`             | Player (str) _Optional_                                                                    | Member       | Returns ingot count for player                         |
-| `/add_ingots`         | Player (str), Ingots (int), Reason (str) _Optional_                                        | Leadership   | Adds to player's ingot total                           |
-| `/add_ingots_bulk`    | Players (str, comma separated list of player names), Ingots (int), Reason (str) _Optional_ | Leadership   | Adds to multiple player's ingot total                  |
-| `/update_ingots`      | Player (str), Ingots (int), Reason (str) _Optional_                                        | Leadership   | Updates player's ingot total                           |
+| `/add_remove_ingots`  | Players (str, comma separated list of player names), Ingots (int), Reason (str)            | Leadership   | Add or remove ingots from one or many players at once  |
 | `/raffle_admin`       | Subcommand (str, [start, end, choose_winner])                                              | Leadership   | Parent command for controlling raffle state            |
 | `/raffle_tickets`     | N/A                                                                                        | Member       | Returns raffle ticket count for user                   |
 | `/buy_raffle_tickets` | Tickets (int)                                                                              | Member       | Purchases raffle tickets for user                      |
