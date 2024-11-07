@@ -12,4 +12,4 @@ concurrent-log-handler
 python-dateutil
 aiohttp
 aiofiles
-
+tabulate

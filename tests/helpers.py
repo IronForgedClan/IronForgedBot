@@ -124,3 +124,13 @@ async def get_url_status_code(session, url, timeout=5):
             return response.status
     except Exception as e:
         return str(e)
+
+
+def validate_embed(self, expected, actual):
+    self.assertEqual(actual.title, expected.title)
+    self.assertEqual(len(actual.fields), len(expected.fields))
+
+    for expected, actual in zip(expected.fields, actual.fields):
+        self.assertEqual(expected.name, actual.name)
+        self.assertEqual(expected.value, actual.value)
+        self.assertEqual(expected.inline, actual.inline)

@@ -21,6 +21,12 @@ def build_response_embed(
     return discord.Embed(title=title, description=description, color=color)
 
 
+def build_ingot_response_embed(title: str, description: str) -> discord.Embed:
+    return discord.Embed(
+        title=title, description=description, color=discord.Colour.light_grey()
+    )
+
+
 async def send_prospect_response(
     interaction: discord.Interaction,
     eligible_rank_name: str,
