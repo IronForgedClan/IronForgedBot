@@ -123,7 +123,7 @@ async def cmd_add_remove_ingots(
     result_table = tabulate(
         sorted_output_data, headers=["Player", "Change", "Total"], tablefmt="github"
     )
-    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingot Results"
+    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
     result_content = (
         f"**Total Change:** {'+' if is_positive else ''}{total_change:,}\n"
         f"**Reason:** _{reason}_"

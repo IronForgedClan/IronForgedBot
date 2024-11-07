@@ -54,7 +54,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         actual_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_embed = discord.Embed(
-            title=" Add Ingot Results",
+            title=" Add Ingots Result",
             description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
@@ -98,7 +98,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         actual_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_embed = discord.Embed(
-            title=" Remove Ingot Results",
+            title=" Remove Ingots Result",
             description=(f"**Total Change:** -2,000\n" f"**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
@@ -167,7 +167,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         actual_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_embed = discord.Embed(
-            title=" Add Ingot Results",
+            title=" Add Ingots Result",
             description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
@@ -228,7 +228,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         actual_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_embed = discord.Embed(
-            title=" Add Ingot Results",
+            title=" Add Ingots Result",
             description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
@@ -298,7 +298,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         actual_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_embed = discord.Embed(
-            title=" Add Ingot Results",
+            title=" Add Ingots Result",
             description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
@@ -378,7 +378,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         actual_result_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_results_embed = discord.Embed(
-            title=" Remove Ingot Results",
+            title=" Remove Ingots Result",
             description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
