@@ -18,6 +18,7 @@ with patch(
 class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_get_role_members(self, mock_discord_file):
+        """Test get role members returns successfully"""
         caller = create_test_member("leader", ROLES.LEADERSHIP)
         member1 = create_test_member("member1", ROLES.MEMBER)
         member2 = create_test_member("member2", ROLES.MEMBER)
@@ -49,11 +50,12 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         followup_text = interaction.followup.send.call_args[0][0]
         self.assertEqual(
             followup_text,
-            f"## Member Role List\nFound **2** members with the role '**{ROLES.MEMBER}**'.",
+            "## Member Role List\nFound **2** members with the role '**Member**'.",
         )
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_get_role_members_multiple_word_role(self, mock_discord_file):
+        """Test get role members works with complex role names"""
         custom_role = "N0w this_is A rOLe!"
         caller = create_test_member("leader", ROLES.LEADERSHIP)
         member1 = create_test_member("member1", custom_role)
@@ -93,7 +95,8 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_get_role_members_handles_emoji(self, mock_discord_file):
-        custom_role = "alien"
+        """Test get role members works with emojis in user names or role names"""
+        custom_role = "alien👽"
         caller = create_test_member("leader", ROLES.LEADERSHIP)
         member1 = create_test_member("member1 💩", custom_role)
         member2 = create_test_member("🤖member2", custom_role)
@@ -125,10 +128,11 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         followup_text = interaction.followup.send.call_args[0][0]
         self.assertEqual(
             followup_text,
-            f"## Member Role List\nFound **3** members with the role '**{custom_role}**'.",
+            "## Member Role List\nFound **3** members with the role '**alien**'.",
         )
 
     async def test_get_role_members_reports_none_found(self):
+        """Test get role members returns message if no matching users found"""
         caller = create_test_member("leader", ROLES.LEADERSHIP)
         member1 = create_test_member("member1", ROLES.MEMBER)
         member2 = create_test_member("member2", ROLES.MEMBER)
@@ -140,5 +144,5 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         await cmd_get_role_members(interaction, ROLES.PROSPECT)
 
         interaction.followup.send.assert_called_with(
-            f"No members with role '**{ROLES.PROSPECT}**' found."
+            "No members with role '**Prospect**' found."
         )
