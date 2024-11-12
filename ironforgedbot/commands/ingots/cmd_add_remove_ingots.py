@@ -15,6 +15,12 @@ from ironforgedbot.common.responses import (
     send_error_response,
 )
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.text_formatters import (
+    text_bold,
+    text_code_block,
+    text_h2,
+    text_italic,
+)
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -83,7 +89,7 @@ async def cmd_add_remove_ingots(
                     await send_error_response(
                         interaction,
                         (
-                            f"Member **{player}** does not have enough ingots.\n"
+                            f"Member {text_bold(player)} does not have enough ingots.\n"
                             f"No action taken.\n```{error_table}```"
                         ),
                     )
@@ -125,8 +131,8 @@ async def cmd_add_remove_ingots(
     )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
     result_content = (
-        f"**Total Change:** {'+' if is_positive else ''}{total_change:,}\n"
-        f"**Reason:** _{reason}_"
+        f"{text_bold('Total Change:')} {'+' if is_positive else ''}{total_change:,}\n"
+        f"{text_bold('Reason:')} {text_italic(reason)}"
     )
 
     if len(output_data) >= 9:
@@ -137,11 +143,11 @@ async def cmd_add_remove_ingots(
         )
 
         return await interaction.followup.send(
-            f"## {result_title}\n{result_content}",
+            f"{text_h2(result_title)}{result_content}",
             file=discord_file,
         )
 
     embed = build_ingot_response_embed(result_title, result_content)
 
-    embed.add_field(name="", value=f"```{result_table}```")
+    embed.add_field(name="", value=text_code_block(result_table))
     return await interaction.followup.send(embed=embed)

@@ -52,7 +52,7 @@ def create_mock_discord_guild(
 
 
 def create_test_member(
-    name: str, role: ROLES, nick: Optional[str] = None
+    name: str, role: str, nick: Optional[str] = None
 ) -> discord.Member:
     mock_role = Mock(spec=discord.Role)
     mock_role.name = role

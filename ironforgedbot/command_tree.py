@@ -5,6 +5,7 @@ import traceback
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
+from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.admin.cmd_log import cmd_log
 from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
@@ -135,6 +136,13 @@ class IronForgedCommands:
                 name="activity_check",
                 description="Manually runs the activity check automation.",
                 callback=cmd_activity_check,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="get_role_members",
+                description="Generate a list of all members with a certain role.",
+                callback=cmd_get_role_members,
             )
         )
         if CONFIG.TRICK_OR_TREAT_ENABLED:
