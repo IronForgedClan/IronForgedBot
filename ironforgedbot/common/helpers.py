@@ -79,7 +79,9 @@ def validate_playername(
 
 def validate_member_has_role(member: Member, required_role: str) -> bool:
     for role in member.roles:
-        if role.name.lower() == required_role.lower():
+        if normalize_discord_string(role.name.lower()) == normalize_discord_string(
+            required_role.lower()
+        ):
             return True
 
     return False
