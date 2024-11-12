@@ -1,11 +1,14 @@
-from datetime import datetime
 import io
+from datetime import datetime
+
 import discord
+
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     validate_member_has_role,
 )
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.decorators import require_role
 
 
@@ -26,7 +29,7 @@ async def cmd_get_role_members(
 
     if len(output) < 1:
         return await interaction.followup.send(
-            f"No members with role '**{role}**' found."
+            f"No members with role '{text_bold(role)}' found."
         )
 
     discord_file = discord.File(
@@ -39,8 +42,8 @@ async def cmd_get_role_members(
 
     return await interaction.followup.send(
         (
-            "## Member Role List\n"
-            f"Found **{count}** members with the role '**{role}**'."
+            f"{text_h2('Member Role List')}"
+            f"Found {text_bold(str(count))} members with the role '{text_bold(role)}'."
         ),
         file=discord_file,
     )

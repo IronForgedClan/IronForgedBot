@@ -27,6 +27,7 @@ from ironforgedbot.common.responses import (
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.text_formatters import text_bold, text_italic
 from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     rank_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Rank Ladder",
-        "The **Iron Forged** player rank ladder.",
+        f"The {text_bold('Iron Forged')} player rank ladder.",
         rank_color,
     )
 
@@ -102,7 +103,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                 f"{icon} {rank}%s"
                 % (
                     f"{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}{EMPTY_SPACE}"
-                    f"← _{display_name}_"
+                    f"← {text_italic(display_name)}"
                     if rank == rank_name
                     else ""
                 )
@@ -144,7 +145,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     skill_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Skilling Points",
-        f"Breakdown of **{skill_points:,}** points awarded for skill xp.",
+        f"Breakdown of {text_bold(f"{skill_points:,}")} points awarded for skill xp.",
         rank_color,
     )
 
@@ -205,9 +206,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     for index, embed in enumerate(boss_embeds):
         embed.title = f"{rank_icon} {display_name} | Bossing Points"
-        embed.description = (
-            f"Breakdown of **{boss_point_counter:,}** points awarded for boss kc."
-        )
+        embed.description = f"Breakdown of {text_bold(f"{boss_point_counter:,}")} points awarded for boss kc."
 
         if boss_page_count > 1:
             embed.title = "".join(embed.title) + f" ({index + 1}/{boss_page_count})"
@@ -231,9 +230,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             value=f"{EMPTY_SPACE}{raid['kc']:,} kc",
         )
 
-    raid_breakdown_embed.description = (
-        f"Breakdown of **{raid_point_counter:,}** points awarded for raid completions."
-    )
+    raid_breakdown_embed.description = f"Breakdown of {text_bold(f"{raid_point_counter:,}")} points awarded for raid completions."
 
     clue_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Cluescroll Points",
@@ -250,7 +247,10 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             value=f"{EMPTY_SPACE}{clue['kc']:,} {clue.get("display_name", clue['name'])}",
         )
 
-    clue_breakdown_embed.description = f"Breakdown of **{clue_point_counter:,}** points awarded for cluescroll completions."
+    clue_breakdown_embed.description = (
+        f"Breakdown of {text_bold(f"{clue_point_counter:,}")} "
+        "points awarded for cluescroll completions."
+    )
 
     menu = ViewMenu(
         interaction,
