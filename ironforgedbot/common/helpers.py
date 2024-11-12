@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from io import BytesIO
+import re
 from typing import List, Tuple, TypedDict
 
 import discord
@@ -25,17 +26,36 @@ NEW_LINE = "\n"
 
 def normalize_discord_string(input: str) -> str:
     """Strips string down to plaintext."""
-    if input is None or len(input) < 1:
-        return ""
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # Emoticons
+        "\U0001F300-\U0001F5FF"  # Symbols & Pictographs
+        "\U0001F680-\U0001F6FF"  # Transport & Map Symbols
+        "\U0001F700-\U0001F77F"  # Alchemical Symbols
+        "\U0001F780-\U0001F7FF"  # Geometric Shapes Extended
+        "\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
+        "\U0001F900-\U0001F9FF"  # Supplemental Symbols & Pictographs
+        "\U0001FA00-\U0001FA6F"  # Chess Symbols, Symbols & Pictographs Extended-A
+        "\U0001FA70-\U0001FAFF"  # Symbols & Pictographs Extended-B
+        "\U00002702-\U000027B0"  # Dingbats
+        "\U000024C2-\U0001F251"  # Enclosed characters
+        "\U00002000-\U0000201F"  # Miscellaneous Symbols
+        "\U0000FE00-\U0000FE0F"  # Variation Selectors (used with emojis)
+        "\U0001F004"  # Mahjong Tiles
+        "\U0001F0CF"  # Playing Cards
+        "\U0001F1E0-\U0001F1FF"  # Regional indicator symbols (flags)
+        "\U0001F200-\U0001F251"  # Enclosed Alphanumeric Supplement
+        "\U0001F004-\U0001F0CF"  # Mahjong Tiles, Playing Cards
+        "]+",
+        flags=re.UNICODE,
+    )
+    string_without_emojis = emoji_pattern.sub(r"", input)
 
-    if input.isascii():
-        return input
+    # Only keep characters that are within the ASCII range
+    ascii_string = "".join([char for char in string_without_emojis if ord(char) < 128])
 
-    new_str = []
-    for letter in input:
-        if letter.isascii():
-            new_str.append(letter)
-    return "".join(new_str).strip()
+    # Replace multiple spaces with a single space and strip leading/trailing spaces
+    return re.sub(r"\s+", " ", ascii_string).strip()
 
 
 def validate_playername(
