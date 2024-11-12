@@ -96,6 +96,9 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     )
 
     for rank in RANKS:
+        if rank is RANKS.PROSPECT:
+            continue
+
         icon = find_emoji(interaction, rank)
         point_threshold = RANK_POINTS[rank.upper()]
         rank_breakdown_embed.add_field(
