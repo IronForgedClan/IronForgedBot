@@ -64,4 +64,4 @@ def text_code(input: str) -> str:
 
 
 def text_code_block(input: str) -> str:
-    return f"```{input}```{NEW_LINE}"
+    return f"```{input}```"

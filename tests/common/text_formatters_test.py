@@ -107,6 +107,6 @@ class TestTextFormatters(unittest.TestCase):
 
     def test_text_code_block(self):
         value = "test"
-        expected = f"```{value}```\n"
+        expected = f"```{value}```"
         result = text_code_block(value)
         self.assertEqual(result, expected)
