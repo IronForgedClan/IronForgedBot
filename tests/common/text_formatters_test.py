@@ -46,7 +46,7 @@ class TestTextFormatters(unittest.TestCase):
 
     def test_text_sub(self):
         value = "test"
-        expected = f"-# {value}"
+        expected = f"-# {value}\n"
         result = text_sub(value)
         self.assertEqual(result, expected)
 
@@ -59,19 +59,19 @@ class TestTextFormatters(unittest.TestCase):
 
     def test_text_h1(self):
         value = "test"
-        expected = f"# {value}"
+        expected = f"# {value}\n"
         result = text_h1(value)
         self.assertEqual(result, expected)
 
     def test_text_h2(self):
         value = "test"
-        expected = f"## {value}"
+        expected = f"## {value}\n"
         result = text_h2(value)
         self.assertEqual(result, expected)
 
     def test_text_h3(self):
         value = "test"
-        expected = f"### {value}"
+        expected = f"### {value}\n"
         result = text_h3(value)
         self.assertEqual(result, expected)
 
@@ -89,13 +89,13 @@ class TestTextFormatters(unittest.TestCase):
 
     def test_text_quote(self):
         value = "test"
-        expected = f"> {value}"
+        expected = f"> {value}\n"
         result = text_quote(value)
         self.assertEqual(result, expected)
 
     def test_text_quote_multiline(self):
         value = "test"
-        expected = f">>> {value}"
+        expected = f">>> {value}\n"
         result = text_quote_multiline(value)
         self.assertEqual(result, expected)
 
@@ -107,6 +107,6 @@ class TestTextFormatters(unittest.TestCase):
 
     def test_text_code_block(self):
         value = "test"
-        expected = f"```{value}```"
+        expected = f"```{value}```\n"
         result = text_code_block(value)
         self.assertEqual(result, expected)

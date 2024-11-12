@@ -18,7 +18,7 @@ def text_underline(input: str) -> str:
 
 
 def text_sub(input: str) -> str:
-    return f"-# {input}"
+    return f"-# {input}{NEW_LINE}"
 
 
 def text_link(title: str, link: str) -> str:
@@ -26,15 +26,15 @@ def text_link(title: str, link: str) -> str:
 
 
 def text_h1(input: str) -> str:
-    return f"# {input}"
+    return f"# {input}{NEW_LINE}"
 
 
 def text_h2(input: str) -> str:
-    return f"## {input}"
+    return f"## {input}{NEW_LINE}"
 
 
 def text_h3(input: str) -> str:
-    return f"### {input}"
+    return f"### {input}{NEW_LINE}"
 
 
 def text_ul(list: list) -> str:
@@ -52,11 +52,11 @@ def text_ol(list: list) -> str:
 
 
 def text_quote(input: str) -> str:
-    return f"> {input}"
+    return f"> {input}{NEW_LINE}"
 
 
 def text_quote_multiline(input: str) -> str:
-    return f">>> {input}"
+    return f">>> {input}{NEW_LINE}"
 
 
 def text_code(input: str) -> str:
@@ -64,4 +64,4 @@ def text_code(input: str) -> str:
 
 
 def text_code_block(input: str) -> str:
-    return f"```{input}```"
+    return f"```{input}```{NEW_LINE}"
