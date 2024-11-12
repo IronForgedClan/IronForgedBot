@@ -1,1 +1,4 @@
 EMPTY_SPACE = "⠀⠀"
+QUOTES = "```"
+MAX_DISCORD_MESSAGE_SIZE = 2_000 - len(QUOTES) - 1
+NEW_LINE = "\n"

@@ -8,6 +8,7 @@ import discord
 from dateutil.relativedelta import relativedelta
 from discord import Guild, Member
 
+from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
 from ironforgedbot.http import HTTP
 
 logger = logging.getLogger(__name__)
@@ -19,9 +20,6 @@ class EmojiCache(TypedDict):
 
 
 emojiCache: dict[str, EmojiCache] = {}
-QUOTES = "```"
-MAX_DISCORD_MESSAGE_SIZE = 2_000 - len(QUOTES) - 1
-NEW_LINE = "\n"
 
 
 def normalize_discord_string(input: str) -> str:
