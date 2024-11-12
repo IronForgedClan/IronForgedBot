@@ -6,6 +6,7 @@ from wom import Client, NameChangeStatus
 from ironforgedbot.common.helpers import render_relative_time, validate_playername
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
 
@@ -66,7 +67,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
             if field_count == 24:
                 embed.add_field(
                     name="",
-                    value=f"...and **{len(details) - field_count}** more not shown.",
+                    value=f"...and {text_bold(str(len(details) - field_count))} more not shown.",
                     inline=False,
                 )
                 break
@@ -77,12 +78,12 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
             if change.resolved_at is not None:
                 timestamp = render_relative_time(change.resolved_at)
             else:
-                timestamp = "**pending**"
+                timestamp = text_bold("pending")
 
             field_count += 1
             embed.add_field(
                 name="",
-                value=f"**{timestamp}**: {change.old_name} → {change.new_name}",
+                value=f"{text_bold(timestamp)}: {change.old_name} → {change.new_name}",
                 inline=False,
             )
 

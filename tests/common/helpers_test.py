@@ -1,7 +1,6 @@
 import unittest
 from datetime import datetime
-from dateutil import parser
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import discord
 
@@ -25,6 +24,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(normalize_discord_string("abc"), "abc")
         self.assertEqual(normalize_discord_string("abc😄"), "abc")
         self.assertEqual(normalize_discord_string("😄"), "")
+        self.assertEqual(normalize_discord_string("😄").encode("utf-8"), b"")
         self.assertEqual(
             normalize_discord_string("long_text with! symbols?$😄"),
             "long_text with! symbols?$",
