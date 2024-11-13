@@ -2,7 +2,7 @@ import logging
 from typing import List, NotRequired, Tuple, TypedDict
 
 from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.ranks import RANKS, get_rank_from_points
+from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.http import HTTP
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
@@ -76,13 +76,13 @@ async def get_player_points_total(player_name: str) -> int:
     return points
 
 
-async def get_rank(player_name: str) -> RANKS:
+async def get_rank(player_name: str) -> RANK:
     try:
         total_points = await get_player_points_total(player_name)
     except RuntimeError as e:
         raise e
 
-    return RANKS(get_rank_from_points(total_points))
+    return RANK(get_rank_from_points(total_points))
 
 
 def _get_skills_info(score_data) -> List[SkillScore]:

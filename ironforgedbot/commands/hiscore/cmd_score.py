@@ -14,7 +14,7 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
     RANK_POINTS,
-    RANKS,
+    RANK,
     get_god_alignment_from_member,
     get_next_rank_from_points,
     get_rank_color_from_points,
@@ -72,7 +72,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
 
-    if rank_name == RANKS.GOD:
+    if rank_name == RANK.GOD:
         god_alignment = get_god_alignment_from_member(member)
 
         rank_color = get_rank_color_from_points(points_total, god_alignment)
@@ -109,7 +109,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         inline=True,
     )
 
-    if rank_name == RANKS.GOD:
+    if rank_name == RANK.GOD:
         match god_alignment:
             case GOD_ALIGNMENT.SARADOMIN:
                 icon = find_emoji(interaction, "Saradomin")

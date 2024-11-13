@@ -4,7 +4,7 @@ from typing import Optional
 import discord
 
 from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.ranks import RANKS
+from ironforgedbot.common.ranks import RANK
 
 
 class ROLES(StrEnum):
@@ -32,10 +32,10 @@ def extract_roles(member: discord.Member) -> list[str]:
     return roles
 
 
-def find_rank(roles: list[str]) -> Optional[RANKS]:
+def find_rank(roles: list[str]) -> Optional[RANK]:
     for role in roles:
-        if RANKS.has_value(role):
-            return RANKS(role)
+        if RANK.has_value(role):
+            return RANK(role)
     return None
 
 
