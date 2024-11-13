@@ -5,7 +5,7 @@ import discord
 from wom import Client, NameChangeStatus
 from ironforgedbot.common.helpers import render_relative_time, validate_playername
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
@@ -13,7 +13,7 @@ from ironforgedbot.decorators import require_role
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.ANY)
+@require_role(ROLE.ANY)
 async def cmd_whois(interaction: discord.Interaction, player: str):
     """Get player's rsn history
 

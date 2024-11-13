@@ -13,7 +13,7 @@ from ironforgedbot.common.helpers import (
     validate_member_has_role,
     validate_playername,
 )
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
@@ -32,7 +32,7 @@ class TestHelpers(unittest.TestCase):
 
     def test_validate_playername(self):
         """Test validate playername happy path"""
-        member = create_test_member("tester", ROLES.MEMBER, "tester")
+        member = create_test_member("tester", ROLE.MEMBER, "tester")
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -47,7 +47,7 @@ class TestHelpers(unittest.TestCase):
     def test_validate_playername_fails_too_short(self):
         """Test validate playername fails when too short"""
         playername = ""
-        member = create_test_member(playername, ROLES.MEMBER)
+        member = create_test_member(playername, ROLE.MEMBER)
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -60,7 +60,7 @@ class TestHelpers(unittest.TestCase):
     def test_validate_playername_fails_too_long(self):
         """Test validate playername fails when too long"""
         playername = "0123456789012"
-        member = create_test_member(playername, ROLES.MEMBER, playername)
+        member = create_test_member(playername, ROLE.MEMBER, playername)
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -76,7 +76,7 @@ class TestHelpers(unittest.TestCase):
         It should still attempt to fetch and return Member object if possible
         """
         playername = "player"
-        member = create_test_member(playername, ROLES.MEMBER, playername)
+        member = create_test_member(playername, ROLE.MEMBER, playername)
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -94,7 +94,7 @@ class TestHelpers(unittest.TestCase):
         It should return None in place of Member object if not found
         """
         playername = "player"
-        unrelated_member = create_test_member("tester", ROLES.MEMBER)
+        unrelated_member = create_test_member("tester", ROLE.MEMBER)
         interaction = create_mock_discord_interaction([unrelated_member])
 
         assert interaction.guild

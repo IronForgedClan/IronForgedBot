@@ -11,7 +11,7 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import (
-    ROLES,
+    ROLE,
     extract_roles,
     find_rank,
     is_member,
@@ -74,7 +74,7 @@ class Signups(object):
         self.unknowns.append(normalize_discord_string(member.name))
 
 
-@require_role(ROLES.LEADERSHIP)
+@require_role(ROLE.LEADERSHIP)
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,

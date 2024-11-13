@@ -7,13 +7,13 @@ from ironforgedbot.commands.raffle.cmd_raffle_select_winner import (
     sub_raffle_select_winner,
 )
 from ironforgedbot.commands.raffle.cmd_raffle_start import sub_raffle_start
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.LEADERSHIP)
+@require_role(ROLE.LEADERSHIP)
 async def cmd_raffle_admin(interaction: discord.Interaction, command: str):
     """Parent command for doing admin actions around raffles.
 

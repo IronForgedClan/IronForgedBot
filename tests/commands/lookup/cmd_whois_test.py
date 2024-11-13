@@ -6,7 +6,7 @@ import discord
 import wom
 
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 mock_name_change_list = [
@@ -29,7 +29,7 @@ class WhoisTest(unittest.IsolatedAsyncioTestCase):
         self, mock_validate_playername, mock_wom, mock_relative_time
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLES.MEMBER)
+        user = create_test_member(playername, ROLE.MEMBER)
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
@@ -74,7 +74,7 @@ class WhoisTest(unittest.IsolatedAsyncioTestCase):
         self, mock_validate_playername, mock_wom, mock_send_error_response
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLES.MEMBER)
+        user = create_test_member(playername, ROLE.MEMBER)
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)

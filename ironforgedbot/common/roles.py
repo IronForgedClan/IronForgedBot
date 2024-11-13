@@ -7,7 +7,7 @@ from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANK
 
 
-class ROLES(StrEnum):
+class ROLE(StrEnum):
     LEADERSHIP = "Leadership"
     DISCORD_TEAM = "Discord Team"
     MEMBER = "Member"
@@ -41,7 +41,7 @@ def find_rank(roles: list[str]) -> Optional[RANK]:
 
 def is_member(roles: list[str]) -> bool:
     for role in roles:
-        if ROLES.MEMBER.lower() == role.lower():
+        if ROLE.MEMBER.lower() == role.lower():
             return True
 
     return False
@@ -49,7 +49,7 @@ def is_member(roles: list[str]) -> bool:
 
 def is_prospect(roles: list[str]) -> bool:
     for role in roles:
-        if ROLES.PROSPECT.lower() == role.lower():
+        if ROLE.PROSPECT.lower() == role.lower():
             return True
 
     return False

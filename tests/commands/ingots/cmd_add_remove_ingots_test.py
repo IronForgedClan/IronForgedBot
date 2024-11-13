@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 import discord
 from tabulate import tabulate
 
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -32,8 +32,8 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_validate_playername
     ):
         """Test that ingots can be added to a single user."""
-        caller = create_test_member("leader", ROLES.LEADERSHIP)
-        target = create_test_member("tester", ROLES.MEMBER)
+        caller = create_test_member("leader", ROLE.LEADERSHIP)
+        target = create_test_member("tester", ROLE.MEMBER)
         reason = "testing"
 
         interaction = create_mock_discord_interaction(user=caller, members=[target])
@@ -76,8 +76,8 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_validate_playername
     ):
         """Test that ingots can be removed from a single user."""
-        caller = create_test_member("leader", ROLES.LEADERSHIP)
-        target = create_test_member("tester", ROLES.MEMBER)
+        caller = create_test_member("leader", ROLE.LEADERSHIP)
+        target = create_test_member("tester", ROLE.MEMBER)
         reason = "testing"
 
         interaction = create_mock_discord_interaction(user=caller, members=[target])
@@ -120,10 +120,10 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_validate_playername
     ):
         """Test that ingots can be added to multiple users at once."""
-        caller = create_test_member("leader", ROLES.LEADERSHIP)
-        target1 = create_test_member("atester", ROLES.MEMBER)
-        target2 = create_test_member("btester", ROLES.MEMBER)
-        target3 = create_test_member("ctester", ROLES.MEMBER)
+        caller = create_test_member("leader", ROLE.LEADERSHIP)
+        target1 = create_test_member("atester", ROLE.MEMBER)
+        target2 = create_test_member("btester", ROLE.MEMBER)
+        target3 = create_test_member("ctester", ROLE.MEMBER)
         reason = "testing"
 
         interaction = create_mock_discord_interaction(
@@ -193,8 +193,8 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_validate_playername
     ):
         """Test that we ignore duplicate names and only award ingots once."""
-        caller = create_test_member("leader", ROLES.LEADERSHIP)
-        target1 = create_test_member("atester", ROLES.MEMBER)
+        caller = create_test_member("leader", ROLE.LEADERSHIP)
+        target1 = create_test_member("atester", ROLE.MEMBER)
         reason = "testing"
 
         interaction = create_mock_discord_interaction(user=caller, members=[target1])
@@ -252,9 +252,9 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_validate_playername
     ):
         """Test that we ignore unknown users but report them in output."""
-        caller = create_test_member("leader", ROLES.LEADERSHIP)
-        target1 = create_test_member("atester", ROLES.MEMBER)
-        target2 = create_test_member("btester", ROLES.MEMBER)
+        caller = create_test_member("leader", ROLE.LEADERSHIP)
+        target1 = create_test_member("atester", ROLE.MEMBER)
+        target2 = create_test_member("btester", ROLE.MEMBER)
         reason = "testing"
 
         interaction = create_mock_discord_interaction(
@@ -325,10 +325,10 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_validate_playername, mock_send_error_response
     ):
         """Test that we report insufficient funds and don't process."""
-        caller = create_test_member("leader", ROLES.LEADERSHIP)
-        target1 = create_test_member("atester", ROLES.MEMBER)
-        target2 = create_test_member("btester", ROLES.MEMBER)
-        target3 = create_test_member("ctester", ROLES.MEMBER)
+        caller = create_test_member("leader", ROLE.LEADERSHIP)
+        target1 = create_test_member("atester", ROLE.MEMBER)
+        target2 = create_test_member("btester", ROLE.MEMBER)
+        target3 = create_test_member("ctester", ROLE.MEMBER)
         reason = "testing"
 
         interaction = create_mock_discord_interaction(

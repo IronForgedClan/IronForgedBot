@@ -9,7 +9,7 @@ from ironforgedbot.common.responses import (
     build_ingot_response_embed,
     send_error_response,
 )
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -17,7 +17,7 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.ANY)
+@require_role(ROLE.ANY)
 async def cmd_view_ingots(
     interaction: discord.Interaction, player: Optional[str] = None
 ):

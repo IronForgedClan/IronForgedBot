@@ -9,7 +9,7 @@ import discord
 
 from ironforgedbot.common.helpers import validate_member_has_role
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def require_role(role_name: str, ephemeral=False):
                     f"Unable to verify caller's guild membership ({func.__name__})"
                 )
 
-            if role_name != ROLES.ANY:
+            if role_name != ROLE.ANY:
                 has_role = validate_member_has_role(member, role_name)
                 if not has_role:
                     raise discord.app_commands.CheckFailure(

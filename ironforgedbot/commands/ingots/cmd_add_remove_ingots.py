@@ -14,7 +14,7 @@ from ironforgedbot.common.responses import (
     build_ingot_response_embed,
     send_error_response,
 )
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import (
     text_bold,
     text_code_block,
@@ -28,7 +28,7 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.LEADERSHIP)
+@require_role(ROLE.LEADERSHIP)
 async def cmd_add_remove_ingots(
     interaction: discord.Interaction,
     players: str,

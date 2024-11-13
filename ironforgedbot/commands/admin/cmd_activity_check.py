@@ -2,7 +2,7 @@ import logging
 import discord
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
 from ironforgedbot.tasks.check_activity import job_check_activity
@@ -10,7 +10,7 @@ from ironforgedbot.tasks.check_activity import job_check_activity
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.LEADERSHIP, ephemeral=True)
+@require_role(ROLE.LEADERSHIP, ephemeral=True)
 async def cmd_activity_check(interaction: discord.Interaction):
     assert interaction.guild
     report_channel = get_text_channel(interaction.guild, CONFIG.AUTOMATION_CHANNEL_ID)

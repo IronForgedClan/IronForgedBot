@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -23,7 +23,7 @@ class ActivityCheckTest(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_activity_check(
         self, mock_get_text_channel, mock_job_check_activity
     ):
-        user = create_test_member("test", ROLES.LEADERSHIP)
+        user = create_test_member("test", ROLE.LEADERSHIP)
         mock_report_channel = Mock(discord.TextChannel)
         mock_get_text_channel.return_value = mock_report_channel
         interaction = create_mock_discord_interaction(user=user)

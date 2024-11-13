@@ -25,13 +25,13 @@ from ironforgedbot.common.responses import (
     send_error_response,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.ANY)
+@require_role(ROLE.ANY)
 async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
     """Compute clan score for a Runescape player name.
 
@@ -87,7 +87,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
         next_rank_icon = find_emoji(interaction, next_rank_name)
 
     if member and member.roles:
-        if validate_member_has_role(member, ROLES.PROSPECT):
+        if validate_member_has_role(member, ROLE.PROSPECT):
             return await send_prospect_response(
                 interaction, rank_name, rank_icon, member
             )

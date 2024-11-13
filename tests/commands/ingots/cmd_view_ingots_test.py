@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 import discord
 
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -19,7 +19,7 @@ class TestViewIngots(unittest.IsolatedAsyncioTestCase):
     )
     async def test_ingots(self, mock_storage, mock_validate_playername):
         """Test that a player's ingot total is returned to user."""
-        user = create_test_member("johnnycache", ROLES.MEMBER)
+        user = create_test_member("johnnycache", ROLE.MEMBER)
         interaction = create_mock_discord_interaction(user=user)
 
         mock_storage.read_member.return_value = Member(
@@ -61,7 +61,7 @@ class TestViewIngots(unittest.IsolatedAsyncioTestCase):
 
         mock_storage.read_member.return_value = None
         mock_validate_playername.side_effect = lambda _, name: (
-            create_test_member(name, ROLES.MEMBER),
+            create_test_member(name, ROLE.MEMBER),
             name,
         )
 
