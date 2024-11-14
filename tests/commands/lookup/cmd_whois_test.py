@@ -5,9 +5,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import discord
 import wom
 
-from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.common.roles import ROLE
-from tests.helpers import create_mock_discord_interaction, create_test_member
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    mock_require_role,
+)
+
+with patch(
+    "ironforgedbot.decorators.require_role",
+    mock_require_role,
+):
+    from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
+
 
 mock_name_change_list = [
     SimpleNamespace(

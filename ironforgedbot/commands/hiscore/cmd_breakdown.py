@@ -9,7 +9,7 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
     render_percentage,
-    validate_member_has_role,
+    check_member_has_role,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
@@ -33,7 +33,7 @@ from ironforgedbot.decorators import require_role
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.ANY)
+@require_role(ROLE.MEMBER)
 async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute player score with complete source enumeration.
 
@@ -82,7 +82,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         rank_icon = find_emoji(interaction, rank_name)
 
     if member and member.roles:
-        if validate_member_has_role(member, ROLE.PROSPECT):
+        if check_member_has_role(member, ROLE.PROSPECT):
             return await send_prospect_response(
                 interaction, rank_name, rank_icon, member
             )

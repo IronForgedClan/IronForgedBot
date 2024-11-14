@@ -61,13 +61,17 @@ def get_rank_from_points(points: int) -> str:
     return RANK.IRON
 
 
-def get_rank_from_member(member: discord.Member | None) -> RANK | str | None:
+def get_rank_from_member(
+    member: discord.Member | None, ignore_prospect: Optional[bool] = False
+) -> RANK | str | None:
     if not member:
         return None
 
     for role in member.roles:
         match role.name:
             case RANK.PROSPECT:
+                if ignore_prospect:
+                    continue
                 return RANK.PROSPECT
             case RANK.IRON:
                 return RANK.IRON

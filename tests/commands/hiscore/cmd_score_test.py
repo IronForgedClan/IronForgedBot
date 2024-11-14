@@ -4,9 +4,19 @@ from unittest.mock import patch
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
-from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.common.roles import ROLE
-from tests.helpers import create_mock_discord_interaction, create_test_member
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    mock_require_role,
+)
+
+with patch(
+    "ironforgedbot.decorators.require_role",
+    mock_require_role,
+):
+    from ironforgedbot.commands.hiscore.cmd_score import cmd_score
+
 
 mock_score_breakdown = ScoreBreakdown(
     skills=[

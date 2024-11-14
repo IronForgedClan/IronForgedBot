@@ -2,13 +2,14 @@ import logging
 from datetime import datetime
 from io import BytesIO
 import re
-from typing import List, Tuple, TypedDict
+from typing import List, Optional, Tuple, TypedDict
 
 import discord
 from dateutil.relativedelta import relativedelta
 from discord import Guild, Member
 
 from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.http import HTTP
 
 logger = logging.getLogger(__name__)
@@ -75,12 +76,26 @@ def validate_playername(
         return None, playername
 
 
-def validate_member_has_role(member: Member, required_role: str) -> bool:
-    for role in member.roles:
-        if normalize_discord_string(role.name.lower()) == normalize_discord_string(
-            required_role.lower()
-        ):
-            return True
+def check_member_has_role(
+    member: Member,
+    required_role: ROLE,
+    or_higher: Optional[bool] = False,
+    or_lower: Optional[bool] = False,
+) -> bool:
+    member_roles = set(role.name for role in member.roles)
+    acceptable_roles = set([required_role.value])
+
+    if or_higher:
+        acceptable_roles = set(ROLE(required_role).or_higher())
+
+    if or_lower:
+        acceptable_roles = set(ROLE(required_role).or_lower())
+
+    member_roles = {role.lower().strip() for role in member_roles}
+    acceptable_roles = {role.lower().strip() for role in acceptable_roles}
+
+    if acceptable_roles & member_roles:
+        return True
 
     return False
 

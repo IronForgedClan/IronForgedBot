@@ -95,8 +95,8 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_get_role_members_handles_emoji(self, mock_discord_file):
-        """Test get role members works with emojis in user names or role names"""
-        custom_role = "alien👽"
+        """Test get role members works with emojis in user names, roles are only ever plaintext"""
+        custom_role = "alien"
         caller = create_test_member("leader", ROLE.LEADERSHIP)
         member1 = create_test_member("member1 💩", custom_role)
         member2 = create_test_member("🤖member2", custom_role)

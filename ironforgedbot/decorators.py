@@ -7,7 +7,7 @@ from random import randrange
 
 import discord
 
-from ironforgedbot.common.helpers import validate_member_has_role
+from ironforgedbot.common.helpers import check_member_has_role
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.state import STATE
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def require_role(role_name: str, ephemeral=False):
-    """Makes sure that the interaction user has the required role"""
+    """Makes sure that the interaction user has the required role or higher"""
 
     def decorator(func):
         @functools.wraps(func)
@@ -52,13 +52,12 @@ def require_role(role_name: str, ephemeral=False):
                     f"Unable to verify caller's guild membership ({func.__name__})"
                 )
 
-            if role_name != ROLE.ANY:
-                has_role = validate_member_has_role(member, role_name)
-                if not has_role:
-                    raise discord.app_commands.CheckFailure(
-                        f"Member '{interaction.user.display_name}' tried using "
-                        f"{func.__name__} but does not have permission"
-                    )
+            logger.info("running..")
+            if not check_member_has_role(member, ROLE(role_name), or_higher=True):
+                raise discord.app_commands.CheckFailure(
+                    f"Member '{interaction.user.display_name}' tried using "
+                    f"{func.__name__} but does not have permission"
+                )
 
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)
             await func(*args, **kwargs)

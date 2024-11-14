@@ -10,7 +10,7 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     render_percentage,
     render_relative_time,
-    validate_member_has_role,
+    check_member_has_role,
     validate_playername,
 )
 from ironforgedbot.common.roles import ROLE
@@ -106,23 +106,55 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(result_member, None)
         self.assertEqual(result_playername, playername)
 
-    def test_validate_member_has_role(self):
-        """Test validate member has role happy path"""
+    def test_check_member_has_role(self):
+        """Test validate member has role"""
         member = Mock(discord.Member)
-        role = Mock(discord.Role)
-        role.name = "tester"
-        member.roles = [role]
+        member.roles = [ROLE.MEMBER]
 
-        self.assertEqual(validate_member_has_role(member, role.name), True)
+        self.assertEqual(check_member_has_role(member, ROLE.MEMBER), True)
 
-    def test_validate_member_has_role_fails(self):
+    def test_check_member_has_role_fails(self):
         """Test validate member has role fails when member does not have role"""
         member = Mock(discord.Member)
-        role = Mock(discord.Role)
-        role.name = "tester"
+        member.roles = [ROLE.MEMBER]
+
+        self.assertEqual(check_member_has_role(member, ROLE.LEADERSHIP), False)
+
+    def test_check_member_has_role_or_higher(self):
+        """Test validate member has role or higher"""
+        member = Mock(discord.Member)
+        member.roles = [ROLE.LEADERSHIP]
+
+        self.assertEqual(
+            check_member_has_role(member, ROLE.MEMBER, or_higher=True), True
+        )
+
+    def test_check_member_has_role_or_higher_fail(self):
+        """Test validate member has role or higher"""
+        member = Mock(discord.Member)
+        member.roles = [ROLE.MEMBER]
+
+        self.assertEqual(
+            check_member_has_role(member, ROLE.STAFF, or_higher=True), False
+        )
+
+    def test_check_member_has_role_or_lower(self):
+        """Test validate member has role or lower"""
+        member = Mock(discord.Member)
+        member.roles = [ROLE.MEMBER]
+
+        self.assertEqual(
+            check_member_has_role(member, ROLE.LEADERSHIP, or_lower=True), True
+        )
+
+    def test_check_member_has_role_or_lower_fail(self):
+        """Test validate member has role or lower"""
+        member = Mock(discord.Member)
         member.roles = []
 
-        self.assertEqual(validate_member_has_role(member, role), False)
+        self.assertEqual(
+            check_member_has_role(member, ROLE.MEMBER, or_lower=True), False
+        )
 
     def test_find_member_by_nickname(self):
         """Test find member by nickname happy path"""

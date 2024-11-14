@@ -1,5 +1,6 @@
 import asyncio
 import re
+
 from ironforgedbot.storage.sheets import STORAGE
 
 
@@ -54,11 +55,11 @@ async def get_results():
 
     print("\nNET WINNERS:")
     for player, net in sorted_by_net_change[:10]:
-        print(f"{player} {net:,}")
+        print(f"{player} (+{net:,})")
 
     print("\nNET LOSERS:")
     for player, net in sorted_by_net_change[-10:][::-1]:
-        print(f"{player} {net:,}")
+        print(f"{player} ({net:,})")
 
     print(f"\nTotal Lost:   {total_lost:,}\nTotal Gained: {total_gained:,}")
 

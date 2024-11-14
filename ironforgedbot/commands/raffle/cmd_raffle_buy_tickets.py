@@ -12,7 +12,7 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.ANY)
+@require_role(ROLE.MEMBER)
 async def cmd_buy_raffle_tickets(interaction: discord.Interaction, tickets: int):
     """Use ingots to buy tickets. Tickets cost 5000 ingots each."""
     caller = normalize_discord_string(interaction.user.display_name)

@@ -3,7 +3,7 @@ import logging
 import discord
 
 from ironforgedbot.common.helpers import (
-    validate_member_has_role,
+    check_member_has_role,
     normalize_discord_string,
     fit_log_lines_into_discord_messages,
 )
@@ -44,7 +44,7 @@ async def sync_members(guild: discord.Guild) -> list[str]:
     member_ids = []
 
     for member in guild.members:
-        if validate_member_has_role(member, ROLE.MEMBER):
+        if check_member_has_role(member, ROLE.MEMBER):
             members.append(member)
             member_ids.append(member.id)
 

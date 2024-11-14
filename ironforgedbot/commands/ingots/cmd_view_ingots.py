@@ -17,7 +17,7 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.ANY)
+@require_role(ROLE.any())
 async def cmd_view_ingots(
     interaction: discord.Interaction, player: Optional[str] = None
 ):

@@ -13,7 +13,7 @@ from ironforgedbot.decorators import require_role
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.ANY)
+@require_role(ROLE.MEMBER)
 async def cmd_whois(interaction: discord.Interaction, player: str):
     """Get player's rsn history
 

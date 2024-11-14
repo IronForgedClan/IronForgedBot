@@ -10,15 +10,14 @@ from ironforgedbot.common.helpers import (
     find_member_by_nickname,
     normalize_discord_string,
 )
-from ironforgedbot.common.ranks import get_rank_from_points
-from ironforgedbot.common.roles import extract_roles, find_rank, is_member, is_prospect
+from ironforgedbot.common.ranks import get_rank_from_member, get_rank_from_points
+from ironforgedbot.common.text_formatters import text_bold
 
 logger = logging.getLogger(__name__)
 
 
 async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextChannel):
     members_to_update = {}
-
     await report_channel.send("Beginning rank check...")
 
     for member in guild.members:
@@ -28,34 +27,32 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             logger.info(f"Skipping rank check for: {member.display_name}")
             continue
 
-        member_roles = extract_roles(member)
-        current_rank = find_rank(member_roles)
+        current_rank = get_rank_from_member(member, ignore_prospect=True)
 
         if current_rank is None:
-            if is_member(member_roles) and not is_prospect(member_roles):
-                message = f"Member '{nick}' detected without any ranked role."
-                logger.warning(message)
-                await report_channel.send(message)
+            message = f"Member {member.mention} detected without any ranked role."
+            logger.warning(message)
+            await report_channel.send(message)
             continue
 
         members_to_update[nick] = current_rank
 
-    for member, current_rank in members_to_update.items():
+    for nick, current_rank in members_to_update.items():
+        member = find_member_by_nickname(guild, nick)
         try:
-            current_points = await get_player_points_total(member)
+            current_points = await get_player_points_total(nick)
         except Exception as e:
-            logger.error(f"Error processing {member}: {e}")
+            logger.error(f"Error processing {nick}: {e}")
             await report_channel.send(
-                f"Error calculating points for **{member}**. Is their rsn correct?"
+                f"Error calculating points for {member.mention}. Is their rsn correct?"
             )
             continue
 
         correct_rank = get_rank_from_points(current_points)
-        m = find_member_by_nickname(guild, member)
         if current_rank != str(correct_rank):
             message = (
-                f"{m.mention} has upgraded their rank from {find_emoji(None, current_rank)} "
-                f"→ {find_emoji(None, correct_rank)} with **{current_points:,}** points."
+                f"{member.mention} upgraded their rank {find_emoji(None, current_rank)} "
+                f"→ {find_emoji(None, correct_rank)} with {text_bold(f"{current_points:,}")} points."
             )
             await report_channel.send(message)
 

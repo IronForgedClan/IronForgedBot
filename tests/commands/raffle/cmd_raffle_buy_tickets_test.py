@@ -1,10 +1,21 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.storage.types import Member
-from tests.helpers import create_mock_discord_interaction, create_test_member
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    mock_require_role,
+)
+
+with patch(
+    "ironforgedbot.decorators.require_role",
+    mock_require_role,
+):
+    from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import (
+        cmd_buy_raffle_tickets,
+    )
 
 
 class TestRaffleBuyTickets(unittest.IsolatedAsyncioTestCase):
