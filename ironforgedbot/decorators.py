@@ -7,7 +7,7 @@ from random import randrange
 
 import discord
 
-from ironforgedbot.common.helpers import check_member_has_role
+from ironforgedbot.common.helpers import check_member_has_role, normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.state import STATE
@@ -15,13 +15,13 @@ from ironforgedbot.state import STATE
 logger = logging.getLogger(__name__)
 
 
-def require_role(role_name: str, ephemeral=False):
+def require_role(role: ROLE, ephemeral=False):
     """Makes sure that the interaction user has the required role or higher"""
 
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
-            if role_name is None or len(role_name) < 1:
+            if not role:
                 raise ValueError(f"No role provided to decorator ({func.__name__})")
 
             interaction = args[0]
@@ -36,15 +36,20 @@ def require_role(role_name: str, ephemeral=False):
                 )
 
             logger.info(
-                f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of {interaction.user.display_name}"
+                (
+                    f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of "
+                    f"'{normalize_discord_string(interaction.user.display_name)}'"
+                )
             )
 
             if STATE.state["is_shutting_down"]:
                 logger.warning("Bot has begun shut down. Ignoring command.")
-                await interaction.response.send_message(
-                    "## Bad Timing!!\nThe bot is shutting down, please try again when the bot comes back online."
+                return await interaction.response.send_message(
+                    (
+                        "## Bad Timing!!\nThe bot is shutting down, "
+                        "please try again when the bot comes back online."
+                    )
                 )
-                return
 
             member = interaction.guild.get_member(interaction.user.id)
             if not member:
@@ -52,11 +57,10 @@ def require_role(role_name: str, ephemeral=False):
                     f"Unable to verify caller's guild membership ({func.__name__})"
                 )
 
-            logger.info("running..")
-            if not check_member_has_role(member, ROLE(role_name), or_higher=True):
+            if not check_member_has_role(member, role, or_higher=True):
                 raise discord.app_commands.CheckFailure(
-                    f"Member '{interaction.user.display_name}' tried using "
-                    f"{func.__name__} but does not have permission"
+                    f"Member '{normalize_discord_string(interaction.user.display_name)}' "
+                    f"tried using '{func.__name__}' but does not have permission"
                 )
 
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)

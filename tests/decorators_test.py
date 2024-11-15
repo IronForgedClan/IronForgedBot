@@ -97,7 +97,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             str(context.exception),
-            f"Member '{mock_member.display_name}' tried using {mock_func.__name__} but does not have permission",
+            f"Member '{mock_member.display_name}' tried using '{mock_func.__name__}' but does not have permission",
         )
 
     @patch("ironforgedbot.decorators.STATE")
