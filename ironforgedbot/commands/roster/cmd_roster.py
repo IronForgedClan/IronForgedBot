@@ -8,12 +8,10 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
 )
-from ironforgedbot.common.ranks import RANK
+from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import (
     ROLE,
-    extract_roles,
-    find_rank,
     is_member,
     is_prospect,
 )
@@ -202,19 +200,18 @@ async def _get_signups(
             res.add_unknowns(member)
             continue
 
-        member_roles = extract_roles(member)
-        if not is_member(member_roles):
+        if not is_member(guild_member):
             res.add_unknowns(member)
             continue
 
-        if is_prospect(member_roles):
+        if is_prospect(guild_member):
             res.add_prospect(member, members)
             continue
 
-        rank = find_rank(member_roles)
+        rank = get_rank_from_member(guild_member)
         if rank is None:
             rank = RANK.IRON
 
-        res.add_ranked(member, rank, False, members)
+        res.add_ranked(member, RANK(rank), False, members)
 
     return res

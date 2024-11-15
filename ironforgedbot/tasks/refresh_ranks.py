@@ -17,7 +17,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
     await report_channel.send("Beginning rank check...")
 
     for member in guild.members:
-        if member.bot or is_prospect([role.name for role in member.roles]):
+        if member.bot or is_prospect(member):
             continue
 
         if member.nick is None or len(member.nick) < 1:
