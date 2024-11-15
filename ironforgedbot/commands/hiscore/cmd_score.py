@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER)
-async def cmd_score(interaction: discord.Interaction, player: Optional[str]):
+async def cmd_score(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute clan score for a Runescape player name.
 
     Arguments:
