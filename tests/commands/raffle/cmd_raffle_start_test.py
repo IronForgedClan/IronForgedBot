@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.raffle.cmd_raffle_start import sub_raffle_start
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.storage.types import StorageError
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
@@ -14,7 +14,7 @@ class TestRaffleStart(unittest.IsolatedAsyncioTestCase):
     async def test_sub_start_raffle(self, mock_storage):
         interaction = create_mock_discord_interaction()
 
-        user = create_test_member("test", ROLES.LEADERSHIP)
+        user = create_test_member("test", ROLE.LEADERSHIP)
         interaction.user = user
 
         await sub_raffle_start(interaction)
@@ -33,7 +33,7 @@ class TestRaffleStart(unittest.IsolatedAsyncioTestCase):
     ):
         interaction = create_mock_discord_interaction()
 
-        user = create_test_member("test", ROLES.LEADERSHIP)
+        user = create_test_member("test", ROLE.LEADERSHIP)
         interaction.user = user
 
         mock_storage.start_raffle.side_effect = StorageError("Test")

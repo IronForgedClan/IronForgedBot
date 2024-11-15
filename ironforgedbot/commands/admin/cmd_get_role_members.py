@@ -3,16 +3,13 @@ from datetime import datetime
 
 import discord
 
-from ironforgedbot.common.helpers import (
-    normalize_discord_string,
-    validate_member_has_role,
-)
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.decorators import require_role
 
 
-@require_role(ROLES.LEADERSHIP, ephemeral=True)
+@require_role(ROLE.LEADERSHIP, ephemeral=True)
 async def cmd_get_role_members(
     interaction: discord.Interaction,
     role: str,
@@ -23,7 +20,9 @@ async def cmd_get_role_members(
     output = ""
 
     for member in interaction.guild.members:
-        if validate_member_has_role(member, role):
+        user_roles = [role.name for role in member.roles]
+
+        if role in user_roles:
             count += 1
             output += f"{normalize_discord_string(member.display_name)}, "
 

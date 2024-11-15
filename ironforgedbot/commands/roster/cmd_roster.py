@@ -8,12 +8,10 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
 )
-from ironforgedbot.common.ranks import RANKS
+from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import (
-    ROLES,
-    extract_roles,
-    find_rank,
+    ROLE,
     is_member,
     is_prospect,
 )
@@ -48,7 +46,7 @@ class Signups(object):
         self.rank_failures = []
 
     def add_ranked(
-        self, member: discord.Member, rank: RANKS, prospect: bool, members: List[Member]
+        self, member: discord.Member, rank: RANK, prospect: bool, members: List[Member]
     ):
         if rank not in self.known_ranks:
             self.ranked[rank] = []
@@ -74,7 +72,7 @@ class Signups(object):
         self.unknowns.append(normalize_discord_string(member.name))
 
 
-@require_role(ROLES.LEADERSHIP)
+@require_role(ROLE.LEADERSHIP)
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,
@@ -99,30 +97,30 @@ async def _calc_roster(interaction: discord.Interaction, url: str) -> str:
     signups = await _get_signups(interaction, msg, members)
     result = "====STAFF MESSAGE BELOW====\n"
 
-    result += _add_rank(signups, RANKS.MYTH, False)
-    result += _add_rank(signups, RANKS.LEGEND, False)
-    result += _add_rank(signups, RANKS.DRAGON, False)
-    result += _add_rank(signups, RANKS.RUNE, False)
-    result += _add_rank(signups, RANKS.ADAMANT, False)
-    result += _add_rank(signups, RANKS.MITHRIL, False)
-    result += _add_rank(signups, RANKS.IRON, False)
+    result += _add_rank(signups, RANK.MYTH, False)
+    result += _add_rank(signups, RANK.LEGEND, False)
+    result += _add_rank(signups, RANK.DRAGON, False)
+    result += _add_rank(signups, RANK.RUNE, False)
+    result += _add_rank(signups, RANK.ADAMANT, False)
+    result += _add_rank(signups, RANK.MITHRIL, False)
+    result += _add_rank(signups, RANK.IRON, False)
 
     result += _add_list("Unknown", signups.unknowns)
     result += _add_list("Rank lookup failures", signups.rank_failures)
     result += "====CLEAN MESSAGE BELOW====\n"
 
-    result += _add_rank(signups, RANKS.MYTH, True)
-    result += _add_rank(signups, RANKS.LEGEND, True)
-    result += _add_rank(signups, RANKS.DRAGON, True)
-    result += _add_rank(signups, RANKS.RUNE, True)
-    result += _add_rank(signups, RANKS.ADAMANT, True)
-    result += _add_rank(signups, RANKS.MITHRIL, True)
-    result += _add_rank(signups, RANKS.IRON, True)
+    result += _add_rank(signups, RANK.MYTH, True)
+    result += _add_rank(signups, RANK.LEGEND, True)
+    result += _add_rank(signups, RANK.DRAGON, True)
+    result += _add_rank(signups, RANK.RUNE, True)
+    result += _add_rank(signups, RANK.ADAMANT, True)
+    result += _add_rank(signups, RANK.MITHRIL, True)
+    result += _add_rank(signups, RANK.IRON, True)
 
     return result
 
 
-def _add_rank(signups: Signups, rank: RANKS, clean: bool) -> str:
+def _add_rank(signups: Signups, rank: RANK, clean: bool) -> str:
     if rank not in signups.ranked:
         return ""
 
@@ -202,19 +200,18 @@ async def _get_signups(
             res.add_unknowns(member)
             continue
 
-        member_roles = extract_roles(member)
-        if not is_member(member_roles):
+        if not is_member(guild_member):
             res.add_unknowns(member)
             continue
 
-        if is_prospect(member_roles):
+        if is_prospect(guild_member):
             res.add_prospect(member, members)
             continue
 
-        rank = find_rank(member_roles)
+        rank = get_rank_from_member(guild_member)
         if rank is None:
-            rank = RANKS.IRON
+            rank = RANK.IRON
 
-        res.add_ranked(member, rank, False, members)
+        res.add_ranked(member, RANK(rank), False, members)
 
     return res

@@ -4,9 +4,19 @@ from unittest.mock import patch
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
-from ironforgedbot.commands.hiscore.cmd_score import cmd_score
-from ironforgedbot.common.roles import ROLES
-from tests.helpers import create_mock_discord_interaction, create_test_member
+from ironforgedbot.common.roles import ROLE
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    mock_require_role,
+)
+
+with patch(
+    "ironforgedbot.decorators.require_role",
+    mock_require_role,
+):
+    from ironforgedbot.commands.hiscore.cmd_score import cmd_score
+
 
 mock_score_breakdown = ScoreBreakdown(
     skills=[
@@ -57,7 +67,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.score_info")
     async def test_cmd_score(self, mock_score_info, mock_validate_playername):
         playername = "tester"
-        user = create_test_member(playername, ROLES.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
@@ -93,7 +103,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         self, mock_score_info, mock_validate_playername
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLES.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
@@ -133,7 +143,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         self, mock_validate_playername, mock_send_error_response
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLES.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.side_effect = Exception()
@@ -149,7 +159,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         self, mock_validate_playername, mock_send_error_response, mock_score_info
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLES.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.side_effect = lambda _, name: (user, name)
@@ -169,7 +179,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         mock_score_info,
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLES.PROSPECT)
+        user = create_test_member(playername, [ROLE.PROSPECT])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import (
     require_channel,
     require_role,
@@ -17,7 +17,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
     async def test_require_role(self):
         mock_func = AsyncMock()
 
-        mock_member = create_test_member("tester", ROLES.LEADERSHIP)
+        mock_member = create_test_member("tester", [ROLE.LEADERSHIP])
         mock_interaction = create_mock_discord_interaction()
 
         mock_guild = Mock(spec=discord.Guild)
@@ -26,7 +26,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction.guild = mock_guild
         mock_interaction.user = mock_member
 
-        decorated_func = require_role(ROLES.LEADERSHIP)(mock_func)
+        decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
         await decorated_func(mock_interaction)
 
         mock_func.assert_awaited_once()
@@ -46,7 +46,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
     async def test_require_role_fail_interaction_not_first_arg(self):
         mock_func = AsyncMock()
-        decorated_func = require_role(ROLES.LEADERSHIP)(mock_func)
+        decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
         with self.assertRaises(ReferenceError) as context:
             await decorated_func("")
@@ -59,7 +59,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
     async def test_require_role_fail_unable_to_find_member(self):
         mock_func = AsyncMock()
 
-        mock_member = create_test_member("tester", ROLES.LEADERSHIP)
+        mock_member = create_test_member("tester", [ROLE.LEADERSHIP])
         mock_interaction = Mock(spec=discord.Interaction)
 
         mock_guild = Mock(spec=discord.Guild)
@@ -68,7 +68,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction.guild = mock_guild
         mock_interaction.user = mock_member
 
-        decorated_func = require_role(ROLES.LEADERSHIP)(mock_func)
+        decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
         with self.assertRaises(ValueError) as context:
             await decorated_func(mock_interaction)
@@ -81,7 +81,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
     async def test_require_role_user_does_not_have_role(self):
         mock_func = AsyncMock()
 
-        mock_member = create_test_member("tester", ROLES.MEMBER)
+        mock_member = create_test_member("tester", [ROLE.MEMBER])
         mock_interaction = Mock(spec=discord.Interaction)
 
         mock_guild = Mock(spec=discord.Guild)
@@ -90,14 +90,14 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction.guild = mock_guild
         mock_interaction.user = mock_member
 
-        decorated_func = require_role(ROLES.LEADERSHIP)(mock_func)
+        decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
         with self.assertRaises(discord.app_commands.CheckFailure) as context:
             await decorated_func(mock_interaction)
 
         self.assertEqual(
             str(context.exception),
-            f"Member '{mock_member.display_name}' tried using {mock_func.__name__} but does not have permission",
+            f"Member '{mock_member.display_name}' tried using '{mock_func.__name__}' but does not have permission",
         )
 
     @patch("ironforgedbot.decorators.STATE")
@@ -106,7 +106,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         mock_func = AsyncMock()
 
-        mock_member = create_test_member("tester", ROLES.MEMBER)
+        mock_member = create_test_member("tester", [ROLE.MEMBER])
         mock_interaction = Mock(spec=discord.Interaction)
 
         mock_guild = Mock(spec=discord.Guild)
@@ -116,7 +116,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction.user = mock_member
         mock_interaction.response.send_message = AsyncMock()
 
-        decorated_func = require_role(ROLES.LEADERSHIP)(mock_func)
+        decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
         await decorated_func(mock_interaction)
 
         mock_func.assert_not_awaited()

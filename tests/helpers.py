@@ -4,7 +4,7 @@ from typing import List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 import wom
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 
 VALID_CONFIG = {
     "TEMP_DIR": "/tmp",
@@ -28,7 +28,7 @@ def create_mock_discord_interaction(
         members = []
 
     if not user:
-        user = create_test_member("tester", ROLES.MEMBER, "tester")
+        user = create_test_member("tester", [ROLE.MEMBER], "tester")
 
     interaction = Mock(spec=discord.Interaction)
     interaction.followup = AsyncMock()
@@ -52,14 +52,17 @@ def create_mock_discord_guild(
 
 
 def create_test_member(
-    name: str, role: str, nick: Optional[str] = None
+    name: str, roles: list[str], nick: Optional[str] = None
 ) -> discord.Member:
-    mock_role = Mock(spec=discord.Role)
-    mock_role.name = role
+    role_list = []
+    for role in roles:
+        mock_role = Mock(spec=discord.Role)
+        mock_role.name = role
+        role_list.append(mock_role)
 
     mock_member = Mock(spec=discord.Member)
     mock_member.id = random.randint(100, 999)
-    mock_member.roles = [mock_role]
+    mock_member.roles = role_list
     mock_member.name = name
     mock_member.nick = nick
     mock_member.display_name = nick or name

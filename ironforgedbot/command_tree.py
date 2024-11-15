@@ -19,6 +19,7 @@ from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_
 from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.config import CONFIG
 
 logger = logging.getLogger(__name__)
@@ -30,18 +31,21 @@ class IronForgedCommandTree(discord.app_commands.CommandTree):
         interaction: discord.Interaction,
         error: discord.app_commands.AppCommandError,
     ):
-        logger.critical(f"Error: {error}\n%s", traceback.format_exc())
-
         if isinstance(error, discord.app_commands.CheckFailure):
+            logger.info(error)
             await interaction.response.defer(thinking=True, ephemeral=True)
             return await send_error_response(
                 interaction,
                 "You do not have permission to run that command.",
             )
 
+        logger.critical(f"Error: {error}\n%s", traceback.format_exc())
         return await send_error_response(
             interaction,
-            "An unhandled error has occured.\nPlease alert a member of the **Discord Team**.",
+            (
+                "An unhandled error has occured.\n"
+                f"Please alert a member of the {text_bold('Discord Team')}."
+            ),
         )
 
 

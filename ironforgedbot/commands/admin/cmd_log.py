@@ -7,14 +7,14 @@ import discord
 
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.responses import build_response_embed
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 from ironforgedbot.logging_config import LOG_DIR
 
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.DISCORD_TEAM, ephemeral=True)
+@require_role(ROLE.DISCORD_TEAM, ephemeral=True)
 async def cmd_log(interaction: discord.Interaction, file_index: Optional[int]):
     """Allows access to logs through Discord.
 
