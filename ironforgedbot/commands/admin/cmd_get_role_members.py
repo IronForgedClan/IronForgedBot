@@ -20,7 +20,6 @@ async def cmd_get_role_members(
     output = ""
 
     for member in interaction.guild.members:
-        # this needs to work for any arbitrary role
         user_roles = [role.name for role in member.roles]
 
         if role in user_roles:

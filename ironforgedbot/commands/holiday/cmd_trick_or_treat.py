@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @require_channel([CONFIG.TRICK_OR_TREAT_CHANNEL_ID])
 @rate_limit(1, 3600)
-@require_role(ROLE.any())
+@require_role(ROLE.MEMBER)
 async def cmd_trick_or_treat(interaction: discord.Interaction):
     handler = await TrickOrTreatHandler()
     return await handler.random_result(interaction)
