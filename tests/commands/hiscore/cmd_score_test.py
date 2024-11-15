@@ -67,7 +67,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.score_info")
     async def test_cmd_score(self, mock_score_info, mock_validate_playername):
         playername = "tester"
-        user = create_test_member(playername, ROLE.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
@@ -103,7 +103,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         self, mock_score_info, mock_validate_playername
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLE.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
@@ -143,7 +143,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         self, mock_validate_playername, mock_send_error_response
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLE.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.side_effect = Exception()
@@ -159,7 +159,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         self, mock_validate_playername, mock_send_error_response, mock_score_info
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLE.MEMBER)
+        user = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.side_effect = lambda _, name: (user, name)
@@ -179,7 +179,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         mock_score_info,
     ):
         playername = "tester"
-        user = create_test_member(playername, ROLE.PROSPECT)
+        user = create_test_member(playername, [ROLE.PROSPECT])
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)

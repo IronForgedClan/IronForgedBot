@@ -19,11 +19,11 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_get_role_members(self, mock_discord_file):
         """Test get role members returns successfully"""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        member1 = create_test_member("member1", ROLE.MEMBER)
-        member2 = create_test_member("member2", ROLE.MEMBER)
-        member3 = create_test_member("member3", ROLE.PROSPECT)
-        member4 = create_test_member("member4", ROLE.DISCORD_TEAM)
+        caller = create_test_member("leader", [ROLE.LEADERSHIP])
+        member1 = create_test_member("member1", [ROLE.MEMBER])
+        member2 = create_test_member("member2", [ROLE.MEMBER])
+        member3 = create_test_member("member3", [ROLE.PROSPECT])
+        member4 = create_test_member("member4", [ROLE.DISCORD_TEAM])
 
         interaction = create_mock_discord_interaction(
             user=caller, members=[caller, member1, member2, member3, member4]
@@ -57,11 +57,11 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     async def test_get_role_members_multiple_word_role(self, mock_discord_file):
         """Test get role members works with complex role names"""
         custom_role = "N0w this_is A rOLe!"
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        member1 = create_test_member("member1", custom_role)
-        member2 = create_test_member("member2", custom_role)
-        member3 = create_test_member("member3", ROLE.PROSPECT)
-        member4 = create_test_member("member4", custom_role)
+        caller = create_test_member("leader", [ROLE.LEADERSHIP])
+        member1 = create_test_member("member1", [custom_role])
+        member2 = create_test_member("member2", [custom_role])
+        member3 = create_test_member("member3", [ROLE.PROSPECT])
+        member4 = create_test_member("member4", [custom_role])
 
         interaction = create_mock_discord_interaction(
             user=caller, members=[caller, member1, member2, member3, member4]
@@ -97,11 +97,11 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     async def test_get_role_members_handles_emoji(self, mock_discord_file):
         """Test get role members works with emojis in user names, roles are only ever plaintext"""
         custom_role = "alien"
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        member1 = create_test_member("member1 💩", custom_role)
-        member2 = create_test_member("🤖member2", custom_role)
-        member3 = create_test_member("member3", ROLE.PROSPECT)
-        member4 = create_test_member("member4🐼", custom_role)
+        caller = create_test_member("leader", [ROLE.LEADERSHIP])
+        member1 = create_test_member("member1 💩", [custom_role])
+        member2 = create_test_member("🤖member2", [custom_role])
+        member3 = create_test_member("member3", [ROLE.PROSPECT])
+        member4 = create_test_member("member4🐼", [custom_role])
 
         interaction = create_mock_discord_interaction(
             user=caller, members=[caller, member1, member2, member3, member4]
@@ -133,9 +133,9 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_role_members_reports_none_found(self):
         """Test get role members returns message if no matching users found"""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        member1 = create_test_member("member1", ROLE.MEMBER)
-        member2 = create_test_member("member2", ROLE.MEMBER)
+        caller = create_test_member("leader", [ROLE.LEADERSHIP])
+        member1 = create_test_member("member1", [ROLE.MEMBER])
+        member2 = create_test_member("member2", [ROLE.MEMBER])
 
         interaction = create_mock_discord_interaction(
             user=caller, members=[caller, member1, member2]
