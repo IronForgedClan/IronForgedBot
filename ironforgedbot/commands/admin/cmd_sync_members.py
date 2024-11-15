@@ -3,12 +3,12 @@ import logging
 import discord
 
 from ironforgedbot.common.helpers import (
-    validate_member_has_role,
+    check_member_has_role,
     normalize_discord_string,
     fit_log_lines_into_discord_messages,
 )
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError, Member
@@ -16,7 +16,7 @@ from ironforgedbot.storage.types import StorageError, Member
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLES.LEADERSHIP)
+@require_role(ROLE.LEADERSHIP)
 async def cmd_sync_members(interaction: discord.Interaction):
     assert interaction.guild
 
@@ -44,7 +44,7 @@ async def sync_members(guild: discord.Guild) -> list[str]:
     member_ids = []
 
     for member in guild.members:
-        if validate_member_has_role(member, ROLES.MEMBER):
+        if check_member_has_role(member, ROLE.MEMBER):
             members.append(member)
             member_ids.append(member.id)
 

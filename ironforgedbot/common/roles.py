@@ -3,53 +3,44 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.ranks import RANKS
 
-
-class ROLES(StrEnum):
-    LEADERSHIP = "Leadership"
-    DISCORD_TEAM = "Discord Team"
-    MEMBER = "Member"
+class ROLE(StrEnum):
     PROSPECT = "Prospect"
-    ANY = "*"
+    MEMBER = "Member"
+    STAFF = "Staff"
+    EVENTS_TEAM = "Events Team"
+    RECRUITMENT_TEAM = "Recruitment Team"
+    DISCORD_TEAM = "Discord Team"
+    LEADERSHIP = "Leadership"
+
+    def or_higher(self):
+        """Returns all roles at this level or higher"""
+        roles = list(ROLE)
+        index = roles.index(self)
+        return [role.value for role in roles[index:]]  # slice from current to end
+
+    def or_lower(self):
+        """Returns all roles at this level or below"""
+        roles = list(ROLE)
+        index = roles.index(self)
+        return [
+            role.value for role in roles[: index + 1]
+        ]  # slice from start to current
+
+    @staticmethod
+    def any():
+        """Returns all roles in a list"""
+        return list(ROLE)
 
 
-def extract_roles(member: discord.Member) -> list[str]:
-    roles = []
-    if not member or not member.roles:
-        return []
-
-    for role in member.roles:
-        if role.name is None:
-            continue
-
-        normalized_role = normalize_discord_string(role.name)
-        if "" == normalized_role:
-            continue
-        roles.append(normalized_role)
-
-    return roles
+def get_highest_privilage_role_from_member(member: discord.Member) -> Optional[ROLE]:
+    matching_roles = [role for role in ROLE if ROLE.value in member.roles]
+    return max(matching_roles, default=None, key=lambda r: list(ROLE).index(r))
 
 
-def find_rank(roles: list[str]) -> Optional[RANKS]:
-    for role in roles:
-        if RANKS.has_value(role):
-            return RANKS(role)
-    return None
+def is_member(member: discord.Member) -> bool:
+    return True if ROLE.MEMBER in set(role.name for role in member.roles) else False
 
 
-def is_member(roles: list[str]) -> bool:
-    for role in roles:
-        if ROLES.MEMBER.lower() == role.lower():
-            return True
-
-    return False
-
-
-def is_prospect(roles: list[str]) -> bool:
-    for role in roles:
-        if ROLES.PROSPECT.lower() == role.lower():
-            return True
-
-    return False
+def is_prospect(member: discord.Member) -> bool:
+    return True if ROLE.PROSPECT in set(role.name for role in member.roles) else False

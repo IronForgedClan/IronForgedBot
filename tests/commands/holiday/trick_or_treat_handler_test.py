@@ -10,7 +10,7 @@ from ironforgedbot.commands.holiday.trick_or_treat_handler import (
     TrickOrTreat,
     TrickOrTreatHandler,
 )
-from ironforgedbot.common.roles import ROLES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -39,7 +39,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     )
     async def test_adjust_ingots_add(self, mock_storage):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLES.MEMBER)
+            caller = create_test_member("bob", ROLE.MEMBER)
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -62,7 +62,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     )
     async def test_adjust_ingots_remove(self, mock_storage):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLES.MEMBER)
+            caller = create_test_member("bob", ROLE.MEMBER)
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -85,7 +85,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     )
     async def test_adjust_ingots_member_has_none(self, mock_storage):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLES.MEMBER)
+            caller = create_test_member("bob", ROLE.MEMBER)
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -107,7 +107,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_storage
     ):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLES.MEMBER)
+            caller = create_test_member("bob", ROLE.MEMBER)
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(

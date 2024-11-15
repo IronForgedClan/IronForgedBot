@@ -6,7 +6,7 @@ from discord import Color
 from strenum import StrEnum
 
 
-class RANKS(StrEnum):
+class RANK(StrEnum):
     GOD = "God"
     MYTH = "Myth"
     LEGEND = "Legend"
@@ -15,7 +15,6 @@ class RANKS(StrEnum):
     ADAMANT = "Adamant"
     MITHRIL = "Mithril"
     IRON = "Iron"
-    PROSPECT = "Prospect"
 
     @classmethod
     def has_value(cls, value):
@@ -45,47 +44,45 @@ class GOD_ALIGNMENT(StrEnum):
 
 def get_rank_from_points(points: int) -> str:
     if points >= RANK_POINTS.GOD:
-        return RANKS.GOD
+        return RANK.GOD
     if points >= RANK_POINTS.MYTH:
-        return RANKS.MYTH
+        return RANK.MYTH
     if points >= RANK_POINTS.LEGEND:
-        return RANKS.LEGEND
+        return RANK.LEGEND
     if points >= RANK_POINTS.DRAGON:
-        return RANKS.DRAGON
+        return RANK.DRAGON
     if points >= RANK_POINTS.RUNE:
-        return RANKS.RUNE
+        return RANK.RUNE
     if points >= RANK_POINTS.ADAMANT:
-        return RANKS.ADAMANT
+        return RANK.ADAMANT
     if points >= RANK_POINTS.MITHRIL:
-        return RANKS.MITHRIL
-    return RANKS.IRON
+        return RANK.MITHRIL
+    return RANK.IRON
 
 
-def get_rank_from_member(member: discord.Member | None) -> RANKS | str | None:
+def get_rank_from_member(member: discord.Member | None) -> RANK | str | None:
     if not member:
         return None
 
     for role in member.roles:
         match role.name:
-            case RANKS.PROSPECT:
-                return RANKS.PROSPECT
-            case RANKS.IRON:
-                return RANKS.IRON
-            case RANKS.MITHRIL:
-                return RANKS.MITHRIL
-            case RANKS.ADAMANT:
-                return RANKS.ADAMANT
-            case RANKS.RUNE:
-                return RANKS.RUNE
-            case RANKS.DRAGON:
-                return RANKS.DRAGON
-            case RANKS.LEGEND:
-                return RANKS.LEGEND
-            case RANKS.MYTH:
-                return RANKS.MYTH
-            case RANKS.GOD:
+            case RANK.IRON:
+                return RANK.IRON
+            case RANK.MITHRIL:
+                return RANK.MITHRIL
+            case RANK.ADAMANT:
+                return RANK.ADAMANT
+            case RANK.RUNE:
+                return RANK.RUNE
+            case RANK.DRAGON:
+                return RANK.DRAGON
+            case RANK.LEGEND:
+                return RANK.LEGEND
+            case RANK.MYTH:
+                return RANK.MYTH
+            case RANK.GOD:
                 alignment = get_god_alignment_from_member(member)
-                return alignment if alignment else RANKS.GOD
+                return alignment if alignment else RANK.GOD
 
     return None
 
@@ -93,20 +90,20 @@ def get_rank_from_member(member: discord.Member | None) -> RANKS | str | None:
 # TODO: Probably a more elegant way to achieve this using RANK_POINTS enum
 def get_next_rank_from_points(points: int) -> str:
     if points >= RANK_POINTS.GOD:
-        return RANKS.GOD
+        return RANK.GOD
     if points >= RANK_POINTS.MYTH:
-        return RANKS.GOD
+        return RANK.GOD
     if points >= RANK_POINTS.LEGEND:
-        return RANKS.MYTH
+        return RANK.MYTH
     if points >= RANK_POINTS.DRAGON:
-        return RANKS.LEGEND
+        return RANK.LEGEND
     if points >= RANK_POINTS.RUNE:
-        return RANKS.DRAGON
+        return RANK.DRAGON
     if points >= RANK_POINTS.ADAMANT:
-        return RANKS.RUNE
+        return RANK.RUNE
     if points >= RANK_POINTS.MITHRIL:
-        return RANKS.ADAMANT
-    return RANKS.MITHRIL
+        return RANK.ADAMANT
+    return RANK.MITHRIL
 
 
 def get_rank_color_from_points(
@@ -114,7 +111,7 @@ def get_rank_color_from_points(
 ) -> Color:
     rank = get_rank_from_points(points)
 
-    if rank == RANKS.GOD:
+    if rank == RANK.GOD:
         match god_alignment:
             case GOD_ALIGNMENT.SARADOMIN:
                 return Color.from_str("#2F2BFF")
@@ -126,17 +123,17 @@ def get_rank_color_from_points(
                 return Color.from_str("#FFFFFF")
 
     match rank:
-        case RANKS.MYTH:
+        case RANK.MYTH:
             return Color.from_str("#0ECEA9")
-        case RANKS.LEGEND:
+        case RANK.LEGEND:
             return Color.from_str("#CECECE")
-        case RANKS.DRAGON:
+        case RANK.DRAGON:
             return Color.from_str("#A51C1C")
-        case RANKS.RUNE:
+        case RANK.RUNE:
             return Color.from_str("#11B9F8")
-        case RANKS.ADAMANT:
+        case RANK.ADAMANT:
             return Color.from_str("#25964F")
-        case RANKS.MITHRIL:
+        case RANK.MITHRIL:
             return Color.from_str("#7F54FC")
         case _:
             return Color.from_str("#707070")
