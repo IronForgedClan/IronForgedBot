@@ -7,9 +7,9 @@ from random import randrange
 
 import discord
 
-from ironforgedbot.common.helpers import check_member_has_role, normalize_discord_string
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)

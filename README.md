@@ -23,6 +23,8 @@
 | `/logs`               | Index (int)                                                                                | Discord Team | Privately shares bot log files                         |
 | `/activity_check`     | N/A                                                                                        | Leadership   | Manually starts the activity check automation          |
 | `/trick_or_treat`     | N/A                                                                                        | Member       | Holiday special command                                |
+| `/debug_commands`     | N/A                                                                                        | -            | Debug tool for testing various commands                |
+| `/stress_test`        | N/A                                                                                        | -            | Debug tool for initiating stressful environments       |
 
 ## Setup
 
@@ -76,6 +78,7 @@ Now you can modify the example `.env` file with your values.
 
 | Key                       | Explanation                                                                       |
 |---------------------------|-----------------------------------------------------------------------------------|
+| ENVIRONMENT               | Defines the environment the bot is running in: 'dev', 'staging', 'prod'           |
 | TEMP_DIR                  | The location on disk where temporary files are stored. Default value is `./temp`. |
 | SHEET_ID                  | The ID of the Google Sheet.                                                       |
 | GUILD_ID                  | The ID of the Discord guild.                                                      |
