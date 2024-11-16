@@ -5,6 +5,8 @@ import discord
 
 
 class ROLE(StrEnum):
+    GUEST = "Guest"
+    APPLICANT = "Applicant"
     PROSPECT = "Prospect"
     MEMBER = "Member"
     STAFF = "Staff"
@@ -36,11 +38,3 @@ class ROLE(StrEnum):
 def get_highest_privilage_role_from_member(member: discord.Member) -> Optional[ROLE]:
     matching_roles = [role for role in ROLE if ROLE.value in member.roles]
     return max(matching_roles, default=None, key=lambda r: list(ROLE).index(r))
-
-
-def is_member(member: discord.Member) -> bool:
-    return True if ROLE.MEMBER in set(role.name for role in member.roles) else False
-
-
-def is_prospect(member: discord.Member) -> bool:
-    return True if ROLE.PROSPECT in set(role.name for role in member.roles) else False

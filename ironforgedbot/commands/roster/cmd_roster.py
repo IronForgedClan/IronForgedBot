@@ -5,16 +5,13 @@ import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import (
+    check_member_has_role,
     normalize_discord_string,
     reply_with_file,
 )
 from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import (
-    ROLE,
-    is_member,
-    is_prospect,
-)
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import Member
@@ -200,11 +197,11 @@ async def _get_signups(
             res.add_unknowns(member)
             continue
 
-        if not is_member(guild_member):
+        if not check_member_has_role(guild_member, ROLE.MEMBER):
             res.add_unknowns(member)
             continue
 
-        if is_prospect(guild_member):
+        if check_member_has_role(guild_member, ROLE.PROSPECT):
             res.add_prospect(member, members)
             continue
 
