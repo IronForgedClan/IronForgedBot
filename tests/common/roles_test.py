@@ -6,13 +6,15 @@ from tests.helpers import create_test_member
 
 class TestRoles(unittest.TestCase):
     def test_role_or_higher(self):
+        """Test returns current role or higher"""
         expected = [ROLE.DISCORD_TEAM, ROLE.LEADERSHIP]
         result = ROLE.DISCORD_TEAM.or_higher()
 
         self.assertEqual(expected, result)
 
     def test_role_or_lower(self):
-        expected = [ROLE.PROSPECT, ROLE.MEMBER]
+        """Test returns current role or lower"""
+        expected = [ROLE.GUEST, ROLE.APPLICANT, ROLE.PROSPECT, ROLE.MEMBER]
         result = ROLE.MEMBER.or_lower()
 
         self.assertEqual(expected, result)
