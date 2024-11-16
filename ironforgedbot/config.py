@@ -12,6 +12,7 @@ class Config:
         load_dotenv()
 
         self.BOT_VERSION: str = self.get_bot_version()
+        self.DEBUG_COMMANDS: bool = os.getenv("ENVIRONMENT", "prod") == "dev"
         self.TEMP_DIR: str = os.getenv("TEMP_DIR", "./temp")
         self.SHEET_ID: str = os.getenv("SHEET_ID", "")
         self.GUILD_ID: int = int(os.getenv("GUILD_ID") or 0)
