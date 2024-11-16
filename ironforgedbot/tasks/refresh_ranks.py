@@ -5,9 +5,9 @@ import random
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_player_points_total
-from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.helpers import check_member_has_role, find_emoji
 from ironforgedbot.common.ranks import get_rank_from_member, get_rank_from_points
-from ironforgedbot.common.roles import is_prospect
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,12 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
     await report_channel.send("Beginning rank check...")
 
     for member in guild.members:
-        if member.bot or is_prospect(member):
+        if (
+            member.bot
+            or check_member_has_role(member, ROLE.PROSPECT)
+            or check_member_has_role(member, ROLE.APPLICANT)
+            or check_member_has_role(member, ROLE.GUEST)
+        ):
             continue
 
         if member.nick is None or len(member.nick) < 1:
