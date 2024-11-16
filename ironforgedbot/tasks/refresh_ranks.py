@@ -5,9 +5,9 @@ import random
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_player_points_total
-from ironforgedbot.common.helpers import check_member_has_role, find_emoji
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.ranks import get_rank_from_member, get_rank_from_points
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold
 
 logger = logging.getLogger(__name__)

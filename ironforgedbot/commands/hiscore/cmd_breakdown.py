@@ -9,7 +9,6 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
     render_percentage,
-    check_member_has_role,
     validate_playername,
 )
 from ironforgedbot.common.ranks import (
@@ -26,7 +25,7 @@ from ironforgedbot.common.responses import (
     send_error_response,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_italic
 from ironforgedbot.decorators import require_role
 

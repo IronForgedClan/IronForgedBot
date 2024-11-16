@@ -5,13 +5,12 @@ import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import (
-    check_member_has_role,
     normalize_discord_string,
     reply_with_file,
 )
 from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import Member
