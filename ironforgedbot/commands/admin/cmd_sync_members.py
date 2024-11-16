@@ -3,12 +3,11 @@ import logging
 import discord
 
 from ironforgedbot.common.helpers import (
-    check_member_has_role,
     normalize_discord_string,
     fit_log_lines_into_discord_messages,
 )
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError, Member

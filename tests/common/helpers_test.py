@@ -10,10 +10,9 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     render_percentage,
     render_relative_time,
-    check_member_has_role,
     validate_playername,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
@@ -32,7 +31,7 @@ class TestHelpers(unittest.TestCase):
 
     def test_validate_playername(self):
         """Test validate playername happy path"""
-        member = create_test_member("tester", ROLE.MEMBER, "tester")
+        member = create_test_member("tester", [ROLE.MEMBER], "tester")
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -47,7 +46,7 @@ class TestHelpers(unittest.TestCase):
     def test_validate_playername_fails_too_short(self):
         """Test validate playername fails when too short"""
         playername = ""
-        member = create_test_member(playername, ROLE.MEMBER)
+        member = create_test_member(playername, [ROLE.MEMBER])
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -60,7 +59,7 @@ class TestHelpers(unittest.TestCase):
     def test_validate_playername_fails_too_long(self):
         """Test validate playername fails when too long"""
         playername = "0123456789012"
-        member = create_test_member(playername, ROLE.MEMBER, playername)
+        member = create_test_member(playername, [ROLE.MEMBER], playername)
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -76,7 +75,7 @@ class TestHelpers(unittest.TestCase):
         It should still attempt to fetch and return Member object if possible
         """
         playername = "player"
-        member = create_test_member(playername, ROLE.MEMBER, playername)
+        member = create_test_member(playername, [ROLE.MEMBER], playername)
         interaction = create_mock_discord_interaction([member])
 
         assert interaction.guild
@@ -94,7 +93,7 @@ class TestHelpers(unittest.TestCase):
         It should return None in place of Member object if not found
         """
         playername = "player"
-        unrelated_member = create_test_member("tester", ROLE.MEMBER)
+        unrelated_member = create_test_member("tester", [ROLE.MEMBER])
         interaction = create_mock_discord_interaction([unrelated_member])
 
         assert interaction.guild
@@ -105,56 +104,6 @@ class TestHelpers(unittest.TestCase):
 
         self.assertEqual(result_member, None)
         self.assertEqual(result_playername, playername)
-
-    def test_check_member_has_role(self):
-        """Test validate member has role"""
-        member = Mock(discord.Member)
-        member.roles = [ROLE.MEMBER]
-
-        self.assertEqual(check_member_has_role(member, ROLE.MEMBER), True)
-
-    def test_check_member_has_role_fails(self):
-        """Test validate member has role fails when member does not have role"""
-        member = Mock(discord.Member)
-        member.roles = [ROLE.MEMBER]
-
-        self.assertEqual(check_member_has_role(member, ROLE.LEADERSHIP), False)
-
-    def test_check_member_has_role_or_higher(self):
-        """Test validate member has role or higher"""
-        member = Mock(discord.Member)
-        member.roles = [ROLE.LEADERSHIP]
-
-        self.assertEqual(
-            check_member_has_role(member, ROLE.MEMBER, or_higher=True), True
-        )
-
-    def test_check_member_has_role_or_higher_fail(self):
-        """Test validate member has role or higher"""
-        member = Mock(discord.Member)
-        member.roles = [ROLE.MEMBER]
-
-        self.assertEqual(
-            check_member_has_role(member, ROLE.STAFF, or_higher=True), False
-        )
-
-    def test_check_member_has_role_or_lower(self):
-        """Test validate member has role or lower"""
-        member = Mock(discord.Member)
-        member.roles = [ROLE.MEMBER]
-
-        self.assertEqual(
-            check_member_has_role(member, ROLE.LEADERSHIP, or_lower=True), True
-        )
-
-    def test_check_member_has_role_or_lower_fail(self):
-        """Test validate member has role or lower"""
-        member = Mock(discord.Member)
-        member.roles = []
-
-        self.assertEqual(
-            check_member_has_role(member, ROLE.MEMBER, or_lower=True), False
-        )
 
     def test_find_member_by_nickname(self):
         """Test find member by nickname happy path"""

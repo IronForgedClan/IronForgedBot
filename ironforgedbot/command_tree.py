@@ -8,6 +8,8 @@ from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.admin.cmd_log import cmd_log
 from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
+from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
+from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
@@ -20,7 +22,7 @@ from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.config import CONFIG
+from ironforgedbot.config import CONFIG, ENVIRONMENT
 
 logger = logging.getLogger(__name__)
 
@@ -155,5 +157,20 @@ class IronForgedCommands:
                     name="trick_or_treat",
                     description="Feeling lucky, punk?",
                     callback=cmd_trick_or_treat,
+                )
+            )
+        if CONFIG.ENVIRONMENT in [ENVIRONMENT.DEVELOPMENT, ENVIRONMENT.STAGING]:
+            self._tree.add_command(
+                discord.app_commands.Command(
+                    name="debug_commands",
+                    description="Menu showing all commands",
+                    callback=cmd_debug_commands,
+                )
+            )
+            self._tree.add_command(
+                discord.app_commands.Command(
+                    name="stress_test",
+                    description="Stress test",
+                    callback=cmd_stress_test,
                 )
             )
