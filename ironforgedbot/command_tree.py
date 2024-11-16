@@ -22,7 +22,7 @@ from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.config import CONFIG
+from ironforgedbot.config import CONFIG, ENVIRONMENT
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +159,7 @@ class IronForgedCommands:
                     callback=cmd_trick_or_treat,
                 )
             )
-        if CONFIG.DEBUG_COMMANDS:
+        if CONFIG.ENVIRONMENT in [ENVIRONMENT.DEVELOPMENT, ENVIRONMENT.STAGING]:
             self._tree.add_command(
                 discord.app_commands.Command(
                     name="debug_commands",

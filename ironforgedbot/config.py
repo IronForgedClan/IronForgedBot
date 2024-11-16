@@ -1,3 +1,4 @@
+import enum
 import logging
 import os
 import sys
@@ -7,12 +8,18 @@ from dotenv import load_dotenv
 logger = logging.getLogger(__name__)
 
 
+class ENVIRONMENT(enum.StrEnum):
+    DEVELOPMENT = "dev"
+    STAGING = "staging"
+    PRODUCTION = "prod"
+
+
 class Config:
     def __init__(self):
         load_dotenv()
 
         self.BOT_VERSION: str = self.get_bot_version()
-        self.DEBUG_COMMANDS: bool = os.getenv("ENVIRONMENT", "prod") == "dev"
+        self.ENVIRONMENT: ENVIRONMENT = ENVIRONMENT(os.getenv("ENVIRONMENT", "prod"))
         self.TEMP_DIR: str = os.getenv("TEMP_DIR", "./temp")
         self.SHEET_ID: str = os.getenv("SHEET_ID", "")
         self.GUILD_ID: int = int(os.getenv("GUILD_ID") or 0)
