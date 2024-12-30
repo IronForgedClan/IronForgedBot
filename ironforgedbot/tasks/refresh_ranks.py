@@ -6,7 +6,12 @@ import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_player_points_total
 from ironforgedbot.common.helpers import find_emoji
-from ironforgedbot.common.ranks import get_rank_from_member, get_rank_from_points
+from ironforgedbot.common.ranks import (
+    GOD_ALIGNMENT,
+    RANK,
+    get_rank_from_member,
+    get_rank_from_points,
+)
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold
 
@@ -26,14 +31,25 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             continue
 
         if member.nick is None or len(member.nick) < 1:
-            message = f"{member.mention} has no nickname set, skipping..."
+            message = (
+                f"{member.mention} is not a Prospect, Applicant, Guest or Bot "
+                "and has no nickname set, ignoring..."
+            )
             await report_channel.send(message)
             continue
 
         current_rank = get_rank_from_member(member)
+
+        if current_rank in GOD_ALIGNMENT:
+            continue
+
+        if current_rank == RANK.GOD:
+            message = f"{member.mention} has God role but no alignment."
+            await report_channel.send(message)
+            continue
+
         if current_rank is None:
-            message = f"{member.mention} detected without any ranked role, skipping..."
-            logger.warning(f"{member.display_name} has no ranked role set")
+            message = f"{member.mention} detected without any ranked role, ignoring..."
             await report_channel.send(message)
             continue
 
