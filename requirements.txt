@@ -6,24 +6,24 @@
 #
 aiofiles==24.1.0
     # via -r requirements.in
-aiohappyeyeballs==2.4.3
+aiohappyeyeballs==2.4.4
     # via aiohttp
-aiohttp==3.10.9
+aiohttp==3.11.11
     # via
     #   -r requirements.in
     #   discord-py
     #   wom-py
-aiosignal==1.3.1
+aiosignal==1.3.2
     # via aiohttp
-apscheduler==3.10.4
+apscheduler==3.11.0
     # via -r requirements.in
-attrs==24.2.0
+attrs==24.3.0
     # via aiohttp
 cachetools==5.5.0
     # via google-auth
-certifi==2024.8.30
+certifi==2024.12.14
     # via requests
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
     # via requests
 concurrent-log-handler==0.9.25
     # via -r requirements.in
@@ -31,15 +31,15 @@ discord-py==2.4.0
     # via
     #   -r requirements.in
     #   reactionmenu
-frozenlist==1.4.1
+frozenlist==1.5.0
     # via
     #   aiohttp
     #   aiosignal
-google-api-core==2.21.0
+google-api-core==2.24.0
     # via google-api-python-client
-google-api-python-client==2.149.0
+google-api-python-client==2.156.0
     # via -r requirements.in
-google-auth==2.35.0
+google-auth==2.37.0
     # via
     #   -r requirements.in
     #   google-api-core
@@ -47,7 +47,7 @@ google-auth==2.35.0
     #   google-auth-httplib2
 google-auth-httplib2==0.2.0
     # via google-api-python-client
-googleapis-common-protos==1.65.0
+googleapis-common-protos==1.66.0
     # via google-api-core
 httplib2==0.22.0
     # via
@@ -57,19 +57,21 @@ idna==3.10
     # via
     #   requests
     #   yarl
-msgspec==0.18.6
+msgspec==0.19.0
     # via wom-py
 multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
-portalocker==2.10.1
+portalocker==3.0.0
     # via concurrent-log-handler
-propcache==0.2.0
-    # via yarl
-proto-plus==1.24.0
+propcache==0.2.1
+    # via
+    #   aiohttp
+    #   yarl
+proto-plus==1.25.0
     # via google-api-core
-protobuf==5.28.2
+protobuf==5.29.2
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -80,16 +82,14 @@ pyasn1==0.6.1
     #   rsa
 pyasn1-modules==0.4.1
     # via google-auth
-pyparsing==3.1.4
+pyparsing==3.2.0
     # via httplib2
 python-dateutil==2.9.0.post0
     # via -r requirements.in
 python-dotenv==1.0.1
     # via -r requirements.in
 pytz==2024.2
-    # via
-    #   -r requirements.in
-    #   apscheduler
+    # via -r requirements.in
 reactionmenu==3.1.7
     # via -r requirements.in
 requests==2.32.3
@@ -98,10 +98,8 @@ requests==2.32.3
     #   google-api-core
 rsa==4.9
     # via google-auth
-six==1.16.0
-    # via
-    #   apscheduler
-    #   python-dateutil
+six==1.17.0
+    # via python-dateutil
 strenum==0.4.15
     # via -r requirements.in
 tabulate==0.9.0
@@ -110,9 +108,9 @@ tzlocal==5.2
     # via apscheduler
 uritemplate==4.1.1
     # via google-api-python-client
-urllib3==2.2.3
+urllib3==2.3.0
     # via requests
 wom-py==1.0.1
     # via -r requirements.in
-yarl==1.14.0
+yarl==1.18.3
     # via aiohttp

@@ -72,7 +72,6 @@ async def _get_valid_wom_members(
     wom_group_result = await wom_client.groups.get_details(wom_group_id)
 
     if wom_group_result.is_err:
-        logger.critical(wom_group_result.unwrap_err())
         await updates_channel.send("Error fetching WOM group details.")
         return None, []
 

@@ -1,17 +1,16 @@
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import discord
 import wom
 
 from ironforgedbot.tasks.membership_discrepancies import (
-    job_check_membership_discrepancies,
     _get_valid_wom_members,
+    job_check_membership_discrepancies,
 )
 from tests.helpers import (
     create_mock_discord_guild,
-    create_mock_wom_client,
 )
 
 mock_wom_group_detail = SimpleNamespace(

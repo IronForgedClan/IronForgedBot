@@ -61,6 +61,7 @@ def create_test_member(
         role_list.append(mock_role)
 
     mock_member = Mock(spec=discord.Member)
+    mock_member.bot = False
     mock_member.id = random.randint(100, 999)
     mock_member.roles = role_list
     mock_member.name = name
