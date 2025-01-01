@@ -1,8 +1,12 @@
+import io
 import logging
 import random
-from typing import Optional
+from typing import Any, Optional, Tuple
+
 import discord
 from discord.ui import Button, Modal, TextInput, View
+from PIL import Image, ImageDraw, ImageFont
+
 from ironforgedbot.common.helpers import (
     find_emoji,
     find_member_by_nickname,
@@ -16,19 +20,110 @@ from ironforgedbot.state import STATE
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
 
-
 logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER, ephemeral=True)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
+    file = await build_winner_image_file("oxore", 5105000)
+    return await interaction.followup.send(file=file)
+
     embed = await build_embed(interaction)
     if not embed:
         return
 
     menu = build_menu(interaction)
     menu.message = await interaction.followup.send(embed=embed, view=menu)
+
+
+async def build_winner_image_file(winner_name: str, winnings: int) -> discord.File:
+    image_path = "img/raffle_winner.jpeg"
+
+    def calculate_position(
+        text,
+        font: ImageFont.FreeTypeFont,
+    ) -> Tuple[float, float]:
+        text = str(text)
+        bbox = font.getbbox(text)
+        text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        image_width, image_height = img.size
+        x = (image_width - text_width) // 2
+        y = (image_height - text_height) // 2
+
+        return x, y
+
+    def draw_text_with_outline(
+        draw: ImageDraw.Draw,
+        x: float,
+        y: float,
+        text: str,
+        font: ImageFont.FreeTypeFont,
+        outline_color: Any = "black",
+        fill_color: Any = "yellow",
+        outline_width: int = 2,
+    ):
+        for offset_x, offset_y in [
+            (-outline_width, 0),
+            (outline_width, 0),
+            (0, -outline_width),
+            (0, outline_width),
+            (-outline_width, -outline_width),
+            (-outline_width, outline_width),
+            (outline_width, -outline_width),
+            (outline_width, outline_width),
+        ]:
+            draw.text((x + offset_x, y + offset_y), text, font=font, fill=outline_color)
+
+        draw.text((x, y), text, font=font, fill=fill_color)
+
+    with Image.open(image_path) as img:
+        draw = ImageDraw.Draw(img)
+
+        # draw winner name
+        font = ImageFont.truetype("fonts/runescape.ttf", size=85)
+        x, y = calculate_position(winner_name, font)
+        y = y - 65  # offset
+
+        draw_text_with_outline(draw, x, y, winner_name, font)
+
+        # draw winner quantity with icon
+        spacing = 10
+        offset = 90
+        winnings_text = f"{winnings:,}"
+        font = ImageFont.truetype("fonts/runescape.ttf", size=40)
+
+        icon = Image.open("img/ingot_icon.png").convert("RGBA")
+        icon = icon.resize((35, 35))
+        icon_width, icon_height = icon.size
+
+        text_bbox = font.getbbox(winnings_text)
+        text_width, text_height = (
+            text_bbox[2] - text_bbox[0],
+            text_bbox[3] - text_bbox[1],
+        )
+
+        total_width = text_width + spacing + icon_width
+        image_width = img.width
+        x_start = (image_width - total_width) // 2
+
+        # Calculate positions
+        icon_x = x_start
+        icon_y = (y + (text_height - icon_height) // 2) + offset
+        text_x = x_start + icon_width + spacing
+        text_y = y + offset
+
+        x, y = calculate_position(winnings_text, font)
+        y = y + 20  # offset
+
+        draw_text_with_outline(draw, text_x, text_y, winnings_text, font)
+        img.paste(icon, (icon_x, icon_y), mask=icon)
+
+        # Return discord.File
+        with io.BytesIO() as image_binary:
+            img.save(image_binary, "PNG")
+            image_binary.seek(0)
+            return discord.File(fp=image_binary, filename="raffle_winner.png")
 
 
 async def build_embed(interaction: discord.Interaction):
@@ -191,6 +286,7 @@ class RaffleMenuView(View):
             embed=await build_embed(interaction), view=build_menu(interaction)
         )
 
+        # Calculate valid entries
         current_members = {}
         for member in members:
             current_members[member.id] = member.runescape_name
@@ -201,25 +297,62 @@ class RaffleMenuView(View):
             if current_members.get(id) is not None:
                 entries.extend([current_members.get(id)] * ticket_count)
 
-        winner = entries[random.randrange(0, len(entries))]
-        winning_member = find_member_by_nickname(interaction.guild, winner)
+        logger.info(entries)
 
+        # Calculate winner
+        winner = entries[random.randrange(0, len(entries))]
+        winning_discord_member = find_member_by_nickname(interaction.guild, winner)
         winnings = len(entries) * (STATE.state["raffle_price"] / 2)
 
-        # TODO: Make this more fun by adding an entries file or rendering a graphic
-        await interaction.followup.send(
-            f"{winning_member.mention} has won {winnings:,} ingots out of {len(entries)} entries!"
-        )
+        # Award winnings
+        try:
+            member = await STORAGE.read_member(
+                normalize_discord_string(winning_discord_member.display_name)
+            )
+        except StorageError as error:
+            return await send_error_response(interaction, str(error))
 
+        if member is None:
+            return await send_error_response(
+                interaction,
+                f"Member '{winning_discord_member.display_name}' not found in storage.",
+            )
+
+        member.ingots += winnings
+
+        try:
+            await STORAGE.update_members(
+                [member],
+                interaction.user.display_name,
+                note=f"[BOT] Raffle winnings ({winnings:,})",
+            )
+        except StorageError as error:
+            logger.error(error)
+            await send_error_response(interaction, "Error updating ingots.")
+
+        # Cleanup
         try:
             await STORAGE.delete_raffle_tickets(
                 normalize_discord_string(interaction.user.display_name).lower()
             )
         except StorageError as error:
-            await send_error_response(
+            return await send_error_response(
                 interaction, f"Encountered error clearing ticket storage: {error}"
             )
-            return
+
+        # Announce winner
+        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        ingot_icon = find_emoji(None, "Ingot")
+        file = await build_winner_image_file(winner)
+
+        return await interaction.followup.send(
+            (
+                f"## {ticket_icon} Congratulations {winning_discord_member.mention}!!\n"
+                f"You have won {ingot_icon} {text_bold(f"{winnings:,}")} ingots "
+                f"out of {ticket_icon} {text_bold(f"{len(entries):,}")} entries!"
+            ),
+            file=file,
+        )
 
 
 class StartRaffleModal(Modal):
