@@ -16,6 +16,7 @@ from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
+from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
 from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
 from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
 from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
@@ -149,6 +150,13 @@ class IronForgedCommands:
                 name="get_role_members",
                 description="Generate a list of all members with a certain role.",
                 callback=cmd_get_role_members,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="raffle",
+                description="Play or control the raffle.",
+                callback=cmd_raffle,
             )
         )
         if CONFIG.TRICK_OR_TREAT_ENABLED:
