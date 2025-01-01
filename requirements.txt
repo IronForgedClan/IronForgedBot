@@ -63,7 +63,9 @@ multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
-portalocker==3.0.0
+pillow==11.0.0
+    # via -r requirements.in
+portalocker==3.1.1
     # via concurrent-log-handler
 propcache==0.2.1
     # via
@@ -82,7 +84,7 @@ pyasn1==0.6.1
     #   rsa
 pyasn1-modules==0.4.1
     # via google-auth
-pyparsing==3.2.0
+pyparsing==3.2.1
     # via httplib2
 python-dateutil==2.9.0.post0
     # via -r requirements.in
