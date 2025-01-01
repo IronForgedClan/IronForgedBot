@@ -163,7 +163,9 @@ class RaffleMenuView(View):
             return
 
         await interaction.response.send_modal(StartRaffleModal())
-        await self.message.edit(embed=build_embed(), view=build_menu(interaction))
+        await self.message.edit(
+            embed=await build_embed(interaction), view=build_menu(interaction)
+        )
 
     async def handle_end_raffle(self, interaction: discord.Interaction):
         assert interaction.guild
@@ -186,7 +188,7 @@ class RaffleMenuView(View):
             return
 
         await interaction.response.edit_message(
-            embed=build_embed(), view=build_menu(interaction)
+            embed=await build_embed(interaction), view=build_menu(interaction)
         )
 
         current_members = {}
@@ -206,7 +208,7 @@ class RaffleMenuView(View):
 
         # TODO: Make this more fun by adding an entries file or rendering a graphic
         await interaction.followup.send(
-            f"{winning_member.mentioned_in} has won {winnings:,} ingots out of {len(entries)} entries!"
+            f"{winning_member.mention} has won {winnings:,} ingots out of {len(entries)} entries!"
         )
 
         try:
