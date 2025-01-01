@@ -10,6 +10,7 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.decorators import require_role
 from ironforgedbot.state import STATE
 from ironforgedbot.storage.sheets import STORAGE
@@ -22,21 +23,43 @@ logger = logging.getLogger(__name__)
 @require_role(ROLE.MEMBER, ephemeral=True)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
-    embed = build_embed()
-    menu = build_menu(interaction)
+    embed = await build_embed(interaction)
+    if not embed:
+        return
 
+    menu = build_menu(interaction)
     menu.message = await interaction.followup.send(embed=embed, view=menu)
 
 
-def build_embed():
+async def build_embed(interaction: discord.Interaction):
+    ticket_icon = find_emoji(None, "Raffle_Ticket")
     ingot_icon = find_emoji(None, "Ingot")
     ticket_price = STATE.state["raffle_price"]
     embed_color = (
         discord.Colour.green() if STATE.state["raffle_on"] else discord.Colour.red()
     )
 
+    try:
+        all_tickets = await STORAGE.read_raffle_tickets()
+    except StorageError as error:
+        return await send_error_response(
+            interaction, f"Encountered error ending raffle: {error}"
+        )
+
+    my_ticket_count = 0
+    total_tickets = 0
+    prize_pool = 0
+
+    for id, qty in all_tickets.items():
+        if id == interaction.user.id:
+            my_ticket_count = qty
+
+        total_tickets += qty
+
+    prize_pool = int(total_tickets * (STATE.state["raffle_price"] / 2))
+
     embed = build_response_embed(
-        title=f"{ingot_icon} Iron Forged Raffle 💰",
+        title=f"{ticket_icon} Iron Forged Raffle",
         description="",
         color=embed_color,
     )
@@ -51,8 +74,12 @@ def build_embed():
             value=f"{ingot_icon} {ticket_price:,}",
             inline=True,
         )
-        embed.add_field(name="My Tickets", value="🎫 3,000", inline=True)
-        embed.add_field(name="Prize Pool", value=f"{ingot_icon} 30,250", inline=True)
+        embed.add_field(
+            name="My Tickets", value=f"{ticket_icon} {my_ticket_count:,}", inline=True
+        )
+        embed.add_field(
+            name="Prize Pool", value=f"{ingot_icon} {prize_pool:,}", inline=True
+        )
 
     embed.set_thumbnail(
         url="https://oldschool.runescape.wiki/images/thumb/Mounted_coins_built.png/250px-Mounted_coins_built.png"
@@ -162,15 +189,15 @@ class RaffleMenuView(View):
             embed=build_embed(), view=build_menu(interaction)
         )
 
-        id_rsn = {}
+        current_members = {}
         for member in members:
-            id_rsn[member.id] = member.runescape_name
+            current_members[member.id] = member.runescape_name
 
         entries = []
         for id, ticket_count in current_tickets.items():
-            # Account for users who left clan since buying tickets.
-            if id_rsn.get(id) is not None:
-                entries.extend([id_rsn.get(id)] * ticket_count)
+            # Ignore members who have left the clan since buying tickets
+            if current_members.get(id) is not None:
+                entries.extend([current_members.get(id)] * ticket_count)
 
         winner = entries[random.randrange(0, len(entries))]
         winning_member = find_member_by_nickname(interaction.guild, winner)
@@ -235,63 +262,71 @@ class BuyTicketModal(Modal):
         self.add_item(self.ticket_qty)
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True)
         qty = self.ticket_qty.value
         caller = normalize_discord_string(interaction.user.display_name)
 
         if not qty.isdigit():
-            return await interaction.response.send_message(
-                "Invalid input.", ephemeral=True
+            return await send_error_response(
+                interaction, "Invalid quantity of tickets entered."
             )
 
         qty = int(qty)
         if qty < 1:
-            return await interaction.response.send_message(
-                "Invalid input.", ephemeral=True
+            return await send_error_response(
+                interaction, "Invalid quantity of tickets entered."
             )
 
         try:
             member = await STORAGE.read_member(caller)
         except StorageError as error:
-            await send_error_response(
+            return await send_error_response(
                 interaction, f"Encountered error reading member from storage: {error}"
             )
-            return
 
         if member is None:
-            await send_error_response(
+            return await send_error_response(
                 interaction,
                 f"{caller} not found in storage, please reach out to leadership.",
             )
-            return
 
         cost = qty * STATE.state["raffle_price"]
         if cost > member.ingots:
-            await interaction.followup.send(
-                f"{caller} does not have enough ingots for {qty} tickets.\n"
-                + f"Cost: {cost}, current ingots: {member.ingots}"
+            return await send_error_response(
+                interaction,
+                f"{caller} does not have enough ingots for {qty:,} tickets.\n"
+                + f"Cost: {cost:,}, current ingots: {member.ingots:,}",
             )
-            return
 
+        logger.info(f"Buying {qty:,} tickets for {caller}")
         member.ingots -= cost
         try:
-            await STORAGE.update_members([member], caller, note="Bought raffle tickets")
+            await STORAGE.update_members([member], caller, note="Buy raffle tickets")
         except StorageError as error:
-            await send_error_response(
-                interaction, f"Encountered error updating member ingot count: {error}"
+            logger.error(error)
+            return await send_error_response(
+                interaction, "Encountered error updating member ingot count."
             )
-            return
 
         try:
             await STORAGE.add_raffle_tickets(member.id, qty)
         except StorageError as error:
-            await send_error_response(
-                interaction, f"Encountered error adding raffle tickets: {error}"
+            logger.error(error)
+            return await send_error_response(
+                interaction,
+                "Encountered error saving raffle tickets. "
+                "Ingots have been deducted, please contact a member of staff.",
             )
 
-            return
-
-        await interaction.followup.send(
-            f"{caller} successfully bought {qty} tickets for {cost} ingots!"
+        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        ingot_icon = find_emoji(None, "Ingot")
+        embed = build_response_embed(
+            title=f"{ticket_icon} Raffle Ticket Purchase",
+            description=(
+                f"{text_bold(caller)} just bought {ticket_icon} {text_bold(f"{qty:,}")} "
+                f"raffle ticket(s)\nfor {ingot_icon} {text_bold(f"{cost:,}")}."
+            ),
+            color=discord.Colour.gold(),
         )
 
-        await interaction.response.send_message(f"You entered: {qty}", ephemeral=True)
+        await interaction.followup.send(embed=embed)
