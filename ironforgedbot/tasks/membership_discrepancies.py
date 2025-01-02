@@ -80,7 +80,7 @@ async def _get_valid_wom_members(
     members: List[str] = []
     ignore_members: List[str] = []
     for member in wom_group.memberships:
-        member_role = member.membership.role
+        member_role = member.role
         member_rsn = member.player.username
 
         if member_role is None:
