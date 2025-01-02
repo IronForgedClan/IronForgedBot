@@ -17,13 +17,13 @@ mock_wom_group_detail = SimpleNamespace(
     memberships=[
         SimpleNamespace(
             **{
-                "membership": SimpleNamespace(**{"role": wom.GroupRole.Administrator}),
+                "role": wom.GroupRole.Administrator,
                 "player": SimpleNamespace(**{"username": "ignored_user"}),
             }
         ),
         SimpleNamespace(
             **{
-                "membership": SimpleNamespace(**{"role": wom.GroupRole.Adamant}),
+                "role": wom.GroupRole.Adamant,
                 "player": SimpleNamespace(**{"username": "tester"}),
             }
         ),
@@ -45,15 +45,19 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         expected_messages = [
             call("Beginning membership discrepancy check..."),
-            call("Found **3** discord members\nFound **4** wom members..."),
             call(
-                "```\nMember(s) found only on discord:\nmore\ntest\nMember(s) "
+                "## Members Found\nDiscord: **3** members\n"
+                "Wise Old Man: **4** members\n\n_Computing discrepancies..._"
+            ),
+            call(
+                "```\nMembers found only on discord:\nmore\ntest\nMembers "
                 "found only on wom:\nanother\nbar\ntester\n```"
             ),
             call(
-                "Finished membership discrepancy check.\nFound **2** member(s) only "
-                "on discord, and **3** member(s) only on wom."
+                "## Discrepancy Summary\nDiscord Only: **2** members\n"
+                "Wise Old Man Only: **3** members",
             ),
+            call("Finished membership discrepancy check."),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -82,15 +86,19 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         expected_messages = [
             call("Beginning membership discrepancy check..."),
-            call("Found **3** discord members\nFound **4** wom members..."),
             call(
-                "```\nMember(s) found only on discord:\nmore\ntest\nMember(s) "
+                "## Members Found\nDiscord: **3** members\n"
+                "Wise Old Man: **4** members\n\n_Computing discrepancies..._"
+            ),
+            call(
+                "```\nMembers found only on discord:\nmore\ntest\nMembers "
                 "found only on wom:\nanother\nbar\ntester\n```"
             ),
             call(
-                "Finished membership discrepancy check.\nFound **2** member(s) only "
-                "on discord, and **3** member(s) only on wom."
+                "## Discrepancy Summary\nDiscord Only: **2** members\n"
+                "Wise Old Man Only: **3** members",
             ),
+            call("Finished membership discrepancy check."),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
