@@ -104,17 +104,13 @@ async def build_winner_image_file(winner_name: str, winnings: int) -> discord.Fi
         )
 
         total_width = text_width + spacing + icon_width
-        image_width = img.width
-        x_start = (image_width - total_width) // 2
+        x_start = (img.width - total_width) // 2
 
         # Calculate positions
         icon_x = x_start
         icon_y = (y + (text_height - icon_height) // 2) + offset
         text_x = x_start + icon_width + spacing
         text_y = y + offset
-
-        x, y = calculate_position(winnings_text, font)
-        y = y + 20  # offset
 
         draw_text_with_outline(draw, text_x, text_y, winnings_text, font)
         img.paste(icon, (icon_x, icon_y), mask=icon)
