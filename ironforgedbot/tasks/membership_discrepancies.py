@@ -44,23 +44,25 @@ async def job_check_membership_discrepancies(
         return
 
     await report_channel.send(
-        f"Found **{len(discord_members)}** discord members\nFound **{len(wom_members)}** wom members..."
+        f"## Members Found\nDiscord: **{len(discord_members)}** members\n"
+        f"Wise Old Man: **{len(wom_members)}** members\n\n_Computing discrepancies..._"
     )
 
     only_discord = sorted(list(set(discord_members) - set(wom_members)))
     only_wom = sorted(list(set(wom_members) - set(discord_members)))
 
-    only_discord.insert(0, "Member(s) found only on discord:")
-    only_wom.insert(0, "Member(s) found only on wom:")
+    only_discord.insert(0, "Members found only on discord:")
+    only_wom.insert(0, "Members found only on wom:")
 
     discord_messages = fit_log_lines_into_discord_messages(only_discord + only_wom)
     for message in discord_messages:
         await report_channel.send(message)
 
     await report_channel.send(
-        f"Finished membership discrepancy check.\nFound **{len(discord_members) - 1}** member(s) "
-        f"only on discord, and **{len(wom_members) - 1}** member(s) only on wom.",
+        f"## Discrepancy Summary\nDiscord Only: **{len(only_discord) - 1}** members\n"
+        f"Wise Old Man Only: **{len(only_wom) - 1}** members",
     )
+    await report_channel.send("Finished membership discrepancy check.")
 
 
 async def _get_valid_wom_members(
@@ -80,7 +82,7 @@ async def _get_valid_wom_members(
     members: List[str] = []
     ignore_members: List[str] = []
     for member in wom_group.memberships:
-        member_role = member.membership.role
+        member_role = member.role
         member_rsn = member.player.username
 
         if member_role is None:
