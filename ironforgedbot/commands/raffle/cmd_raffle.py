@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import random
@@ -14,7 +15,7 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
-from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.decorators import require_role
 from ironforgedbot.state import STATE
 from ironforgedbot.storage.sheets import STORAGE
@@ -240,35 +241,38 @@ class RaffleMenuView(View):
 
     async def on_timeout(self) -> None:
         if self.message:
-            await self.message.edit(view=None)
+            self.message = await self.message.edit(view=None)
 
         return await super().on_timeout()
 
     async def handle_buy_tickets(self, interaction: discord.Interaction):
-        if not self.message:
-            return
+        await interaction.response.send_modal(BuyTicketModal())
 
-        await interaction.response.send_modal(BuyTicketModal(self.message))
+        if self.message:
+            self.message = await self.message.delete()
 
     async def handle_start_raffle(self, interaction: discord.Interaction):
         await interaction.response.send_modal(StartRaffleModal())
+
         if self.message:
-            await self.message.delete()
+            self.message = await self.message.delete()
 
     async def handle_end_raffle(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
         async def handle_end_raffle_error(message):
             if self.message:
-                await self.message.delete()
+                self.message = await self.message.delete()
 
-            await interaction.response.defer()
             return await send_error_response(interaction, message)
 
         assert interaction.guild
-        STATE.state["raffle_on"] = False
 
         if self.message:
             self.message = await self.message.edit(
-                content="## Ending raffle\nSelecting winner, standby..."
+                content="## Ending raffle\nSelecting winner, standby...",
+                embed=None,
+                view=None,
             )
 
         try:
@@ -311,7 +315,7 @@ class RaffleMenuView(View):
         random.shuffle(entries)
         winner = random.choice(entries)
         winning_discord_member = find_member_by_nickname(interaction.guild, winner)
-        winnings = len(entries) * (STATE.state["raffle_price"] / 2)
+        winnings = int(len(entries) * (STATE.state["raffle_price"] / 2))
 
         logger.info(entries)
         logger.info(winner)
@@ -340,6 +344,28 @@ class RaffleMenuView(View):
         except StorageError as error:
             return await handle_end_raffle_error(error)
 
+        # Announce winner
+        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        ingot_icon = find_emoji(None, "Ingot")
+        file = await build_winner_image_file(winner, int(winnings))
+
+        winner_ticket_count = current_tickets[winning_discord_member.id]
+        winner_spent = winner_ticket_count * STATE.state["raffle_price"]
+        winner_profit = winnings - winner_spent
+        await interaction.followup.send(
+            (
+                f"## {ticket_icon} Congratulations {winning_discord_member.mention}!!\n"
+                f"You have won {ingot_icon} {text_bold(f"{winnings:,}")} ingots!\n\n"
+                f"You spent {ingot_icon} {text_bold(f"{winner_spent:,}")} on {ticket_icon} "
+                f"{text_bold(f"{winner_ticket_count:,}")} tickets.\n"
+                f"Resulting in {ingot_icon}{text_bold(f"{winner_profit:,}")} profit.\n"
+                + (f"{text_sub('ouch')}\n\n" if winner_profit < 0 else "\n")
+                + f"There were a total of {ticket_icon} {text_bold(f"{len(entries):,}")} entries.\n"
+                "Thank you everyone for participating!"
+            ),
+            file=file,
+        )
+
         # Cleanup
         try:
             await STORAGE.delete_raffle_tickets(
@@ -351,21 +377,10 @@ class RaffleMenuView(View):
             )
 
         if self.message:
-            await self.message.delete()
+            self.message = await self.message.delete()
 
-        # Announce winner
-        ticket_icon = find_emoji(None, "Raffle_Ticket")
-        ingot_icon = find_emoji(None, "Ingot")
-        file = await build_winner_image_file(winner, int(winnings))
-
-        return await interaction.followup.send(
-            (
-                f"## {ticket_icon} Congratulations {winning_discord_member.mention}!!\n"
-                f"You have won {ingot_icon} {text_bold(f"{winnings:,}")} ingots.\n"
-                f"Your ticket was chosen out of {ticket_icon} {text_bold(f"{len(entries):,}")} total entries!"
-            ),
-            file=file,
-        )
+        STATE.state["raffle_on"] = False
+        STATE.state["raffle_price"] = 0
 
 
 class StartRaffleModal(Modal):
@@ -392,19 +407,21 @@ class StartRaffleModal(Modal):
         STATE.state["raffle_on"] = True
         STATE.state["raffle_price"] = int(price)
 
+        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        ingot_icon = find_emoji(None, "Ingot")
+
         await interaction.response.send_message(
-            f"## Raffle Started\nTicket Price: **{int(price):,}**\n"
-            "Members can now buy raffle tickets with the `/raffle` command.\n"
-            "Admins can now end the raffle and select a winner by running the"
-            "`/raffle` command and clicking the 'End Raffle' button.",
+            f"## {ticket_icon} Raffle Started\nTicket Price: {ingot_icon} **{int(price):,}**\n\n"
+            "- Members can now buy raffle tickets with the `/raffle` command.\n"
+            "- Admins can now end the raffle and select a winner by running the"
+            "`/raffle` command and clicking the red 'End Raffle' button.",
             ephemeral=True,
         )
 
 
 class BuyTicketModal(Modal):
-    def __init__(self, parent_message: discord.Message):
+    def __init__(self):
         super().__init__(title="Buy Raffle Tickets")
-        self.parent_message = parent_message
 
         self.ticket_qty = TextInput(
             label="How many tickets?",
@@ -418,25 +435,30 @@ class BuyTicketModal(Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
+
         qty = self.ticket_qty.value
         caller = normalize_discord_string(interaction.user.display_name)
 
         if not qty.isdigit():
             return await send_error_response(
-                interaction, "Invalid quantity of tickets entered."
+                interaction,
+                f"{text_bold(caller)} entered an invalid quantity of tickets.",
             )
 
         qty = int(qty)
         if qty < 1:
             return await send_error_response(
-                interaction, "Invalid quantity of tickets entered."
+                interaction,
+                f"{text_bold(caller)} entered an invalid quantity of tickets.",
             )
 
         try:
             member = await STORAGE.read_member(caller)
         except StorageError as error:
+            logger.error(error)
             return await send_error_response(
-                interaction, f"Encountered error reading member from storage: {error}"
+                interaction,
+                f"Encountered error reading member {text_bold(caller)} from storage.",
             )
 
         if member is None:
@@ -449,18 +471,21 @@ class BuyTicketModal(Modal):
         if cost > member.ingots:
             return await send_error_response(
                 interaction,
-                f"{caller} does not have enough ingots for {qty:,} tickets.\n"
-                + f"Cost: {cost:,}, current ingots: {member.ingots:,}",
+                f"{text_bold(caller)} does not have enough ingots for {text_bold(f"{qty:,}")} tickets.\n"
+                f"Cost: {text_bold(f"{cost:,}")}, current ingots: {text_bold(f"{member.ingots:,}")}",
             )
 
         logger.info(f"Buying {qty:,} tickets for {caller}")
         member.ingots -= cost
         try:
-            await STORAGE.update_members([member], caller, note="Buy raffle tickets")
+            await STORAGE.update_members(
+                [member], caller, note=f"Pay for {qty} raffle tickets"
+            )
         except StorageError as error:
             logger.error(error)
             return await send_error_response(
-                interaction, "Encountered error updating member ingot count."
+                interaction,
+                f"Encountered error updating ingot count for {text_bold(caller)}.",
             )
 
         try:
@@ -469,22 +494,19 @@ class BuyTicketModal(Modal):
             logger.error(error)
             return await send_error_response(
                 interaction,
-                "Encountered error saving raffle tickets. "
+                f"Encountered error saving raffle tickets for {text_bold(caller)}.\n"
                 "Ingots have been deducted, please contact a member of staff.",
             )
 
         ticket_icon = find_emoji(None, "Raffle_Ticket")
         ingot_icon = find_emoji(None, "Ingot")
         embed = build_response_embed(
-            title=f"{ticket_icon} Raffle Ticket Purchase",
+            title=f"{ticket_icon} Ticket Purchase",
             description=(
-                f"{text_bold(caller)} just bought {ticket_icon} {text_bold(f"{qty:,}")} "
-                f"raffle ticket(s)\nfor {ingot_icon} {text_bold(f"{cost:,}")}."
+                f"{text_bold(caller)} just bought {ticket_icon} {text_bold(f"{qty:,}")} raffle "
+                f"ticket{'s' if qty > 1 else ''} for {ingot_icon} {text_bold(f"{cost:,}")}."
             ),
             color=discord.Colour.gold(),
         )
 
         await interaction.followup.send(embed=embed)
-
-        if self.parent_message:
-            await self.parent_message.delete()
