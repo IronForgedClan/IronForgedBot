@@ -5,6 +5,7 @@ import traceback
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
+from ironforgedbot.commands.admin.cmd_admin import cmd_admin
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.admin.cmd_log import cmd_log
 from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
@@ -151,6 +152,14 @@ class IronForgedCommands:
                 callback=cmd_get_role_members,
             )
         )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="admin",
+                description="Collection of administrative actions.",
+                callback=cmd_admin,
+            )
+        )
+
         if CONFIG.TRICK_OR_TREAT_ENABLED:
             self._tree.add_command(
                 discord.app_commands.Command(
