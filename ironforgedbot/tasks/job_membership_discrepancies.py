@@ -7,6 +7,7 @@ from wom import GroupRole, Client
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
     get_all_discord_members,
+    normalize_discord_string,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ async def job_check_membership_discrepancies(
 
     discord_members = get_all_discord_members(guild)
     if len(discord_members) > 1:
-        discord_members = [s.lower() for s in discord_members]
+        discord_members = [normalize_discord_string(s) for s in discord_members]
 
     wom_members, wom_ignore = await _get_valid_wom_members(
         wom_api_key, wom_group_id, report_channel

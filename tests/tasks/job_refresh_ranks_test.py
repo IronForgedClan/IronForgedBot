@@ -6,13 +6,15 @@ import discord
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.tasks.refresh_ranks import job_refresh_ranks
+from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
 from tests.helpers import create_mock_discord_guild, create_test_member
 
 
 class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.tasks.refresh_ranks.get_player_points_total")
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks(self, mock_sleep, mock_get_points):
         """Happy path with no additional reports"""
         mock_guild = create_mock_discord_guild(
@@ -31,7 +33,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_ignore_specific_roles(self, mock_sleep):
         """Should ignore specific roles"""
         mock_guild = create_mock_discord_guild(
@@ -53,7 +57,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_notifies_no_nickname(self, mock_sleep):
         """Reporting of members without nicknames set"""
         member = create_test_member("foo", [ROLE.MEMBER], "")
@@ -74,7 +80,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_ignore_god_alignment_roles(self, mock_sleep):
         """Should ignore God ranks with alignment set"""
         member = create_test_member(
@@ -93,7 +101,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_report_god_role_no_alignment(self, mock_sleep):
         """Should report users with God role but no alignment"""
         member = create_test_member("foo", [ROLE.MEMBER, RANK.GOD], "bar")
@@ -112,7 +122,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_report_no_valid_role(self, mock_sleep):
         """Should report users with no valid role set"""
         member = create_test_member("foo", [], "bar")
@@ -130,8 +142,10 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.get_player_points_total")
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_report_unable_to_lookup_score(
         self, mock_sleep, mock_get_points
     ):
@@ -154,8 +168,10 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.refresh_ranks.get_player_points_total")
-    @patch("ironforgedbot.tasks.refresh_ranks.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
+    @patch(
+        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
+    )
     async def test_job_refresh_ranks_member_need_upgrading(
         self, mock_sleep, mock_get_points
     ):

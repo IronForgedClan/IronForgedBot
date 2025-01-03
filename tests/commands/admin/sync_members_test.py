@@ -1,25 +1,17 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+from ironforgedbot.commands.admin.sync_members import sync_members
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.storage.types import Member
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
-    mock_require_role,
 )
-
-with patch(
-    "ironforgedbot.decorators.require_role",
-    mock_require_role,
-):
-    from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
 
 
 class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
-    @patch(
-        "ironforgedbot.commands.admin.cmd_sync_members.STORAGE", new_callable=AsyncMock
-    )
+    @patch("ironforgedbot.commands.admin.sync_members.STORAGE", new_callable=AsyncMock)
     async def test_sync_members(self, mock_storage):
         """Test that sheet can be updated to only members in Discord."""
         caller = create_test_member("leader", [ROLE.LEADERSHIP])
@@ -39,7 +31,8 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
             Member(id=13, runescape_name="member4", ingots=1000),
         ]
 
-        await cmd_sync_members(interaction)
+        assert interaction.guild
+        await sync_members(interaction.guild)
 
         mock_storage.add_members.assert_called_once_with(
             [Member(id=member3.id, runescape_name="member3", ingots=0)],
