@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 import discord
 import wom
 
-from ironforgedbot.tasks.membership_discrepancies import (
+from ironforgedbot.tasks.job_membership_discrepancies import (
     _get_valid_wom_members,
     job_check_membership_discrepancies,
 )
@@ -32,8 +32,8 @@ mock_wom_group_detail = SimpleNamespace(
 
 
 class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.tasks.membership_discrepancies.get_all_discord_members")
-    @patch("ironforgedbot.tasks.membership_discrepancies._get_valid_wom_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
     async def test_job_check_membership(self, mock_wom_members, mock_discord_members):
         mock_report_channel = Mock(discord.TextChannel)
         guild = create_mock_discord_guild()
@@ -63,11 +63,11 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
     @patch(
-        "ironforgedbot.tasks.membership_discrepancies.IGNORED_USERS",
+        "ironforgedbot.tasks.job_membership_discrepancies.IGNORED_USERS",
         ["ignored", "also_ignored"],
     )
-    @patch("ironforgedbot.tasks.membership_discrepancies.get_all_discord_members")
-    @patch("ironforgedbot.tasks.membership_discrepancies._get_valid_wom_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
     async def test_job_check_membership_should_ignore_users(
         self, mock_wom_members, mock_discord_members
     ):
@@ -103,8 +103,8 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.membership_discrepancies.get_all_discord_members")
-    @patch("ironforgedbot.tasks.membership_discrepancies._get_valid_wom_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
     async def test_job_check_membership_discrepancies_fails_no_wom_members(
         self, mock_wom_members, mock_discord_members
     ):
@@ -123,8 +123,8 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.membership_discrepancies.get_all_discord_members")
-    @patch("ironforgedbot.tasks.membership_discrepancies._get_valid_wom_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
     async def test_job_check_membership_discrepancies_fails_no_discord_members(
         self, mock_wom_members, mock_discord_members
     ):
@@ -143,7 +143,7 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
-    @patch("ironforgedbot.tasks.membership_discrepancies.Client")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.Client")
     async def test_get_valid_wom_members(self, mock_wom):
         mock_report_channel = Mock(discord.TextChannel)
         mock_wom_client = AsyncMock(spec=wom.Client)
@@ -162,7 +162,7 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(members, ["tester"])
         self.assertEqual(ignored, ["ignored_user"])
 
-    @patch("ironforgedbot.tasks.membership_discrepancies.Client")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.Client")
     async def test_get_valid_wom_members_fail_wom_error(self, mock_wom):
         mock_report_channel = Mock(discord.TextChannel)
         mock_wom_client = AsyncMock(spec=wom.Client)
