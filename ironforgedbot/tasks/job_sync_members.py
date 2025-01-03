@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.admin.cmd_sync_members import sync_members
+from ironforgedbot.commands.admin.sync_members import sync_members
 from ironforgedbot.common.helpers import fit_log_lines_into_discord_messages
 from ironforgedbot.storage.types import StorageError
 
@@ -14,6 +14,8 @@ async def job_sync_members(
     report_channel: discord.TextChannel,
 ):
     await report_channel.send("Beginning member sync...")
+    members_change = []
+
     try:
         members_change = await sync_members(guild)
     except StorageError as error:

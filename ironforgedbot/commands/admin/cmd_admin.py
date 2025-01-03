@@ -1,15 +1,13 @@
 import io
+import json
 import logging
 import os
 from typing import Optional
 
 import discord
 from discord.ui import View
-import json
 
-from ironforgedbot.commands.admin.cmd_sync_members import sync_members
 from ironforgedbot.common.helpers import (
-    fit_log_lines_into_discord_messages,
     get_text_channel,
 )
 from ironforgedbot.common.responses import send_error_response
@@ -18,8 +16,8 @@ from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
 from ironforgedbot.logging_config import LOG_DIR
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.types import StorageError
 from ironforgedbot.tasks.check_activity import job_check_activity
+from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.membership_discrepancies import (
     job_check_membership_discrepancies,
 )
@@ -75,7 +73,6 @@ class AdminMenuView(View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         assert interaction.guild
-        logger.info("Manually initiating member sync job")
         await interaction.response.send_message(
             "## Manually initiating member sync job...\n"
             f"View <#{self.report_channel.id}> for output.",
@@ -85,18 +82,7 @@ class AdminMenuView(View):
         await self.clear_parent()
         logger.info("Manually initiating sync member job")
 
-        try:
-            lines = await sync_members(interaction.guild)
-        except StorageError as error:
-            return await send_error_response(
-                interaction, f"Encountered error syncing members: {error}"
-            )
-
-        discord_messages = fit_log_lines_into_discord_messages(lines)
-        if len(discord_messages) == 0:
-            discord_messages = fit_log_lines_into_discord_messages(["No changes found"])
-
-        await self.report_channel.send(discord_messages[0])
+        await job_sync_members(interaction.guild, self.report_channel)
 
     @discord.ui.button(
         label="Member Discrepancy Check",

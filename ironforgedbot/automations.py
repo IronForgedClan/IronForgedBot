@@ -13,11 +13,11 @@ from ironforgedbot.tasks.check_activity import (
     job_check_activity,
     job_check_activity_reminder,
 )
+from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.membership_discrepancies import (
     job_check_membership_discrepancies,
 )
 from ironforgedbot.tasks.refresh_ranks import job_refresh_ranks
-from ironforgedbot.tasks.sync_members import job_sync_members
 
 logger = logging.getLogger(__name__)
 

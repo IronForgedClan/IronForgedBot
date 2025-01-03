@@ -4,34 +4,12 @@ import discord
 
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
-    fit_log_lines_into_discord_messages,
 )
-from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
-from ironforgedbot.decorators import require_role
 from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError, Member
+from ironforgedbot.storage.types import Member, StorageError
 
 logger = logging.getLogger(__name__)
-
-
-@require_role(ROLE.LEADERSHIP)
-async def cmd_sync_members(interaction: discord.Interaction):
-    assert interaction.guild
-
-    try:
-        lines = await sync_members(interaction.guild)
-    except StorageError as error:
-        await send_error_response(
-            interaction, f"Encountered error syncing members: {error}"
-        )
-        return
-
-    discord_messages = fit_log_lines_into_discord_messages(lines)
-    if len(discord_messages) == 0:
-        discord_messages = fit_log_lines_into_discord_messages(["No changes found"])
-    # We don't expect many changes here since it will co-exist with periodic updates
-    await interaction.followup.send(discord_messages[0])
 
 
 async def sync_members(guild: discord.Guild) -> list[str]:
