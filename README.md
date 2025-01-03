@@ -18,10 +18,8 @@
 | `/raffle_admin`       | Subcommand (str, [start, end, choose_winner])                                              | Leadership   | Parent command for controlling raffle state            |
 | `/raffle_tickets`     | N/A                                                                                        | Member       | Returns raffle ticket count for user                   |
 | `/buy_raffle_tickets` | Tickets (int)                                                                              | Member       | Purchases raffle tickets for user                      |
-| `/sync_members`       | N/A                                                                                        | Leadership   | Synchronises Discord members with storage              |
 | `/roster`             | Url (str)                                                                                  | Leadership   | Produces a roster list of players                      |
-| `/logs`               | Index (int)                                                                                | Discord Team | Privately shares bot log files                         |
-| `/activity_check`     | N/A                                                                                        | Leadership   | Manually starts the activity check automation          |
+| `/admin`              | N/A                                                                                        | Leadership   | A menu of administrative commands                      |
 | `/trick_or_treat`     | N/A                                                                                        | Member       | Holiday special command                                |
 | `/debug_commands`     | N/A                                                                                        | -            | Debug tool for testing various commands                |
 | `/stress_test`        | N/A                                                                                        | -            | Debug tool for initiating stressful environments       |
