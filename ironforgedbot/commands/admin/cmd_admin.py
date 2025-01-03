@@ -1,7 +1,4 @@
-import io
-import json
 import logging
-import os
 from typing import Optional
 
 import discord
@@ -16,13 +13,12 @@ from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
-from ironforgedbot.state import STATE
 from ironforgedbot.tasks.job_check_activity import job_check_activity
-from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
 )
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
+from ironforgedbot.tasks.job_sync_members import job_sync_members
 
 logger = logging.getLogger(__name__)
 
