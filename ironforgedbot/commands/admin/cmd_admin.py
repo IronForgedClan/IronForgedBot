@@ -7,6 +7,7 @@ from typing import Optional
 import discord
 from discord.ui import View
 
+from ironforgedbot.commands.admin.internal_state import get_internal_state
 from ironforgedbot.commands.admin.latest_log import get_latest_log_file
 from ironforgedbot.common.helpers import (
     get_text_channel,
@@ -193,10 +194,8 @@ class AdminMenuView(View):
         await self.clear_parent()
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        json_bytes = io.BytesIO(json.dumps(STATE.state, indent=2).encode("utf-8"))
-        json_bytes.seek(0)
+        file = get_internal_state()
 
         return await interaction.followup.send(
-            content="## Current Internal State",
-            file=discord.File(json_bytes, "state.json"),
+            content="## Current Internal State", file=file
         )
