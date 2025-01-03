@@ -16,7 +16,7 @@ from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
 from ironforgedbot.logging_config import LOG_DIR
 from ironforgedbot.state import STATE
-from ironforgedbot.tasks.check_activity import job_check_activity
+from ironforgedbot.tasks.job_check_activity import job_check_activity
 from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,

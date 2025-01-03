@@ -9,7 +9,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG
-from ironforgedbot.tasks.check_activity import (
+from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
     job_check_activity_reminder,
 )

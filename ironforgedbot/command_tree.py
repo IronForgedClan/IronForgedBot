@@ -1,10 +1,9 @@
 import logging
-
-import discord
 import traceback
 
+import discord
+
 from ironforgedbot.client import DiscordClient
-from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
 from ironforgedbot.commands.admin.cmd_admin import cmd_admin
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
@@ -120,13 +119,6 @@ class IronForgedCommands:
                 name="whois",
                 description="Get player's rsn history.",
                 callback=cmd_whois,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="activity_check",
-                description="Manually runs the activity check automation.",
-                callback=cmd_activity_check,
             )
         )
         self._tree.add_command(

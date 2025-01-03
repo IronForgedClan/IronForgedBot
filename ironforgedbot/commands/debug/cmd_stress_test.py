@@ -5,7 +5,7 @@ from discord.ui import Button, View
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.config import CONFIG
-from ironforgedbot.tasks.check_activity import job_check_activity
+from ironforgedbot.tasks.job_check_activity import job_check_activity
 from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,

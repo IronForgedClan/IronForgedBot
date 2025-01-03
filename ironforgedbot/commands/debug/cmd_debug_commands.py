@@ -1,7 +1,6 @@
 import discord
 from discord.ui import Button, View
 
-from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.admin.cmd_log import cmd_log
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
@@ -35,9 +34,6 @@ async def cmd_debug_commands(original_interaction: discord.Interaction):
                 -500_000,
                 "test remove",
             )
-        },
-        "activity check": {
-            "callback": lambda interaction: cmd_activity_check(interaction)
         },
         "start raffle": {
             "callback": lambda interaction: cmd_raffle_admin(
