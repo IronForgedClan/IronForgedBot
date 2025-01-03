@@ -7,6 +7,7 @@ from typing import Optional
 import discord
 from discord.ui import View
 
+from ironforgedbot.commands.admin.latest_log import get_latest_log_file
 from ironforgedbot.common.helpers import (
     get_text_channel,
 )
@@ -14,7 +15,6 @@ from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
-from ironforgedbot.logging_config import LOG_DIR
 from ironforgedbot.state import STATE
 from ironforgedbot.tasks.job_check_activity import job_check_activity
 from ironforgedbot.tasks.job_sync_members import job_sync_members
@@ -171,17 +171,12 @@ class AdminMenuView(View):
         await self.clear_parent()
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        try:
-            files = [os.path.join(LOG_DIR, f) for f in os.listdir(LOG_DIR)]
-            files = [f for f in files if os.path.isfile(f)]
-            latest_file = max(files, key=os.path.getmtime)
+        file = get_latest_log_file()
 
-            return await interaction.followup.send(
-                content="## Latest Log File", file=discord.File(latest_file)
-            )
-        except Exception as e:
-            logger.error(e)
+        if not file:
             return await send_error_response(interaction, "Error processing log file.")
+
+        return await interaction.followup.send(content="## Latest Log File", file=file)
 
     @discord.ui.button(
         label="View Internal State",
