@@ -10,7 +10,7 @@ from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
 )
-from ironforgedbot.tasks.refresh_ranks import job_refresh_ranks
+from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
 
 
 async def cmd_stress_test(interaction: discord.Interaction):
