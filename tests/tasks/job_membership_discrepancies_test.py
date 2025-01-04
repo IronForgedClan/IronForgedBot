@@ -73,7 +73,7 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         mock_wom_members.return_value = [
             "tester",
             "another",
-            "foo-bar",
+            "foo bar",
             "bar_foo",
             "foo bar",
         ], []
