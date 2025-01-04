@@ -107,6 +107,51 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
+    async def test_job_check_ignore_casing(
+        self, mock_wom_members, mock_discord_members
+    ):
+        mock_report_channel = Mock(discord.TextChannel)
+        guild = create_mock_discord_guild()
+
+        mock_wom_members.return_value = [
+            "tESter",
+            "anothEr",
+            "fOO-bar",
+            "Bar_fOo",
+            "FOO bAr",
+        ], []
+        mock_discord_members.return_value = [
+            "Test",
+            "More",
+            "Foo",
+            "Foo-Bar",
+            "Bar_Foo",
+            "Foo Bar",
+        ]
+
+        await job_check_membership_discrepancies(guild, mock_report_channel, "", 0)
+
+        expected_messages = [
+            call("Beginning membership discrepancy check..."),
+            call(
+                "## Members Found\nDiscord: **6** members\n"
+                "Wise Old Man: **5** members\n\n_Computing discrepancies..._"
+            ),
+            call(
+                "```\nMembers found only on discord:\nfoo\nmore\ntest\nMembers "
+                "found only on wom:\nanother\ntester\n```"
+            ),
+            call(
+                "## Discrepancy Summary\nDiscord Only: **3** members\n"
+                "Wise Old Man Only: **2** members",
+            ),
+            call("Finished membership discrepancy check."),
+        ]
+
+        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
+
     @patch(
         "ironforgedbot.tasks.job_membership_discrepancies.IGNORED_USERS",
         ["ignored", "also_ignored"],
