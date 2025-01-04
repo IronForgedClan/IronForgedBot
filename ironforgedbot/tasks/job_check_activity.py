@@ -77,11 +77,9 @@ async def job_check_activity(
         await report_channel.send(msg)
 
     await report_channel.send(
-        (
-            f"Finished activity check.\nFound **{len(results)}** "
-            "member(s) that do not meet requirements."
-        )
+        f"Found **{len(results)}** member(s) that do not meet requirements."
     )
+    await report_channel.send("Finished activity check.")
 
 
 async def _find_inactive_users(
