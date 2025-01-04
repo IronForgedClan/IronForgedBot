@@ -40,8 +40,10 @@ async def job_check_membership_discrepancies(
     ignored = wom_ignore + IGNORED_USERS
     logger.info(ignored)
 
-    discord_members = [member for member in discord_members if member not in ignored]
-    wom_members = [member for member in wom_members if member not in ignored]
+    discord_members = [
+        member.lower() for member in discord_members if member not in ignored
+    ]
+    wom_members = [member.lower() for member in wom_members if member not in ignored]
 
     if (
         wom_members is None
