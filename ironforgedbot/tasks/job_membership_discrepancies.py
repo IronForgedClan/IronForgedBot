@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple
 
 import discord
-from wom import GroupRole, Client
+from wom import Client, GroupRole
 
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
@@ -25,15 +25,23 @@ async def job_check_membership_discrepancies(
     await report_channel.send("Beginning membership discrepancy check...")
 
     discord_members = get_all_discord_members(guild)
-    if len(discord_members) > 1:
-        discord_members = [normalize_discord_string(s) for s in discord_members]
-
     wom_members, wom_ignore = await _get_valid_wom_members(
         wom_api_key, wom_group_id, report_channel
     )
 
+    if len(discord_members) < 1:
+        return await report_channel.send(
+            "Error computing discord member list, aborting."
+        )
+
+    if not wom_members or len(wom_members) < 1:
+        return await report_channel.send("Error computing wom member list, aborting.")
+
     ignored = wom_ignore + IGNORED_USERS
-    discord_members = [item for item in discord_members if item not in ignored]
+    logger.info(ignored)
+
+    discord_members = [member for member in discord_members if member not in ignored]
+    wom_members = [member for member in wom_members if member not in ignored]
 
     if (
         wom_members is None
@@ -41,8 +49,7 @@ async def job_check_membership_discrepancies(
         or discord_members is None
         or len(discord_members) < 1
     ):
-        await report_channel.send("Error fetching member list, aborting.")
-        return
+        return await report_channel.send("Error fetching member list, aborting.")
 
     await report_channel.send(
         f"## Members Found\nDiscord: **{len(discord_members)}** members\n"
@@ -84,17 +91,21 @@ async def _get_valid_wom_members(
     ignore_members: List[str] = []
     for member in wom_group.memberships:
         member_role = member.role
-        member_rsn = member.player.username
+        member_rsn = normalize_discord_string(member.player.username)
 
         if member_role is None:
+            logger.info(f"{member_rsn} has no role, skipping.")
             continue
 
         if member_role in IGNORED_ROLES:
+            logger.info(f"{member_rsn} has ignored role, skipping.")
             if member_rsn not in IGNORED_USERS:
+                logger.info(f"adding {member_rsn} to ignored members list.")
                 ignore_members.append(member_rsn)
             continue
 
-        if member_rsn not in IGNORED_USERS or member_rsn not in ignore_members:
+        ignored = IGNORED_USERS + ignore_members
+        if member_rsn not in ignored:
             members.append(member_rsn)
 
     await wom_client.close()
