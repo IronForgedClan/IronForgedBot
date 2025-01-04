@@ -22,6 +22,9 @@ async def job_check_membership_discrepancies(
     wom_api_key: str,
     wom_group_id: int,
 ):
+    def normalize_username(name: str) -> str:
+        return name.lower().replace("-", " ").replace("_", " ")
+
     await report_channel.send("Beginning membership discrepancy check...")
 
     discord_members = get_all_discord_members(guild)
@@ -41,9 +44,13 @@ async def job_check_membership_discrepancies(
     logger.info(ignored)
 
     discord_members = [
-        member.lower() for member in discord_members if member not in ignored
+        normalize_username(member)
+        for member in discord_members
+        if member not in ignored
     ]
-    wom_members = [member.lower() for member in wom_members if member not in ignored]
+    wom_members = [
+        normalize_username(member) for member in wom_members if member not in ignored
+    ]
 
     if (
         wom_members is None
