@@ -471,8 +471,11 @@ class BuyTicketModal(Modal):
         if cost > member.ingots:
             return await send_error_response(
                 interaction,
-                f"{text_bold(caller)} does not have enough ingots for {text_bold(f"{qty:,}")} tickets.\n"
-                f"Cost: {text_bold(f"{cost:,}")}, current ingots: {text_bold(f"{member.ingots:,}")}",
+                f"{text_bold(caller)} does not have enough ingots for {ticket_icon} {text_bold(f"{qty:,}")} "
+                f"tickets.\n\nCost: {ingot_icon} {text_bold(f"{cost:,}")}\nBalance: "
+                f"{ingot_icon} {text_bold(f"{member.ingots:,}")}\n\n"
+                f"You can afford a maximum of {ticket_icon} "
+                f"{text_bold(f"{round(member.ingots/STATE.state['raffle_price']):,}")} tickets.",
             )
 
         logger.info(f"Buying {qty:,} tickets for {caller}")
