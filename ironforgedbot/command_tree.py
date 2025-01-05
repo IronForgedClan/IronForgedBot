@@ -15,9 +15,6 @@ from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_i
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
-from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
-from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
-from ironforgedbot.commands.raffle.cmd_raffle_tickets import cmd_raffle_tickets
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
@@ -85,27 +82,6 @@ class IronForgedCommands:
                 name="add_remove_ingots",
                 description="Add or remove ingots to one or multiple member's accounts.",
                 callback=cmd_add_remove_ingots,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="raffle_admin",
-                description="Raffle admin actions.",
-                callback=cmd_raffle_admin,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="raffle_tickets",
-                description="Displays member's raffle ticket total.",
-                callback=cmd_raffle_tickets,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="buy_raffle_tickets",
-                description="Buy raffle tickets (5k ingots each).",
-                callback=cmd_buy_raffle_tickets,
             )
         )
         self._tree.add_command(
