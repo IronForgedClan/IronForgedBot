@@ -1,8 +1,12 @@
+import logging
+
 import discord
 from discord.ui import Modal, TextInput
 
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.state import STATE
+
+logger = logging.getLogger(__name__)
 
 
 class StartRaffleModal(Modal):
