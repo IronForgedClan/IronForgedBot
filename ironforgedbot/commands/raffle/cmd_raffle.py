@@ -1,4 +1,3 @@
-import asyncio
 import io
 import logging
 import random
@@ -358,7 +357,7 @@ class RaffleMenuView(View):
                 f"You have won {ingot_icon} {text_bold(f"{winnings:,}")} ingots!\n\n"
                 f"You spent {ingot_icon} {text_bold(f"{winner_spent:,}")} on {ticket_icon} "
                 f"{text_bold(f"{winner_ticket_count:,}")} tickets.\n"
-                f"Resulting in {ingot_icon}{text_bold(f"{winner_profit:,}")} profit.\n"
+                f"Resulting in {ingot_icon} {text_bold(f"{winner_profit:,}")} profit.\n"
                 + (f"{text_sub('ouch')}\n\n" if winner_profit < 0 else "\n")
                 + f"There were a total of {ticket_icon} {text_bold(f"{len(entries):,}")} entries.\n"
                 "Thank you everyone for participating!"
@@ -435,22 +434,30 @@ class BuyTicketModal(Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
-
-        qty = self.ticket_qty.value
         caller = normalize_discord_string(interaction.user.display_name)
 
-        if not qty.isdigit():
+        try:
+            qty = int(self.ticket_qty.value)
+        except ValueError:
             return await send_error_response(
                 interaction,
-                f"{text_bold(caller)} entered an invalid quantity of tickets.",
+                f"{text_bold(caller)} tried to buy an invalid quantity of tickets.",
             )
 
-        qty = int(qty)
+        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        ingot_icon = find_emoji(None, "Ingot")
+
         if qty < 1:
-            return await send_error_response(
-                interaction,
-                f"{text_bold(caller)} entered an invalid quantity of tickets.",
+            embed = build_response_embed(
+                title=f"{ticket_icon} Ticket Purchase",
+                description=(
+                    f"{text_bold(caller)} just tried to buy {ticket_icon} {text_bold(f"{qty:,}")} raffle "
+                    f"tickets. What a joker."
+                ),
+                color=discord.Colour.gold(),
             )
+
+            return await interaction.followup.send(embed=embed)
 
         try:
             member = await STORAGE.read_member(caller)
@@ -501,8 +508,6 @@ class BuyTicketModal(Modal):
                 "Ingots have been deducted, please contact a member of staff.",
             )
 
-        ticket_icon = find_emoji(None, "Raffle_Ticket")
-        ingot_icon = find_emoji(None, "Ingot")
         embed = build_response_embed(
             title=f"{ticket_icon} Ticket Purchase",
             description=(
