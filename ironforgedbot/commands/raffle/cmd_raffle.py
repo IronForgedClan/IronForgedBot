@@ -19,15 +19,23 @@ logger = logging.getLogger(__name__)
 @require_role(ROLE.MEMBER, ephemeral=True)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
+    assert interaction.guild
+
     embed = await build_embed(interaction)
     if not embed:
         return
 
-    menu = build_menu(interaction)
+    member = interaction.guild.get_member(interaction.user.id)
+    if not member:
+        return await send_error_response(interaction, "Unable to get member details.")
+
+    menu = RaffleMenuView(
+        check_member_has_role(member, ROLE.LEADERSHIP, or_higher=True)
+    )
     menu.message = await interaction.followup.send(embed=embed, view=menu)
 
 
-async def build_embed(interaction: discord.Interaction):
+async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
     ticket_icon = find_emoji(None, "Raffle_Ticket")
     ingot_icon = find_emoji(None, "Ingot")
     ticket_price = STATE.state["raffle_price"]
@@ -38,9 +46,10 @@ async def build_embed(interaction: discord.Interaction):
     try:
         all_tickets = await STORAGE.read_raffle_tickets()
     except StorageError as error:
-        return await send_error_response(
+        await send_error_response(
             interaction, f"Encountered error ending raffle: {error}"
         )
+        return None
 
     my_ticket_count = 0
     total_tickets = 0
@@ -82,12 +91,3 @@ async def build_embed(interaction: discord.Interaction):
     )
 
     return embed
-
-
-def build_menu(interaction: discord.Interaction):
-    assert interaction.guild
-    member = interaction.guild.get_member(interaction.user.id)
-    assert member
-    is_admin = check_member_has_role(member, ROLE.LEADERSHIP, or_higher=True)
-
-    return RaffleMenuView(is_admin)
