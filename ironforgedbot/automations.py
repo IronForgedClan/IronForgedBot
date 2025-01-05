@@ -9,15 +9,15 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG
-from ironforgedbot.tasks.check_activity import (
+from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
     job_check_activity_reminder,
 )
-from ironforgedbot.tasks.membership_discrepancies import (
+from ironforgedbot.tasks.job_sync_members import job_sync_members
+from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
 )
-from ironforgedbot.tasks.refresh_ranks import job_refresh_ranks
-from ironforgedbot.tasks.sync_members import job_sync_members
+from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
 
 logger = logging.getLogger(__name__)
 

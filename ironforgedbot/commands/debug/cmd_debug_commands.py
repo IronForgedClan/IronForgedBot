@@ -1,9 +1,7 @@
 import discord
 from discord.ui import Button, View
 
-from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
-from ironforgedbot.commands.admin.cmd_log import cmd_log
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
@@ -36,9 +34,6 @@ async def cmd_debug_commands(original_interaction: discord.Interaction):
                 "test remove",
             )
         },
-        "activity check": {
-            "callback": lambda interaction: cmd_activity_check(interaction)
-        },
         "start raffle": {
             "callback": lambda interaction: cmd_raffle_admin(
                 interaction, command="start"
@@ -60,7 +55,6 @@ async def cmd_debug_commands(original_interaction: discord.Interaction):
                 interaction, ROLE.MEMBER
             )
         },
-        "logs": {"callback": lambda interaction: cmd_log(interaction, None)},
         "trick or treat": {
             "callback": lambda interaction: cmd_trick_or_treat(interaction)
         },

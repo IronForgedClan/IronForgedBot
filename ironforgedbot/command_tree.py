@@ -1,13 +1,11 @@
 import logging
-
-import discord
 import traceback
 
+import discord
+
 from ironforgedbot.client import DiscordClient
-from ironforgedbot.commands.admin.cmd_activity_check import cmd_activity_check
+from ironforgedbot.commands.admin.cmd_admin import cmd_admin
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
-from ironforgedbot.commands.admin.cmd_log import cmd_log
-from ironforgedbot.commands.admin.cmd_sync_members import cmd_sync_members
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
 from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
@@ -112,13 +110,6 @@ class IronForgedCommands:
         )
         self._tree.add_command(
             discord.app_commands.Command(
-                name="sync_members",
-                description="Synchronises Discord with storage.",
-                callback=cmd_sync_members,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
                 name="roster",
                 description="Creates an event roster.",
                 callback=cmd_roster,
@@ -126,23 +117,9 @@ class IronForgedCommands:
         )
         self._tree.add_command(
             discord.app_commands.Command(
-                name="logs",
-                description="Displays bot logs.",
-                callback=cmd_log,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
                 name="whois",
                 description="Get player's rsn history.",
                 callback=cmd_whois,
-            )
-        )
-        self._tree.add_command(
-            discord.app_commands.Command(
-                name="activity_check",
-                description="Manually runs the activity check automation.",
-                callback=cmd_activity_check,
             )
         )
         self._tree.add_command(
@@ -157,6 +134,13 @@ class IronForgedCommands:
                 name="raffle",
                 description="Play or control the raffle.",
                 callback=cmd_raffle,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="admin",
+                description="Collection of administrative actions.",
+                callback=cmd_admin,
             )
         )
         if CONFIG.TRICK_OR_TREAT_ENABLED:
