@@ -43,25 +43,25 @@ async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
         discord.Colour.green() if STATE.state["raffle_on"] else discord.Colour.red()
     )
 
-    try:
-        all_tickets = await STORAGE.read_raffle_tickets()
-    except StorageError as error:
-        await send_error_response(
-            interaction, f"Encountered error ending raffle: {error}"
-        )
-        return None
-
     my_ticket_count = 0
     total_tickets = 0
     prize_pool = 0
+    if STATE.state["raffle_on"]:
+        try:
+            all_tickets = await STORAGE.read_raffle_tickets()
+        except StorageError as error:
+            await send_error_response(
+                interaction, f"Encountered error ending raffle: {error}"
+            )
+            return None
 
-    for id, qty in all_tickets.items():
-        if id == interaction.user.id:
-            my_ticket_count = qty
+        for id, qty in all_tickets.items():
+            if id == interaction.user.id:
+                my_ticket_count = qty
 
-        total_tickets += qty
+            total_tickets += qty
 
-    prize_pool = int(total_tickets * (STATE.state["raffle_price"] / 2))
+        prize_pool = int(total_tickets * (STATE.state["raffle_price"] / 2))
 
     embed = build_response_embed(
         title=f"{ticket_icon} Iron Forged Raffle",
