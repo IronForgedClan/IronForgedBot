@@ -1,6 +1,6 @@
 import functools
 import random
-from typing import List, Optional
+from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 import wom
@@ -23,6 +23,7 @@ def create_mock_discord_interaction(
     members: Optional[List[discord.Member]] = None,
     user: Optional[discord.Member] = None,
     channel_id: Optional[int] = None,
+    data: Optional[Any] = None,
 ) -> discord.Interaction:
     if not members:
         members = []
@@ -35,6 +36,7 @@ def create_mock_discord_interaction(
     interaction.response = AsyncMock()
     interaction.guild = create_mock_discord_guild(members)
     interaction.user = user
+    interaction.data = data
 
     if channel_id:
         interaction.channel_id = channel_id
