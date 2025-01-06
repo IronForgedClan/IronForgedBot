@@ -23,6 +23,7 @@ class BuyTicketModal(Modal):
             max_length=10,
             required=True,
             style=discord.TextStyle.short,
+            custom_id="ticket_qty",
         )
 
         self.add_item(self.ticket_qty)
@@ -66,7 +67,7 @@ class BuyTicketModal(Modal):
         if member is None:
             return await send_error_response(
                 interaction,
-                f"{caller} not found in storage, please reach out to leadership.",
+                f"{text_bold(caller)} not found in storage, please reach out to leadership.",
             )
 
         cost = qty * STATE.state["raffle_price"]
