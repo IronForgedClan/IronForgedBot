@@ -2,7 +2,6 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.raffle.build_winner_image import build_winner_image_file
 from ironforgedbot.commands.raffle.raffle_menu_view import RaffleMenuView
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -21,9 +20,6 @@ logger = logging.getLogger(__name__)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
     assert interaction.guild
-
-    image = await build_winner_image_file("oxore", 5123456)
-    return await interaction.followup.send(file=image)
 
     embed = await build_embed(interaction)
     if not embed:
