@@ -59,6 +59,7 @@ class RaffleMenuView(View):
                 await self.handle_start_raffle(interaction)
             if custom_id == "end_raffle":
                 await handle_end_raffle(self.message, interaction)
+                self.message = None
 
         return await super().interaction_check(interaction)
 
