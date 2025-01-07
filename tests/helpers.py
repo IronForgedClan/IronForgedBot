@@ -31,6 +31,7 @@ def create_mock_discord_interaction(
     if not user:
         user = create_test_member("tester", [ROLE.MEMBER], "tester")
 
+    members.append(user)
     interaction = Mock(spec=discord.Interaction)
     interaction.followup = AsyncMock()
     interaction.response = AsyncMock()

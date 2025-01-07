@@ -77,7 +77,7 @@ async def handle_end_raffle(
         return await handle_end_raffle_error(
             parent_message,
             interaction,
-            "Raffle ended without any valid entries. " "May require manual data purge.",
+            "Raffle ended without any valid entries. May require manual data purge.",
         )
 
     # Calculate winner
@@ -95,7 +95,7 @@ async def handle_end_raffle(
             normalize_discord_string(winning_discord_member.display_name)
         )
     except StorageError as error:
-        return await handle_end_raffle_error(parent_message, interaction, str(error))
+        return await handle_end_raffle_error(parent_message, interaction, error.message)
 
     if member is None:
         return await handle_end_raffle_error(
@@ -113,7 +113,7 @@ async def handle_end_raffle(
             note=f"[BOT] Raffle winnings ({winnings:,})",
         )
     except StorageError as error:
-        return await handle_end_raffle_error(parent_message, interaction, error)
+        return await handle_end_raffle_error(parent_message, interaction, error.message)
 
     # Announce winner
     ticket_icon = find_emoji(None, "Raffle_Ticket")
@@ -138,6 +138,9 @@ async def handle_end_raffle(
     )
 
     # Cleanup
+    STATE.state["raffle_on"] = False
+    STATE.state["raffle_price"] = 0
+
     try:
         await STORAGE.delete_raffle_tickets(
             normalize_discord_string(interaction.user.display_name).lower()
@@ -151,6 +154,3 @@ async def handle_end_raffle(
 
     if parent_message:
         parent_message = await parent_message.delete()
-
-    STATE.state["raffle_on"] = False
-    STATE.state["raffle_price"] = 0
