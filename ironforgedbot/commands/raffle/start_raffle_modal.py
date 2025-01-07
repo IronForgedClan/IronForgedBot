@@ -51,7 +51,6 @@ class StartRaffleModal(Modal):
         await interaction.followup.send(
             f"## {ticket_icon} Raffle Started\nTicket Price: {ingot_icon} **{int(price):,}**\n\n"
             "- Members can now buy raffle tickets with the `/raffle` command.\n"
-            "- Admins can now end the raffle and select a winner by running the"
+            "- Admins can now end the raffle and select a winner by running the "
             "`/raffle` command and clicking the red 'End Raffle' button.",
-            ephemeral=True,
         )
