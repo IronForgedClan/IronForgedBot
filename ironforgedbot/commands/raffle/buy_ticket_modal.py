@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class BuyTicketModal(Modal):
     def __init__(self):
         super().__init__(title="Buy Raffle Tickets")
+        self.ticket_embed_color = discord.Colour.from_rgb(115, 136, 217)
 
         self.ticket_qty = TextInput(
             label="How many tickets?",
@@ -50,7 +51,7 @@ class BuyTicketModal(Modal):
                     f"{text_bold(caller)} just tried to buy {ticket_icon} {text_bold(f"{qty:,}")} raffle "
                     f"tickets. What a joker."
                 ),
-                color=discord.Colour.gold(),
+                color=self.ticket_embed_color,
             )
 
             return await interaction.followup.send(embed=embed)
@@ -110,7 +111,7 @@ class BuyTicketModal(Modal):
                 f"{text_bold(caller)} just bought {ticket_icon} {text_bold(f"{qty:,}")} raffle "
                 f"ticket{'s' if qty > 1 else ''} for {ingot_icon} {text_bold(f"{cost:,}")}."
             ),
-            color=discord.Colour.gold(),
+            color=self.ticket_embed_color,
         )
 
         await interaction.followup.send(embed=embed)

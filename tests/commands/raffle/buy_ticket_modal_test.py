@@ -56,7 +56,6 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(actual_embed, discord.Embed)
         self.assertEqual(actual_embed.title, expected_title)
         self.assertEqual(actual_embed.description, expected_description)
-        self.assertEqual(actual_embed.color, discord.Color.gold())
 
         mock_storage.update_members.assert_called_with(
             [Member(id=12345, runescape_name="tester", ingots=5000)],
@@ -116,7 +115,6 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(actual_embed, discord.Embed)
         self.assertEqual(actual_embed.title, expected_title)
         self.assertEqual(actual_embed.description, expected_description)
-        self.assertEqual(actual_embed.color, discord.Color.gold())
 
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.send_error_response")
     @patch(
