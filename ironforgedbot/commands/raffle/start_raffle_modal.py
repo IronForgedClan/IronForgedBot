@@ -4,6 +4,8 @@ import discord
 from discord.ui import Modal, TextInput
 
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -23,20 +25,30 @@ class StartRaffleModal(Modal):
         self.add_item(self.ticket_price)
 
     async def on_submit(self, interaction: discord.Interaction):
-        price = self.ticket_price.value
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        price = 0
 
-        if not price.isdigit():
-            await interaction.response.send_message(
-                "Ticket price must be a valid number.", ephemeral=True
+        try:
+            price = int(self.ticket_price.value)
+        except ValueError:
+            return await send_error_response(
+                interaction,
+                f"{text_bold(self.ticket_price.value)} is an invalid ticket price.",
+            )
+
+        if price < 1:
+            return await send_error_response(
+                interaction,
+                f"{text_bold(self.ticket_price.value)} is an invalid ticket price.",
             )
 
         STATE.state["raffle_on"] = True
-        STATE.state["raffle_price"] = int(price)
+        STATE.state["raffle_price"] = price
 
         ticket_icon = find_emoji(None, "Raffle_Ticket")
         ingot_icon = find_emoji(None, "Ingot")
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"## {ticket_icon} Raffle Started\nTicket Price: {ingot_icon} **{int(price):,}**\n\n"
             "- Members can now buy raffle tickets with the `/raffle` command.\n"
             "- Admins can now end the raffle and select a winner by running the"
