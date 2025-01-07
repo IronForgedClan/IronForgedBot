@@ -4,55 +4,56 @@ from PIL import Image, ImageDraw, ImageFont
 import discord
 
 
+def _calculate_position(
+    text, font: ImageFont.FreeTypeFont, image_width: int, image_height: int
+) -> Tuple[float, float]:
+    text = str(text)
+    bbox = font.getbbox(text)
+    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (image_width - text_width) // 2
+    y = (image_height - text_height) // 2
+
+    return x, y
+
+
+def _draw_text_with_outline(
+    draw: ImageDraw.Draw,
+    x: float,
+    y: float,
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    outline_color: Any = "black",
+    fill_color: Any = "yellow",
+    outline_width: int = 2,
+):
+    for offset_x, offset_y in [
+        (-outline_width, 0),
+        (outline_width, 0),
+        (0, -outline_width),
+        (0, outline_width),
+        (-outline_width, -outline_width),
+        (-outline_width, outline_width),
+        (outline_width, -outline_width),
+        (outline_width, outline_width),
+    ]:
+        draw.text((x + offset_x, y + offset_y), text, font=font, fill=outline_color)
+
+    draw.text((x, y), text, font=font, fill=fill_color)
+
+
 async def build_winner_image_file(winner_name: str, winnings: int) -> discord.File:
     image_path = "img/raffle_winner.jpeg"
-
-    def calculate_position(
-        text,
-        font: ImageFont.FreeTypeFont,
-    ) -> Tuple[float, float]:
-        text = str(text)
-        bbox = font.getbbox(text)
-        text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        image_width, image_height = img.size
-        x = (image_width - text_width) // 2
-        y = (image_height - text_height) // 2
-
-        return x, y
-
-    def draw_text_with_outline(
-        draw: ImageDraw.Draw,
-        x: float,
-        y: float,
-        text: str,
-        font: ImageFont.FreeTypeFont,
-        outline_color: Any = "black",
-        fill_color: Any = "yellow",
-        outline_width: int = 2,
-    ):
-        for offset_x, offset_y in [
-            (-outline_width, 0),
-            (outline_width, 0),
-            (0, -outline_width),
-            (0, outline_width),
-            (-outline_width, -outline_width),
-            (-outline_width, outline_width),
-            (outline_width, -outline_width),
-            (outline_width, outline_width),
-        ]:
-            draw.text((x + offset_x, y + offset_y), text, font=font, fill=outline_color)
-
-        draw.text((x, y), text, font=font, fill=fill_color)
 
     with Image.open(image_path) as img:
         draw = ImageDraw.Draw(img)
 
         # draw winner name
         font = ImageFont.truetype("fonts/runescape.ttf", size=85)
-        x, y = calculate_position(winner_name, font)
+        img_height, img_width = img.size
+        x, y = _calculate_position(winner_name, font, img_height, img_width)
         y = y - 65  # offset
 
-        draw_text_with_outline(draw, x, y, winner_name, font)
+        _draw_text_with_outline(draw, x, y, winner_name, font)
 
         # draw winner quantity with icon
         spacing = 10
@@ -79,7 +80,7 @@ async def build_winner_image_file(winner_name: str, winnings: int) -> discord.Fi
         text_x = x_start + icon_width + spacing
         text_y = y + offset
 
-        draw_text_with_outline(draw, text_x, text_y, winnings_text, font)
+        _draw_text_with_outline(draw, text_x, text_y, winnings_text, font)
         img.paste(icon, (icon_x, icon_y), mask=icon)
 
         # Return discord.File
