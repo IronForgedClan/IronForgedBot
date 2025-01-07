@@ -31,7 +31,6 @@ async def handle_end_raffle(
     parent_message: Optional[discord.Message], interaction: discord.Interaction
 ):
     await interaction.response.defer()
-
     assert interaction.guild
 
     if parent_message:
@@ -48,9 +47,16 @@ async def handle_end_raffle(
             parent_message, interaction, f"Encountered error ending raffle: {error}"
         )
 
+    ticket_icon = find_emoji(None, "Raffle_Ticket")
     if len(current_tickets) < 1:
-        return await handle_end_raffle_error(
-            parent_message, interaction, "Raffle ended without any tickets sold."
+        STATE.state["raffle_on"] = False
+        STATE.state["raffle_price"] = 0
+
+        if parent_message:
+            parent_message = await parent_message.delete()
+
+        return await interaction.followup.send(
+            content=f"## {ticket_icon} Raffle Ended\n\nNo tickets were sold. There is no winner 🤷‍♂️."
         )
 
     try:
@@ -116,7 +122,6 @@ async def handle_end_raffle(
         return await handle_end_raffle_error(parent_message, interaction, error.message)
 
     # Announce winner
-    ticket_icon = find_emoji(None, "Raffle_Ticket")
     ingot_icon = find_emoji(None, "Ingot")
     file = await build_winner_image_file(winner, int(winnings))
 

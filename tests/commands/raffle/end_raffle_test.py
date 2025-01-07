@@ -89,12 +89,9 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_state.state["raffle_on"], True)
         self.assertEqual(mock_state.state["raffle_price"], 5000)
 
-    @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
     @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_no_tickets_sold(
-        self, mock_state, mock_storage, mock_handle_error
-    ):
+    async def test_end_raffle_fails_no_tickets_sold(self, mock_state, mock_storage):
         caller = create_test_member("tester", [], "tester")
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
         mock_parent_message = AsyncMock()
@@ -114,13 +111,13 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
 
         await handle_end_raffle(mock_parent_message, interaction)
 
-        mock_handle_error.assert_called_once_with(
-            ANY, interaction, "Raffle ended without any tickets sold."
+        interaction.followup.send.assert_called_once_with(
+            content="##  Raffle Ended\n\nNo tickets were sold. There is no winner 🤷‍♂️."
         )
         mock_storage.update_members.assert_not_called()
         mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], True)
-        self.assertEqual(mock_state.state["raffle_price"], 5000)
+        self.assertEqual(mock_state.state["raffle_on"], False)
+        self.assertEqual(mock_state.state["raffle_price"], 0)
 
     @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
     @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
