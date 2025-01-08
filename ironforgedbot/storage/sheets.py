@@ -355,22 +355,22 @@ class SheetsStorage(metaclass=IngotsStorage):
                 existing_count = current_count
                 new_count = current_count + tickets
 
-        current_tickets[member_id] = new_count
+        current_tickets[member_id] = int(new_count)
         changes.append(
             [
                 member_id,
                 self._get_timestamp(),
                 existing_count,
-                new_count,
+                int(new_count),
                 member_id,
-                "Bought raffle tickets",
+                f"Assign {tickets} raffle tickets",
             ]
         )
 
         # Convert to list for write & sort for stability.
         values = []
         for id, current_count in current_tickets.items():
-            values.append([str(id), str(current_count)])
+            values.append([str(id), current_count])
 
         values.sort(key=lambda x: x[0])
 

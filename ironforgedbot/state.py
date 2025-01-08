@@ -15,6 +15,8 @@ class BotStateDict(TypedDict):
     is_shutting_down: bool
     rate_limit: dict
     trick_or_treat_jackpot_claimed: bool
+    raffle_on: bool
+    raffle_price: int
 
 
 class BotState:
@@ -31,6 +33,8 @@ class BotState:
             "is_shutting_down": False,
             "rate_limit": dict(),
             "trick_or_treat_jackpot_claimed": False,
+            "raffle_on": False,
+            "raffle_price": 5_000,
         }
 
         event_emitter.on("shutdown", self._save_state, priority=90)

@@ -8,8 +8,7 @@ from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
-from ironforgedbot.commands.raffle.cmd_raffle_admin import cmd_raffle_admin
-from ironforgedbot.commands.raffle.cmd_raffle_buy_tickets import cmd_buy_raffle_tickets
+from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
 from ironforgedbot.common.roles import ROLE
 
 
@@ -34,22 +33,7 @@ async def cmd_debug_commands(original_interaction: discord.Interaction):
                 "test remove",
             )
         },
-        "start raffle": {
-            "callback": lambda interaction: cmd_raffle_admin(
-                interaction, command="start"
-            )
-        },
-        "buy raffle tickets": {
-            "callback": lambda interaction: cmd_buy_raffle_tickets(interaction, 2)
-        },
-        "end raffle": {
-            "callback": lambda interaction: cmd_raffle_admin(interaction, "end")
-        },
-        "raffle winner": {
-            "callback": lambda interaction: cmd_raffle_admin(
-                interaction, "select_winner"
-            )
-        },
+        "raffle": {"callback": lambda interaction: cmd_raffle(interaction)},
         "get role members": {
             "callback": lambda interaction: cmd_get_role_members(
                 interaction, ROLE.MEMBER
