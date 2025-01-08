@@ -337,7 +337,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         await client.add_raffle_tickets(12345, 5)
 
         self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["12345", "25"]]})
+            http.request_sequence[1][2], json.dumps({"values": [["12345", 25]]})
         )
 
         self.assertEqual(
@@ -351,7 +351,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
                             20,
                             25,
                             12345,
-                            "Bought raffle tickets",
+                            "Assign 5 raffle tickets",
                         ]
                     ]
                 }
@@ -377,7 +377,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         await client.add_raffle_tickets(12345, 5)
 
         self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["12345", "5"]]})
+            http.request_sequence[1][2], json.dumps({"values": [["12345", 5]]})
         )
 
         self.assertEqual(
@@ -391,7 +391,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
                             0,
                             5,
                             12345,
-                            "Bought raffle tickets",
+                            "Assign 5 raffle tickets",
                         ]
                     ]
                 }
