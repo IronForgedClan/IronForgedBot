@@ -14,13 +14,11 @@
 | `/score`              | Player (str) _Optional_                                                                    | Member       | Returns the score for the player                       |
 | `/breakdown`          | Player (str) _Optional_                                                                    | Member       | Returns an interactive breakdown of the player's score |
 | `/ingots`             | Player (str) _Optional_                                                                    | Member       | Returns ingot count for player                         |
+| `/raffle      `       | N/A                                                                                        | Member       | Play or manage the raffle                              |
+| `/trick_or_treat`     | N/A                                                                                        | Member       | Holiday special command                                |
 | `/add_remove_ingots`  | Players (str, comma separated list of player names), Ingots (int), Reason (str)            | Leadership   | Add or remove ingots from one or many players at once  |
-| `/raffle_admin`       | Subcommand (str, [start, end, choose_winner])                                              | Leadership   | Parent command for controlling raffle state            |
-| `/raffle_tickets`     | N/A                                                                                        | Member       | Returns raffle ticket count for user                   |
-| `/buy_raffle_tickets` | Tickets (int)                                                                              | Member       | Purchases raffle tickets for user                      |
 | `/roster`             | Url (str)                                                                                  | Leadership   | Produces a roster list of players                      |
 | `/admin`              | N/A                                                                                        | Leadership   | A menu of administrative commands                      |
-| `/trick_or_treat`     | N/A                                                                                        | Member       | Holiday special command                                |
 | `/debug_commands`     | N/A                                                                                        | -            | Debug tool for testing various commands                |
 | `/stress_test`        | N/A                                                                                        | -            | Debug tool for initiating stressful environments       |
 
