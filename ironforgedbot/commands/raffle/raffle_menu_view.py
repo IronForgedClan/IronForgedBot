@@ -5,8 +5,9 @@ import discord
 from discord.ui import Button, View
 
 from ironforgedbot.commands.raffle.buy_ticket_modal import BuyTicketModal
-from ironforgedbot.commands.raffle.end_raffle import handle_end_raffle
+from ironforgedbot.commands.raffle.end_raffle_view import EndRaffleView
 from ironforgedbot.commands.raffle.start_raffle_modal import StartRaffleModal
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -58,8 +59,7 @@ class RaffleMenuView(View):
             if custom_id == "start_raffle":
                 await self.handle_start_raffle(interaction)
             if custom_id == "end_raffle":
-                await handle_end_raffle(self.message, interaction)
-                self.message = None
+                await self.handle_end_raffle(interaction)
 
         return await super().interaction_check(interaction)
 
@@ -77,6 +77,17 @@ class RaffleMenuView(View):
 
     async def handle_start_raffle(self, interaction: discord.Interaction):
         await interaction.response.send_modal(StartRaffleModal())
+
+        if self.message:
+            self.message = await self.message.delete()
+
+    async def handle_end_raffle(self, interaction: discord.Interaction):
+        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        await interaction.response.send_message(
+            content=f"## {ticket_icon} How do you want to end the raffle?",
+            view=EndRaffleView(interaction=interaction),
+            ephemeral=True,
+        )
 
         if self.message:
             self.message = await self.message.delete()
