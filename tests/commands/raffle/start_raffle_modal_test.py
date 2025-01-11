@@ -32,11 +32,11 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_state.state["raffle_on"], True)
         self.assertEqual(mock_state.state["raffle_price"], 5000)
-        interaction.followup.send.assert_called_once_with(
+        interaction.response.send_message.assert_called_once_with(
             "##  Raffle Started\nTicket Price:  **5,000**\n\n"
-            "- Members can now buy raffle tickets with the `/raffle` command.\n"
+            "- Members can now buy raffle tickets with the `raffle` command.\n"
             "- Admins can now end the raffle and select a winner by running the "
-            "`/raffle` command and clicking the red 'End Raffle' button."
+            "`raffle` command and clicking the red 'End Raffle' button."
         )
 
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
@@ -60,7 +60,7 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_state.state["raffle_price"], 0)
         mock_send_error_response.assert_awaited_with(
             interaction,
-            "**test** is an invalid ticket price.",
+            " **test** is an invalid  ticket price.",
         )
 
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
@@ -84,5 +84,5 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_state.state["raffle_price"], 0)
         mock_send_error_response.assert_awaited_with(
             interaction,
-            "**-10** is an invalid ticket price.",
+            " **-10** is an invalid  ticket price.",
         )
