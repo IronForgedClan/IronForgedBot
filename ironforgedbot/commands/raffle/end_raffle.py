@@ -49,6 +49,7 @@ async def handle_end_raffle(
 
     ticket_icon = find_emoji(None, "Raffle_Ticket")
     if len(current_tickets) < 1:
+        logger.info("Raffle ended with no tickets sold.")
         STATE.state["raffle_on"] = False
         STATE.state["raffle_price"] = 0
 
@@ -80,6 +81,7 @@ async def handle_end_raffle(
             entries.extend([current_members.get(id)] * ticket_count)
 
     if len(entries) < 1:
+        logger.info("Raffle ended with no valid tickets to select from.")
         return await handle_end_raffle_error(
             parent_message,
             interaction,
@@ -92,8 +94,8 @@ async def handle_end_raffle(
     winning_discord_member = find_member_by_nickname(interaction.guild, winner)
     winnings = int(len(entries) * (STATE.state["raffle_price"] / 2))
 
-    logger.info(entries)
-    logger.info(winner)
+    logger.info(f"Raffle entries: {entries}")
+    logger.info(f"Raffle winner: {winner} ({winning_discord_member.id})")
 
     # Award winnings
     try:
@@ -145,6 +147,7 @@ async def handle_end_raffle(
     # Cleanup
     STATE.state["raffle_on"] = False
     STATE.state["raffle_price"] = 0
+    logger.info("Raffle ended.")
 
     try:
         await STORAGE.delete_raffle_tickets(

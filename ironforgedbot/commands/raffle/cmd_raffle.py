@@ -8,7 +8,8 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
-from ironforgedbot.decorators import require_role
+from ironforgedbot.config import CONFIG
+from ironforgedbot.decorators import require_channel, require_role
 from ironforgedbot.state import STATE
 from ironforgedbot.storage.sheets import STORAGE
 from ironforgedbot.storage.types import StorageError
@@ -16,6 +17,7 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 
+@require_channel([CONFIG.RAFFLE_CHANNEL_ID])
 @require_role(ROLE.MEMBER, ephemeral=True)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
