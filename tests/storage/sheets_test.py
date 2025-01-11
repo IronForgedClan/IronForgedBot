@@ -45,6 +45,35 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(await client.read_member("kennylogs"), None)
 
+    async def test_read_member_handle_big_numbers(self):
+        sheets_read_response = {
+            "values": [["testrunbtw", "1000000000014870", "123456"]]
+        }
+
+        http = HttpMock(headers={"status": "200"})
+        http.data = json.dumps(sheets_read_response)
+        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+
+        client = SheetsStorage(sheets_client, "")
+
+        expected = Member(
+            id=123456, runescape_name="testrunbtw", ingots=1000000000014870
+        )
+
+        self.assertEqual(await client.read_member("testrunbtw"), expected)
+
+    async def test_read_member_handle_invalid_ingot_value(self):
+        sheets_read_response = {"values": [["testrunbtw", "no-ingots", "123456"]]}
+
+        http = HttpMock(headers={"status": "200"})
+        http.data = json.dumps(sheets_read_response)
+        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+
+        client = SheetsStorage(sheets_client, "")
+
+        with self.assertRaises(StorageError):
+            await client.read_member("testrunbtw")
+
     async def test_read_members(self):
         sheets_read_response = {
             "values": [
@@ -141,7 +170,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             http.request_sequence[1][2],
-            json.dumps({"values": [["kennylogs", 2000, "123456"]]}),
+            json.dumps({"values": [["kennylogs", "2000", "123456"]]}),
         )
 
         self.assertEqual(
