@@ -27,6 +27,7 @@ class Config:
         self.WOM_GROUP_ID: int = int(os.getenv("WOM_GROUP_ID") or 0)
         self.WOM_API_KEY: str = os.getenv("WOM_API_KEY", "")
         self.AUTOMATION_CHANNEL_ID: int = int(os.getenv("AUTOMATION_CHANNEL_ID") or 0)
+        self.RAFFLE_CHANNEL_ID: int = int(os.getenv("RAFFLE_CHANNEL_ID") or 0)
         self.TRICK_OR_TREAT_ENABLED: bool = (
             os.getenv("TRICK_OR_TREAT_ENABLED", "False") == "True"
         )
