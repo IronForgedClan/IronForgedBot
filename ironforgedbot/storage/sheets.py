@@ -162,10 +162,16 @@ class SheetsStorage(metaclass=IngotsStorage):
         result = await self._get_sheet_data(
             self._sheet_id, SHEET_RANGE_WITH_DISCORD_IDS
         )
-        members = [
-            Member(id=int(value[2]), runescape_name=value[0], ingots=int(value[1]))
-            for value in result
-        ]
+
+        # ingot values stored as strings to allow for large numbers
+        try:
+            members = [
+                Member(id=int(value[2]), runescape_name=value[0], ingots=int(value[1]))
+                for value in result
+            ]
+        except ValueError as e:
+            logger.error(e)
+            raise StorageError("Invalid ingot value for user.")
 
         return members
 
@@ -223,9 +229,12 @@ class SheetsStorage(metaclass=IngotsStorage):
         existing.sort(key=lambda x: x.runescape_name)
 
         write_range = f"ClanIngots!A2:C{2 + len(existing)}"
+
+        # save ingots as a string to allow for large numbers
+        # while maintaining accuracy
         body = {
             "values": [
-                [member.runescape_name, member.ingots, str(member.id)]
+                [member.runescape_name, str(member.ingots), str(member.id)]
                 for member in existing
             ]
         }
