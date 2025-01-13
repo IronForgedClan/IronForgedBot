@@ -75,7 +75,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             ):
                 await report_channel.send(
                     f"{member.mention} has completed their {text_bold(f'{PROBATION_DAYS} day')} probation period and "
-                    f"is eligible for {find_emoji(None,correct_rank)} {text_bold(correct_rank)} rank."
+                    f"is now eligible for {find_emoji(None,correct_rank)} {text_bold(correct_rank)} rank."
                 )
                 continue
 

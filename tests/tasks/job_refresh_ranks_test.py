@@ -40,7 +40,6 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         """Should ignore specific roles"""
         mock_guild = create_mock_discord_guild(
             [
-                create_test_member("foo", [ROLE.PROSPECT], "prospect"),
                 create_test_member("foo", [ROLE.APPLICANT], "applicant"),
                 create_test_member("foo", [ROLE.GUEST], "guest"),
             ]
@@ -71,10 +70,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         expected_messages = [
             call("Beginning rank check..."),
-            call(
-                f"{member.mention} is not a Prospect, Applicant, Guest or Bot "
-                "and has no nickname set, ignoring..."
-            ),
+            call(f"{member.mention} has no nickname set, ignoring..."),
             call("Finished rank check."),
         ]
 
@@ -116,27 +112,33 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
 
         expected_messages = [
             call("Beginning rank check..."),
-            call(f"{member.mention} has God role but no alignment."),
+            call(f"{member.mention} has  God rank but no alignment."),
             call("Finished rank check."),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
     @patch(
         "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
     )
-    async def test_job_refresh_ranks_report_no_valid_role(self, mock_sleep):
+    async def test_job_refresh_ranks_report_no_valid_role(
+        self, mock_sleep, mock_get_points
+    ):
         """Should report users with no valid role set"""
         member = create_test_member("foo", [], "bar")
         mock_guild = create_mock_discord_guild([member])
         mock_report_channel = Mock(discord.TextChannel)
         mock_sleep.return_value = None
+        mock_get_points.return_value = 705
 
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
             call("Beginning rank check..."),
-            call(f"{member.mention} detected without any ranked role, ignoring..."),
+            call(
+                f"{member.mention} detected without any rank. Should have  **Mithril**."
+            ),
             call("Finished rank check."),
         ]
 
