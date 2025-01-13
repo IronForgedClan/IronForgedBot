@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, List, Optional
 
 
@@ -17,10 +18,14 @@ class Member:
 
     id: int
     runescape_name: str
-    ingots: int = 0
+    ingots: int
+    joined_date: datetime | str
 
     def __str__(self):
-        return f"Member: (ID: {self.id}, RSN: {self.runescape_name}, Ingots: {self.ingots})"
+        return (
+            f"Member: (ID: {self.id}, RSN: {self.runescape_name}, "
+            f"Ingots: {self.ingots}, Joined: {self.joined_date})"
+        )
 
 
 class IngotsStorage(type):

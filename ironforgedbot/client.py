@@ -9,7 +9,9 @@ from ironforgedbot.automations import IronForgedAutomations
 from ironforgedbot.common.helpers import (
     populate_emoji_cache,
 )
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
+from ironforgedbot.effects.add_prospect_role import add_prospect_role
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
 
@@ -143,3 +145,19 @@ class DiscordClient(discord.Client):
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
 
         self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
+
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        before_roles = set(r.name for r in before.roles)
+        after_roles = set(r.name for r in after.roles)
+
+        roles_added = after_roles - before_roles
+        roles_removed = before_roles - after_roles
+
+        logger.info(f"{after.display_name} roles added: {roles_added}")
+        logger.info(f"{after.display_name} roles removed: {roles_removed}")
+
+        if ROLE.PROSPECT in roles_added:
+            await add_prospect_role(after)
+
+        if before.nick != after.nick:
+            logger.info(f"nickname change: {before.nick} -> {after.nick}")

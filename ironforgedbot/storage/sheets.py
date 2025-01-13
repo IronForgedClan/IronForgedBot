@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SHEET_RANGE = "ClanIngots!A2:B"
-SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:C"
+SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:D"
 RAFFLE_RANGE = "ClanRaffle!A2"
 RAFFLE_TICKETS_RANGE = "ClanRaffleTickets!A2:B"
 CHANGELOG_RANGE = "ChangeLog!A2:F"
@@ -163,15 +163,30 @@ class SheetsStorage(metaclass=IngotsStorage):
             self._sheet_id, SHEET_RANGE_WITH_DISCORD_IDS
         )
 
-        # ingot values stored as strings to allow for large numbers
-        try:
-            members = [
-                Member(id=int(value[2]), runescape_name=value[0], ingots=int(value[1]))
-                for value in result
-            ]
-        except ValueError as e:
-            logger.error(e)
-            raise StorageError("Invalid ingot value for user.")
+        members = []
+        for value in result:
+            # ingot values stored as strings to allow for large numbers
+            try:
+                member_ingots = int(value[1])
+            except ValueError as e:
+                logger.error(e)
+                raise StorageError("Invalid ingot value for user.")
+
+            # legacy members won't have a valid joined date set
+            try:
+                member_joined_date = datetime.fromisoformat(value[3].strip())
+            except ValueError as e:
+                logger.error(e)
+                member_joined_date = "unknown"
+
+            member = Member(
+                id=int(value[2]),
+                runescape_name=value[0],
+                ingots=member_ingots,
+                joined_date=member_joined_date,
+            )
+
+            members.append(member)
 
         return members
 
@@ -185,7 +200,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         existing.sort(key=lambda x: x.runescape_name)
 
         # We're only adding members, so the length can only increase.
-        write_range = f"ClanIngots!A2:C{2 + len(existing)}"
+        write_range = f"ClanIngots!A2:D{2 + len(existing)}"
         body = {
             "values": [
                 [member.runescape_name, member.ingots, str(member.id)]
@@ -228,13 +243,18 @@ class SheetsStorage(metaclass=IngotsStorage):
         # Sort by RSN for output stability
         existing.sort(key=lambda x: x.runescape_name)
 
-        write_range = f"ClanIngots!A2:C{2 + len(existing)}"
+        write_range = f"ClanIngots!A2:D{2 + len(existing)}"
 
         # save ingots as a string to allow for large numbers
         # while maintaining accuracy
         body = {
             "values": [
-                [member.runescape_name, str(member.ingots), str(member.id)]
+                [
+                    member.runescape_name,
+                    str(member.ingots),
+                    str(member.id),
+                    member.joined_date,
+                ]
                 for member in existing
             ]
         }
@@ -277,7 +297,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         for _ in range(len(existing) - len(filtered_values)):
             rows.append(["", "", ""])
 
-        write_range = f"ClanIngots!A2:C{2 + len(existing)}"
+        write_range = f"ClanIngots!A2:D{2 + len(existing)}"
         body = {"values": rows}
 
         await self._update_sheet_data(self._sheet_id, write_range, body)
