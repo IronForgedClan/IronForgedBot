@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_player_points_total
@@ -70,7 +70,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                 )
                 continue
 
-            if datetime.now() >= storage_member.joined_date + timedelta(
+            if datetime.now(timezone.utc) >= storage_member.joined_date + timedelta(
                 days=PROBATION_DAYS
             ):
                 await report_channel.send(
