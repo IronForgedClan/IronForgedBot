@@ -89,7 +89,7 @@ class IronForgedAutomations:
                 job_refresh_ranks, self.discord_guild, self.report_channel
             ),
             # CronTrigger(minute="*"),
-            CronTrigger(hour=2, minute=0, second=0, timezone="UTC"),
+            CronTrigger(hour="8,20", minute=10, second=0, timezone="UTC"),
         )
 
         self.scheduler.add_job(

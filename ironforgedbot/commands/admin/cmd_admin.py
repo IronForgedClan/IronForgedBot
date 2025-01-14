@@ -149,7 +149,7 @@ class AdminMenuView(View):
         )
 
         await self.clear_parent()
-        logger.info("Manually initiating refresh rankd job")
+        logger.info("Manually initiating refresh ranks job")
 
         await job_refresh_ranks(interaction.guild, self.report_channel)
 
