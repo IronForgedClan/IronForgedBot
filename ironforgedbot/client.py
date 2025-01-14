@@ -153,11 +153,5 @@ class DiscordClient(discord.Client):
         roles_added = after_roles - before_roles
         roles_removed = before_roles - after_roles
 
-        logger.info(f"{after.display_name} roles added: {roles_added}")
-        logger.info(f"{after.display_name} roles removed: {roles_removed}")
-
         if ROLE.PROSPECT in roles_added:
             await add_prospect_role(after)
-
-        if before.nick != after.nick:
-            logger.info(f"nickname change: {before.nick} -> {after.nick}")
