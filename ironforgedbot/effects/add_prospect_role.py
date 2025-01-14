@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 import logging
 import discord
 
@@ -21,6 +21,6 @@ async def add_prospect_role(member: discord.Member):
         return
 
     assert storage_member
-    storage_member.joined_date = datetime.now().isoformat()
+    storage_member.joined_date = datetime.now(timezone.utc).isoformat()
 
     return await STORAGE.update_members([storage_member], "BOT", "Added Prospect role")
