@@ -218,7 +218,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         mock_storage.read_member.return_value = Member(
             id=member.id,
             runescape_name=member.display_name,
-            joined_date=datetime.fromisoformat("2020-01-01T10:10:10.000000"),
+            joined_date=datetime.fromisoformat("2020-01-01T10:10:10.000000+00:00"),
         )
 
         await job_refresh_ranks(mock_guild, mock_report_channel)
@@ -242,7 +242,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
     async def test_job_refresh_ranks_ignore_prospect_during_probation(
         self, mock_sleep, mock_get_points, mock_storage
     ):
-        """Reports when member has completed their probation period"""
+        """Ignores when member has not yet completed their probation period"""
         actual_points = 705
         member = create_test_member("foo", [ROLE.PROSPECT], "bar")
         mock_guild = create_mock_discord_guild([member])
@@ -252,7 +252,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         mock_storage.read_member.return_value = Member(
             id=member.id,
             runescape_name=member.display_name,
-            joined_date=datetime.fromisoformat("2120-01-01T10:10:10.000000"),
+            joined_date=datetime.fromisoformat("2120-01-01T10:10:10.000000+00:00"),
         )
 
         await job_refresh_ranks(mock_guild, mock_report_channel)
