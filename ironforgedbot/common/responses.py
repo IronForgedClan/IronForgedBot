@@ -1,6 +1,13 @@
+from datetime import datetime, timedelta, timezone
+import logging
 import discord
 
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.storage.types import StorageError
+
+logger = logging.getLogger(__name__)
 
 
 async def send_error_response(interaction: discord.Interaction, message: str):
@@ -33,12 +40,36 @@ async def send_prospect_response(
     eligible_rank_icon: str,
     member: discord.Member,
 ):
+    from ironforgedbot.storage.sheets import STORAGE
+    from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
+
     prospect_icon = find_emoji(interaction, "Prospect")
+    storage_member = None
+
+    try:
+        storage_member = await STORAGE.read_member(member.display_name)
+    except StorageError as e:
+        logger.error(e)
+
     embed_description = (
-        f'The member "_{member.display_name}_" is a **{prospect_icon} Prospect**, and will\n'
-        f"be eligible for **{eligible_rank_icon} {eligible_rank_name}** rank once their **14 day**\n"
-        "probationary period is over."
+        f"{text_bold(member.display_name)} is currently a {prospect_icon} {text_bold(ROLE.PROSPECT)} and "
+        f"will become eligible for the {eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
+        f"successful acceptance into the clan after completing the {text_bold(f"{PROBATION_DAYS}-day")} "
+        "probation period."
     )
+
+    if storage_member and isinstance(storage_member.joined_date, datetime):
+        target_date = storage_member.joined_date + timedelta(days=PROBATION_DAYS)
+        remaining_time = target_date - datetime.now(timezone.utc)
+
+        days = max(1, remaining_time.days)
+        days_remaining = str(days) + " day"
+        days_remaining += "s" if days > 1 else ""
+
+        embed_description += (
+            f"\n\n⏳ Approximately {text_bold(days_remaining)} remaining."
+        )
+
     embed = build_response_embed(
         "",
         embed_description,
