@@ -71,6 +71,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
 
+    god_alignment = None
     if rank_name == RANK.GOD:
         god_alignment = get_god_alignment_from_member(member)
 
