@@ -175,7 +175,8 @@ class SheetsStorage(metaclass=IngotsStorage):
             # legacy members won't have a valid joined date set
             try:
                 member_joined_date = datetime.fromisoformat(value[3].strip())
-            except ValueError as e:
+                print(member_joined_date)
+            except (ValueError, IndexError) as e:
                 logger.error(e)
                 member_joined_date = "unknown"
 
@@ -253,7 +254,7 @@ class SheetsStorage(metaclass=IngotsStorage):
                     member.runescape_name,
                     str(member.ingots),
                     str(member.id),
-                    member.joined_date,
+                    str(member.joined_date),
                 ]
                 for member in existing
             ]
