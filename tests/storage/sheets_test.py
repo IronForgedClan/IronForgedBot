@@ -22,7 +22,9 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         time.tzset()
 
     async def test_read_member(self):
-        sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
+        sheets_read_response = {
+            "values": [["johnnycache", "2000", "123456", "unknown"]]
+        }
 
         http = HttpMock(headers={"status": "200"})
         http.data = json.dumps(sheets_read_response)
@@ -35,7 +37,9 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await client.read_member("johnnycache"), expected)
 
     async def test_read_member_not_found(self):
-        sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
+        sheets_read_response = {
+            "values": [["johnnycache", "2000", "123456", "unknown"]]
+        }
 
         http = HttpMock(headers={"status": "200"})
         http.data = json.dumps(sheets_read_response)
@@ -47,7 +51,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
     async def test_read_member_handle_big_numbers(self):
         sheets_read_response = {
-            "values": [["testrunbtw", "1000000000014870", "123456"]]
+            "values": [["testrunbtw", "1000000000014870", "123456", "unknown"]]
         }
 
         http = HttpMock(headers={"status": "200"})
@@ -63,7 +67,9 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await client.read_member("testrunbtw"), expected)
 
     async def test_read_member_handle_invalid_ingot_value(self):
-        sheets_read_response = {"values": [["testrunbtw", "no-ingots", "123456"]]}
+        sheets_read_response = {
+            "values": [["testrunbtw", "no-ingots", "123456", "unknown"]]
+        }
 
         http = HttpMock(headers={"status": "200"})
         http.data = json.dumps(sheets_read_response)
@@ -77,8 +83,8 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
     async def test_read_members(self):
         sheets_read_response = {
             "values": [
-                ["johnnycache", "2000", "123456"],
-                ["kennylogs", "4000", "654321"],
+                ["johnnycache", "2000", "123456", "unknown"],
+                ["kennylogs", "4000", "654321", "unknown"],
             ]
         }
 
@@ -99,7 +105,9 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
     async def test_add_members(self, mock_datetime):
         mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
 
-        sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
+        sheets_read_response = {
+            "values": [["johnnycache", "2000", "123456", "unknown"]]
+        }
 
         http = HttpMockSequence(
             [
@@ -148,10 +156,18 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.storage.sheets.datetime")
     async def test_update_members(self, mock_datetime):
+        self.maxDiff = None
         mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        johnnycache = Member(id=123456, runescape_name="johnnycache", ingots=2000)
+        johnnycache = Member(
+            id=123456,
+            runescape_name="johnnycache",
+            ingots=2000,
+            joined_date=mock_datetime.fromisoformat("2022-12-30T10:22:51.626649"),
+        )
         kennylogs = Member(id=123456, runescape_name="kennylogs", ingots=2000)
-        sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
+        sheets_read_response = {
+            "values": [["johnnycache", "2000", "123456", "2022-12-30T10:22:51.626649"]]
+        }
 
         http = HttpMockSequence(
             [
@@ -170,7 +186,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             http.request_sequence[1][2],
-            json.dumps({"values": [["kennylogs", "2000", "123456"]]}),
+            json.dumps({"values": [["kennylogs", "2000", "123456", "unknown"]]}),
         )
 
         self.assertEqual(
@@ -193,9 +209,17 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.storage.sheets.datetime")
     async def test_remove_members(self, mock_datetime):
+        self.maxDiff = None
         mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        johnnycache = Member(id=123456, runescape_name="johnnycache", ingots=2000)
-        sheets_read_response = {"values": [["johnnycache", "2000", "123456"]]}
+        johnnycache = Member(
+            id=123456,
+            runescape_name="johnnycache",
+            ingots=2000,
+            joined_date=mock_datetime.fromisoformat("2022-12-30T10:22:51.626649"),
+        )
+        sheets_read_response = {
+            "values": [["johnnycache", "2000", "123456", "unknown"]]
+        }
 
         http = HttpMockSequence(
             [
