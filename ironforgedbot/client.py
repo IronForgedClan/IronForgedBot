@@ -7,11 +7,15 @@ import discord
 
 from ironforgedbot.automations import IronForgedAutomations
 from ironforgedbot.common.helpers import (
+    get_text_channel,
     populate_emoji_cache,
 )
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
+from ironforgedbot.effects.add_member_role import add_member_role
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
+from ironforgedbot.effects.nickname_change import nickname_change
+from ironforgedbot.effects.remove_member_role import remove_member_role
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
 
@@ -147,6 +151,11 @@ class DiscordClient(discord.Client):
         self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        report_channel = get_text_channel(before.guild, CONFIG.AUTOMATION_CHANNEL_ID)
+        if not report_channel:
+            logger.error("Unable to select report channel")
+            return
+
         before_roles = set(r.name for r in before.roles)
         after_roles = set(r.name for r in after.roles)
 
@@ -154,4 +163,13 @@ class DiscordClient(discord.Client):
         roles_removed = before_roles - after_roles
 
         if ROLE.PROSPECT in roles_added:
-            await add_prospect_role(after)
+            return await add_prospect_role(report_channel, after)
+
+        if ROLE.MEMBER in roles_added:
+            return await add_member_role(report_channel, after)
+
+        if ROLE.MEMBER in roles_removed:
+            return await remove_member_role(report_channel, after)
+
+        if before.nick != after.nick:
+            return await nickname_change(report_channel, before, after)
