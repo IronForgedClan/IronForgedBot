@@ -11,8 +11,8 @@ async def nickname_change(
     report_channel: discord.TextChannel, before: discord.Member, after: discord.Member
 ):
     await report_channel.send(
-        f"Nickname change detected: {text_bold(before.display_name)} -> "
-        f"{text_bold(after.display_name)}. Initiating member sync job..."
+        f":information: Name change detected: {text_bold(before.display_name)} → "
+        f"{text_bold(after.display_name)}. Initiating member sync..."
     )
 
     await job_sync_members(report_channel.guild, report_channel)
