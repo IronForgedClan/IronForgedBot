@@ -96,6 +96,7 @@ async def sync_members(guild: discord.Guild) -> list[str]:
                                     member.name
                                 ).lower(),
                                 ingots=existing_member.ingots,
+                                joined_date=str(existing_member.joined_date),
                             )
                         )
                 else:
@@ -110,6 +111,7 @@ async def sync_members(guild: discord.Guild) -> list[str]:
                                     member.nick
                                 ).lower(),
                                 ingots=existing_member.ingots,
+                                joined_date=str(existing_member.joined_date),
                             )
                         )
 
