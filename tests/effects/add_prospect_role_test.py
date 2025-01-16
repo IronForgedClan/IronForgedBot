@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
 from ironforgedbot.storage.types import Member, StorageError
 from tests.helpers import create_test_member
@@ -56,7 +57,7 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
 
         mock_report_channel.send.assert_called_once_with(
             f":information: {member.mention} has been given the "
-            f"{ROLE.PROSPECT} role, saving timestamp."
+            f"{text_bold(ROLE.PROSPECT)} role, saving timestamp."
         )
 
     @patch("ironforgedbot.effects.add_prospect_role.STORAGE", new_callable=AsyncMock)
