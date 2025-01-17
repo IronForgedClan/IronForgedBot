@@ -101,6 +101,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.storage.sheets.datetime")
     async def test_add_members(self, mock_datetime):
         mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
+        mock_datetime.fromisoformat.side_effect = ValueError()
 
         sheets_read_response = {
             "values": [["johnnycache", "2000", "123456", "unknown"]]
@@ -126,8 +127,8 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
             json.dumps(
                 {
                     "values": [
-                        ["johnnycache", 2000, "123456"],
-                        ["kennylogs", 0, "654321"],
+                        ["johnnycache", "2000", "123456", "unknown"],
+                        ["kennylogs", "0", "654321", "unknown"],
                     ]
                 }
             ),
