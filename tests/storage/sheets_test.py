@@ -235,7 +235,7 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         await client.remove_members([johnnycache], "User Left Server")
 
         self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["", "", ""]]})
+            http.request_sequence[1][2], json.dumps({"values": [["", "", "", ""]]})
         )
 
         self.assertEqual(

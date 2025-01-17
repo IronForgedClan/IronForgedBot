@@ -176,7 +176,6 @@ class SheetsStorage(metaclass=IngotsStorage):
             try:
                 member_joined_date = datetime.fromisoformat(value[3].strip())
             except (ValueError, IndexError) as e:
-                logger.error(e)
                 member_joined_date = "unknown"
 
             member = Member(
@@ -289,13 +288,18 @@ class SheetsStorage(metaclass=IngotsStorage):
         # Sort by RSN for output stability.
         filtered_values.sort(key=lambda x: x.runescape_name)
         rows = [
-            [member.runescape_name, member.ingots, str(member.id)]
+            [
+                member.runescape_name,
+                member.ingots,
+                str(member.id),
+                str(member.joined_date),
+            ]
             for member in filtered_values
         ]
 
         # Pad empty values to actually remove members from the sheet.
         for _ in range(len(existing) - len(filtered_values)):
-            rows.append(["", "", ""])
+            rows.append(["", "", "", ""])
 
         write_range = f"ClanIngots!A2:D{2 + len(existing)}"
         body = {"values": rows}
