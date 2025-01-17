@@ -162,14 +162,14 @@ class DiscordClient(discord.Client):
         roles_added = after_roles - before_roles
         roles_removed = before_roles - after_roles
 
-        if ROLE.PROSPECT in roles_added:
-            return await add_prospect_role(report_channel, after)
-
         if ROLE.MEMBER in roles_added:
-            return await add_member_role(report_channel, after)
+            await add_member_role(report_channel, after)
 
-        if ROLE.MEMBER in roles_removed:
-            return await remove_member_role(report_channel, after)
+        if ROLE.PROSPECT in roles_added:
+            await add_prospect_role(report_channel, after)
 
         if before.nick != after.nick:
-            return await nickname_change(report_channel, before, after)
+            await nickname_change(report_channel, before, after)
+
+        if ROLE.MEMBER in roles_removed:
+            await remove_member_role(report_channel, after)

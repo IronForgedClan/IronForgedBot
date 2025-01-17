@@ -40,6 +40,9 @@ class IronForgedAutomations:
 
         asyncio.create_task(self.setup_automations())
 
+        # Sync on startup to make sure all changes captured.
+        asyncio.create_task(job_sync_members(self.discord_guild, self.report_channel))
+
     async def stop(self):
         """Initiates shutdown and cleanup of scheduled jobs."""
         self.scheduler.pause()
