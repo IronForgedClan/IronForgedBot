@@ -202,7 +202,12 @@ class SheetsStorage(metaclass=IngotsStorage):
         write_range = f"ClanIngots!A2:D{2 + len(existing)}"
         body = {
             "values": [
-                [member.runescape_name, member.ingots, str(member.id)]
+                [
+                    member.runescape_name,
+                    str(member.ingots),
+                    str(member.id),
+                    str(member.joined_date),
+                ]
                 for member in existing
             ]
         }
@@ -290,7 +295,7 @@ class SheetsStorage(metaclass=IngotsStorage):
         rows = [
             [
                 member.runescape_name,
-                member.ingots,
+                str(member.ingots),
                 str(member.id),
                 str(member.joined_date),
             ]
