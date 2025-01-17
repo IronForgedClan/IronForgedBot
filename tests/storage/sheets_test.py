@@ -2,15 +2,12 @@ import json
 import os
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytz
 from googleapiclient.discovery import build
 from googleapiclient.http import HttpMock, HttpMockSequence
 from ironforgedbot.storage.sheets import SheetsStorage
 from ironforgedbot.storage.types import Member, StorageError
-
-TIMEZONE = "America/Los_Angeles"
 
 
 class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
@@ -465,11 +462,6 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
         )
 
         sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        mock_datetime = MagicMock()
-        mock_datetime.now.return_value = datetime.fromtimestamp(
-            1693100000, tz=pytz.timezone(TIMEZONE)
-        )
 
         client = SheetsStorage(sheets_client, "")
 
