@@ -14,3 +14,4 @@ aiohttp
 aiofiles
 tabulate
 Pillow
+sqlalchemy

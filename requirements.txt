@@ -37,7 +37,7 @@ frozenlist==1.5.0
     #   aiosignal
 google-api-core==2.24.0
     # via google-api-python-client
-google-api-python-client==2.156.0
+google-api-python-client==2.159.0
     # via -r requirements.in
 google-auth==2.37.0
     # via
@@ -49,6 +49,8 @@ google-auth-httplib2==0.2.0
     # via google-api-python-client
 googleapis-common-protos==1.66.0
     # via google-api-core
+greenlet==3.1.1
+    # via sqlalchemy
 httplib2==0.22.0
     # via
     #   google-api-python-client
@@ -63,7 +65,7 @@ multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
-pillow==11.0.0
+pillow==11.1.0
     # via -r requirements.in
 portalocker==3.1.1
     # via concurrent-log-handler
@@ -73,7 +75,7 @@ propcache==0.2.1
     #   yarl
 proto-plus==1.25.0
     # via google-api-core
-protobuf==5.29.2
+protobuf==5.29.3
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -102,10 +104,14 @@ rsa==4.9
     # via google-auth
 six==1.17.0
     # via python-dateutil
+sqlalchemy==2.0.37
+    # via -r requirements.in
 strenum==0.4.15
     # via -r requirements.in
 tabulate==0.9.0
     # via -r requirements.in
+typing-extensions==4.12.2
+    # via sqlalchemy
 tzlocal==5.2
     # via apscheduler
 uritemplate==4.1.1
