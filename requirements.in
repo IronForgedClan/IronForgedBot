@@ -14,4 +14,5 @@ aiohttp
 aiofiles
 tabulate
 Pillow
-sqlalchemy
+sqlalchemy[asyncio]
+aiosqlite
