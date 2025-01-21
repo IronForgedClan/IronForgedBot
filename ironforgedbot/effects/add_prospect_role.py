@@ -3,7 +3,7 @@ import logging
 import discord
 
 from ironforgedbot.common.helpers import (
-    iso_timestamp_to_discord_relative,
+    datetime_to_discord_relative,
     normalize_discord_string,
 )
 from ironforgedbot.common.roles import ROLE
@@ -36,18 +36,18 @@ async def add_prospect_role(
             f":warning: {text_bold('WARNING')}\nAdded the "
             f"{text_bold(ROLE.PROSPECT)} role to a member that doesn't exist in "
             f"storage. Timestamp can therefore not be saved.\n\n"
-            f"Please make sure the member {member.mention} has the "
+            f"Please make sure {member.mention} has the "
             f"{text_bold(ROLE.MEMBER)} role and has been successfully synchonized. "
             f"Then add the {text_bold(ROLE.PROSPECT)} role again to successfully "
             "save a timestamp. Adding both roles at once is only supported on mobile."
         )
 
-    timestamp = datetime.now(timezone.utc).isoformat()
-    storage_member.joined_date = timestamp
+    now = datetime.now(timezone.utc)
+    storage_member.joined_date = now.isoformat()
 
     await STORAGE.update_members([storage_member], "BOT", "Added Prospect role")
 
     return await report_channel.send(
         f":information: Timestamp for {member.mention} "
-        f"saved: {iso_timestamp_to_discord_relative(timestamp)}"
+        f"saved: {datetime_to_discord_relative(now)}"
     )
