@@ -5,6 +5,7 @@ from io import BytesIO
 from typing import List, Tuple, TypedDict
 
 import discord
+import pytz
 from dateutil.relativedelta import relativedelta
 from discord import Guild, Member
 
@@ -238,3 +239,14 @@ def get_text_channel(
             return channel
 
     return None
+
+
+def iso_timestamp_to_discord_relative(timestamp: str, format="d") -> str:
+    dt = datetime.fromisoformat(timestamp)
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=pytz.UTC)
+
+    unix_timestamp = int(dt.timestamp())
+
+    return f"<t:{unix_timestamp}:{format}>"
