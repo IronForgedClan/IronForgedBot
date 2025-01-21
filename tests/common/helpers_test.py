@@ -7,6 +7,7 @@ import discord
 from ironforgedbot.common.helpers import (
     calculate_percentage,
     find_member_by_nickname,
+    iso_timestamp_to_discord_relative,
     normalize_discord_string,
     render_percentage,
     render_relative_time,
@@ -242,4 +243,23 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(
             render_relative_time(datetime(2000, 8, 7, 9, 26, 25).astimezone()),
             "24 years ago",
+        )
+
+    def test_iso_to_discord_relative(self):
+        """Test conversion of iso timestamp to Discord's relative time format"""
+        self.assertEqual(
+            iso_timestamp_to_discord_relative("2025-01-20T21:31:01Z"),
+            "<t:1737408661:d>",
+        )
+        self.assertEqual(
+            iso_timestamp_to_discord_relative("2025-01-20T21:31:01+00:00"),
+            "<t:1737408661:d>",
+        )
+        self.assertEqual(
+            iso_timestamp_to_discord_relative("2025-01-20T21:31:01+00:00", "r"),
+            "<t:1737408661:r>",
+        )
+        self.assertEqual(
+            iso_timestamp_to_discord_relative("2025-01-20T21:31:01+01:00"),
+            "<t:1737405061:d>",
         )
