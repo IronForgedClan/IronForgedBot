@@ -245,7 +245,7 @@ class TestHelpers(unittest.TestCase):
             "24 years ago",
         )
 
-    def test_iso_to_discord_relative(self):
+    def test_datetime_to_discord_relative(self):
         """Test conversion of iso timestamp to Discord's relative time format"""
         self.assertEqual(
             datetime_to_discord_relative(
