@@ -241,9 +241,7 @@ def get_text_channel(
     return None
 
 
-def iso_timestamp_to_discord_relative(timestamp: str, format="d") -> str:
-    dt = datetime.fromisoformat(timestamp)
-
+def datetime_to_discord_relative(dt: datetime, format="d") -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=pytz.UTC)
 
