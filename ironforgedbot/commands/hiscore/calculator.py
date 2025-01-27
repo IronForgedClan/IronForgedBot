@@ -61,12 +61,14 @@ async def score_info(
 
 async def get_player_points_total(player_name: str) -> int:
     player_name = normalize_discord_string(player_name)
-
     data = await score_info(player_name)
+
+    if not data:
+        return 0
+
     activities = data.clues + data.raids + data.bosses
 
     points = 0
-
     for skill in data.skills:
         points += skill["points"]
 
