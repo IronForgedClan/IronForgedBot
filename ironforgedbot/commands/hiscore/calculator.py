@@ -49,9 +49,12 @@ class ScoreBreakdown:
 
 async def score_info(
     player_name: str,
-) -> ScoreBreakdown:
+) -> ScoreBreakdown | None:
     player_name = normalize_discord_string(player_name)
     data = await HTTP.get(HISCORES_PLAYER_URL.format(player=player_name))
+
+    if not data:
+        return None
 
     skills = _get_skills_info(data)
     clues, raids, bosses = _get_activities_info(data)
