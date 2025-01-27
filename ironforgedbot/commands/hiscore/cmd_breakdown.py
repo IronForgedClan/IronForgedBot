@@ -4,7 +4,7 @@ from typing import Optional
 import discord
 from reactionmenu import ViewButton, ViewMenu
 
-from ironforgedbot.commands.hiscore.calculator import score_info
+from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown, score_info
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -23,6 +23,7 @@ from ironforgedbot.common.ranks import (
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
+    send_member_no_hiscore_values,
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
@@ -52,11 +53,16 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     except Exception as e:
         return await send_error_response(interaction, str(e))
 
+    display_name = member.display_name if member is not None else player
+
     try:
         data = await score_info(player)
     except RuntimeError as error:
         await send_error_response(interaction, str(error))
         return
+
+    if not data:
+        return await send_member_no_hiscore_values(interaction, display_name)
 
     activities = data.clues + data.raids + data.bosses
 
@@ -86,8 +92,6 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             return await send_prospect_response(
                 interaction, rank_name, rank_icon, member
             )
-
-    display_name = member.display_name if member is not None else player
 
     rank_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Rank Ladder",

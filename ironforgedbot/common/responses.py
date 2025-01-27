@@ -3,6 +3,7 @@ import logging
 import discord
 
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.storage.types import StorageError
@@ -74,6 +75,27 @@ async def send_prospect_response(
         "",
         embed_description,
         discord.Color.from_str("#df781c"),
+    )
+
+    await interaction.followup.send(embed=embed)
+
+
+async def send_member_no_hiscore_values(interaction: discord.Interaction, name: str):
+    rank_name = get_rank_from_points(0)
+    rank_color = get_rank_color_from_points(0)
+    rank_icon = find_emoji(interaction, rank_name)
+
+    embed = build_response_embed(
+        f"{rank_icon} {name}",
+        (
+            "Unable to calculate an accurate score for this member.\n\n"
+            "The bot uses the official hiscores to retrieve data about a member. If the account "
+            "is new or at a very low level, it may not appear on the hiscores yet. Until an accurate "
+            "score can be determined, this member will be assigned the "
+            f"{rank_icon} {text_bold(rank_name)} rank.\n\n"
+            "-# :information: If this nickname is incorrect please reach out to a member of staff."
+        ),
+        rank_color,
     )
 
     await interaction.followup.send(embed=embed)

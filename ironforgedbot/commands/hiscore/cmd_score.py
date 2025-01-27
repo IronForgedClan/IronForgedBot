@@ -22,6 +22,7 @@ from ironforgedbot.common.ranks import (
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
+    send_member_no_hiscore_values,
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
@@ -57,6 +58,9 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
     except RuntimeError as error:
         await send_error_response(interaction, str(error))
         return
+
+    if not data:
+        return await send_member_no_hiscore_values(interaction, display_name)
 
     activities = data.clues + data.raids + data.bosses
 

@@ -25,15 +25,14 @@ class AsyncHttpClient:
 
         if not self.session:
             logger.critical("No session initialized")
-            return
+            return None
 
         try:
             async with self.session.request(
                 method, url, params=params, headers=headers, json=json_data
             ) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    return data
+                    return await response.json()
                 else:
                     logger.error(f"Request failed with status: {response.status}")
                     return None
