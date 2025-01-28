@@ -5,7 +5,7 @@ import discord
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
@@ -110,16 +110,18 @@ async def send_not_clan_member(
     name: str,
 ):
     icon = eligible_rank_icon if points_total > 0 else ":grey_question:"
-    description = f"{text_bold(name)} is not a member of this server.\n\n"
 
+    description = ""
     if points_total > 0:
         description += (
-            f"If this player would join {text_bold('Iron Forged')} they'd be eligible "
+            "This player is not a member of the clan.\n\n"
+            f"If they would join {text_bold('Iron Forged')} they'd be eligible "
             f"for the {eligible_rank_icon} {text_bold(eligible_rank_name)} rank."
         )
     else:
         description += (
-            "Unable to calculate an accurate score for this member. Do they exist?"
+            "Unable to calculate an accurate score for this player. Do they exist?\n\n"
+            f"{text_sub('...do any of us?')}"
         )
 
     embed = build_response_embed(
