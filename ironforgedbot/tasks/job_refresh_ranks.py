@@ -51,9 +51,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             current_points = await get_player_points_total(member.display_name)
         except Exception as e:
             logger.error(e)
-            await report_channel.send(
-                f"Error calculating points for {member.mention}. Is their nickname correct?"
-            )
+            await report_channel.send(f"Error calculating points for {member.mention}.")
             continue
         correct_rank = get_rank_from_points(current_points)
 
