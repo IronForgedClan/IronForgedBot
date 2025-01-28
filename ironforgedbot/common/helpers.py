@@ -8,8 +8,10 @@ import discord
 import pytz
 from dateutil.relativedelta import relativedelta
 from discord import Guild, Member
+from discord.utils import get
 
 from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.http import HTTP
 
 logger = logging.getLogger(__name__)
@@ -248,3 +250,7 @@ def datetime_to_discord_relative(dt: datetime, format="d") -> str:
     unix_timestamp = int(dt.timestamp())
 
     return f"<t:{unix_timestamp}:{format}>"
+
+
+def get_discord_role(guild: discord.Guild, role: ROLE) -> discord.Role | None:
+    return get(guild.roles, name=role)
