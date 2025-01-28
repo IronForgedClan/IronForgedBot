@@ -24,6 +24,7 @@ from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
     send_member_no_hiscore_values,
+    send_not_clan_member,
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
@@ -62,7 +63,10 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         return
 
     if not data:
-        return await send_member_no_hiscore_values(interaction, display_name)
+        if member:
+            return await send_member_no_hiscore_values(interaction, display_name)
+        else:
+            data = ScoreBreakdown([], [], [], [])
 
     activities = data.clues + data.raids + data.bosses
 
@@ -92,6 +96,11 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             return await send_prospect_response(
                 interaction, rank_name, rank_icon, member
             )
+
+    if not member:
+        return await send_not_clan_member(
+            interaction, rank_name, rank_icon, rank_color, points_total, display_name
+        )
 
     rank_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Rank Ladder",

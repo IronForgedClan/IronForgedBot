@@ -99,3 +99,33 @@ async def send_member_no_hiscore_values(interaction: discord.Interaction, name: 
     )
 
     await interaction.followup.send(embed=embed)
+
+
+async def send_not_clan_member(
+    interaction: discord.Interaction,
+    eligible_rank_name: str,
+    eligible_rank_icon: str,
+    eligible_rank_color: discord.Color,
+    points_total: int,
+    name: str,
+):
+    icon = eligible_rank_icon if points_total > 0 else ":grey_question:"
+    description = f"{text_bold(name)} is not a member of this server.\n\n"
+
+    if points_total > 0:
+        description += (
+            f"If this player would join {text_bold('Iron Forged')} they'd be eligible "
+            f"for the {eligible_rank_icon} {text_bold(eligible_rank_name)} rank."
+        )
+    else:
+        description += (
+            "Unable to calculate an accurate score for this member. Do they exist?"
+        )
+
+    embed = build_response_embed(
+        f"{icon} {name}",
+        description,
+        eligible_rank_color,
+    )
+
+    await interaction.followup.send(embed=embed)
