@@ -38,14 +38,14 @@ async def add_prospect_role(
         member_role = get_discord_role(report_channel.guild, ROLE.MEMBER)
         prospect_role = get_discord_role(report_channel.guild, ROLE.PROSPECT)
         if not member_role or not prospect_role:
-            raise ValueError("Unable to access member or prospect role")
+            raise ValueError("Unable to access member or prospect role values")
 
-        await member.add_roles(member_role)
-        await member.remove_roles(prospect_role)
-        await member.add_roles(prospect_role)
+        await member.add_roles(member_role, reason="Prospect role effect")
+        await member.remove_roles(prospect_role, reason="Prospect role effect")
+        await member.add_roles(prospect_role, reason="Prospect role effect")
         return
 
-    await report_channel.send(
+    report_message = await report_channel.send(
         f":information: {member.mention} has been given the "
         f"{text_bold(ROLE.PROSPECT)} role, saving timestamp..."
     )
@@ -55,7 +55,10 @@ async def add_prospect_role(
 
     await STORAGE.update_members([storage_member], "BOT", "Added Prospect role")
 
-    return await report_channel.send(
-        f":information: Timestamp for {member.mention} "
-        f"saved: {datetime_to_discord_relative(now)}"
+    await report_message.edit(
+        content=(
+            f":information: {member.mention} has been given the "
+            f"{text_bold(ROLE.PROSPECT)} role.\nJoin date saved: "
+            f"{datetime_to_discord_relative(now, 'F')}"
+        )
     )
