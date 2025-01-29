@@ -93,7 +93,7 @@ async def send_member_no_hiscore_values(interaction: discord.Interaction, name: 
             "is new or at a very low level, it may not appear on the hiscores yet. Until an accurate "
             "score can be determined, this member will be assigned the "
             f"{rank_icon} {text_bold(rank_name)} rank.\n\n"
-            "-# :information: If this nickname is incorrect please reach out to a member of staff."
+            "-# :information: If your Discord nickname is incorrect please reach out to a member of staff."
         ),
         rank_color,
     )
