@@ -2,7 +2,9 @@ import asyncio
 import logging
 import random
 
+from string import Template
 from datetime import datetime, timedelta, timezone
+from typing import Iterable
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_player_points_total
@@ -23,9 +25,13 @@ PROBATION_DAYS = 14
 
 
 async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextChannel):
-    await report_channel.send("Beginning rank check...")
+    progress_message = await report_channel.send("Starting rank check...")
 
-    for member in guild.members:
+    for index, member in enumerate(guild.members):
+        await progress_message.edit(
+            content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
+        )
+
         if (
             member.bot
             or check_member_has_role(member, ROLE.APPLICANT)
@@ -93,6 +99,8 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             )
             await report_channel.send(message)
 
-        await asyncio.sleep(random.randrange(1, 3))
+        await asyncio.sleep(round(random.uniform(0.2, 1.5), 2))
 
-    await report_channel.send("Finished rank check.")
+    await report_channel.send(
+        f"Finished rank check: [{guild.member_count}/{guild.member_count}]"
+    )
