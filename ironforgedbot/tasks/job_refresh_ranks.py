@@ -1,10 +1,8 @@
 import asyncio
 import logging
 import random
-
-from string import Template
 from datetime import datetime, timedelta, timezone
-from typing import Iterable
+
 import discord
 
 from ironforgedbot.commands.hiscore.calculator import get_player_points_total
