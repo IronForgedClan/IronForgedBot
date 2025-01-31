@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+from ironforgedbot.commands.hiscore.calculator import HiscoresNotFound
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -77,7 +78,7 @@ class BreakdownTest(unittest.IsolatedAsyncioTestCase):
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
-        mock_score_info.return_value = None
+        mock_score_info.side_effect = HiscoresNotFound()
 
         await cmd_breakdown(interaction, playername)
 

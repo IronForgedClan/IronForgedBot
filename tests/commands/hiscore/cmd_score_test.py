@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import discord
 
+from ironforgedbot.commands.hiscore.calculator import HiscoresNotFound
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -160,7 +161,7 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         interaction = create_mock_discord_interaction(user=user)
 
         mock_validate_playername.return_value = (user, playername)
-        mock_score_info.return_value = None
+        mock_score_info.side_effect = HiscoresNotFound()
 
         await cmd_score(interaction, playername)
 
