@@ -5,7 +5,11 @@ from datetime import datetime, timedelta, timezone
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import get_player_points_total
+from ironforgedbot.commands.hiscore.calculator import (
+    HiscoresError,
+    HiscoresNotFound,
+    get_player_points_total,
+)
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
@@ -30,11 +34,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
         )
 
-        if (
-            member.bot
-            or check_member_has_role(member, ROLE.APPLICANT)
-            or check_member_has_role(member, ROLE.GUEST)
-        ):
+        if not check_member_has_role(member, ROLE.MEMBER):
             continue
 
         if member.nick is None or len(member.nick) < 1:
@@ -43,6 +43,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             continue
 
         current_rank = get_rank_from_member(member)
+
         if current_rank in GOD_ALIGNMENT:
             continue
 
@@ -53,10 +54,14 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
         try:
             current_points = await get_player_points_total(member.display_name)
-        except Exception as e:
-            logger.error(e)
-            await report_channel.send(f"Error calculating points for {member.mention}.")
+        except HiscoresError:
+            await report_channel.send(
+                f"Error response from api for {member.mention}, try again."
+            )
             continue
+        except HiscoresNotFound:
+            current_points = 0
+
         correct_rank = get_rank_from_points(current_points)
 
         if check_member_has_role(member, ROLE.PROSPECT):
