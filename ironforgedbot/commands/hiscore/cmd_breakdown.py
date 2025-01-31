@@ -283,4 +283,4 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     menu.add_button(ViewButton.back())
     menu.add_button(ViewButton.next())
 
-    await menu.start()
+    return await menu.start()
