@@ -4,6 +4,7 @@ from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 import wom
+from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
 from ironforgedbot.common.roles import ROLE
 
 VALID_CONFIG = {
@@ -18,6 +19,49 @@ VALID_CONFIG = {
     "TRICK_OR_TREAT_CHANNEL_ID": "",
     "RAFFLE_CHANNEL_ID": "123456",
 }
+
+mock_score_breakdown = ScoreBreakdown(
+    skills=[
+        {
+            "name": "Slayer",
+            "display_name": "Slayer",
+            "display_order": 1,
+            "emoji_key": "Slayer",
+            "level": 67,
+            "xp": 547953,
+            "points": 18,
+        }
+    ],
+    clues=[
+        {
+            "name": "Clue Scrolls (beginner)",
+            "display_name": "Beginner",
+            "display_order": 1,
+            "emoji_key": "ClueScrolls_Beginner",
+            "kc": 100,
+            "points": 10,
+        },
+    ],
+    raids=[
+        {
+            "name": "Tombs of Amascut",
+            "display_order": 4,
+            "emoji_key": "TombsOfAmascut",
+            "kc": 10,
+            "points": 10,
+        },
+    ],
+    bosses=[
+        {
+            "name": "Kraken",
+            "display_name": "Kraken",
+            "display_order": 1,
+            "emoji_key": "Kraken",
+            "kc": 70,
+            "points": 2,
+        }
+    ],
+)
 
 
 def create_mock_discord_interaction(
