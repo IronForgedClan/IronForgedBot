@@ -29,8 +29,8 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
-            call("Finished rank check."),
+            call("Starting rank check..."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -52,8 +52,8 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
-            call("Finished rank check."),
+            call("Starting rank check..."),
+            call("Finished rank check: [2/2]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -71,9 +71,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
+            call("Starting rank check..."),
             call(f"{member.mention} has no nickname set, ignoring..."),
-            call("Finished rank check."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -93,8 +93,8 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
-            call("Finished rank check."),
+            call("Starting rank check..."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -113,9 +113,9 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
+            call("Starting rank check..."),
             call(f"{member.mention} has  God rank but no alignment."),
-            call("Finished rank check."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -137,11 +137,11 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
+            call("Starting rank check..."),
             call(
                 f"{member.mention} detected without any rank. Should have  **Mithril**."
             ),
-            call("Finished rank check."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -150,11 +150,11 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
     @patch(
         "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
     )
-    async def test_job_refresh_ranks_report_unable_to_lookup_score(
+    async def test_job_refresh_ranks_lookup_failure_results_in_iron_rank(
         self, mock_sleep, mock_get_points
     ):
-        """Reports when unable to look up members score"""
-        member = create_test_member("foo", [ROLE.MEMBER, RANK.IRON], "bar")
+        """When unable to look up members score, assume score of 0"""
+        member = create_test_member("foo", [ROLE.PROSPECT, ROLE.MEMBER], "bar")
         mock_guild = create_mock_discord_guild([member])
         mock_report_channel = Mock(discord.TextChannel)
         mock_sleep.return_value = None
@@ -163,13 +163,10 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
-            call(
-                f"Error calculating points for {member.mention}. Is their nickname correct?"
-            ),
-            call("Finished rank check."),
+            call("Starting rank check..."),
+            call(f"Error calculating points for {member.mention}."),
+            call("Finished rank check: [1/1]"),
         ]
-
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
@@ -190,12 +187,12 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
+            call("Starting rank check..."),
             call(
                 f"{member.mention} needs upgrading  "
                 f"→  ({text_bold(f"{actual_points:,}")} points)"
             ),
-            call("Finished rank check."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -224,12 +221,12 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
+            call("Starting rank check..."),
             call(
                 f"{member.mention} has completed their **14 day** probation period and "
                 f"is now eligible for  **Mithril** rank."
             ),
-            call("Finished rank check."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
@@ -258,8 +255,8 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Beginning rank check..."),
-            call("Finished rank check."),
+            call("Starting rank check..."),
+            call("Finished rank check: [1/1]"),
         ]
 
         self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
