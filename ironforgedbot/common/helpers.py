@@ -123,16 +123,17 @@ async def populate_emoji_cache(application_id: int, token: str):
         headers=headers,
     )
 
-    if data:
-        for emoji in data["items"]:
-            emojiCache[emoji["name"]] = {
-                "id": emoji["id"],
-                "animated": emoji["animated"],
-            }
-
-        logger.info("Emoji cache loaded successfully")
-    else:
+    if data["status"] != 200:
         logger.critical("Error populating emoji cache")
+        return
+
+    for emoji in data["body"]["items"]:
+        emojiCache[emoji["name"]] = {
+            "id": emoji["id"],
+            "animated": emoji["animated"],
+        }
+
+    logger.info("Emoji cache loaded successfully")
 
 
 # TODO: when discord.py 2.5 releases remove interaction param and fallback
