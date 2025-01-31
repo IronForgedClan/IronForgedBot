@@ -34,7 +34,11 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
         )
 
-        if not check_member_has_role(member, ROLE.MEMBER):
+        if (
+            member.bot
+            or check_member_has_role(member, ROLE.APPLICANT)
+            or check_member_has_role(member, ROLE.GUEST)
+        ):
             continue
 
         if member.nick is None or len(member.nick) < 1:
