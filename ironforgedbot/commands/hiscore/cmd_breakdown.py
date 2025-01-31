@@ -4,7 +4,12 @@ from typing import Optional
 import discord
 from reactionmenu import ViewButton, ViewMenu
 
-from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown, score_info
+from ironforgedbot.commands.hiscore.calculator import (
+    HiscoresError,
+    HiscoresNotFound,
+    ScoreBreakdown,
+    score_info,
+)
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -58,11 +63,9 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     try:
         data = await score_info(player)
-    except RuntimeError as error:
-        await send_error_response(interaction, str(error))
-        return
-
-    if not data:
+    except HiscoresError as e:
+        return await send_error_response(interaction, e.message)
+    except HiscoresNotFound:
         if member:
             return await send_member_no_hiscore_values(interaction, display_name)
         else:
