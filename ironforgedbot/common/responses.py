@@ -54,8 +54,8 @@ async def send_prospect_response(
 
     embed_description = (
         f"{text_bold(member.display_name)} is currently a {prospect_icon} {text_bold(ROLE.PROSPECT)} and "
-        f"will become eligible for the {eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
-        f"successful acceptance into the clan after completing the {text_bold(f"{PROBATION_DAYS}-day")} "
+        f"will become eligible for\nthe {eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
+        f"successful acceptance into the clan\nafter completing the {text_bold(f"{PROBATION_DAYS}-day")} "
         "probation period."
     )
 
