@@ -8,8 +8,10 @@ import discord
 import pytz
 from dateutil.relativedelta import relativedelta
 from discord import Guild, Member
+from discord.utils import get
 
 from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.http import HTTP
 
 logger = logging.getLogger(__name__)
@@ -121,16 +123,17 @@ async def populate_emoji_cache(application_id: int, token: str):
         headers=headers,
     )
 
-    if data:
-        for emoji in data["items"]:
-            emojiCache[emoji["name"]] = {
-                "id": emoji["id"],
-                "animated": emoji["animated"],
-            }
-
-        logger.info("Emoji cache loaded successfully")
-    else:
+    if data["status"] != 200:
         logger.critical("Error populating emoji cache")
+        return
+
+    for emoji in data["body"]["items"]:
+        emojiCache[emoji["name"]] = {
+            "id": emoji["id"],
+            "animated": emoji["animated"],
+        }
+
+    logger.info("Emoji cache loaded successfully")
 
 
 # TODO: when discord.py 2.5 releases remove interaction param and fallback
@@ -248,3 +251,7 @@ def datetime_to_discord_relative(dt: datetime, format="d") -> str:
     unix_timestamp = int(dt.timestamp())
 
     return f"<t:{unix_timestamp}:{format}>"
+
+
+def get_discord_role(guild: discord.Guild, role: ROLE) -> discord.Role | None:
+    return get(guild.roles, name=role)
