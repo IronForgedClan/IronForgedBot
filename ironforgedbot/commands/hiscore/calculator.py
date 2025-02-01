@@ -69,10 +69,11 @@ async def score_info(
     data = await HTTP.get(HISCORES_PLAYER_URL.format(player=player_name))
 
     if data["status"] == 404:
-        raise HiscoresNotFound(data["body"])
+        raise HiscoresNotFound()
 
     if data["status"] != 200:
-        raise HiscoresError(data["body"])
+        logger.error(data["body"])
+        raise HiscoresError()
 
     skills = _get_skills_info(data["body"])
     clues, raids, bosses = _get_activities_info(data["body"])
