@@ -19,6 +19,7 @@ from ironforgedbot.common.ranks import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.http import HttpException
 from ironforgedbot.storage.sheets import STORAGE
 
 logger = logging.getLogger(__name__)
@@ -56,11 +57,17 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             await report_channel.send(message)
             continue
 
+        current_points = 0
         try:
             current_points = await get_player_points_total(member.display_name)
+        except HttpException as e:
+            await report_channel.send(
+                f"HttpException getting points for {member.mention}.\n> {e}"
+            )
+            continue
         except HiscoresError:
             await report_channel.send(
-                f"Error response from api for {member.mention}, try again."
+                f"Unhandled error getting points for {member.mention}."
             )
             continue
         except HiscoresNotFound:
