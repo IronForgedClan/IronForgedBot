@@ -180,13 +180,8 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_sleep.call_count, 2)
         mock_logger.critical.assert_called_once()
 
-    @patch("ironforgedbot.decorators.randrange")
     @patch("asyncio.sleep", return_value=None)
-    async def test_retry_on_exception_random_sleep_between_tries(
-        self, mock_sleep, mock_randrange
-    ):
-        mock_randrange.return_value = 5
-
+    async def test_retry_on_exception_exponential_sleep_between_tries(self, mock_sleep):
         async def func():
             if not hasattr(func, "call_count"):
                 func.call_count = 0
@@ -194,13 +189,15 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
 
             raise Exception("Test Exception")
 
-        decorated_func = retry_on_exception(3)(func)
+        decorated_func = retry_on_exception(retries=5)(func)
 
         with self.assertRaises(Exception):
             await decorated_func()
 
-        self.assertEqual(mock_randrange.call_count, 2)
-        mock_sleep.assert_called_with(5)
+        mock_sleep.assert_any_call(1)
+        mock_sleep.assert_any_call(2)
+        mock_sleep.assert_any_call(4)
+        mock_sleep.assert_any_call(8)
 
 
 class TestRequireChannelDecorator(unittest.IsolatedAsyncioTestCase):
@@ -226,7 +223,7 @@ class TestRequireChannelDecorator(unittest.IsolatedAsyncioTestCase):
             f"Expected discord.Interaction as first argument ({mock_func.__name__})",
         )
 
-    @patch("ironforgedbot.decorators.send_error_response")
+    @patch("ironforgedbot.common.responses.send_error_response")
     async def test_require_channel_fails_invalid_channel_id(
         self, mock_send_error_response
     ):
