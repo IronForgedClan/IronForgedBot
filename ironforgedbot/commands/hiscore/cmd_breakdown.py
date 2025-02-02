@@ -35,6 +35,7 @@ from ironforgedbot.common.responses import (
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_italic
 from ironforgedbot.decorators import require_role
+from ironforgedbot.http import HttpException
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +64,11 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     try:
         data = await score_info(player)
-    except HiscoresError as e:
-        return await send_error_response(interaction, e.message)
+    except (HiscoresError, HttpException):
+        return await send_error_response(
+            interaction,
+            "An error has occurred calculating the score for this user. Please try again.",
+        )
     except HiscoresNotFound:
         if member:
             return await send_member_no_hiscore_values(interaction, display_name)
