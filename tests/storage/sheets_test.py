@@ -98,6 +98,17 @@ class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(await client.read_members(), expected)
 
+    async def test_read_members_empty(self):
+        sheets_read_response = {}
+
+        http = HttpMock(headers={"status": "200"})
+        http.data = json.dumps(sheets_read_response)
+        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
+
+        client = SheetsStorage(sheets_client, "")
+
+        self.assertEqual(await client.read_members(), [])
+
     @patch("ironforgedbot.storage.sheets.datetime")
     async def test_add_members(self, mock_datetime):
         mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
