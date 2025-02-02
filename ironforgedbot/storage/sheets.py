@@ -83,7 +83,7 @@ class SheetsStorage(metaclass=IngotsStorage):
             )
 
             result = await asyncio.to_thread(query.execute)
-            return result.get("values", None)
+            return result.get("values", [])
 
     @retry_on_exception(retries=5)
     async def _update_sheet_data(self, spreadsheet_id, range_name, body):
