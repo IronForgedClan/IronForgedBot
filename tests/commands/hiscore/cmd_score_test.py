@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
+from ironforgedbot.commands.hiscore.calculator import HiscoresNotFound
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -11,55 +11,13 @@ from tests.helpers import (
     mock_require_role,
 )
 
+from tests.helpers import mock_score_breakdown
+
 with patch(
     "ironforgedbot.decorators.require_role",
     mock_require_role,
 ):
     from ironforgedbot.commands.hiscore.cmd_score import cmd_score
-
-
-mock_score_breakdown = ScoreBreakdown(
-    skills=[
-        {
-            "name": "Slayer",
-            "display_name": "Slayer",
-            "display_order": 1,
-            "emoji_key": "Slayer",
-            "level": 67,
-            "xp": 547953,
-            "points": 18,
-        }
-    ],
-    clues=[
-        {
-            "name": "Clue Scrolls (beginner)",
-            "display_name": "Beginner",
-            "display_order": 1,
-            "emoji_key": "ClueScrolls_Beginner",
-            "kc": 100,
-            "points": 10,
-        },
-    ],
-    raids=[
-        {
-            "name": "Tombs of Amascut",
-            "display_order": 4,
-            "emoji_key": "TombsOfAmascut",
-            "kc": 10,
-            "points": 10,
-        },
-    ],
-    bosses=[
-        {
-            "name": "Kraken",
-            "display_name": "Kraken",
-            "display_order": 1,
-            "emoji_key": "Kraken",
-            "kc": 70,
-            "points": 2,
-        }
-    ],
-)
 
 
 class ScoreTest(unittest.IsolatedAsyncioTestCase):
@@ -188,3 +146,42 @@ class ScoreTest(unittest.IsolatedAsyncioTestCase):
         await cmd_score(interaction, playername)
 
         mock_send_prospect_response.assert_awaited_once()
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.score_info")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.send_member_no_hiscore_values")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
+    async def test_cmd_score_member_no_hiscore_response(
+        self,
+        mock_validate_playername,
+        mock_send_no_hiscore_values,
+        mock_score_info,
+    ):
+        playername = "tester"
+        user = create_test_member(playername, [ROLE.MEMBER])
+        interaction = create_mock_discord_interaction(user=user)
+
+        mock_validate_playername.return_value = (user, playername)
+        mock_score_info.side_effect = HiscoresNotFound()
+
+        await cmd_score(interaction, playername)
+
+        mock_send_no_hiscore_values.assert_awaited_once()
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.score_info")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.send_not_clan_member")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
+    async def test_cmd_score_not_in_clan_response(
+        self,
+        mock_validate_playername,
+        mock_send_not_clan_member,
+        mock_score_info,
+    ):
+        playername = "tester"
+        interaction = create_mock_discord_interaction()
+
+        mock_validate_playername.return_value = (None, playername)
+        mock_score_info.return_value = mock_score_breakdown
+
+        await cmd_score(interaction, playername)
+
+        mock_send_not_clan_member.assert_awaited_once()

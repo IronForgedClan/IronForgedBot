@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 import sys
 from typing import Optional
 
@@ -8,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from ironforgedbot.common.helpers import get_text_channel
-from ironforgedbot.config import CONFIG
+from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
     job_check_activity_reminder,
@@ -79,12 +80,18 @@ class IronForgedAutomations:
 
     async def setup_automations(self):
         """Add jobs to scheduler."""
+        offset = (
+            0
+            if ENVIRONMENT.PRODUCTION in CONFIG.ENVIRONMENT
+            else random.randint(10, 50)
+        )
+
         self.scheduler.add_job(
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
             ),
             # CronTrigger(minute="*"),
-            CronTrigger(hour="3", minute=50, second=0, timezone="UTC"),
+            CronTrigger(hour="3", minute=50, second=offset, timezone="UTC"),
         )
 
         self.scheduler.add_job(
@@ -92,13 +99,15 @@ class IronForgedAutomations:
                 job_refresh_ranks, self.discord_guild, self.report_channel
             ),
             # CronTrigger(minute="*"),
-            CronTrigger(hour="8,20", minute=10, second=0, timezone="UTC"),
+            CronTrigger(hour="8,20", minute=10, second=offset, timezone="UTC"),
         )
 
         self.scheduler.add_job(
             self._job_wrapper(job_check_activity_reminder, self.report_channel),
             # CronTrigger(minute="*"),
-            CronTrigger(day_of_week="mon", hour=0, minute=0, second=0, timezone="UTC"),
+            CronTrigger(
+                day_of_week="mon", hour=0, minute=0, second=offset, timezone="UTC"
+            ),
         )
 
         self.scheduler.add_job(
@@ -109,7 +118,9 @@ class IronForgedAutomations:
                 CONFIG.WOM_GROUP_ID,
             ),
             # CronTrigger(minute="*"),
-            CronTrigger(day_of_week="mon", hour=1, minute=0, second=0, timezone="UTC"),
+            CronTrigger(
+                day_of_week="mon", hour=1, minute=0, second=offset, timezone="UTC"
+            ),
         )
 
         self.scheduler.add_job(
@@ -121,7 +132,9 @@ class IronForgedAutomations:
                 CONFIG.WOM_GROUP_ID,
             ),
             # CronTrigger(minute="*"),
-            CronTrigger(day_of_week="sun", hour=0, minute=0, second=0, timezone="UTC"),
+            CronTrigger(
+                day_of_week="sun", hour=0, minute=0, second=offset, timezone="UTC"
+            ),
         )
 
         await self.report_channel.send(

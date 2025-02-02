@@ -3,8 +3,9 @@ import logging
 import discord
 
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
@@ -53,8 +54,8 @@ async def send_prospect_response(
 
     embed_description = (
         f"{text_bold(member.display_name)} is currently a {prospect_icon} {text_bold(ROLE.PROSPECT)} and "
-        f"will become eligible for the {eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
-        f"successful acceptance into the clan after completing the {text_bold(f"{PROBATION_DAYS}-day")} "
+        f"will become eligible for\nthe {eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
+        f"successful acceptance into the clan\nafter completing the {text_bold(f"{PROBATION_DAYS}-day")} "
         "probation period."
     )
 
@@ -74,6 +75,59 @@ async def send_prospect_response(
         "",
         embed_description,
         discord.Color.from_str("#df781c"),
+    )
+
+    await interaction.followup.send(embed=embed)
+
+
+async def send_member_no_hiscore_values(interaction: discord.Interaction, name: str):
+    rank_name = get_rank_from_points(0)
+    rank_color = get_rank_color_from_points(0)
+    rank_icon = find_emoji(interaction, rank_name)
+
+    embed = build_response_embed(
+        f"{rank_icon} {name}",
+        (
+            "Unable to calculate an accurate score for this member.\n\n"
+            "The bot uses the official hiscores to retrieve data about a member. If the account "
+            "is new or at a very low level, it may not appear on the hiscores yet. Until an accurate "
+            "score can be determined, this member will be assigned the "
+            f"{rank_icon} {text_bold(rank_name)} rank.\n\n"
+            "-# :information: If your Discord nickname is incorrect please reach out to a member of staff."
+        ),
+        rank_color,
+    )
+
+    await interaction.followup.send(embed=embed)
+
+
+async def send_not_clan_member(
+    interaction: discord.Interaction,
+    eligible_rank_name: str,
+    eligible_rank_icon: str,
+    eligible_rank_color: discord.Color,
+    points_total: int,
+    name: str,
+):
+    icon = eligible_rank_icon if points_total > 0 else ":grey_question:"
+
+    description = ""
+    if points_total > 0:
+        description += (
+            "This player is not a member of the clan.\n\n"
+            f"If they would join {text_bold('Iron Forged')} they'd be eligible "
+            f"for the {eligible_rank_icon} {text_bold(eligible_rank_name)} rank."
+        )
+    else:
+        description += (
+            "Unable to calculate an accurate score for this player. Do they exist?\n\n"
+            f"{text_sub('...do any of us?')}"
+        )
+
+    embed = build_response_embed(
+        f"{icon} {name}",
+        description,
+        eligible_rank_color,
     )
 
     await interaction.followup.send(embed=embed)

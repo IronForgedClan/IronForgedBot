@@ -3,12 +3,9 @@ import functools
 import logging
 import time
 from pprint import pformat
-from random import randrange
 
 import discord
 
-from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.state import STATE
 
@@ -17,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 def require_role(role: ROLE, ephemeral=False):
     """Makes sure that the interaction user has the required role or higher"""
+
+    from ironforgedbot.common.helpers import normalize_discord_string
 
     def decorator(func):
         @functools.wraps(func)
@@ -74,6 +73,8 @@ def require_role(role: ROLE, ephemeral=False):
 def require_channel(channel_ids: list[int]):
     """Makes sure that the interaction is happening in a whitelisted channel"""
 
+    from ironforgedbot.common.responses import send_error_response
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -111,17 +112,18 @@ def retry_on_exception(retries=3):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            sleep_time = 1
             for attempt in range(retries):
                 try:
                     return await func(*args, **kwargs)
                 except Exception as e:
                     if attempt < retries - 1:
-                        sleep_time = randrange(1, 7)
                         logger.warning(
                             f"Fail #{attempt + 1} for {func.__name__}, "
                             f"retrying after {sleep_time}s sleep..."
                         )
                         await asyncio.sleep(sleep_time)
+                        sleep_time *= 2
                     else:
                         logger.critical(e)
                         raise e
@@ -133,6 +135,8 @@ def retry_on_exception(retries=3):
 
 def rate_limit(rate: int = 1, seconds: int = 3600):
     """Limits how often a command can be called by an individual user"""
+
+    from ironforgedbot.common.responses import send_error_response
 
     def decorator(func):
         @functools.wraps(func)

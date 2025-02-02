@@ -1,11 +1,15 @@
 import asyncio
 import logging
 import random
-
 from datetime import datetime, timedelta, timezone
+
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import get_player_points_total
+from ironforgedbot.commands.hiscore.calculator import (
+    HiscoresError,
+    HiscoresNotFound,
+    get_player_points_total,
+)
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
@@ -15,6 +19,7 @@ from ironforgedbot.common.ranks import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.http import HttpException
 from ironforgedbot.storage.sheets import STORAGE
 
 logger = logging.getLogger(__name__)
@@ -23,9 +28,13 @@ PROBATION_DAYS = 14
 
 
 async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextChannel):
-    await report_channel.send("Beginning rank check...")
+    progress_message = await report_channel.send("Starting rank check...")
 
-    for member in guild.members:
+    for index, member in enumerate(guild.members):
+        await progress_message.edit(
+            content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
+        )
+
         if (
             member.bot
             or check_member_has_role(member, ROLE.APPLICANT)
@@ -39,6 +48,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             continue
 
         current_rank = get_rank_from_member(member)
+
         if current_rank in GOD_ALIGNMENT:
             continue
 
@@ -47,14 +57,22 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             await report_channel.send(message)
             continue
 
+        current_points = 0
         try:
             current_points = await get_player_points_total(member.display_name)
-        except Exception as e:
-            logger.error(e)
+        except HttpException as e:
             await report_channel.send(
-                f"Error calculating points for {member.mention}. Is their nickname correct?"
+                f"HttpException getting points for {member.mention}.\n> {e}"
             )
             continue
+        except HiscoresError:
+            await report_channel.send(
+                f"Unhandled error getting points for {member.mention}."
+            )
+            continue
+        except HiscoresNotFound:
+            current_points = 0
+
         correct_rank = get_rank_from_points(current_points)
 
         if check_member_has_role(member, ROLE.PROSPECT):
@@ -95,6 +113,8 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             )
             await report_channel.send(message)
 
-        await asyncio.sleep(random.randrange(1, 3))
+        await asyncio.sleep(round(random.uniform(0.2, 1.5), 2))
 
-    await report_channel.send("Finished rank check.")
+    await report_channel.send(
+        f"Finished rank check: [{guild.member_count}/{guild.member_count}]"
+    )
