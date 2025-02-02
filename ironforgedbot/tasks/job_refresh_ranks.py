@@ -72,6 +72,15 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             continue
         except HiscoresNotFound:
             current_points = 0
+            if (
+                not check_member_has_role(member, ROLE.PROSPECT)
+                and current_rank != RANK.IRON
+            ):
+                await report_channel.send(
+                    f"{member.mention} has no presence on the hiscores. This member has either "
+                    "changed their rsn, or been banned."
+                )
+                continue
 
         correct_rank = get_rank_from_points(current_points)
 
