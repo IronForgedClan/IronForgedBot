@@ -68,7 +68,6 @@ async def add_prospect_role(
         )
         await member.add_roles(member_role, reason="Prospect: adding Member role")
         await member.add_roles(prospect_role, reason="Prospect: adding Prospect role")
-        logger.info("done")
         return
 
     report_message = await report_channel.send(
