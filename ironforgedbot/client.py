@@ -159,6 +159,12 @@ class DiscordClient(discord.Client):
                 logger.error("Unable to select report channel")
                 return
 
+            if before.nick != after.nick:
+                await nickname_change(report_channel, before, after)
+
+            if before.roles == after.roles:
+                return
+
             before_roles = set(r.name for r in before.roles)
             after_roles = set(r.name for r in after.roles)
 
@@ -169,10 +175,7 @@ class DiscordClient(discord.Client):
                 await add_member_role(report_channel, after)
 
             if ROLE.PROSPECT in roles_added:
-                await add_prospect_role(report_channel, after)
-
-            if before.nick != after.nick:
-                await nickname_change(report_channel, before, after)
+                asyncio.create_task(add_prospect_role(report_channel, after))
 
             if ROLE.MEMBER in roles_removed:
                 await remove_member_role(report_channel, after)
