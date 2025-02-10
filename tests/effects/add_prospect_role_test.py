@@ -39,7 +39,7 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
                 )
             ],
             "BOT",
-            "Added Prospect role",
+            "Saving Prospect joined timestamp",
         )
 
     @patch("ironforgedbot.effects.add_prospect_role.datetime")
@@ -82,8 +82,12 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
     async def test_should_report_and_fix_when_called_without_member_in_storage(
         self, mock_storage
     ):
-        member = create_test_member("tester", [ROLE.PROSPECT], "tester")
-        guild = create_mock_discord_guild([member], [ROLE.PROSPECT, ROLE.MEMBER])
+        member = create_test_member(
+            "tester", [ROLE.PROSPECT, ROLE.GUEST, ROLE.APPLICANT], "tester"
+        )
+        guild = create_mock_discord_guild(
+            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
+        )
         mock_report_channel = Mock(discord.TextChannel)
         mock_report_channel.guild = guild
 
@@ -97,11 +101,21 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
             "role. Adding correct roles to member and trying again..."
         )
 
-        member.remove_roles.assert_awaited_once_with(
-            guild.roles[0], reason="Prospect role effect"
+        member.remove_roles.assert_any_await(
+            guild.roles[2], reason="Prospect: remove Guest role"
+        )
+        member.remove_roles.assert_any_await(
+            guild.roles[3], reason="Prospect: remove Applicant role"
         )
 
-        member.add_roles.assert_any_await(guild.roles[0], reason="Prospect role effect")
-        member.add_roles.assert_any_await(guild.roles[1], reason="Prospect role effect")
+        member.remove_roles.assert_any_await(
+            guild.roles[0], reason="Prospect: not in storage, toggling role"
+        )
+        member.add_roles.assert_any_await(
+            guild.roles[0], reason="Prospect: adding Prospect role"
+        )
+        member.add_roles.assert_any_await(
+            guild.roles[1], reason="Prospect: adding Member role"
+        )
 
         mock_storage.update_members.assert_not_called()
