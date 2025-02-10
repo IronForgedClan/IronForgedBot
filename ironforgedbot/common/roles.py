@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Optional
+from typing import List, Optional
 
 import discord
 
@@ -62,3 +62,13 @@ def check_member_has_role(
         return True
 
     return False
+
+
+def member_has_any_roles(
+    member: discord.Member,
+    roles: List[ROLE],
+) -> bool:
+    required_roles = set([r.lower() for r in roles])
+    actual_roles = set([r.name.lower() for r in member.roles])
+
+    return len(required_roles & actual_roles) > 0
