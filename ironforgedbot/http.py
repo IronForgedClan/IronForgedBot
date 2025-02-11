@@ -46,17 +46,17 @@ class AsyncHttpClient:
             url, params=params, headers=headers, json=json_data
         ) as response:
             if response.status >= 500:
-                logger.error(await response.text())
+                logger.debug(await response.text())
                 raise HttpException(f"A remote server error occured: {response.status}")
 
             if response.status == 408:
-                logger.error(await response.text())
+                logger.debug(await response.text())
                 raise HttpException(
                     f"No response from remote server: {response.status}"
                 )
 
             if response.status == 429:
-                logger.error(await response.text())
+                logger.debug(await response.text())
                 raise HttpException(
                     f"Rate limited or timed out response: {response.status}"
                 )
