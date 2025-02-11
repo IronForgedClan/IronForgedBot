@@ -4,6 +4,7 @@ from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 import wom
+from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
 from ironforgedbot.common.roles import ROLE
 
 VALID_CONFIG = {
@@ -18,6 +19,49 @@ VALID_CONFIG = {
     "TRICK_OR_TREAT_CHANNEL_ID": "",
     "RAFFLE_CHANNEL_ID": "123456",
 }
+
+mock_score_breakdown = ScoreBreakdown(
+    skills=[
+        {
+            "name": "Slayer",
+            "display_name": "Slayer",
+            "display_order": 1,
+            "emoji_key": "Slayer",
+            "level": 67,
+            "xp": 547953,
+            "points": 18,
+        }
+    ],
+    clues=[
+        {
+            "name": "Clue Scrolls (beginner)",
+            "display_name": "Beginner",
+            "display_order": 1,
+            "emoji_key": "ClueScrolls_Beginner",
+            "kc": 100,
+            "points": 10,
+        },
+    ],
+    raids=[
+        {
+            "name": "Tombs of Amascut",
+            "display_order": 4,
+            "emoji_key": "TombsOfAmascut",
+            "kc": 10,
+            "points": 10,
+        },
+    ],
+    bosses=[
+        {
+            "name": "Kraken",
+            "display_name": "Kraken",
+            "display_order": 1,
+            "emoji_key": "Kraken",
+            "kc": 70,
+            "points": 2,
+        }
+    ],
+)
 
 
 def create_mock_discord_interaction(
@@ -47,12 +91,25 @@ def create_mock_discord_interaction(
 
 
 def create_mock_discord_guild(
-    members: Optional[List[discord.Member]] = None,
+    members: Optional[List[discord.Member]] = None, roles: Optional[List[str]] = None
 ) -> discord.Guild:
     guild = Mock(spec=discord.Guild)
     guild.members = members or []
     guild.emojis = []
+    guild.roles = []
+    guild.member_count = len(members or [])
+    if roles:
+        for role in roles:
+            guild.roles.append(create_mock_discord_role(role))
+
     return guild
+
+
+def create_mock_discord_role(name: str) -> discord.Role:
+    role = Mock(spec=discord.Role)
+    role.name = name
+    role.id = random.randint(100, 999)
+    return role
 
 
 def create_test_member(
@@ -71,6 +128,8 @@ def create_test_member(
     mock_member.name = name
     mock_member.nick = nick
     mock_member.display_name = nick or name
+    mock_member.add_roles = AsyncMock()
+    mock_member.remove_roles = AsyncMock()
 
     return mock_member
 

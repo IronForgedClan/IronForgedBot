@@ -14,6 +14,21 @@ HISCORES_PLAYER_URL = (
 LEVEL_99_EXPERIENCE = 13034431
 
 
+class HiscoresError(Exception):
+    def __init__(
+        self,
+        message="Error response from the hiscores, please wait a moment and try again.",
+    ):
+        self.message = message
+        super().__init__(self.message)
+
+
+class HiscoresNotFound(Exception):
+    def __init__(self, message="Player not found on the hiscores."):
+        self.message = message
+        super().__init__(self.message)
+
+
 class ActivityScore(TypedDict):
     name: str
     display_name: NotRequired[str]
@@ -53,20 +68,26 @@ async def score_info(
     player_name = normalize_discord_string(player_name)
     data = await HTTP.get(HISCORES_PLAYER_URL.format(player=player_name))
 
-    skills = _get_skills_info(data)
-    clues, raids, bosses = _get_activities_info(data)
+    if data["status"] == 404:
+        raise HiscoresNotFound()
+
+    if data["status"] != 200:
+        logger.error(data["body"])
+        raise HiscoresError()
+
+    skills = _get_skills_info(data["body"])
+    clues, raids, bosses = _get_activities_info(data["body"])
 
     return ScoreBreakdown(skills, clues, raids, bosses)
 
 
 async def get_player_points_total(player_name: str) -> int:
     player_name = normalize_discord_string(player_name)
-
     data = await score_info(player_name)
+
     activities = data.clues + data.raids + data.bosses
 
     points = 0
-
     for skill in data.skills:
         points += skill["points"]
 
