@@ -37,10 +37,6 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
     progress_message = await report_channel.send("Starting rank check...")
 
     for index, member in enumerate(guild.members):
-        await progress_message.edit(
-            content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
-        )
-
         if (
             member.bot
             or check_member_has_role(member, ROLE.APPLICANT)
@@ -49,6 +45,10 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             continue
 
         await _job_refresh_ranks_sleep()
+
+        await progress_message.edit(
+            content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
+        )
 
         if member.nick is None or len(member.nick) < 1:
             message = f"{member.mention} has no nickname set, ignoring..."
