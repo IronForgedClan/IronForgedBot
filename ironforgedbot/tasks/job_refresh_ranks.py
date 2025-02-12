@@ -145,6 +145,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                 f"→ {find_emoji(None, correct_rank)} ({text_bold(f"{current_points:,}")} points)"
             )
             await report_channel.send(message)
+            continue
 
         logger.info("...no change")
 
