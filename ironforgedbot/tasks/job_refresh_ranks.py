@@ -34,7 +34,9 @@ async def _job_refresh_ranks_sleep():
 
 
 async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextChannel):
-    progress_message = await report_channel.send("Starting rank check...")
+    progress_message = await report_channel.send(
+        f"Rank check progress: [0/{guild.member_count}]"
+    )
 
     for index, member in enumerate(guild.members):
         if (
@@ -49,6 +51,8 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
         await progress_message.edit(
             content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
         )
+
+        logger.info(f"Rank check processing member: {member.display_name}")
 
         if member.nick is None or len(member.nick) < 1:
             message = f"{member.mention} has no nickname set, ignoring..."
@@ -129,8 +133,6 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                 f"→ {find_emoji(None, correct_rank)} ({text_bold(f"{current_points:,}")} points)"
             )
             await report_channel.send(message)
-
-        await asyncio.sleep(round(random.uniform(0.2, 1.5), 2))
 
     await report_channel.send(
         f"Finished rank check: [{guild.member_count}/{guild.member_count}]"
