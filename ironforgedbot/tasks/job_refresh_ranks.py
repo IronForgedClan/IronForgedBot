@@ -29,7 +29,7 @@ PROBATION_DAYS = 14
 
 async def _sleep():
     sleep = round(random.uniform(0.2, 1.5), 2)
-    logger.info(f"Sleeping {sleep}s...")
+    logger.info(f"...sleeping {sleep}s")
     await asyncio.sleep(sleep)
 
 
@@ -42,7 +42,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
         if index > 0:
             await _sleep()
 
-        logger.info(f"Rank check processing member: {member.display_name}...")
+        logger.info(f"Processing member: {member.display_name}")
 
         await progress_message.edit(
             content=f"Rank check progress: [{index + 1}/{guild.member_count}]"
