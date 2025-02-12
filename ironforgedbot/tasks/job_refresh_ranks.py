@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 PROBATION_DAYS = 14
 
 
+async def _job_refresh_ranks_sleep():
+    sleep = round(random.uniform(0.2, 1.5), 2)
+    logger.info(f"Rank check sleeping {sleep}s...")
+    await asyncio.sleep(sleep)
+
+
 async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextChannel):
     progress_message = await report_channel.send("Starting rank check...")
 
@@ -41,6 +47,8 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             or check_member_has_role(member, ROLE.GUEST)
         ):
             continue
+
+        await _job_refresh_ranks_sleep()
 
         if member.nick is None or len(member.nick) < 1:
             message = f"{member.mention} has no nickname set, ignoring..."
