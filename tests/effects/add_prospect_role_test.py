@@ -16,7 +16,11 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.effects.add_prospect_role.STORAGE", new_callable=AsyncMock)
     async def test_timestamp_is_saved(self, mock_storage, mock_datetime):
         member = create_test_member("tester", [ROLE.PROSPECT], "tester")
+        guild = create_mock_discord_guild(
+            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
+        )
         mock_report_channel = Mock(discord.TextChannel)
+        mock_report_channel.guild = guild
 
         expected_datetime = datetime(2024, 1, 1, 12, 0, 0)
         mock_datetime.now.return_value = expected_datetime
@@ -48,7 +52,11 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
         self, mock_storage, mock_datetime
     ):
         member = create_test_member("tester", [ROLE.PROSPECT], "tester")
+        guild = create_mock_discord_guild(
+            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
+        )
         mock_report_channel = Mock(discord.TextChannel)
+        mock_report_channel.guild = guild
 
         expected_datetime = datetime.fromisoformat("2024-01-01T12:00:00Z")
         mock_datetime.now.return_value = expected_datetime
@@ -119,3 +127,26 @@ class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_storage.update_members.assert_not_called()
+
+    async def test_should_report_and_remove_role_if_no_nickname_set(self):
+        member = create_test_member(
+            "tester", [ROLE.PROSPECT, ROLE.GUEST, ROLE.APPLICANT], ""
+        )
+        guild = create_mock_discord_guild(
+            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
+        )
+        mock_report_channel = Mock(discord.TextChannel)
+        mock_report_channel.guild = guild
+
+        await add_prospect_role(mock_report_channel, member)
+
+        mock_report_channel.send.assert_called_with(
+            f":warning: {member.mention} has been given the "
+            f"{text_bold(ROLE.PROSPECT)} role, but has no nickname set. "
+            "Cannot proceed. It is crucial that all members have a valid nickname.\n\n"
+            f"I have removed the {text_bold(ROLE.PROSPECT)} role. Please add a nickname and try again."
+        )
+
+        member.remove_roles.assert_any_await(
+            guild.roles[0], reason="Prospect: no nickname"
+        )

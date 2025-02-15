@@ -30,7 +30,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call("Finished rank check: [1/1]"),
         ]
 
@@ -53,7 +53,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/2]"),
             call("Finished rank check: [2/2]"),
         ]
 
@@ -72,7 +72,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(f"{member.mention} has no nickname set, ignoring..."),
             call("Finished rank check: [1/1]"),
         ]
@@ -94,7 +94,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call("Finished rank check: [1/1]"),
         ]
 
@@ -114,7 +114,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(f"{member.mention} has  God rank but no alignment."),
             call("Finished rank check: [1/1]"),
         ]
@@ -138,7 +138,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(
                 f"{member.mention} detected without any rank. Should have  **Mithril**."
             ),
@@ -170,7 +170,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(
                 f"{member.mention} has completed their **14 day** probation period "
                 "and is now eligible for  **Iron** rank."
@@ -202,7 +202,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(
                 f"{member.mention} has no presence on the hiscores. This member has either "
                 "changed their rsn, or been banned."
@@ -229,7 +229,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(
                 f"{member.mention} needs upgrading  "
                 f"→  ({text_bold(f"{actual_points:,}")} points)"
@@ -263,7 +263,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call(
                 f"{member.mention} has completed their **14 day** probation period and "
                 f"is now eligible for  **Mithril** rank."
@@ -297,7 +297,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(mock_guild, mock_report_channel)
 
         expected_messages = [
-            call("Starting rank check..."),
+            call("Rank check progress: [0/1]"),
             call("Finished rank check: [1/1]"),
         ]
 

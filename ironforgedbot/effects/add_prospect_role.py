@@ -21,6 +21,21 @@ async def add_prospect_role(
 ):
     logger.info(f"{member.display_name} has been given the Prospect role...")
 
+    prospect_role = get_discord_role(report_channel.guild, ROLE.PROSPECT)
+    if prospect_role is None:
+        raise ValueError("Unable to access Prospect role value")
+
+    if not member.nick or len(member.nick) < 1:
+        logger.info(f"{member.display_name} has no nickname, removing Prospect role...")
+        await report_channel.send(
+            f":warning: {member.mention} has been given the "
+            f"{text_bold(ROLE.PROSPECT)} role, but has no nickname set. "
+            "Cannot proceed. It is crucial that all members have a valid nickname.\n\n"
+            f"I have removed the {text_bold(ROLE.PROSPECT)} role. Please add a nickname and try again."
+        )
+        await member.remove_roles(prospect_role, reason="Prospect: no nickname")
+        return
+
     if check_member_has_role(member, ROLE.APPLICANT):
         logger.info(f"{member.display_name} has Applicant role, removing...")
         applicant_role = get_discord_role(report_channel.guild, ROLE.APPLICANT)
@@ -59,9 +74,8 @@ async def add_prospect_role(
         )
 
         member_role = get_discord_role(report_channel.guild, ROLE.MEMBER)
-        prospect_role = get_discord_role(report_channel.guild, ROLE.PROSPECT)
-        if member_role is None or prospect_role is None:
-            raise ValueError("Unable to access Member or Prospect role values")
+        if member_role is None:
+            raise ValueError("Unable to access Member role value")
 
         await member.remove_roles(
             prospect_role, reason="Prospect: not in storage, toggling role"
