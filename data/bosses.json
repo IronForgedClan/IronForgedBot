@@ -288,68 +288,74 @@
         "kc_per_point": 8
     },
     {
-        "name": "The Whisperer",
+        "name": "The Royal Titans",
         "display_order": 47,
+        "emoji_key": "RoyalTitans",
+        "kc_per_point": 30
+    },
+    {
+        "name": "The Whisperer",
+        "display_order": 48,
         "emoji_key": "Whisperer",
         "kc_per_point": 6
     },
     {
         "name": "Thermonuclear Smoke Devil",
-        "display_order": 48,
+        "display_order": 49,
         "emoji_key": "Thermonuclear_Smoke_Devil",
         "kc_per_point": 20
     },
     {
         "name": "TzKal-Zuk",
-        "display_order": 49,
+        "display_order": 50,
         "emoji_key": "Tzkal_Zuk",
         "kc_per_point": 0.1
     },
     {
         "name": "TzTok-Jad",
-        "display_order": 50,
+        "display_order": 51,
         "emoji_key": "Tztok_Jad",
         "kc_per_point": 1
     },
     {
         "name": "Vardorvis",
-        "display_order": 51,
+        "display_order": 52,
         "emoji_key": "Vardorvis",
         "kc_per_point": 10
     },
     {
         "name": "Venenatis",
-        "display_order": 52,
+        "display_order": 53,
         "emoji_key": "Venenatis",
         "kc_per_point": 15
     },
     {
         "name": "Vet'ion",
-        "display_order": 53,
+        "display_order": 54,
         "emoji_key": "Vetion",
         "kc_per_point": 15
     },
     {
         "name": "Vorkath",
-        "display_order": 54,
+        "display_order": 55,
         "emoji_key": "Vorkath",
         "kc_per_point": 12
     },
     {
         "name": "Wintertodt",
-        "display_order": 55,
+        "display_order": 56,
         "emoji_key": "Wintertodt",
         "kc_per_point": 10
     },
     {
         "name": "Zalcano",
-        "display_order": 56,
+        "display_order": 57,
         "emoji_key": "Zalcano",
         "kc_per_point": 5
     },
     {
         "name": "Zulrah",
-        "display_order": 57,
+        "display_order": 58,
         "emoji_key": "Zulrah",
         "kc_per_point": 12
     }
