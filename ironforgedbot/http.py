@@ -1,10 +1,27 @@
 import logging
 import sys
+from typing import Any, TypedDict
+
 import aiohttp
 
+from ironforgedbot.decorators import retry_on_exception
 from ironforgedbot.event_emitter import event_emitter
 
 logger = logging.getLogger(__name__)
+
+
+class HttpResponse(TypedDict):
+    status: int
+    body: Any
+
+
+class HttpException(Exception):
+    def __init__(
+        self,
+        message="Unexpected response from target.",
+    ):
+        self.message = message
+        super().__init__(self.message)
 
 
 class AsyncHttpClient:
@@ -15,31 +32,48 @@ class AsyncHttpClient:
 
     async def _initialize_session(self):
         """Initialize the aiohttp session."""
-        if self.session is None or self.session.closed:
+        if not self.session or self.session.closed:
             logger.info("Initializing new session...")
             self.session = aiohttp.ClientSession()
 
-    async def get(self, url, method="GET", params=None, headers=None, json_data=None):
+    @retry_on_exception(retries=5)
+    async def get(self, url, params=None, headers=None, json_data=None) -> HttpResponse:
         """Make a request to the provided URL with the given parameters."""
         await self._initialize_session()
+        assert self.session
 
-        if not self.session:
-            logger.critical("No session initialized")
-            return
+        async with self.session.get(
+            url, params=params, headers=headers, json=json_data
+        ) as response:
+            if response.status >= 500:
+                logger.debug(await response.text())
+                logger.warning(f"HTTP error code: {response.status}")
+                raise HttpException(f"A remote server error occured: {response.status}")
 
-        try:
-            async with self.session.request(
-                method, url, params=params, headers=headers, json=json_data
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data
-                else:
-                    logger.error(f"Request failed with status: {response.status}")
-                    return None
-        except aiohttp.ClientError as e:
-            logger.error(f"HTTP request failed: {e}")
-            return None
+            if response.status == 408:
+                logger.debug(await response.text())
+                logger.warning(f"HTTP error code: {response.status}")
+                raise HttpException(
+                    f"No response from remote server: {response.status}"
+                )
+
+            if response.status == 429:
+                logger.debug(await response.text())
+                logger.warning(f"HTTP error code: {response.status}")
+                raise HttpException(
+                    f"Rate limited or timed out response: {response.status}"
+                )
+
+            content_type = response.content_type.lower()
+
+            if "json" in content_type:
+                data = await response.json()
+            elif "text" in content_type or "html" in content_type:
+                data = await response.text()
+            else:
+                data = await response.read()
+
+            return HttpResponse(status=response.status, body=data)
 
     async def cleanup(self):
         if self.session:

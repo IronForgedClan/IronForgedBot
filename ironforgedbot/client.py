@@ -58,7 +58,7 @@ class DiscordClient(discord.Client):
         self.upload = upload
         self.guild = guild
         self.automations = None
-
+        self.effect_lock = asyncio.Lock()
         self.loop = asyncio.get_event_loop()
 
         signal.signal(signal.SIGINT, self.handle_signal)
@@ -151,25 +151,31 @@ class DiscordClient(discord.Client):
         self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        report_channel = get_text_channel(before.guild, CONFIG.AUTOMATION_CHANNEL_ID)
-        if not report_channel:
-            logger.error("Unable to select report channel")
-            return
+        async with self.effect_lock:
+            report_channel = get_text_channel(
+                before.guild, CONFIG.AUTOMATION_CHANNEL_ID
+            )
+            if not report_channel:
+                logger.error("Unable to select report channel")
+                return
 
-        before_roles = set(r.name for r in before.roles)
-        after_roles = set(r.name for r in after.roles)
+            if before.nick != after.nick:
+                await nickname_change(report_channel, before, after)
 
-        roles_added = after_roles - before_roles
-        roles_removed = before_roles - after_roles
+            if before.roles == after.roles:
+                return
 
-        if ROLE.MEMBER in roles_added:
-            await add_member_role(report_channel, after)
+            before_roles = set(r.name for r in before.roles)
+            after_roles = set(r.name for r in after.roles)
 
-        if ROLE.PROSPECT in roles_added:
-            await add_prospect_role(report_channel, after)
+            roles_added = after_roles - before_roles
+            roles_removed = before_roles - after_roles
 
-        if before.nick != after.nick:
-            await nickname_change(report_channel, before, after)
+            if ROLE.MEMBER in roles_added:
+                await add_member_role(report_channel, after)
 
-        if ROLE.MEMBER in roles_removed:
-            await remove_member_role(report_channel, after)
+            if ROLE.PROSPECT in roles_added:
+                asyncio.create_task(add_prospect_role(report_channel, after))
+
+            if ROLE.MEMBER in roles_removed:
+                await remove_member_role(report_channel, after)

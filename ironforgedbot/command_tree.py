@@ -41,7 +41,7 @@ class IronForgedCommandTree(discord.app_commands.CommandTree):
         return await send_error_response(
             interaction,
             (
-                "An unhandled error has occured.\n"
+                "An unhandled error has occurred.\n"
                 f"Please alert a member of the {text_bold('Discord Team')}."
             ),
         )

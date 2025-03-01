@@ -3,7 +3,12 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import score_info
+from ironforgedbot.commands.hiscore.calculator import (
+    HiscoresError,
+    HiscoresNotFound,
+    ScoreBreakdown,
+    score_info,
+)
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -22,10 +27,13 @@ from ironforgedbot.common.ranks import (
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
+    send_member_no_hiscore_values,
+    send_not_clan_member,
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.decorators import require_role
+from ironforgedbot.http import HttpException
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +62,16 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
 
     try:
         data = await score_info(player)
-    except RuntimeError as error:
-        await send_error_response(interaction, str(error))
-        return
+    except (HiscoresError, HttpException):
+        return await send_error_response(
+            interaction,
+            "An error has occurred calculating the score for this user. Please try again.",
+        )
+    except HiscoresNotFound:
+        if member:
+            return await send_member_no_hiscore_values(interaction, display_name)
+        else:
+            data = ScoreBreakdown([], [], [], [])
 
     activities = data.clues + data.raids + data.bosses
 
@@ -90,6 +105,11 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
             return await send_prospect_response(
                 interaction, rank_name, rank_icon, member
             )
+
+    if not member:
+        return await send_not_clan_member(
+            interaction, rank_name, rank_icon, rank_color, points_total, display_name
+        )
 
     embed = build_response_embed(
         f"{rank_icon} {display_name} | Score: {points_total:,}",
