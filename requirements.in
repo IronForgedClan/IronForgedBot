@@ -16,4 +16,5 @@ tabulate
 Pillow
 sqlalchemy[asyncio]
 aiosqlite
+alembic
 audioop-lts # https://github.com/Rapptz/discord.py/issues/9742
