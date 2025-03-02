@@ -5,6 +5,10 @@ import sys
 
 import discord
 
+
+import ironforgedbot.models.member
+import ironforgedbot.models.changelog
+
 from ironforgedbot.automations import IronForgedAutomations
 from ironforgedbot.common.helpers import (
     get_text_channel,
@@ -18,6 +22,8 @@ from ironforgedbot.effects.nickname_change import nickname_change
 from ironforgedbot.effects.remove_member_role import remove_member_role
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
+from ironforgedbot.database.database import db
+from ironforgedbot.services.member_service import MemberService
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -114,6 +120,9 @@ class DiscordClient(discord.Client):
             except asyncio.TimeoutError:
                 logger.warning("Timeout occurred while waiting for outstanding tasks.")
 
+        logger.info("Closing database connection...")
+        await db.close()
+
         if self.automations:
             await self.automations.stop()
 
@@ -146,8 +155,15 @@ class DiscordClient(discord.Client):
             logger.critical("Error logging into discord server")
             sys.exit(1)
 
-        logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
+        logger.info("Initializing database...")
+        # await db.init_db()
 
+        # async for session in db.get_session():
+        #     service = MemberService(session)
+
+        #     await service.create_member(12345, "oxore")
+
+        logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
         self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
