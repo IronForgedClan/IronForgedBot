@@ -18,8 +18,8 @@ class Changelog(Base):
     __tablename__ = "changelog"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), nullable=False)
-    admin_id: Mapped[str] = mapped_column(ForeignKey("members.id"), nullable=False)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"), nullable=False)
+    admin_id: Mapped[int] = mapped_column(ForeignKey("members.id"), nullable=False)
     change_type: Mapped[ChangeType] = mapped_column(Integer)
     previous_value: Mapped[str] = mapped_column(String)
     new_value: Mapped[str] = mapped_column(String)
