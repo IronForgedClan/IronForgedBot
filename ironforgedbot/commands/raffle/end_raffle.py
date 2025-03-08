@@ -74,13 +74,15 @@ async def handle_end_raffle(
     for member in members:
         current_members[member.id] = member.runescape_name
 
-    entries = []
+    total_tickets = 0
+    valid_entries = []
     for id, ticket_count in current_tickets.items():
+        total_tickets += ticket_count
         # Ignore members who have left the clan since buying tickets
         if current_members.get(id) is not None:
-            entries.extend([current_members.get(id)] * ticket_count)
+            valid_entries.extend([current_members.get(id)] * ticket_count)
 
-    if len(entries) < 1:
+    if len(valid_entries) < 1:
         logger.info("Raffle ended with no valid tickets to select from.")
         return await handle_end_raffle_error(
             parent_message,
@@ -89,12 +91,13 @@ async def handle_end_raffle(
         )
 
     # Calculate winner
-    random.shuffle(entries)
-    winner = random.choice(entries)
+    random.shuffle(valid_entries)
+    winner = random.choice(valid_entries)
     winning_discord_member = find_member_by_nickname(interaction.guild, winner)
-    winnings = int(len(entries) * (STATE.state["raffle_price"] / 2))
 
-    logger.info(f"Raffle entries: {entries}")
+    winnings = int(total_tickets * (STATE.state["raffle_price"] / 2))
+
+    logger.info(f"Raffle entries: {valid_entries}")
     logger.info(f"Raffle winner: {winner} ({winning_discord_member.id})")
 
     # Award winnings
@@ -138,7 +141,7 @@ async def handle_end_raffle(
             f"{text_bold(f"{winner_ticket_count:,}")} tickets.\n"
             f"Resulting in {ingot_icon} {text_bold(f"{winner_profit:,}")} profit.\n"
             + (f"{text_sub('ouch')}\n\n" if winner_profit < 0 else "\n")
-            + f"There were a total of {ticket_icon} {text_bold(f"{len(entries):,}")} entries.\n"
+            + f"There were a total of {ticket_icon} {text_bold(f"{total_tickets:,}")} entries.\n"
             "Thank you everyone for participating!"
         ),
         file=file,
