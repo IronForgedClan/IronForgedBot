@@ -1,13 +1,25 @@
 from datetime import datetime
 from typing import Optional
 import uuid
-
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.models.changelog import ChangeType, Changelog
 from ironforgedbot.models.member import Member
+
+
+class UniqueNicknameViolation(Exception):
+    def __init__(self, message="This nickname already exists"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class UniqueDiscordIdVolation(Exception):
+    def __init__(self, message="This discord id already exists"):
+        self.message = message
+        super().__init__(self.message)
 
 
 class MemberService:
@@ -41,9 +53,21 @@ class MemberService:
             timestamp=now,
         )
 
-        self.db.add(member)
-        self.db.add(changelog_entry)
-        await self.db.commit()
+        try:
+            self.db.add(member)
+            self.db.add(changelog_entry)
+            await self.db.commit()
+        except IntegrityError as e:
+            error_message = str(e)
+
+            if "members.nickname" in error_message:
+                await self.db.rollback()
+                raise UniqueNicknameViolation()
+            elif "members.discord_id" in error_message:
+                await self.db.rollback()
+                raise UniqueDiscordIdVolation()
+            else:
+                raise e
 
         return member
 
