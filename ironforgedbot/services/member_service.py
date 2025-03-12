@@ -1,12 +1,13 @@
+import uuid
 from datetime import datetime
 from typing import Optional
-import uuid
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
-from ironforgedbot.models.changelog import ChangeType, Changelog
+from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 
 
@@ -60,16 +61,29 @@ class MemberService:
         except IntegrityError as e:
             error_message = str(e)
 
-            if "members.nickname" in error_message:
-                await self.db.rollback()
-                raise UniqueNicknameViolation()
-            elif "members.discord_id" in error_message:
+            if "members.discord_id" in error_message:
                 await self.db.rollback()
                 raise UniqueDiscordIdVolation()
+            elif "members.nickname" in error_message:
+                await self.db.rollback()
+                raise UniqueNicknameViolation()
             else:
                 raise e
 
         return member
+
+    async def create_or_activate(
+        self, discord_id: int, nickname: str, admin_id: Optional[str] = None
+    ) -> Member:
+        try:
+            member = await self.create_member(discord_id, nickname, admin_id)
+            return member
+        except UniqueDiscordIdVolation:
+            existing_member = await self.get_member_by_discord_id(discord_id)
+            if not existing_member:
+                raise Exception("Member not found")
+
+        return await self.change_activity(existing_member.id, True)
 
     async def get_all_active_members(self):
         result = await self.db.execute(select(Member).where(Member.active == True))
@@ -79,11 +93,69 @@ class MemberService:
         result = await self.db.execute(select(Member).where(Member.id == id))
         return result.scalars().first()
 
+    async def get_member_by_discord_id(self, discord_id: int):
+        result = await self.db.execute(
+            select(Member).where(Member.discord_id == discord_id)
+        )
+        return result.scalars().first()
+
     async def get_member_by_nickname(self, nickname: str):
         result = await self.db.execute(
             select(Member).where(Member.nickname == nickname)
         )
         return result.scalars().first()
+
+    async def reactivate_member(self, id: str, new_nickname: str) -> Member:
+        member = await self.get_member_by_id(id)
+
+        if not member:
+            # todo: nicer exceptions
+            raise Exception("Member with id does not exist")
+
+        now = datetime.now()
+
+        changelog_entry = Changelog(
+            member_id=member.id,
+            admin_id=None,
+            change_type=ChangeType.ACTIVITY_CHANGE,
+            previous_value=member.active,
+            new_value=True,
+            comment="Reactivating member",
+            timestamp=now,
+        )
+
+        nickname_changelog_entry = None
+        if member.nickname != new_nickname:
+            nickname_changelog_entry = Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.NAME_CHANGE,
+                previous_value=member.nickname,
+                new_value=new_nickname,
+                comment="Nickname changed during reactivation",
+                timestamp=now,
+            )
+
+        try:
+            member.active = True
+            member.nickname = new_nickname
+            member.last_changed_date = now
+
+            self.db.add(changelog_entry)
+            if nickname_changelog_entry:
+                self.db.add(nickname_changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except IntegrityError as e:
+            error_message = str(e)
+
+            if "members.nickname" in error_message:
+                await self.db.rollback()
+                raise UniqueNicknameViolation()
+            else:
+                raise e
+
+        return member
 
     async def change_activity(self, id: str, active: bool) -> Member:
         member = await self.get_member_by_id(id)
@@ -135,9 +207,18 @@ class MemberService:
         member.nickname = new_nickname
         member.last_changed_date = now
 
-        self.db.add(changelog_entry)
-        await self.db.commit()
-        await self.db.refresh(member)
+        try:
+            self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except IntegrityError as e:
+            error_message = str(e)
+
+            if "members.nickname" in error_message:
+                await self.db.rollback()
+                raise UniqueNicknameViolation()
+            else:
+                raise e
 
         return member
 
