@@ -37,7 +37,7 @@ async def sync_members(guild: discord.Guild) -> list[tuple[str, str]]:
         for member in existing_members.values():
             if member.discord_id not in discord_members.keys():
                 await service.change_activity(member.id, False)
-                output.append([member.nickname, "Disabled", "Left clan"])
+                output.append([member.nickname, "Disabled", "No longer a member"])
 
         # update nicknames
         for discord_member in discord_members.values():
