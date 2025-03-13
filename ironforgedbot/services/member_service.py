@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -23,15 +23,24 @@ class UniqueDiscordIdVolation(Exception):
         super().__init__(self.message)
 
 
+class MemberNotFoundException(Exception):
+    def __init__(self, message="The member can not be found"):
+        self.message = message
+        super().__init__(self.message)
+
+
 class MemberService:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def close(self):
+        await self.db.close()
 
     async def create_member(
         self, discord_id: int, nickname: str, admin_id: Optional[str] = None
     ) -> Member:
         new_member_id = str(uuid.uuid4())
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         member = Member(
             id=new_member_id,
@@ -93,13 +102,13 @@ class MemberService:
         result = await self.db.execute(select(Member).where(Member.id == id))
         return result.scalars().first()
 
-    async def get_member_by_discord_id(self, discord_id: int):
+    async def get_member_by_discord_id(self, discord_id: int) -> Member | None:
         result = await self.db.execute(
             select(Member).where(Member.discord_id == discord_id)
         )
         return result.scalars().first()
 
-    async def get_member_by_nickname(self, nickname: str):
+    async def get_member_by_nickname(self, nickname: str) -> Member | None:
         result = await self.db.execute(
             select(Member).where(Member.nickname == nickname)
         )
@@ -109,10 +118,9 @@ class MemberService:
         member = await self.get_member_by_id(id)
 
         if not member:
-            # todo: nicer exceptions
-            raise Exception("Member with id does not exist")
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         changelog_entry = Changelog(
             member_id=member.id,
@@ -161,10 +169,9 @@ class MemberService:
         member = await self.get_member_by_id(id)
 
         if not member:
-            # todo: nicer exceptions
-            raise Exception("Member with id does not exist")
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         changelog_entry = Changelog(
             member_id=member.id,
@@ -189,10 +196,9 @@ class MemberService:
         member = await self.get_member_by_id(id)
 
         if not member:
-            # todo: nicer exceptions
-            raise Exception("Member with id does not exist")
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         changelog_entry = Changelog(
             member_id=member.id,
@@ -226,10 +232,9 @@ class MemberService:
         member = await self.get_member_by_id(id)
 
         if not member:
-            # todo: nicer exceptions
-            raise Exception("Member with id does not exist")
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         changelog_entry = Changelog(
             member_id=member.id,
