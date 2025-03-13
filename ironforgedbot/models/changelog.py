@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ironforgedbot.database.database import Base
+from ironforgedbot.models.decorators import UTCDateTime
 
 
 class ChangeType(StrEnum):
@@ -25,4 +26,6 @@ class Changelog(Base):
     previous_value: Mapped[str] = mapped_column(String, nullable=True)
     new_value: Mapped[str] = mapped_column(String, nullable=True)
     comment: Mapped[str] = mapped_column(String, nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime)
+    timestamp: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=lambda: datetime.now(timezone.utc)
+    )

@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import Boolean, DateTime, Integer, String
+from datetime import datetime, timezone
+from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.database.database import Base
+from ironforgedbot.models.decorators import UTCDateTime
 
 
 class Member(Base):
@@ -21,5 +22,9 @@ class Member(Base):
     nickname: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     ingots: Mapped[int] = mapped_column(Integer, default=0)
     rank: Mapped[RANK] = mapped_column(String)
-    joined_date: Mapped[datetime] = mapped_column(DateTime)
-    last_changed_date: Mapped[datetime] = mapped_column(DateTime)
+    joined_date: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=lambda: datetime.now(timezone.utc)
+    )
+    last_changed_date: Mapped[datetime] = mapped_column(
+        UTCDateTime, default=lambda: datetime.now(timezone.utc)
+    )
