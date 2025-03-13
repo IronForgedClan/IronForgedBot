@@ -5,10 +5,6 @@ import sys
 
 import discord
 
-
-import ironforgedbot.models.member
-import ironforgedbot.models.changelog
-
 from ironforgedbot.automations import IronForgedAutomations
 from ironforgedbot.common.helpers import (
     get_text_channel,
@@ -23,7 +19,6 @@ from ironforgedbot.effects.remove_member_role import remove_member_role
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db
-from ironforgedbot.services.member_service import MemberService
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -154,14 +149,6 @@ class DiscordClient(discord.Client):
         if not self.user:
             logger.critical("Error logging into discord server")
             sys.exit(1)
-
-        logger.info("Initializing database...")
-        # await db.init_db()
-
-        # async for session in db.get_session():
-        #     service = MemberService(session)
-
-        #     await service.create_member(12345, "oxore")
 
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
         self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
