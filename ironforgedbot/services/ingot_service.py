@@ -91,7 +91,7 @@ class IngotService:
             return IngotServiceResponse(False, "Admin member could not be found", -1)
 
         logger.info(
-            f"Attempting to remove {quantity} ingots to {member.nickname} on behalf of {admin_member.nickname}"
+            f"Attempting to remove {quantity} ingots from {member.nickname} on behalf of {admin_member.nickname}"
         )
 
         new_ingot_total = member.ingots + quantity
