@@ -32,9 +32,8 @@ async def job_sync_members(
 
     if len(changes) < 1:
         return await report_channel.send(
-            "**Member Sync**: Processed in "
+            " 🔁 **Member Sync**: No changes. Completed in "
             f"**{format_duration(start_time,end_time)}**. "
-            "No changes to report."
         )
 
     output_table = tabulate(
