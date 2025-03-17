@@ -116,48 +116,58 @@ class MemberService:
 
     async def reactivate_member(self, id: str, new_nickname: str) -> Member:
         member = await self.get_member_by_id(id)
-
         if not member:
             raise MemberNotFoundException(f"Member with id {id} does not exist")
 
         now = datetime.now(timezone.utc)
 
-        changelog_entry = Changelog(
-            member_id=member.id,
-            admin_id=None,
-            change_type=ChangeType.ACTIVITY_CHANGE,
-            previous_value=member.active,
-            new_value=True,
-            comment="Reactivating member",
-            timestamp=now,
-        )
-
-        nickname_changelog_entry = None
-        if member.nickname != new_nickname:
-            nickname_changelog_entry = Changelog(
+        self.db.add(
+            Changelog(
                 member_id=member.id,
                 admin_id=None,
-                change_type=ChangeType.NAME_CHANGE,
-                previous_value=member.nickname,
-                new_value=new_nickname,
-                comment="Nickname changed during reactivation",
+                change_type=ChangeType.ACTIVITY_CHANGE,
+                previous_value=member.active,
+                new_value=True,
+                comment="Returning member",
                 timestamp=now,
             )
+        )
+        member.active = True
+
+        self.db.add(
+            Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.JOINED_DATE_CHANGE,
+                previous_value=member.joined_date,
+                new_value=now,
+                comment="Returning member updated join timestamp",
+                timestamp=now,
+            )
+        )
+        member.joined_date = now
+
+        if member.nickname != new_nickname:
+            self.db.add(
+                Changelog(
+                    member_id=member.id,
+                    admin_id=None,
+                    change_type=ChangeType.NAME_CHANGE,
+                    previous_value=member.nickname,
+                    new_value=new_nickname,
+                    comment="Nickname changed during reactivation",
+                    timestamp=now,
+                )
+            )
+            member.nickname = new_nickname
+
+        member.last_changed_date = now
 
         try:
-            member.active = True
-            member.nickname = new_nickname
-            member.last_changed_date = now
-
-            self.db.add(changelog_entry)
-            if nickname_changelog_entry:
-                self.db.add(nickname_changelog_entry)
             await self.db.commit()
             await self.db.refresh(member)
         except IntegrityError as e:
-            error_message = str(e)
-
-            if "members.nickname" in error_message:
+            if "members.nickname" in str(e):
                 await self.db.rollback()
                 raise UniqueNicknameViolation()
             else:
