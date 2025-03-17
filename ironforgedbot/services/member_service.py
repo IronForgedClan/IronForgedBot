@@ -92,7 +92,7 @@ class MemberService:
             if not existing_member:
                 raise Exception("Member not found")
 
-        return await self.change_activity(existing_member.id, True)
+        return await self.disable_member(existing_member.id, True)
 
     async def get_all_active_members(self):
         result = await self.db.execute(select(Member).where(Member.active == True))
@@ -175,9 +175,8 @@ class MemberService:
 
         return member
 
-    async def change_activity(self, id: str, active: bool) -> Member:
+    async def disable_member(self, id: str) -> Member:
         member = await self.get_member_by_id(id)
-
         if not member:
             raise MemberNotFoundException(f"Member with id {id} does not exist")
 
@@ -189,29 +188,13 @@ class MemberService:
                 admin_id=None,
                 change_type=ChangeType.ACTIVITY_CHANGE,
                 previous_value=member.active,
-                new_value=active,
-                comment="Enabled returning member" if active else "Disabled member",
+                new_value=False,
+                comment="Disabled member",
                 timestamp=now,
             )
         )
-
-        member.active = active
+        member.active = False
         member.last_changed_date = now
-
-        if active is True:
-            self.db.add(
-                Changelog(
-                    member_id=member.id,
-                    admin_id=None,
-                    change_type=ChangeType.JOINED_DATE_CHANGE,
-                    previous_value=member.joined_date,
-                    new_value=now,
-                    comment="Returning member updated join timestamp",
-                    timestamp=now,
-                )
-            )
-
-            member.joined_date = now
 
         await self.db.commit()
         await self.db.refresh(member)
