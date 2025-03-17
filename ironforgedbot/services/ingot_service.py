@@ -32,7 +32,6 @@ class IngotService:
         now = datetime.now(timezone.utc)
 
         if quantity < 1:
-            logger.info("...fail")
             return IngotServiceResponse(False, "Quantity must be a positive value", -1)
 
         member = await self.member_service.get_member_by_discord_id(discord_id)
@@ -51,20 +50,21 @@ class IngotService:
 
         new_ingot_total = member.ingots + quantity
 
-        changelog_entry = Changelog(
-            member_id=member.id,
-            admin_id=admin_member.id,
-            change_type=ChangeType.ADD_INGOTS,
-            previous_value=member.ingots,
-            new_value=new_ingot_total,
-            comment=reason or "Adding ingots",
-            timestamp=now,
+        self.db.add(
+            Changelog(
+                member_id=member.id,
+                admin_id=admin_member.id,
+                change_type=ChangeType.ADD_INGOTS,
+                previous_value=member.ingots,
+                new_value=new_ingot_total,
+                comment=reason or "Adding ingots",
+                timestamp=now,
+            )
         )
 
         member.ingots = new_ingot_total
         member.last_changed_date = now
 
-        self.db.add(changelog_entry)
         await self.db.commit()
         await self.db.refresh(member)
 
@@ -104,20 +104,21 @@ class IngotService:
                 member.ingots,
             )
 
-        changelog_entry = Changelog(
-            member_id=member.id,
-            admin_id=admin_member.id,
-            change_type=ChangeType.REMOVE_INGOTS,
-            previous_value=member.ingots,
-            new_value=new_ingot_total,
-            comment=reason or "Removing ingots",
-            timestamp=now,
+        self.db.add(
+            Changelog(
+                member_id=member.id,
+                admin_id=admin_member.id,
+                change_type=ChangeType.REMOVE_INGOTS,
+                previous_value=member.ingots,
+                new_value=new_ingot_total,
+                comment=reason or "Removing ingots",
+                timestamp=now,
+            )
         )
 
         member.ingots = new_ingot_total
         member.last_changed_date = now
 
-        self.db.add(changelog_entry)
         await self.db.commit()
         await self.db.refresh(member)
 
