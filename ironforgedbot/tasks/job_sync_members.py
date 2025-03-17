@@ -30,6 +30,13 @@ async def job_sync_members(
 
     end_time = time.perf_counter()
 
+    if len(changes) < 1:
+        return await report_channel.send(
+            "**Member Sync**: Processed in "
+            f"**{format_duration(start_time,end_time)}**. "
+            "No changes to report."
+        )
+
     output_table = tabulate(
         changes, headers=["Member", "Action", "Reason"], tablefmt="simple"
     )
