@@ -21,25 +21,18 @@ async def job_sync_members(
     start_time = time.perf_counter()
 
     try:
-        members_change = await sync_members(guild)
-    except Exception:
+        changes = await sync_members(guild)
+    except Exception as e:
+        logger.error(e)
         return await report_channel.send(
             "An unhandled error occurrend during member sync. Please check the logs."
         )
 
     end_time = time.perf_counter()
 
-    if len(members_change) < 1:
-        return await report_channel.send(
-            "**Member Sync**: Processed in "
-            f"**{format_duration(start_time,end_time)}**. "
-            "No changes to report."
-        )
-
     output_table = tabulate(
-        members_change, headers=["Member", "Action", "Reason"], tablefmt="simple"
+        changes, headers=["Member", "Action", "Reason"], tablefmt="simple"
     )
-
     discord_file = discord.File(
         fp=io.BytesIO(output_table.encode("utf-8")),
         filename=f"sync_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
