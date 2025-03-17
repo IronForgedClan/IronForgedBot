@@ -11,6 +11,7 @@ class ChangeType(StrEnum):
     ADD_MEMBER = "add"
     NAME_CHANGE = "name_change"
     ACTIVITY_CHANGE = "activity_change"
+    JOINED_DATE_CHANGE = "joined_date_change"
     ADD_INGOTS = "add_ingots"
     REMOVE_INGOTS = "remove_ingots"
     RANK_CHANGE = "rank_change"

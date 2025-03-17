@@ -173,20 +173,36 @@ class MemberService:
 
         now = datetime.now(timezone.utc)
 
-        changelog_entry = Changelog(
-            member_id=member.id,
-            admin_id=None,
-            change_type=ChangeType.ACTIVITY_CHANGE,
-            previous_value=member.active,
-            new_value=active,
-            comment="Enabled member" if active else "Disabled member",
-            timestamp=now,
+        self.db.add(
+            Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.ACTIVITY_CHANGE,
+                previous_value=member.active,
+                new_value=active,
+                comment="Enabled returning member" if active else "Disabled member",
+                timestamp=now,
+            )
         )
 
         member.active = active
         member.last_changed_date = now
 
-        self.db.add(changelog_entry)
+        if active is True:
+            self.db.add(
+                Changelog(
+                    member_id=member.id,
+                    admin_id=None,
+                    change_type=ChangeType.JOINED_DATE_CHANGE,
+                    previous_value=member.joined_date,
+                    new_value=now,
+                    comment="Returning member updated join timestamp",
+                    timestamp=now,
+                )
+            )
+
+            member.joined_date = now
+
         await self.db.commit()
         await self.db.refresh(member)
 
