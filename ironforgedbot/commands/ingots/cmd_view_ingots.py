@@ -10,9 +10,9 @@ from ironforgedbot.common.responses import (
     send_error_response,
 )
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.database.database import db
 from ironforgedbot.decorators import require_role
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 
@@ -38,48 +38,46 @@ async def cmd_view_ingots(
         return await send_error_response(interaction, str(e))
 
     display_name = discord_member.display_name if discord_member is not None else player
-    account_id = str(discord_member.id)[:7] if discord_member is not None else "0123456"
 
-    try:
-        member = await STORAGE.read_member(player)
-    except StorageError as error:
-        return await send_error_response(interaction, str(error))
+    async for session in db.get_session():
+        service = MemberService(session)
+        member = await service.get_member_by_nickname(display_name)
 
-    if member is None:
-        return await send_error_response(
-            interaction, f"Member '{player}' could not be found."
+        if not member:
+            return await send_error_response(
+                interaction, f"Member '{player}' could not be found."
+            )
+
+        rank_icon = find_emoji(None, str(get_rank_from_member(discord_member)))
+        ingot_icon = find_emoji(None, "Ingot")
+
+        embed_thumbnail = ""
+        if member.ingots > 0:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_4_detail.png/120px-Coins_4_detail.png"
+        if member.ingots >= 100_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_5_detail.png/120px-Coins_5_detail.png"
+        if member.ingots >= 350_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_25_detail.png/120px-Coins_25_detail.png"
+        if member.ingots >= 750_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_100_detail.png/120px-Coins_100_detail.png"
+        if member.ingots >= 2_500_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_250_detail.png/120px-Coins_250_detail.png"
+        if member.ingots >= 5_000_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_1000_detail.png/120px-Coins_1000_detail.png"
+        if member.ingots >= 10_000_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_3_detail.png/120px-Platinum_token_3_detail.png"
+        if member.ingots >= 15_000_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_4_detail.png/120px-Platinum_token_4_detail.png"
+        if member.ingots >= 20_000_000:
+            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_detail.png/120px-Platinum_token_detail.png"
+
+        embed = build_ingot_response_embed(
+            title=f"{rank_icon} {display_name} | Ingots",
+            description="",
         )
 
-    rank_icon = find_emoji(None, str(get_rank_from_member(discord_member)))
-    ingot_icon = find_emoji(None, "Ingot")
+        embed.set_thumbnail(url=embed_thumbnail)
+        embed.add_field(name="Account ID", value=member.id[-10:])
+        embed.add_field(name="Balance", value=f"{ingot_icon} {member.ingots:,}")
 
-    embed_thumbnail = ""
-    if member.ingots > 0:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_4_detail.png/120px-Coins_4_detail.png"
-    if member.ingots >= 100_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_5_detail.png/120px-Coins_5_detail.png"
-    if member.ingots >= 350_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_25_detail.png/120px-Coins_25_detail.png"
-    if member.ingots >= 750_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_100_detail.png/120px-Coins_100_detail.png"
-    if member.ingots >= 2_500_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_250_detail.png/120px-Coins_250_detail.png"
-    if member.ingots >= 5_000_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_1000_detail.png/120px-Coins_1000_detail.png"
-    if member.ingots >= 10_000_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_3_detail.png/120px-Platinum_token_3_detail.png"
-    if member.ingots >= 15_000_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_4_detail.png/120px-Platinum_token_4_detail.png"
-    if member.ingots >= 20_000_000:
-        embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_detail.png/120px-Platinum_token_detail.png"
-
-    embed = build_ingot_response_embed(
-        title=f"{rank_icon} {display_name} | Ingots",
-        description="",
-    )
-
-    embed.set_thumbnail(url=embed_thumbnail)
-    embed.add_field(name="Account ID", value=account_id)
-    embed.add_field(name=f"{ingot_icon} Balance", value=f"{member.ingots:,}")
-
-    await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
