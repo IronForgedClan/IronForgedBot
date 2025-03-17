@@ -18,7 +18,7 @@ from ironforgedbot.services.member_service import (
 logger = logging.getLogger(__name__)
 
 
-async def sync_members(guild: discord.Guild) -> list[tuple[str, str]]:
+async def sync_members(guild: discord.Guild) -> list[list]:
     discord_members: Dict[int, discord.Member] = {}
     for discord_member in guild.members:
         if check_member_has_role(discord_member, ROLE.MEMBER):
@@ -36,7 +36,7 @@ async def sync_members(guild: discord.Guild) -> list[tuple[str, str]]:
         # disable members in db if no longer in Discord
         for member in existing_members.values():
             if member.discord_id not in discord_members.keys():
-                await service.change_activity(member.id, False)
+                await service.disable_member(member.id)
                 output.append([member.nickname, "Disabled", "No longer a member"])
 
         # update nicknames
@@ -82,7 +82,7 @@ async def sync_members(guild: discord.Guild) -> list[tuple[str, str]]:
                                 [
                                     f"[D]{discord_member.name}",
                                     "Error",
-                                    "Returning member nickname dupe",
+                                    "Nickname dupe",
                                 ]
                             )
                             continue
