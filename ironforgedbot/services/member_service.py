@@ -92,7 +92,7 @@ class MemberService:
             if not existing_member:
                 raise Exception("Member not found")
 
-        return await self.disable_member(existing_member.id, True)
+        return await self.disable_member(existing_member.id)
 
     async def get_all_active_members(self):
         result = await self.db.execute(select(Member).where(Member.active == True))
