@@ -15,6 +15,7 @@ class ChangeType(StrEnum):
     ADD_INGOTS = "add_ingots"
     REMOVE_INGOTS = "remove_ingots"
     RANK_CHANGE = "rank_change"
+    PURCHASE_RAFFLE_TICKETS = "purchase_raffle_tickets"
 
 
 class Changelog(Base):
