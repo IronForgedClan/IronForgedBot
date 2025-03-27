@@ -29,24 +29,24 @@ def normalize_discord_string(input: str) -> str:
     """Strips string down to plaintext."""
     emoji_pattern = re.compile(
         "["
-        "\U0001F600-\U0001F64F"  # Emoticons
-        "\U0001F300-\U0001F5FF"  # Symbols & Pictographs
-        "\U0001F680-\U0001F6FF"  # Transport & Map Symbols
-        "\U0001F700-\U0001F77F"  # Alchemical Symbols
-        "\U0001F780-\U0001F7FF"  # Geometric Shapes Extended
-        "\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
-        "\U0001F900-\U0001F9FF"  # Supplemental Symbols & Pictographs
-        "\U0001FA00-\U0001FA6F"  # Chess Symbols, Symbols & Pictographs Extended-A
-        "\U0001FA70-\U0001FAFF"  # Symbols & Pictographs Extended-B
-        "\U00002702-\U000027B0"  # Dingbats
-        "\U000024C2-\U0001F251"  # Enclosed characters
-        "\U00002000-\U0000201F"  # Miscellaneous Symbols
-        "\U0000FE00-\U0000FE0F"  # Variation Selectors (used with emojis)
-        "\U0001F004"  # Mahjong Tiles
-        "\U0001F0CF"  # Playing Cards
-        "\U0001F1E0-\U0001F1FF"  # Regional indicator symbols (flags)
-        "\U0001F200-\U0001F251"  # Enclosed Alphanumeric Supplement
-        "\U0001F004-\U0001F0CF"  # Mahjong Tiles, Playing Cards
+        "\U0001f600-\U0001f64f"  # Emoticons
+        "\U0001f300-\U0001f5ff"  # Symbols & Pictographs
+        "\U0001f680-\U0001f6ff"  # Transport & Map Symbols
+        "\U0001f700-\U0001f77f"  # Alchemical Symbols
+        "\U0001f780-\U0001f7ff"  # Geometric Shapes Extended
+        "\U0001f800-\U0001f8ff"  # Supplemental Arrows-C
+        "\U0001f900-\U0001f9ff"  # Supplemental Symbols & Pictographs
+        "\U0001fa00-\U0001fa6f"  # Chess Symbols, Symbols & Pictographs Extended-A
+        "\U0001fa70-\U0001faff"  # Symbols & Pictographs Extended-B
+        "\U00002702-\U000027b0"  # Dingbats
+        "\U000024c2-\U0001f251"  # Enclosed characters
+        "\U00002000-\U0000201f"  # Miscellaneous Symbols
+        "\U0000fe00-\U0000fe0f"  # Variation Selectors (used with emojis)
+        "\U0001f004"  # Mahjong Tiles
+        "\U0001f0cf"  # Playing Cards
+        "\U0001f1e0-\U0001f1ff"  # Regional indicator symbols (flags)
+        "\U0001f200-\U0001f251"  # Enclosed Alphanumeric Supplement
+        "\U0001f004-\U0001f0cf"  # Mahjong Tiles, Playing Cards
         "]+",
         flags=re.UNICODE,
     )
