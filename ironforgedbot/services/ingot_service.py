@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +28,11 @@ class IngotService:
         await self.db.close()
 
     async def try_add_ingots(
-        self, discord_id: int, quantity: int, admin_discord_id: int, reason: str
+        self,
+        discord_id: int,
+        quantity: int,
+        admin_discord_id: Optional[int],
+        reason: Optional[str],
     ) -> IngotServiceResponse:
         now = datetime.now(timezone.utc)
 
@@ -38,22 +43,25 @@ class IngotService:
         if not member:
             return IngotServiceResponse(False, "Member could not be found", -1)
 
-        admin_member = await self.member_service.get_member_by_discord_id(
-            admin_discord_id
-        )
-        if not admin_member:
-            return IngotServiceResponse(False, "Admin member could not be found", -1)
+        admin_id = None
+        if admin_discord_id:
+            admin_member = await self.member_service.get_member_by_discord_id(
+                admin_discord_id
+            )
+            if not admin_member:
+                return IngotServiceResponse(
+                    False, "Admin member could not be found", -1
+                )
+            admin_id = admin_member.id
 
-        logger.info(
-            f"Attempting to add {quantity} ingots to {member.nickname} on behalf of {admin_member.nickname}"
-        )
+        logger.info(f"Attempting to add {quantity} ingots to {member.nickname}")
 
         new_ingot_total = member.ingots + quantity
 
         self.db.add(
             Changelog(
                 member_id=member.id,
-                admin_id=admin_member.id,
+                admin_id=admin_id,
                 change_type=ChangeType.ADD_INGOTS,
                 previous_value=member.ingots,
                 new_value=new_ingot_total,
@@ -71,7 +79,11 @@ class IngotService:
         return IngotServiceResponse(True, "Ingots added", new_ingot_total)
 
     async def try_remove_ingots(
-        self, discord_id: int, quantity: int, admin_discord_id: int, reason: str
+        self,
+        discord_id: int,
+        quantity: int,
+        admin_discord_id: Optional[int],
+        reason: str,
     ) -> IngotServiceResponse:
         now = datetime.now(timezone.utc)
 
@@ -84,17 +96,19 @@ class IngotService:
         if not member:
             return IngotServiceResponse(False, "Member could not be found", -1)
 
-        admin_member = await self.member_service.get_member_by_discord_id(
-            admin_discord_id
-        )
-        if not admin_member:
-            return IngotServiceResponse(False, "Admin member could not be found", -1)
+        admin_id = None
+        if admin_discord_id:
+            admin_member = await self.member_service.get_member_by_discord_id(
+                admin_discord_id
+            )
+            if not admin_member:
+                return IngotServiceResponse(
+                    False, "Admin member could not be found", -1
+                )
 
-        logger.info(
-            f"Attempting to remove {quantity} ingots from {member.nickname} on behalf of {admin_member.nickname}"
-        )
+            admin_id = admin_member.id
 
-        new_ingot_total = member.ingots + quantity
+        logger.info(f"Attempting to remove {quantity} ingots from {member.nickname}")
         new_ingot_total = member.ingots + quantity
 
         if new_ingot_total < 0:
@@ -107,7 +121,7 @@ class IngotService:
         self.db.add(
             Changelog(
                 member_id=member.id,
-                admin_id=admin_member.id,
+                admin_id=admin_id,
                 change_type=ChangeType.REMOVE_INGOTS,
                 previous_value=member.ingots,
                 new_value=new_ingot_total,

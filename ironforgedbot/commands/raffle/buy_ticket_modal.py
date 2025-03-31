@@ -6,9 +6,10 @@ from discord.ui import Modal, TextInput
 from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.services.ingot_service import IngotService
+from ironforgedbot.services.raffle_service import RaffleService
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class BuyTicketModal(Modal):
             embed = build_response_embed(
                 title=f"{ticket_icon} Ticket Purchase",
                 description=(
-                    f"{text_bold(caller)} just tried to buy {ticket_icon} {text_bold(f"{qty:,}")} raffle "
+                    f"{text_bold(caller)} just tried to buy {ticket_icon} {text_bold(f'{qty:,}')} raffle "
                     f"tickets. What a joker."
                 ),
                 color=self.ticket_embed_color,
@@ -56,60 +57,32 @@ class BuyTicketModal(Modal):
 
             return await interaction.followup.send(embed=embed)
 
-        try:
-            member = await STORAGE.read_member(caller)
-        except StorageError as error:
-            logger.error(error)
-            return await send_error_response(
-                interaction,
-                f"Encountered error reading member {text_bold(caller)} from storage.",
-            )
-
-        if member is None:
-            return await send_error_response(
-                interaction,
-                f"{text_bold(caller)} not found in storage, please reach out to leadership.",
-            )
-
         cost = qty * STATE.state["raffle_price"]
-        if cost > member.ingots:
-            return await send_error_response(
-                interaction,
-                f"{text_bold(caller)} does not have enough ingots for {ticket_icon} {text_bold(f"{qty:,}")} "
-                f"tickets.\n\nCost: {ingot_icon} {text_bold(f"{cost:,}")}\nBalance: "
-                f"{ingot_icon} {text_bold(f"{member.ingots:,}")}\n\n"
-                f"You can afford a maximum of {ticket_icon} "
-                f"{text_bold(f"{round(member.ingots/STATE.state['raffle_price']):,}")} tickets.",
+
+        async for session in db.get_session():
+            raffle_service = RaffleService(session)
+
+            logger.info(f"Buying {qty:,} tickets for {caller}")
+            result = await raffle_service.try_buy_ticket(
+                interaction.user.id, STATE.state["raffle_price"], qty
             )
 
-        logger.info(f"Buying {qty:,} tickets for {caller}")
-        member.ingots -= cost
-        try:
-            await STORAGE.update_members(
-                [member], caller, note=f"Pay for {qty} raffle tickets"
-            )
-        except StorageError as error:
-            logger.error(error)
-            return await send_error_response(
-                interaction,
-                f"Encountered error updating ingot count for {text_bold(caller)}.",
-            )
-
-        try:
-            await STORAGE.add_raffle_tickets(member.id, qty)
-        except StorageError as error:
-            logger.error(error)
-            return await send_error_response(
-                interaction,
-                f"Encountered error saving raffle tickets for {text_bold(caller)}.\n"
-                "Ingots have been deducted, please contact a member of staff.",
-            )
+            if not result.status:
+                return await send_error_response(interaction, result.message)
+                return await send_error_response(
+                    interaction,
+                    f"{text_bold(caller)} does not have enough ingots for {ticket_icon} {text_bold(f'{qty:,}')} "
+                    f"tickets.\n\nCost: {ingot_icon} {text_bold(f'{cost:,}')}\nBalance: "
+                    f"{ingot_icon} {text_bold(f'{member.ingots:,}')}\n\n"
+                    f"You can afford a maximum of {ticket_icon} "
+                    f"{text_bold(f'{round(member.ingots / STATE.state["raffle_price"]):,}')} tickets.",
+                )
 
         embed = build_response_embed(
             title=f"{ticket_icon} Ticket Purchase",
             description=(
-                f"{text_bold(caller)} just bought {ticket_icon} {text_bold(f"{qty:,}")} raffle "
-                f"ticket{'s' if qty > 1 else ''} for {ingot_icon} {text_bold(f"{cost:,}")}."
+                f"{text_bold(caller)} just bought {ticket_icon} {text_bold(f'{qty:,}')} raffle "
+                f"ticket{'s' if qty > 1 else ''} for {ingot_icon} {text_bold(f'{cost:,}')}."
             ),
             color=self.ticket_embed_color,
         )

@@ -94,9 +94,9 @@ class MemberService:
 
         return await self.disable_member(existing_member.id)
 
-    async def get_all_active_members(self):
-        result = await self.db.execute(select(Member).where(Member.active == True))
-        return result.scalars().all()
+    async def get_all_active_members(self) -> list[Member]:
+        result = await self.db.execute(select(Member).where(Member.active.is_(True)))
+        return list(result.scalars().all())
 
     async def get_member_by_id(self, id: str) -> Member | None:
         result = await self.db.execute(select(Member).where(Member.id == id))
