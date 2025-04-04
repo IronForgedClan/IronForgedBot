@@ -12,13 +12,12 @@ from ironforgedbot.config import CONFIG
 from ironforgedbot.http import HTTP
 from ironforgedbot.state import STATE
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
-from ironforgedbot.storage.sheets import STORAGE
 
 logger = logging.getLogger(__name__)
 
 
 def init_bot():
-    if CONFIG and STATE and STORAGE and HTTP and BOSSES and CLUES and RAIDS and SKILLS:
+    if CONFIG and STATE and HTTP and BOSSES and CLUES and RAIDS and SKILLS:
         logger.info("Requirements loaded")
 
     create_temp_dir(CONFIG.TEMP_DIR)
