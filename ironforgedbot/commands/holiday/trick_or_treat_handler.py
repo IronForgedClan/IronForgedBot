@@ -1,16 +1,16 @@
 import logging
 import random
 from enum import Enum
-from typing import Tuple
 
 import discord
 
-from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
+from ironforgedbot.database.database import db
 from ironforgedbot.decorators import singleton
+from ironforgedbot.services.ingot_service import IngotService
+from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
@@ -535,42 +535,48 @@ class TrickOrTreatHandler:
         interaction: discord.Interaction,
         quantity: int,
         discord_member: discord.Member | None,
-    ) -> Tuple[int | None, int | None]:
+    ) -> int:
         if not discord_member:
             raise Exception("error no user found")
 
-        member = await STORAGE.read_member(
-            normalize_discord_string(discord_member.display_name).lower()
-        )
+        async for session in db.get_session():
+            ingot_service = IngotService(session)
+            member_service = MemberService(session)
 
-        if member is None:
-            await send_error_response(
-                interaction,
-                f"Member '{discord_member.display_name}' not found in storage.",
-            )
-            return 0, 0
+            if quantity > 0:
+                result = await ingot_service.try_add_ingots(
+                    discord_member.id, quantity, None, "Trick or treat win"
+                )
+            else:
+                member = await member_service.get_member_by_discord_id(
+                    interaction.user.id
+                )
 
-        new_total = member.ingots + quantity
+                if not member:
+                    logger.error("Member not found in database")
+                    await send_error_response(interaction, "Error updating ingots.")
+                    return 0
 
-        if new_total < 1 and member.ingots == 0:
-            return None, None
+                if member.ingots > 0 and member.ingots - quantity < 0:
+                    quantity = member.ingots
+                else:
+                    return -1
 
-        if new_total < 1:
-            quantity = member.ingots * -1
-            member.ingots = 0
-        else:
-            member.ingots = new_total
+                result = await ingot_service.try_remove_ingots(
+                    discord_member.id, quantity, None, "Trick or treat loss"
+                )
 
-        try:
-            await STORAGE.update_members(
-                [member], interaction.user.display_name, note="[BOT] Trick or Treat"
-            )
-        except StorageError as error:
-            logger.error(error)
-            await send_error_response(interaction, "Error updating ingots.")
-            return 0, 0
+            if not result:
+                logger.error("Error adjusting ingots")
+                await send_error_response(interaction, "Error updating ingots.")
+                return 0
 
-        return quantity, member.ingots
+            if not result.status:
+                await send_error_response(interaction, result.message)
+                return 0
+
+            return result.new_total
+        return 0
 
     async def random_result(self, interaction: discord.Interaction):
         match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
@@ -601,9 +607,11 @@ class TrickOrTreatHandler:
             )
             return await interaction.followup.send(embed=embed)
 
-        quantity_added, ingot_total = await self._adjust_ingots(
+        jackpot_value = 1_000_000
+
+        user_new_total = await self._adjust_ingots(
             interaction,
-            1_000_000,
+            jackpot_value,
             interaction.guild.get_member(interaction.user.id),
         )
 
@@ -613,11 +621,11 @@ class TrickOrTreatHandler:
             (
                 f"**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day {interaction.user.mention}!\n"
                 f"You have been blessed with the biggest payout I am authorized to give.\n\n"
-                f"A cool **{self.ingot_icon}{quantity_added:,}** ingots wired directly into your bank account.\n\n"
+                f"A cool **{self.ingot_icon}{jackpot_value:,}** ingots wired directly into your bank account.\n\n"
                 "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n"
                 "`wave2:rainbow:gzzzzzzzzzzzzzzzzzzzzzzzzzzzzz`"
                 + self._get_balance_message(
-                    interaction.user.display_name, ingot_total or 0
+                    interaction.user.display_name, user_new_total
                 )
             )
         )
@@ -627,39 +635,44 @@ class TrickOrTreatHandler:
         return await interaction.followup.send(embed=embed)
 
     async def result_remove_all_ingots_trick(self, interaction: discord.Interaction):
-        member = await STORAGE.read_member(
-            normalize_discord_string(interaction.user.display_name).lower()
-        )
+        async for session in db.get_session():
+            member_service = MemberService(session)
+            member = await member_service.get_member_by_discord_id(interaction.user.id)
 
-        if member is None:
-            return await send_error_response(
-                interaction,
-                f"Member '{interaction.user.display_name}' not found in storage.",
-            )
-
-        embed = ""
-        if member.ingots < 1:
-            embed = self._build_no_ingots_error_response(interaction.user.display_name)
-        else:
-            embed = self._build_embed(
-                (
-                    f"You lost **{self.ingot_icon}{member.ingots:,}**...\nNow that's gotta sting."
-                    + self._get_balance_message(interaction.user.display_name, 0)
+            if member is None:
+                return await send_error_response(
+                    interaction,
+                    f"Member '{interaction.user.display_name}' not found in storage.",
                 )
+
+            embed = ""
+            if member.ingots < 1:
+                embed = self._build_no_ingots_error_response(
+                    interaction.user.display_name
+                )
+            else:
+                embed = self._build_embed(
+                    (
+                        f"You lost **{self.ingot_icon}{member.ingots:,}**...\nNow that's gotta sting."
+                        + self._get_balance_message(interaction.user.display_name, 0)
+                    )
+                )
+            embed.set_thumbnail(
+                url="https://oldschool.runescape.wiki/images/thumb/Skull_%28item%29_detail.png/1024px-Skull_%28item%29_detail.png"
             )
-        embed.set_thumbnail(
-            url="https://oldschool.runescape.wiki/images/thumb/Skull_%28item%29_detail.png/1024px-Skull_%28item%29_detail.png"
-        )
-        return await interaction.followup.send(embed=embed)
+            return await interaction.followup.send(embed=embed)
 
     async def result_remove_high(self, interaction: discord.Interaction):
         assert interaction.guild
-        quantity = (random.randrange(100, 250, 1) * 10) * -1
-        quantity_removed, ingot_total = await self._adjust_ingots(
-            interaction, quantity, interaction.guild.get_member(interaction.user.id)
+        quantity_removed = (random.randrange(100, 250, 1) * 10) * -1
+
+        ingot_total = await self._adjust_ingots(
+            interaction,
+            quantity_removed,
+            interaction.guild.get_member(interaction.user.id),
         )
 
-        if quantity_removed is None and ingot_total is None:
+        if ingot_total < 0:
             await interaction.followup.send(
                 embed=self._build_no_ingots_error_response(
                     interaction.user.display_name
@@ -683,9 +696,11 @@ class TrickOrTreatHandler:
 
     async def result_add_high(self, interaction: discord.Interaction):
         assert interaction.guild
-        quantity = random.randrange(150, 250, 1) * 10
-        quantity_added, ingot_total = await self._adjust_ingots(
-            interaction, quantity, interaction.guild.get_member(interaction.user.id)
+        quantity_added = random.randrange(150, 250, 1) * 10
+        ingot_total = await self._adjust_ingots(
+            interaction,
+            quantity_added,
+            interaction.guild.get_member(interaction.user.id),
         )
 
         message = self._get_random_positive_message().format(
@@ -704,12 +719,14 @@ class TrickOrTreatHandler:
 
     async def result_remove_low(self, interaction: discord.Interaction):
         assert interaction.guild
-        quantity = (random.randrange(1, 100, 1) * 10) * -1
-        quantity_removed, ingot_total = await self._adjust_ingots(
-            interaction, quantity, interaction.guild.get_member(interaction.user.id)
+        quantity_removed = (random.randrange(1, 100, 1) * 10) * -1
+        ingot_total = await self._adjust_ingots(
+            interaction,
+            quantity_removed,
+            interaction.guild.get_member(interaction.user.id),
         )
 
-        if quantity_removed is None and ingot_total is None:
+        if ingot_total < 0:
             return await interaction.followup.send(
                 embed=self._build_no_ingots_error_response(
                     interaction.user.display_name
@@ -732,9 +749,11 @@ class TrickOrTreatHandler:
 
     async def result_add_low(self, interaction: discord.Interaction):
         assert interaction.guild
-        quantity = random.randrange(1, 100, 1) * 10
-        quantity_added, ingot_total = await self._adjust_ingots(
-            interaction, quantity, interaction.guild.get_member(interaction.user.id)
+        quantity_added = random.randrange(1, 100, 1) * 10
+        ingot_total = await self._adjust_ingots(
+            interaction,
+            quantity_added,
+            interaction.guild.get_member(interaction.user.id),
         )
 
         message = self._get_random_positive_message().format(
@@ -753,7 +772,8 @@ class TrickOrTreatHandler:
 
     async def result_joke(self, interaction: discord.Interaction):
         jokes = [
-            "**Why did the skeleton go to the party alone?**\nHe had no body to go with! 🩻"
+            "**Why did the skeleton go to the party alone?**\n"
+            "He had no body to go with! 🩻"
         ]
 
         await interaction.followup.send(embed=self._build_embed(random.choice(jokes)))
