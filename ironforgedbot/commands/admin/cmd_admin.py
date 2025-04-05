@@ -1,8 +1,11 @@
+from datetime import datetime
+import io
 import logging
 from typing import Optional
 
 import discord
 from discord.ui import View
+from tabulate import tabulate
 
 from ironforgedbot.commands.admin.internal_state import get_internal_state
 from ironforgedbot.commands.admin.latest_log import get_latest_log_file
@@ -11,14 +14,17 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.text_formatters import text_h2
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
+from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.tasks.job_check_activity import job_check_activity
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
 )
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
 from ironforgedbot.tasks.job_sync_members import job_sync_members
+from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
@@ -195,3 +201,50 @@ class AdminMenuView(View):
         return await interaction.followup.send(
             content="## Current Internal State", file=file
         )
+
+    @discord.ui.button(
+        label="Process Absentee List",
+        style=discord.ButtonStyle.green,
+        custom_id="absentee_list",
+        emoji="🚿",
+        row=0,
+    )
+    async def process_absentee_list_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        """Fetches and returns absentee list."""
+        await self.clear_parent()
+        await interaction.response.defer(thinking=True, ephemeral=True)
+
+        async for session in db.get_session():
+            member_service = MemberService(session)
+
+            absentee_list = await member_service.get_absent_members()
+
+            data = []
+            for member in absentee_list:
+                data.append(
+                    [
+                        member.nickname,
+                        member.date,
+                        member.information,
+                        member.comment,
+                    ]
+                )
+
+            result_table = tabulate(
+                data,
+                headers=["Nickname", "Date", "Info", "Comment"],
+                tablefmt="github",
+            )
+
+            discord_file = discord.File(
+                fp=io.BytesIO(result_table.encode("utf-8")),
+                description="example description",
+                filename=f"absentee_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            )
+
+            return await interaction.followup.send(
+                f"{text_h2('🚿 Absentee List')}",
+                file=discord_file,
+            )
