@@ -107,7 +107,10 @@ async def cmd_add_remove_ingots(
     ingot_icon = find_emoji(None, "Ingot")
     sorted_output_data = sorted(output_data, key=lambda row: row[0])
     result_table = tabulate(
-        sorted_output_data, headers=["Player", "Change", "Total"], tablefmt="github"
+        sorted_output_data,
+        headers=["Player", "Change", "Total"],
+        tablefmt="github",
+        colalign=("left", "right", "right"),
     )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
     result_content = (
@@ -119,7 +122,7 @@ async def cmd_add_remove_ingots(
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),
             description="example description",
-            filename=f"ingot_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
+            filename=f"ingot_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         )
 
         return await interaction.followup.send(
