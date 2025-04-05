@@ -69,7 +69,7 @@ class AdminMenuView(View):
         label="Sync Members",
         style=discord.ButtonStyle.grey,
         custom_id="sync_members",
-        emoji="🤖",
+        emoji="🔁",
         row=0,
     )
     async def member_sync_button(
@@ -118,7 +118,7 @@ class AdminMenuView(View):
         label="Member Activity Check",
         style=discord.ButtonStyle.grey,
         custom_id="activity_check",
-        emoji="🤖",
+        emoji="🧗",
         row=0,
     )
     async def member_activity_check_button(
@@ -204,7 +204,7 @@ class AdminMenuView(View):
 
     @discord.ui.button(
         label="Process Absentee List",
-        style=discord.ButtonStyle.green,
+        style=discord.ButtonStyle.grey,
         custom_id="absentee_list",
         emoji="🚿",
         row=0,
@@ -214,7 +214,7 @@ class AdminMenuView(View):
     ):
         """Fetches and returns absentee list."""
         await self.clear_parent()
-        await interaction.response.defer(thinking=True, ephemeral=True)
+        await interaction.response.defer(thinking=True, ephemeral=False)
 
         async for session in db.get_session():
             member_service = MemberService(session)
