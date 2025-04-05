@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -7,8 +8,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
+from ironforgedbot.models.absent_member import AbsentMember
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
+from ironforgedbot.storage.sheets import STORAGE
 
 
 class UniqueNicknameViolation(Exception):
@@ -27,6 +30,9 @@ class MemberNotFoundException(Exception):
     def __init__(self, message="The member can not be found"):
         self.message = message
         super().__init__(self.message)
+
+
+logger = logging.getLogger(__name__)
 
 
 class MemberService:
@@ -263,3 +269,40 @@ class MemberService:
         await self.db.refresh(member)
 
         return member
+
+    async def get_absent_members(self) -> list[AbsentMember]:
+        absentees = await STORAGE.get_absentees()
+
+        for storage_member in absentees:
+            if storage_member.id:
+                member = await self.get_member_by_id(storage_member.id)
+            else:
+                member = await self.get_member_by_nickname(storage_member.nickname)
+
+            if not member:
+                storage_member.information = "Member not found in database."
+                continue
+
+            if not member.active:
+                storage_member.information = "Member has left the clan."
+                continue
+
+            updated = False
+            if storage_member.nickname != member.nickname:
+                storage_member.nickname = member.nickname
+                storage_member.information = "Updated nickname."
+                updated = True
+
+            if not storage_member.id or len(storage_member.id) < 1:
+                storage_member.id = member.id
+                updated = True
+
+            if not storage_member.discord_id:
+                storage_member.discord_id = member.discord_id
+                updated = True
+
+            if not updated:
+                storage_member.information = ""
+
+        await STORAGE.update_absentees(absentees)
+        return absentees

@@ -12,6 +12,7 @@ from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import retry_on_exception
+from ironforgedbot.models.absent_member import AbsentMember
 from ironforgedbot.storage.types import IngotsStorage, Member, StorageError
 
 logging.getLogger("googleapiclient").setLevel(logging.ERROR)
@@ -24,26 +25,12 @@ SHEET_RANGE_WITH_DISCORD_IDS = "ClanIngots!A2:D"
 RAFFLE_RANGE = "ClanRaffle!A2"
 RAFFLE_TICKETS_RANGE = "ClanRaffleTickets!A2:B"
 CHANGELOG_RANGE = "ChangeLog!A2:F"
-ABSENCE_RANGE = "AbsenceNotice!A2:C"
+
+ABSENCE_RANGE = "AbsenceNotice!A2:G"
 
 
 class SheetsStorage(metaclass=IngotsStorage):
-    """A storage implementation backed by Sheets.
-
-    Expected schema is a sheet with two tabs:
-        ClanIngots: RSN, ingots, Discord ID
-        ChangeLog: Timestamp (EST), previous value, new value,
-            update reason, manual note.
-    """
-
     def __init__(self, sheets_client: Resource, sheet_id: str):
-        """Init.
-
-        Arguments:
-            sheets_client: Built Resource object to interact with
-                sheets API.
-            sheet_id: ID of sheets to connect to.
-        """
         self._sheets_client = sheets_client
         self._sheet_id = sheet_id
         self._lock = asyncio.Lock()
@@ -443,18 +430,44 @@ class SheetsStorage(metaclass=IngotsStorage):
         await self._update_sheet_data(self._sheet_id, write_range, body)
         await self._log_change(changes)
 
-    async def get_absentees(self) -> dict[str, str]:
-        """Returns known list of absentees with <rsn:date> format"""
-        values = await self._get_sheet_data(self._sheet_id, ABSENCE_RANGE)
+    async def get_absentees(self) -> list[AbsentMember]:
+        """Returns known list of absentees"""
+        data = await self._get_sheet_data(self._sheet_id, ABSENCE_RANGE)
 
-        results = {}
-        for value in values:
-            date = "Unknown"
-            if len(value) > 1:
-                date = value[1]
-            results[value[0]] = date
+        members = []
+        for entry in data:
+            logger.info(entry)
+            members.append(
+                AbsentMember(
+                    entry[0],
+                    entry[1],
+                    entry[2],
+                    entry[3] if len(entry) > 3 else "",
+                    entry[4] if len(entry) > 4 else "",
+                    entry[5] if len(entry) > 5 else "",
+                )
+            )
 
-        return results
+        logger.info(members)
+        return members
+
+    async def update_absentees(self, absentees: list[AbsentMember]) -> None:
+        values = []
+
+        for member in absentees:
+            values.append(
+                [
+                    member.id,
+                    str(member.discord_id),
+                    member.nickname,
+                    member.date,
+                    member.information,
+                    member.comment,
+                ]
+            )
+
+        write_range = f"AbsenceNotice!A2:F{2 + len(values)}"
+        await self._update_sheet_data(self._sheet_id, write_range, {"values": values})
 
     async def shutdown(self):
         async with self._lock:
