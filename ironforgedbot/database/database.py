@@ -12,7 +12,7 @@ class Database:
     def __init__(self):
         """Ensure only one instance is created."""
         if not hasattr(self, "engine"):
-            self.engine = create_async_engine(DATABASE_URL, echo=True)
+            self.engine = create_async_engine(DATABASE_URL, echo=False)
             self.async_session_factory = async_sessionmaker(
                 bind=self.engine, expire_on_commit=False, class_=AsyncSession
             )
