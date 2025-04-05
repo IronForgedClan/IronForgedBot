@@ -11,7 +11,7 @@ from ironforgedbot.common.ranks import RANK
 from ironforgedbot.models.absent_member import AbsentMember
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
-from ironforgedbot.storage.sheets import STORAGE
+from ironforgedbot.storage.sheets import SHEETS
 
 
 class UniqueNicknameViolation(Exception):
@@ -271,7 +271,7 @@ class MemberService:
         return member
 
     async def get_absent_members(self) -> list[AbsentMember]:
-        absentees = await STORAGE.get_absentees()
+        absentees = await SHEETS.get_absentees()
 
         for storage_member in absentees:
             if storage_member.id:
@@ -304,5 +304,5 @@ class MemberService:
             if not updated:
                 storage_member.information = ""
 
-        await STORAGE.update_absentees(absentees)
+        await SHEETS.update_absentees(absentees)
         return absentees
