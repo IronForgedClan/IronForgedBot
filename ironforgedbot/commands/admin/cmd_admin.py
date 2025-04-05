@@ -212,13 +212,12 @@ class AdminMenuView(View):
     async def process_absentee_list_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        """Fetches and returns absentee list."""
+        """Processes and returns absentee list."""
         await self.clear_parent()
         await interaction.response.defer(thinking=True, ephemeral=False)
 
         async for session in db.get_session():
             member_service = MemberService(session)
-
             absentee_list = await member_service.get_absent_members()
 
             data = []
@@ -234,17 +233,15 @@ class AdminMenuView(View):
 
             result_table = tabulate(
                 data,
-                headers=["Nickname", "Date", "Info", "Comment"],
+                headers=["Member", "Date", "Info", "Comment"],
                 tablefmt="github",
             )
-
             discord_file = discord.File(
                 fp=io.BytesIO(result_table.encode("utf-8")),
-                description="example description",
                 filename=f"absentee_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
             )
-
             return await interaction.followup.send(
-                f"{text_h2('🚿 Absentee List')}",
+                f"{text_h2('🚿 Absentee List')}\nThe following **{len(absentee_list)}**"
+                " members will be ignored during an activity check.",
                 file=discord_file,
             )
