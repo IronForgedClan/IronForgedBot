@@ -104,7 +104,6 @@ class SheetsStorage:
 
         members = []
         for entry in data:
-            logger.info(entry)
             members.append(
                 AbsentMember(
                     entry[0],
@@ -116,7 +115,6 @@ class SheetsStorage:
                 )
             )
 
-        logger.info(members)
         return members
 
     async def update_absentees(self, absentees: list[AbsentMember]) -> None:
