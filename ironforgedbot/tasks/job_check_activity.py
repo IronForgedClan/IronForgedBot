@@ -1,50 +1,23 @@
-from datetime import datetime
 import io
 import logging
+from datetime import datetime
 
 import discord
-from tabulate import tabulate
 import wom
+from tabulate import tabulate
 from wom import GroupRole, Metric, Period
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
-    fit_log_lines_into_discord_messages,
     render_relative_time,
 )
-from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
 from ironforgedbot.database.database import db
+from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_WOM_LIMIT = 50
 MONTHLY_EXP_THRESHOLD = 100_000
-
-
-async def job_check_activity_reminder(report_channel: discord.TextChannel):
-    try:
-        absentees = await STORAGE.get_absentees()
-    except StorageError as e:
-        logger.error(f"Failed to read absentees list: {e}")
-        await report_channel.send("Failed to read absentee list")
-        return
-
-    await report_channel.send(
-        (
-            f"**REMINDER:**\nExecuting activity check in one hour.\n"
-            f"Ignoring **{len(absentees)}** member(s). Update storage if necessary."
-        )
-    )
-
-    lines = []
-    for absentee, date in absentees.items():
-        lines.append(f"{absentee} [Added: {date}]")
-
-    discord_messages = fit_log_lines_into_discord_messages(lines)
-    for msg in discord_messages:
-        await report_channel.send(msg)
 
 
 async def job_check_activity(

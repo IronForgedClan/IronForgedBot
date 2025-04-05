@@ -12,7 +12,6 @@ from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
-    job_check_activity_reminder,
 )
 from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
@@ -100,14 +99,6 @@ class IronForgedAutomations:
             ),
             # CronTrigger(minute="*"),
             CronTrigger(hour="4,16", minute=10, second=offset, timezone="UTC"),
-        )
-
-        self.scheduler.add_job(
-            self._job_wrapper(job_check_activity_reminder, self.report_channel),
-            # CronTrigger(minute="*"),
-            CronTrigger(
-                day_of_week="mon", hour=0, minute=0, second=offset, timezone="UTC"
-            ),
         )
 
         self.scheduler.add_job(
