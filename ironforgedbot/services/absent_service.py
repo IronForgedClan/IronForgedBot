@@ -25,14 +25,15 @@ class AbsentMemberService:
 
         members = []
         for entry in data:
+            entry_length = len(entry)
             members.append(
                 AbsentMember(
-                    entry[0] or "",
-                    int(entry[1]) if len(entry) > 1 else 0,
-                    entry[2] if len(entry) > 2 else "",
-                    entry[3] if len(entry) > 3 else "",
-                    entry[4] if len(entry) > 4 else "",
-                    entry[5] if len(entry) > 5 else "",
+                    entry[0] if entry_length > 0 else "",
+                    int(entry[1] or 0) if entry_length > 1 else 0,
+                    entry[2] if entry_length > 2 else "",
+                    entry[3] if entry_length > 3 else "",
+                    entry[4] if entry_length > 4 else "",
+                    entry[5] if entry_length > 5 else "",
                 )
             )
 
@@ -69,7 +70,7 @@ class AbsentMemberService:
             )
 
         await self.sheet.update_range(
-            self.sheet_name, f"A2:F{len(values) + removed_count + 1}", values
+            self.sheet_name, f"A2:F{len(values) + removed_count + 2}", values
         )
 
     async def process_absent_members(self) -> list[AbsentMember]:
@@ -77,7 +78,7 @@ class AbsentMemberService:
 
         removed_count = 0
         for storage_member in absentees:
-            if len(storage_member.nickname) < 1 and len(storage_member.id) < 1:
+            if not storage_member.nickname and not storage_member.id:
                 absentees.remove(storage_member)
                 removed_count += 1
                 continue
