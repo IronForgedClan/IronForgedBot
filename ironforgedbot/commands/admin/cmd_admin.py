@@ -1,6 +1,7 @@
 from datetime import datetime
 import io
 import logging
+import time
 from typing import Optional
 
 import discord
@@ -10,6 +11,7 @@ from tabulate import tabulate
 from ironforgedbot.commands.admin.internal_state import get_internal_state
 from ironforgedbot.commands.admin.latest_log import get_latest_log_file
 from ironforgedbot.common.helpers import (
+    format_duration,
     get_text_channel,
 )
 from ironforgedbot.common.responses import send_error_response
@@ -215,6 +217,7 @@ class AdminMenuView(View):
         """Processes and returns absentee list."""
         await self.clear_parent()
         await interaction.response.defer(thinking=True, ephemeral=False)
+        start_time = time.perf_counter()
 
         async for session in db.get_session():
             absent_service = AbsentMemberService(session)
@@ -240,8 +243,11 @@ class AdminMenuView(View):
                 fp=io.BytesIO(result_table.encode("utf-8")),
                 filename=f"absentee_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
             )
+            end_time = time.perf_counter()
+
             return await interaction.followup.send(
                 f"{text_h2('🚿 Absentee List')}\nThe following **{len(absentee_list)}**"
-                " members will be ignored during an activity check.",
+                " members will be ignored during an activity check. Processed in "
+                f"**{format_duration(start_time, end_time)}**.",
                 file=discord_file,
             )
