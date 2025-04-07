@@ -11,7 +11,7 @@ from ironforgedbot.common.helpers import (
     populate_emoji_cache,
 )
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.config import CONFIG
+from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.effects.add_member_role import add_member_role
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
 from ironforgedbot.effects.nickname_change import nickname_change
@@ -104,7 +104,9 @@ class DiscordClient(discord.Client):
         if pending_tasks:
             logger.info(f"Found {len(pending_tasks)} pending tasks. Waiting...")
             try:
-                timeout_seconds = 60
+                timeout_seconds = (
+                    60 if CONFIG.ENVIRONMENT is ENVIRONMENT.PRODUCTION else 5
+                )
                 await asyncio.wait_for(
                     asyncio.gather(*pending_tasks, return_exceptions=True),
                     timeout=timeout_seconds,
