@@ -17,7 +17,7 @@ from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_h2
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
-from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.absent_service import AbsentMemberService
 from ironforgedbot.tasks.job_check_activity import job_check_activity
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
@@ -217,8 +217,8 @@ class AdminMenuView(View):
         await interaction.response.defer(thinking=True, ephemeral=False)
 
         async for session in db.get_session():
-            member_service = MemberService(session)
-            absentee_list = await member_service.get_absent_members()
+            absent_service = AbsentMemberService(session)
+            absentee_list = await absent_service.process_absent_members()
 
             data = []
             for member in absentee_list:

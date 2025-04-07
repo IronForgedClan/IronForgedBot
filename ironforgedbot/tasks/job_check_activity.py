@@ -12,7 +12,7 @@ from ironforgedbot.common.helpers import (
     render_relative_time,
 )
 from ironforgedbot.database.database import db
-from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.absent_service import AbsentMemberService
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,8 @@ async def job_check_activity(
     wom_group_id: int,
 ):
     async for session in db.get_session():
-        member_service = MemberService(session)
-        absentee_list = await member_service.get_absent_members()
+        absent_service = AbsentMemberService(session)
+        absentee_list = await absent_service.process_absent_members()
 
         known_absentees = []
         for absentee in absentee_list:

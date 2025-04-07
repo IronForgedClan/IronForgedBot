@@ -8,10 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
-from ironforgedbot.models.absent_member import AbsentMember
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
-from ironforgedbot.services.absent_service import AbsentMemberService
 
 
 class UniqueNicknameViolation(Exception):
@@ -269,41 +267,3 @@ class MemberService:
         await self.db.refresh(member)
 
         return member
-
-    async def get_absent_members(self) -> list[AbsentMember]:
-        service = AbsentMemberService()
-        absentees = await service.get_absentees()
-
-        for storage_member in absentees:
-            if storage_member.id:
-                member = await self.get_member_by_id(storage_member.id)
-            else:
-                member = await self.get_member_by_nickname(storage_member.nickname)
-
-            if not member:
-                storage_member.information = "Member not found in database."
-                continue
-
-            if not member.active:
-                storage_member.information = "Member has left the clan."
-                continue
-
-            updated = False
-            if storage_member.nickname != member.nickname:
-                storage_member.nickname = member.nickname
-                storage_member.information = "Updated nickname."
-                updated = True
-
-            if not storage_member.id or len(storage_member.id) < 1:
-                storage_member.id = member.id
-                updated = True
-
-            if not storage_member.discord_id:
-                storage_member.discord_id = member.discord_id
-                updated = True
-
-            if not updated:
-                storage_member.information = ""
-
-        await service.update_absentees(absentees)
-        return absentees
