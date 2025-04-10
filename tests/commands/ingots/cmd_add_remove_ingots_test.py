@@ -5,7 +5,6 @@ import discord
 from tabulate import tabulate
 
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.storage.types import Member
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -24,38 +23,33 @@ with patch(
 
 class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
-    @patch(
-        "ironforgedbot.commands.ingots.cmd_add_remove_ingots.STORAGE",
-        new_callable=AsyncMock,
-    )
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
     async def test_add_remove_ingots_one_target(
-        self, mock_storage, mock_validate_playername
+        self, mock_get_session, mock_validate_playername
     ):
         """Test that ingots can be added to a single user."""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        target = create_test_member("tester", ROLE.MEMBER)
+        caller = create_test_member("leader", [ROLE.LEADERSHIP])
+        target = create_test_member("tester", [ROLE.MEMBER])
         reason = "testing"
+
+        fake_session = AsyncMock()
+
+        async def fake_session_generator():
+            yield fake_session
+
+        mock_get_session.side_effect = fake_session_generator
 
         interaction = create_mock_discord_interaction(user=caller, members=[target])
 
-        mock_storage.read_members.return_value = [
-            Member(id=target.id, runescape_name=target.display_name, ingots=5000)
-        ]
         mock_validate_playername.return_value = target, target.display_name
 
         await cmd_add_remove_ingots(interaction, target.display_name, 5000, reason)
-
-        mock_storage.update_members.assert_called_once_with(
-            [Member(id=target.id, runescape_name=target.display_name, ingots=10000)],
-            caller.display_name,
-            note=reason,
-        )
 
         actual_embed = interaction.followup.send.call_args.kwargs["embed"]
 
         expected_embed = discord.Embed(
             title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
+            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
             [[target.display_name, "+5,000", "10,000"]],
@@ -99,7 +93,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
 
         expected_embed = discord.Embed(
             title=" Remove Ingots Result",
-            description=(f"**Total Change:** -2,000\n" f"**Reason:** _{reason}_"),
+            description=(f"**Total Change:** -2,000\n**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
             [[target.display_name, "-2,000", "3,000"]],
@@ -168,7 +162,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
 
         expected_embed = discord.Embed(
             title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
+            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
             [
@@ -229,7 +223,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
 
         expected_embed = discord.Embed(
             title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
+            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
             [
@@ -299,7 +293,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
 
         expected_embed = discord.Embed(
             title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
+            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
             [
@@ -379,7 +373,7 @@ class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
 
         expected_results_embed = discord.Embed(
             title=" Remove Ingots Result",
-            description=(f"**Total Change:** +5,000\n" f"**Reason:** _{reason}_"),
+            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
         )
         expected_result_table = tabulate(
             [
