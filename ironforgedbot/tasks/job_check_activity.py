@@ -15,7 +15,8 @@ from ironforgedbot.storage.types import StorageError
 logger = logging.getLogger(__name__)
 
 DEFAULT_WOM_LIMIT = 50
-MONTHLY_EXP_THRESHOLD = 100_000
+IRON_EXP_THRESHOLD = 100_000
+MONTHLY_EXP_THRESHOLD = 200_000
 
 
 async def job_check_activity_reminder(report_channel: discord.TextChannel):
@@ -61,7 +62,8 @@ async def job_check_activity(
 
     await report_channel.send(
         f"Found **{len(known_absentees)}** absent member(s).\n"
-        f"Threshold: **{MONTHLY_EXP_THRESHOLD:,}** xp/month.",
+        f"Iron threshold: **{IRON_EXP_THRESHOLD:,}** xp/month.\n"
+        f"Mithril+ threshold: **{MONTHLY_EXP_THRESHOLD:,}** xp/month.",
     )
 
     results = await _find_inactive_users(
@@ -116,14 +118,20 @@ async def _find_inactive_users(
             offset += DEFAULT_WOM_LIMIT
             details = result.unwrap()
             for member_gains in details:
-                if member_gains.data.gained < MONTHLY_EXP_THRESHOLD:
-                    wom_member = _find_wom_member(wom_group, member_gains.player.id)
-                    if wom_member is None:
-                        continue
+                wom_member = _find_wom_member(wom_group, member_gains.player.id)
 
-                    if wom_member.player.username.lower() in absentees:
-                        continue
+                if wom_member is None:
+                    continue
+                if wom_member.player.username.lower() in absentees:
+                    continue
 
+                xp_threshold = (
+                    IRON_EXP_THRESHOLD
+                    if wom_member.role == GroupRole.Iron
+                    else MONTHLY_EXP_THRESHOLD
+                )
+
+                if member_gains.data.gained < xp_threshold:
                     if wom_member.role is None:
                         role = "Unknown"
                     elif wom_member.role == GroupRole.Helper:
