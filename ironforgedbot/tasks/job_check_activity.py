@@ -17,7 +17,8 @@ from ironforgedbot.services.absent_service import AbsentMemberService
 logger = logging.getLogger(__name__)
 
 DEFAULT_WOM_LIMIT = 50
-MONTHLY_EXP_THRESHOLD = 100_000
+IRON_EXP_THRESHOLD = 100_000
+MONTHLY_EXP_THRESHOLD = 200_000
 
 
 async def job_check_activity(
@@ -97,13 +98,12 @@ async def _find_inactive_users(
             offset += DEFAULT_WOM_LIMIT
             details = result.unwrap()
             for member_gains in details:
-                if member_gains.data.gained < MONTHLY_EXP_THRESHOLD:
-                    wom_member = _find_wom_member(wom_group, member_gains.player.id)
-                    if wom_member is None:
-                        continue
+                wom_member = _find_wom_member(wom_group, member_gains.player.id)
 
-                    if wom_member.player.username.lower() in absentees:
-                        continue
+                if wom_member is None:
+                    continue
+                if wom_member.player.username.lower() in absentees:
+                    continue
 
                     if wom_member.role == GroupRole.Dogsbody:
                         continue

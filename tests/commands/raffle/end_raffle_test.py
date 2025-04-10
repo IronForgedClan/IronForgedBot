@@ -280,3 +280,56 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(mock_state.state["raffle_on"], False)
         self.assertEqual(mock_state.state["raffle_price"], 0)
+
+    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
+    @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
+    async def test_end_raffle_includes_values_from_members_that_left(
+        self, mock_state, mock_storage
+    ):
+        caller = create_test_member("tester", [], "tester")
+        left_member = create_test_member("ilefttheclan", [], "ilefttheclan")
+        banned_member = create_test_member("igotbanned", [], "igotbanned")
+
+        mock_state.state = {"raffle_on": True, "raffle_price": 5000}
+        mock_parent_message = AsyncMock()
+
+        interaction = create_mock_discord_interaction(user=caller)
+        interaction.followup = AsyncMock()
+        interaction.response.defer = AsyncMock()
+        interaction.response.send_message = AsyncMock()
+
+        storage_member = Member(
+            id=caller.id, runescape_name=caller.display_name, ingots=30000
+        )
+
+        mock_storage.read_members.return_value = [storage_member]
+        mock_storage.read_member.return_value = storage_member
+        mock_storage.read_raffle_tickets.return_value = {
+            left_member.id: 50,
+            banned_member.id: 5,
+            caller.id: 10,
+        }
+
+        await handle_end_raffle(mock_parent_message, interaction)
+
+        mock_parent_message.edit.assert_called_with(
+            content="## Ending raffle\nSelecting winner, standby...",
+            embed=None,
+            view=None,
+        )
+
+        mock_storage.update_members.assert_called_with(
+            [storage_member],
+            interaction.user.display_name,
+            note="[BOT] Raffle winnings (162,500)",
+        )
+
+        interaction.followup.send.assert_called_with(
+            f"##  Congratulations {caller.mention}!!\n"
+            "You have won  **162,500** ingots!\n\n"
+            "You spent  **50,000** on  **10** tickets.\n"
+            "Resulting in  **112,500** profit.\n\n"
+            "There were a total of  **65** entries.\n"
+            "Thank you everyone for participating!",
+            file=ANY,
+        )
