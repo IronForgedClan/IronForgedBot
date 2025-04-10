@@ -105,9 +105,14 @@ async def _find_inactive_users(
                 if wom_member.player.username.lower() in absentees:
                     continue
 
-                    if wom_member.role == GroupRole.Dogsbody:
-                        continue
+                if wom_member.role == GroupRole.Dogsbody:
+                    continue
 
+                xp_threshold = MONTHLY_EXP_THRESHOLD
+                if wom_member.role == GroupRole.Iron:
+                    xp_threshold = IRON_EXP_THRESHOLD
+
+                if member_gains.data.gained < xp_threshold:
                     if not wom_member.role:
                         role = "Unknown"
                     elif wom_member.role == GroupRole.Helper:
@@ -128,12 +133,11 @@ async def _find_inactive_users(
                     else:
                         role = str(wom_member.role).title()
 
+                    days_since_progression = "unknown"
                     if wom_member.player.last_changed_at:
                         days_since_progression = render_relative_time(
                             wom_member.player.last_changed_at
                         )
-                    else:
-                        days_since_progression = "unknown"
 
                     results.append(
                         [
