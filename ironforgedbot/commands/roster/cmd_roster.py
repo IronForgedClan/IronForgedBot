@@ -93,6 +93,7 @@ async def _calc_roster(interaction: discord.Interaction, url: str) -> str:
     signups = await _get_signups(interaction, msg, members)
     result = "====STAFF MESSAGE BELOW====\n"
 
+    result += _add_rank(signups, RANK.GOD, False)
     result += _add_rank(signups, RANK.MYTH, False)
     result += _add_rank(signups, RANK.LEGEND, False)
     result += _add_rank(signups, RANK.DRAGON, False)
@@ -105,6 +106,7 @@ async def _calc_roster(interaction: discord.Interaction, url: str) -> str:
     result += _add_list("Rank lookup failures", signups.rank_failures)
     result += "====CLEAN MESSAGE BELOW====\n"
 
+    result += _add_rank(signups, RANK.GOD, True)
     result += _add_rank(signups, RANK.MYTH, True)
     result += _add_rank(signups, RANK.LEGEND, True)
     result += _add_rank(signups, RANK.DRAGON, True)
