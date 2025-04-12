@@ -1,6 +1,7 @@
 import io
 import logging
 from datetime import datetime
+import time
 
 import discord
 import wom
@@ -9,6 +10,7 @@ from wom import GroupRole, Metric, Period
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
+    format_duration,
     render_relative_time,
 )
 from ironforgedbot.database.database import db
@@ -26,6 +28,7 @@ async def job_check_activity(
     wom_api_key: str,
     wom_group_id: int,
 ):
+    start_time = time.perf_counter()
     async for session in db.get_session():
         absent_service = AbsentMemberService(session)
         absentee_list = await absent_service.process_absent_members()
@@ -52,14 +55,15 @@ async def job_check_activity(
 
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),
-            description="example description",
             filename=f"activity_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         )
 
+        end_time = time.perf_counter()
         await report_channel.send(
             "## 🧗 Activity check\n"
             f"Ignoring **{len(known_absentees)}** absent members.\n"
-            f"Found **{len(results)}** members that do not meet requirements.",
+            f"Found **{len(results)}** members that do not meet requirements.\n"
+            f"Processed in **{format_duration(start_time, end_time)}**.",
             file=discord_file,
         )
 
