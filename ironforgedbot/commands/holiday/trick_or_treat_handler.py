@@ -30,7 +30,7 @@ class TrickOrTreat(Enum):
 class TrickOrTreatHandler:
     def __init__(self):
         self.weights = [1 / item.value for item in TrickOrTreat]
-        self.ingot_icon = find_emoji(None, "Ingot")
+        self.ingot_icon = find_emoji("Ingot")
         self.gif_history = []
         self.thumbnail_history = []
         self.positive_message_history = []

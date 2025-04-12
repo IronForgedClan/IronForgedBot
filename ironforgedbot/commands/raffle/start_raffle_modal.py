@@ -25,8 +25,8 @@ class StartRaffleModal(Modal):
         self.add_item(self.ticket_price)
 
     async def on_submit(self, interaction: discord.Interaction):
-        ticket_icon = find_emoji(None, "Raffle_Ticket")
-        ingot_icon = find_emoji(None, "Ingot")
+        ticket_icon = find_emoji("Raffle_Ticket")
+        ingot_icon = find_emoji("Ingot")
         price = 0
 
         try:

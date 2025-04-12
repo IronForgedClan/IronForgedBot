@@ -42,8 +42,8 @@ class BuyTicketModal(Modal):
                 f"{text_bold(caller)} tried to buy an invalid quantity of tickets.",
             )
 
-        ticket_icon = find_emoji(None, "Raffle_Ticket")
-        ingot_icon = find_emoji(None, "Ingot")
+        ticket_icon = find_emoji("Raffle_Ticket")
+        ingot_icon = find_emoji("Ingot")
 
         if qty < 1:
             embed = build_response_embed(

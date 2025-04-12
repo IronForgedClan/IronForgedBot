@@ -38,8 +38,8 @@ async def cmd_raffle(interaction: discord.Interaction):
 
 
 async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
-    ticket_icon = find_emoji(None, "Raffle_Ticket")
-    ingot_icon = find_emoji(None, "Ingot")
+    ticket_icon = find_emoji("Raffle_Ticket")
+    ingot_icon = find_emoji("Ingot")
     ticket_price = STATE.state["raffle_price"]
     embed_color = (
         discord.Colour.green() if STATE.state["raffle_on"] else discord.Colour.red()

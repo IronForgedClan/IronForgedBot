@@ -43,7 +43,7 @@ async def send_prospect_response(
     eligible_rank_icon: str,
     member: discord.Member,
 ):
-    prospect_icon = find_emoji(interaction, "Prospect")
+    prospect_icon = find_emoji("Prospect")
 
     async for session in db.get_session():
         member_service = MemberService(session)
@@ -87,7 +87,7 @@ async def send_prospect_response(
 async def send_member_no_hiscore_values(interaction: discord.Interaction, name: str):
     rank_name = get_rank_from_points(0)
     rank_color = get_rank_color_from_points(0)
-    rank_icon = find_emoji(interaction, rank_name)
+    rank_icon = find_emoji(rank_name)
 
     embed = build_response_embed(
         f"{rank_icon} {name}",

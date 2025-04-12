@@ -43,7 +43,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
     start_time = time.perf_counter()
 
     random_rank = random.choice(RANK.list())
-    icon = find_emoji(None, random_rank)
+    icon = find_emoji(random_rank)
 
     primary_message_str = (
         f"{text_h2(f'{icon} Rank & Probation Check')}\n"
@@ -65,7 +65,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
             await progress_message.edit(
                 content=primary_message_str
-                + f"Progress: **{index+1}/{guild.member_count}**"
+                + f"Progress: **{index + 1}/{guild.member_count}**"
             )
 
             if (
@@ -91,7 +91,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             if current_rank == RANK.GOD:
                 logger.debug("...has God role but no alignment")
                 message = (
-                    f"{member.mention} has {find_emoji(None, current_rank)} "
+                    f"{member.mention} has {find_emoji(current_rank)} "
                     "God rank but no alignment."
                 )
                 await report_channel.send(message)
@@ -150,7 +150,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                     await report_channel.send(
                         f"{member.mention} has completed their "
                         f"{text_bold(f'{PROBATION_DAYS} day')} probation period and is now "
-                        f"eligible for {find_emoji(None,correct_rank)} {text_bold(correct_rank)} rank."
+                        f"eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)} rank."
                     )
                     continue
 
@@ -161,15 +161,15 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                 logger.debug("...has no rank set")
                 await report_channel.send(
                     f"{member.mention} detected without any rank. Should have "
-                    f"{find_emoji(None,correct_rank)} {text_bold(correct_rank)}."
+                    f"{find_emoji(correct_rank)} {text_bold(correct_rank)}."
                 )
                 continue
 
             if current_rank != str(correct_rank):
                 logger.debug("...needs upgrading")
                 message = (
-                    f"{member.mention} needs upgrading {find_emoji(None, current_rank)} "
-                    f"→ {find_emoji(None, correct_rank)} ({text_bold(f"{current_points:,}")} points)"
+                    f"{member.mention} needs upgrading {find_emoji(current_rank)} "
+                    f"→ {find_emoji(correct_rank)} ({text_bold(f'{current_points:,}')} points)"
                 )
                 await report_channel.send(message)
                 continue

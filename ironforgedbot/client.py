@@ -135,8 +135,7 @@ class DiscordClient(discord.Client):
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
 
-        # TODO: Temporary. See function comment for details.
-        await populate_emoji_cache(self.application_id or 0, CONFIG.BOT_TOKEN)
+        await populate_emoji_cache(await self.fetch_application_emojis())
 
     async def on_connect(self):
         logger.info("Bot connected to Discord")

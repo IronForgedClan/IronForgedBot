@@ -86,19 +86,20 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
 
+    god_alignment = None
     if rank_name == RANK.GOD:
         god_alignment = get_god_alignment_from_member(member)
 
         rank_color = get_rank_color_from_points(points_total, god_alignment)
-        rank_icon = find_emoji(interaction, god_alignment or rank_name)
+        rank_icon = find_emoji(god_alignment or rank_name)
     else:
         rank_color = get_rank_color_from_points(points_total)
-        rank_icon = find_emoji(interaction, rank_name)
+        rank_icon = find_emoji(rank_name)
         rank_point_threshold = RANK_POINTS[rank_name.upper()]
 
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
-        next_rank_icon = find_emoji(interaction, next_rank_name)
+        next_rank_icon = find_emoji(next_rank_name)
 
     if member and member.roles:
         if check_member_has_role(member, ROLE.PROSPECT):
@@ -131,16 +132,16 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
     if rank_name == RANK.GOD:
         match god_alignment:
             case GOD_ALIGNMENT.SARADOMIN:
-                icon = find_emoji(interaction, "Saradomin")
+                icon = find_emoji("Saradomin")
                 alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
             case GOD_ALIGNMENT.ZAMORAK:
-                icon = find_emoji(interaction, "Zamorak")
+                icon = find_emoji("Zamorak")
                 alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
             case GOD_ALIGNMENT.GUTHIX:
-                icon = find_emoji(interaction, "Guthix")
+                icon = find_emoji("Guthix")
                 alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
             case _:
-                icon = find_emoji(interaction, "grass")
+                icon = find_emoji("grass")
                 alignment_emojis = (
                     f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
                 )

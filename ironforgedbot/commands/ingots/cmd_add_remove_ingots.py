@@ -104,7 +104,7 @@ async def cmd_add_remove_ingots(
 
                     logger.info(result.message)
 
-    ingot_icon = find_emoji(None, "Ingot")
+    ingot_icon = find_emoji("Ingot")
     sorted_output_data = sorted(output_data, key=lambda row: row[0])
     result_table = tabulate(
         sorted_output_data,

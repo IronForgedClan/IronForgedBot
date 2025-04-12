@@ -40,7 +40,7 @@ async def handle_end_raffle(
             view=None,
         )
 
-    ticket_icon = find_emoji(None, "Raffle_Ticket")
+    ticket_icon = find_emoji("Raffle_Ticket")
 
     async for session in db.get_session():
         raffle_service = RaffleService(session)
@@ -112,7 +112,7 @@ async def handle_end_raffle(
         winning_discord_member = interaction.guild.get_member(winning_member.discord_id)
         assert winning_discord_member
 
-        ingot_icon = find_emoji(None, "Ingot")
+        ingot_icon = find_emoji("Ingot")
         file = await build_winner_image_file(winning_member.nickname, int(winnings))
 
         tickets_sold_string = (

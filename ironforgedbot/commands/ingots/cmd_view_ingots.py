@@ -48,8 +48,8 @@ async def cmd_view_ingots(
                 interaction, f"Member '{player}' could not be found."
             )
 
-        rank_icon = find_emoji(None, str(get_rank_from_member(discord_member)))
-        ingot_icon = find_emoji(None, "Ingot")
+        rank_icon = find_emoji(str(get_rank_from_member(discord_member)))
+        ingot_icon = find_emoji("Ingot")
 
         embed_thumbnail = ""
         if member.ingots > 0:

@@ -18,7 +18,7 @@ async def add_prospect_role(
     logger.info(f"{member.display_name} has been given the Prospect role...")
 
     report_content = (
-        f"{find_emoji(None, ROLE.PROSPECT)} {member.mention} has been "
+        f"{find_emoji(ROLE.PROSPECT)} {member.mention} has been "
         f"given the {text_bold(ROLE.PROSPECT)} role."
     )
     report_message = await report_channel.send(report_content + " Fixing roles...")
