@@ -152,14 +152,16 @@ class DiscordClient(discord.Client):
             logger.critical("Error logging into discord server")
             sys.exit(1)
 
+        logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
+
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.listening, name="Sea Shanty 2"
             )
         )
 
-        logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
-        self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
+        if not self.automations:
+            self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         async with self.effect_lock:
