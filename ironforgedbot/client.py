@@ -152,6 +152,12 @@ class DiscordClient(discord.Client):
             logger.critical("Error logging into discord server")
             sys.exit(1)
 
+        await self.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.listening, name="Sea Shanty 2"
+            )
+        )
+
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
         self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
