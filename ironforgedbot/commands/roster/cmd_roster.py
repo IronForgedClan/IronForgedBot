@@ -8,7 +8,7 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
 )
-from ironforgedbot.common.ranks import RANK, get_rank_from_member
+from ironforgedbot.common.ranks import RANK,GOD_ALIGNMENT, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.decorators import require_role
@@ -206,10 +206,20 @@ async def _get_signups(
             res.add_prospect(member, members)
             continue
 
-        rank = get_rank_from_member(guild_member)
-        if rank is None:
-            rank = RANK.IRON
+        try:
+            rank_str = get_rank_from_member(guild_member)
 
-        res.add_ranked(member, RANK(rank), False, members)
+            # Check if the rank is a God alignment, and convert it to RANK.GOD
+            god_alignments = ["Saradominist", "Zamorakian", "Guthixian", "Bandosian", "Armadylean", "Zarosian"]
+            if rank_str in god_alignments:
+                rank = RANK.GOD
+            else:
+                rank = RANK(rank_str)
+
+        except Exception:
+            res.rank_failures.append(guild_member.display_name)
+            continue
+
+        res.add_ranked(member, rank, False, members)
 
     return res
