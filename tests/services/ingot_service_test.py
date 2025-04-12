@@ -107,7 +107,7 @@ class TestIngotService_TryAddIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.services.ingot_service.datetime")
     @patch("ironforgedbot.services.ingot_service.MemberService")
-    async def test_try_add_ingots_should_create_changelog_entry(
+    async def test_should_create_changelog_entry(
         self, mock_member_service, mock_datetime
     ):
         now = datetime(2025, 1, 1, 12, 0, 0)
@@ -278,3 +278,53 @@ class TestIngotService_TryRemoveIngots(unittest.IsolatedAsyncioTestCase):
                 mock_service.refresh.assert_called()
 
                 self.assertEqual(result, expected)
+
+    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedbot.services.ingot_service.MemberService")
+    async def test_should_create_changelog_entry(
+        self, mock_member_service, mock_datetime
+    ):
+        now = datetime(2025, 1, 1, 12, 0, 0)
+        mock_datetime.now.return_value = now
+
+        member = Member()
+        member.id = "123-fwo"
+        member.discord_id = 987234
+        member.active = True
+        member.ingots = 100
+
+        mock_member_service_instance = MagicMock()
+        mock_member_service_instance.get_member_by_discord_id = AsyncMock(
+            return_value=member
+        )
+        mock_member_service.return_value = mock_member_service_instance
+
+        mock_service = AsyncMock()
+        mock_service.add = MagicMock()
+        service = IngotService(db=mock_service)
+
+        result = await service.try_remove_ingots(member.discord_id, -50, None, None)
+
+        expected_result = IngotServiceResponse(True, "Ingots removed", 50)
+        expected_changelog = {
+            "member_id": member.id,
+            "admin_id": None,
+            "change_type": ChangeType.REMOVE_INGOTS,
+            "previous_value": 100,
+            "new_value": 50,
+            "comment": "Removing ingots",
+            "timestamp": now,
+        }
+
+        mock_service.add.assert_called_once()
+        result_changelog = mock_service.add.call_args[0][0]
+        self.assertIsInstance(result_changelog, Changelog)
+        for key, value in expected_changelog.items():
+            actual_value = getattr(result_changelog, key, None)
+            self.assertEqual(
+                actual_value, value, f"Expected {key}={value}, but got {actual_value}"
+            )
+
+        mock_service.commit.assert_called()
+        mock_service.refresh.assert_called()
+        self.assertEqual(result, expected_result)
