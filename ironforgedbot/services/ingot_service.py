@@ -36,6 +36,9 @@ class IngotService:
     ) -> IngotServiceResponse:
         now = datetime.now(timezone.utc)
 
+        if not isinstance(quantity, int):
+            raise TypeError("Quantity must be a valid integer")
+
         if quantity < 1:
             return IngotServiceResponse(False, "Quantity must be a positive value", -1)
 
@@ -83,14 +86,15 @@ class IngotService:
         discord_id: int,
         quantity: int,
         admin_discord_id: Optional[int],
-        reason: str,
+        reason: Optional[str],
     ) -> IngotServiceResponse:
         now = datetime.now(timezone.utc)
 
+        if not isinstance(quantity, int):
+            raise TypeError("Quantity must be a valid integer")
+
         if quantity > -1:
-            return IngotServiceResponse(
-                False, "Quantity to remove must be a negative value", -1
-            )
+            return IngotServiceResponse(False, "Quantity must be a negative value", -1)
 
         member = await self.member_service.get_member_by_discord_id(discord_id)
         if not member:
