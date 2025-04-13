@@ -2,12 +2,14 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
+from ironforgedbot.cache.score_cache import ScoreCache
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.http import AsyncHttpClient
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)
+SCORE_CACHE = ScoreCache(600)
 
 
 class HiscoresError(Exception):
@@ -49,18 +51,12 @@ class SkillScore:
     points: int
 
 
+@dataclass
 class ScoreBreakdown:
-    def __init__(
-        self,
-        skills: list[SkillScore],
-        clues: list[ActivityScore],
-        raids: list[ActivityScore],
-        bosses: list[ActivityScore],
-    ):
-        self.skills = skills
-        self.clues = clues
-        self.raids = raids
-        self.bosses = bosses
+    skills: list[SkillScore]
+    clues: list[ActivityScore]
+    raids: list[ActivityScore]
+    bosses: list[ActivityScore]
 
 
 class ScoreService:
@@ -73,24 +69,31 @@ class ScoreService:
         self.level_99_xp = 13_034_431
 
     async def get_player_score(
-        self,
-        player_name: str,
+        self, player_name: str, bypass_cache: Optional[bool] = False
     ) -> ScoreBreakdown:
         player_name = normalize_discord_string(player_name)
-        data = await self.http.get(self.hiscores_url.format(rsn=player_name))
+        breakdown = await SCORE_CACHE.get(player_name)
 
-        logger.info("using new score service")
-        if data["status"] == 404:
-            raise HiscoresNotFound()
+        if not breakdown or bypass_cache:
+            logger.info("fetching live score data")
+            data = await self.http.get(self.hiscores_url.format(rsn=player_name))
 
-        if data["status"] != 200:
-            logger.error(data["body"])
-            raise HiscoresError(message=f"Unexpected response code {data['status']}")
+            if data["status"] == 404:
+                raise HiscoresNotFound()
 
-        skills = self._get_skills_info(data["body"])
-        clues, raids, bosses = self._get_activities_info(data["body"])
+            if data["status"] != 200:
+                logger.error(data["body"])
+                raise HiscoresError(
+                    message=f"Unexpected response code {data['status']}"
+                )
 
-        return ScoreBreakdown(skills, clues, raids, bosses)
+            skills = self._get_skills_info(data["body"])
+            clues, raids, bosses = self._get_activities_info(data["body"])
+
+            breakdown = ScoreBreakdown(skills, clues, raids, bosses)
+            await SCORE_CACHE.set(player_name, breakdown)
+
+        return breakdown
 
     def _get_skills_info(self, score_data) -> list[SkillScore]:
         if SKILLS is None or score_data is None or score_data["skills"] is None:
