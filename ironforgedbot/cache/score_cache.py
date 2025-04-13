@@ -1,5 +1,7 @@
 import asyncio
 import time
+import zlib
+import pickle
 
 
 class ScoreCache:
@@ -13,11 +15,12 @@ class ScoreCache:
             if player_name in self.cache:
                 data, expires = self.cache[player_name]
                 if time.time() < expires:
-                    return data
+                    return pickle.loads(zlib.decompress(data))
                 else:
                     del self.cache[player_name]
             return None
 
     async def set(self, player_name: str, data) -> None:
         async with self.lock:
+            data = zlib.compress(pickle.dumps(data))
             self.cache[player_name] = (data, time.time() + self.ttl)
