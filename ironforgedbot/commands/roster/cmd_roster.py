@@ -3,7 +3,6 @@ from typing import List
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
@@ -13,8 +12,10 @@ from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators import require_role
+from ironforgedbot.http import HTTP
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.score_service import ScoreService
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class Signups(object):
         self.known_ranks = {}
         self.unknowns = []
         self.rank_failures = []
+        self.service = ScoreService(HTTP)
 
     def add_ranked(
         self, member: discord.Member, rank: RANK, prospect: bool, members: list[Member]
@@ -58,7 +60,7 @@ class Signups(object):
     async def add_prospect(self, member: discord.Member, members: list[Member]):
         nick = normalize_discord_string(member.display_name)
         try:
-            rank = await get_rank(nick)
+            rank = await self.service.get_rank(nick)
         except RuntimeError:
             self.rank_failures.append(nick)
             return

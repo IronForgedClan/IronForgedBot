@@ -3,12 +3,6 @@ from typing import Optional
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import (
-    HiscoresError,
-    HiscoresNotFound,
-    ScoreBreakdown,
-    score_info,
-)
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -17,8 +11,8 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
-    RANK_POINTS,
     RANK,
+    RANK_POINTS,
     get_god_alignment_from_member,
     get_next_rank_from_points,
     get_rank_color_from_points,
@@ -33,7 +27,13 @@ from ironforgedbot.common.responses import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.decorators import require_role
-from ironforgedbot.http import HttpException
+from ironforgedbot.http import HTTP, HttpException
+from ironforgedbot.services.score_service import (
+    HiscoresError,
+    HiscoresNotFound,
+    ScoreBreakdown,
+    ScoreService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +59,10 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         return await send_error_response(interaction, str(e))
 
     display_name = member.display_name if member is not None else player
+    service = ScoreService(HTTP)
 
     try:
-        data = await score_info(player)
+        data = await service.get_player_score(player)
     except (HiscoresError, HttpException):
         return await send_error_response(
             interaction,
@@ -77,11 +78,11 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
 
     skill_points = 0
     for skill in data.skills:
-        skill_points += skill["points"]
+        skill_points += skill.points
 
     activity_points = 0
     for activity in activities:
-        activity_points += activity["points"]
+        activity_points += activity.points
 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
