@@ -75,7 +75,7 @@ class ScoreService:
         breakdown = await SCORE_CACHE.get(player_name)
 
         if not breakdown or bypass_cache:
-            logger.info("fetching live score data")
+            logger.info("fetching live hiscores data")
             data = await self.http.get(self.hiscores_url.format(rsn=player_name))
 
             if data["status"] == 404:
@@ -87,15 +87,15 @@ class ScoreService:
                     message=f"Unexpected response code {data['status']}"
                 )
 
-            skills = self._get_skills_info(data["body"])
-            clues, raids, bosses = self._get_activities_info(data["body"])
+            skills = self._process_skills(data["body"])
+            clues, raids, bosses = self._process_activities(data["body"])
 
             breakdown = ScoreBreakdown(skills, clues, raids, bosses)
             await SCORE_CACHE.set(player_name, breakdown)
 
         return breakdown
 
-    def _get_skills_info(self, score_data) -> list[SkillScore]:
+    def _process_skills(self, score_data) -> list[SkillScore]:
         if SKILLS is None or score_data is None or score_data["skills"] is None:
             raise RuntimeError("Unable to read skills data")
 
@@ -141,7 +141,7 @@ class ScoreService:
 
         return output
 
-    def _get_activities_info(
+    def _process_activities(
         self,
         score_data,
     ) -> tuple[list[ActivityScore], list[ActivityScore], list[ActivityScore]]:
