@@ -6,11 +6,6 @@ import time
 
 import discord
 from ironforgedbot.database.database import db
-from ironforgedbot.commands.hiscore.calculator import (
-    HiscoresError,
-    HiscoresNotFound,
-    get_player_points_total,
-)
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
     find_emoji,
@@ -24,8 +19,13 @@ from ironforgedbot.common.ranks import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_h2
-from ironforgedbot.http import HttpException
+from ironforgedbot.http import HTTP, HttpException
 from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.score_service import (
+    HiscoresError,
+    HiscoresNotFound,
+    ScoreService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +97,12 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                 await report_channel.send(message)
                 continue
 
+            score_service = ScoreService(HTTP)
             current_points = 0
             try:
-                current_points = await get_player_points_total(member.display_name)
+                current_points = await score_service.get_player_points_total(
+                    member.display_name
+                )
             except HttpException as e:
                 await report_channel.send(
                     f"HttpException getting points for {member.mention}.\n> {e}"
