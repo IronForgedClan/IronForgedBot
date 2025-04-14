@@ -5,6 +5,7 @@ import discord
 
 
 class ROLE(StrEnum):
+    SLAG = "Slag"
     GUEST = "Guest"
     APPLICANT = "Applicant"
     PROSPECT = "Prospect"
@@ -13,6 +14,7 @@ class ROLE(StrEnum):
     EVENTS_TEAM = "Events Team"
     RECRUITMENT_TEAM = "Recruitment Team"
     DISCORD_TEAM = "Discord Team"
+    BOT_TEAM = "Bot Team"
     LEADERSHIP = "Leadership"
 
     def or_higher(self):
