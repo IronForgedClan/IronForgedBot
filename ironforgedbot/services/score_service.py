@@ -1,62 +1,15 @@
 import logging
-from dataclasses import dataclass
 from typing import Optional
 
-from ironforgedbot.cache.score_cache import ScoreCache
+from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
+from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import AsyncHttpClient
+from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)
-SCORE_CACHE = ScoreCache(600)
-
-
-class HiscoresError(Exception):
-    def __init__(
-        self,
-        message="Error response from the hiscores",
-    ):
-        self.message = message
-        super().__init__(self.message)
-
-
-class HiscoresNotFound(Exception):
-    def __init__(
-        self,
-        message="Player not found on the hiscores",
-    ):
-        self.message = message
-        super().__init__(self.message)
-
-
-@dataclass
-class ActivityScore:
-    name: str
-    display_name: Optional[str]
-    display_order: int
-    emoji_key: str
-    kc: int
-    points: int
-
-
-@dataclass
-class SkillScore:
-    name: str
-    display_name: Optional[str]
-    display_order: int
-    emoji_key: str
-    xp: int
-    level: int
-    points: int
-
-
-@dataclass
-class ScoreBreakdown:
-    skills: list[SkillScore]
-    clues: list[ActivityScore]
-    raids: list[ActivityScore]
-    bosses: list[ActivityScore]
 
 
 class ScoreService:
@@ -220,9 +173,11 @@ class ScoreService:
 
         return clues, raids, bosses
 
-    async def get_player_points_total(self, player_name: str) -> int:
+    async def get_player_points_total(
+        self, player_name: str, bypass_cache: Optional[bool] = False
+    ) -> int:
         player_name = normalize_discord_string(player_name)
-        data = await self.get_player_score(player_name)
+        data = await self.get_player_score(player_name, bypass_cache)
 
         activities = data.clues + data.raids + data.bosses
 

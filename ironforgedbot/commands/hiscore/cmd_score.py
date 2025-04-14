@@ -27,13 +27,10 @@ from ironforgedbot.common.responses import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.decorators import require_role
+from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
-from ironforgedbot.services.score_service import (
-    HiscoresError,
-    HiscoresNotFound,
-    ScoreBreakdown,
-    ScoreService,
-)
+from ironforgedbot.models.score import ScoreBreakdown
+from ironforgedbot.services.score_service import ScoreService
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +56,9 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         return await send_error_response(interaction, str(e))
 
     display_name = member.display_name if member is not None else player
-    service = ScoreService(HTTP)
 
     try:
-        data = await service.get_player_score(player)
+        data = await ScoreService(HTTP).get_player_score(player)
     except (HiscoresError, HttpException):
         return await send_error_response(
             interaction,
