@@ -8,6 +8,7 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.tasks.job_check_activity import (
@@ -77,6 +78,12 @@ class IronForgedAutomations:
         """Wrapper for tracking active jobs."""
         return lambda: self.track_job(job_func, *args, **kwargs)
 
+    async def _clear_caches(self, report_channel: discord.TextChannel):
+        score_cache_output = await SCORE_CACHE.clean()
+
+        if score_cache_output:
+            await report_channel.send(f"**♻️ Score cache:** {score_cache_output}")
+
     async def setup_automations(self):
         """Add jobs to scheduler."""
         offset = (
@@ -126,6 +133,11 @@ class IronForgedAutomations:
             CronTrigger(
                 day_of_week="sun", hour=0, minute=0, second=offset, timezone="UTC"
             ),
+        )
+
+        self.scheduler.add_job(
+            self._job_wrapper(self._clear_caches, self.report_channel),
+            CronTrigger(second=10),
         )
 
         await self.report_channel.send(
