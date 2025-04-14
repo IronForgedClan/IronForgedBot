@@ -87,7 +87,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             current_points = 0
             try:
                 current_points = await score_service.get_player_points_total(
-                    member.nickname
+                    member.nickname, bypass_cache=True
                 )
             except HiscoresNotFound:
                 if (
