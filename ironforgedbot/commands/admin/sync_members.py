@@ -6,6 +6,7 @@ import discord
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
 )
+from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.database.database import db
 from ironforgedbot.models.member import Member
@@ -39,11 +40,13 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                 await service.disable_member(member.id)
                 output.append([member.nickname, "Disabled", "No longer a member"])
 
-        # update nicknames
+        # update nickname and rank
         for discord_member in discord_members.values():
             for member in existing_members.values():
                 if discord_member.id == member.discord_id:
+                    change_text = ""
                     safe_nick = normalize_discord_string(discord_member.nick or "")
+
                     if safe_nick != member.nickname:
                         try:
                             await service.change_nickname(member.id, safe_nick)
@@ -56,7 +59,16 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                                 ]
                             )
                             continue
-                        output.append([safe_nick, "Updated", "Nickname changed"])
+                        change_text += "Nickname changed "
+
+                    discord_rank = get_rank_from_member(discord_member)
+                    if discord_rank:
+                        if member.rank != discord_rank:
+                            await service.change_rank(member.id, RANK(discord_rank))
+                            change_text += "Rank changed"
+
+                    if len(change_text) > 0:
+                        output.append([safe_nick, "Updated", change_text])
 
         # add new members or reactivate returning members
         for discord_member in discord_members.values():
