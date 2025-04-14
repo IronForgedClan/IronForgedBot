@@ -10,12 +10,14 @@ from ironforgedbot.common.helpers import (
     get_text_channel,
     populate_emoji_cache,
 )
+from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.effects.add_member_role import add_member_role
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
 from ironforgedbot.effects.nickname_change import nickname_change
 from ironforgedbot.effects.remove_member_role import remove_member_role
+from ironforgedbot.effects.update_member_rank import update_member_rank
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db
@@ -187,7 +189,10 @@ class DiscordClient(discord.Client):
                 await add_member_role(report_channel, after)
 
             if ROLE.PROSPECT in roles_added:
-                asyncio.create_task(add_prospect_role(report_channel, after))
+                await add_prospect_role(report_channel, after)
+
+            if len(set(RANK.list()) & roles_added) > 0:
+                await update_member_rank(report_channel, after)
 
             if ROLE.MEMBER in roles_removed:
                 await remove_member_role(report_channel, after)
