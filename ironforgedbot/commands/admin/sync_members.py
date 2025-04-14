@@ -89,6 +89,8 @@ async def sync_members(guild: discord.Guild) -> list[list]:
 
                         output.append([safe_nick, "Enabled", "Returning member"])
                         continue
+                    else:
+                        output.append([safe_nick, "Error", "Data continuity error"])
                 except Exception as e:
                     logger.error(e)
                     output.append([safe_nick, "Error", "Uncaught exception"])
