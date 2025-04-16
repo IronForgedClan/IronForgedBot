@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.ranks import RANK
+from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 
@@ -41,10 +42,15 @@ class MemberService:
         await self.db.close()
 
     async def create_member(
-        self, discord_id: int, nickname: str, admin_id: Optional[str] = None
+        self,
+        discord_id: int,
+        nickname: str,
+        rank: Optional[RANK] = RANK.IRON,
+        admin_id: Optional[str] = None,
     ) -> Member:
         new_member_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
+        nickname = normalize_discord_string(nickname)
 
         member = Member(
             id=new_member_id,
@@ -52,7 +58,7 @@ class MemberService:
             active=True,
             nickname=nickname,
             ingots=0,
-            rank=RANK.ADAMANT,
+            rank=rank,
             joined_date=now,
             last_changed_date=now,
         )
@@ -73,30 +79,16 @@ class MemberService:
             await self.db.commit()
         except IntegrityError as e:
             error_message = str(e)
+            await self.db.rollback()
 
             if "members.discord_id" in error_message:
-                await self.db.rollback()
                 raise UniqueDiscordIdVolation()
             elif "members.nickname" in error_message:
-                await self.db.rollback()
                 raise UniqueNicknameViolation()
             else:
                 raise e
 
         return member
-
-    async def create_or_activate(
-        self, discord_id: int, nickname: str, admin_id: Optional[str] = None
-    ) -> Member:
-        try:
-            member = await self.create_member(discord_id, nickname, admin_id)
-            return member
-        except UniqueDiscordIdVolation:
-            existing_member = await self.get_member_by_discord_id(discord_id)
-            if not existing_member:
-                raise Exception("Member not found")
-
-        return await self.disable_member(existing_member.id)
 
     async def get_all_active_members(self) -> list[Member]:
         result = await self.db.execute(select(Member).where(Member.active.is_(True)))
@@ -118,7 +110,9 @@ class MemberService:
         )
         return result.scalars().first()
 
-    async def reactivate_member(self, id: str, new_nickname: str) -> Member:
+    async def reactivate_member(
+        self, id: str, new_nickname: str, rank: Optional[RANK] = RANK.IRON
+    ) -> Member:
         member = await self.get_member_by_id(id)
         if not member:
             raise MemberNotFoundException(f"Member with id {id} does not exist")
@@ -160,6 +154,20 @@ class MemberService:
                     previous_value=member.nickname,
                     new_value=new_nickname,
                     comment="Nickname changed during reactivation",
+                    timestamp=now,
+                )
+            )
+            member.nickname = new_nickname
+
+        if rank:
+            self.db.add(
+                Changelog(
+                    member_id=member.id,
+                    admin_id=None,
+                    change_type=ChangeType.RANK_CHANGE,
+                    previous_value=member.rank,
+                    new_value=rank,
+                    comment="Rank changed during reactivation",
                     timestamp=now,
                 )
             )

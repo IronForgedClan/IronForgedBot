@@ -6,7 +6,7 @@ import discord
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
 )
-from ironforgedbot.common.ranks import RANK, get_rank_from_member
+from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.database.database import db
 from ironforgedbot.models.member import Member
@@ -74,12 +74,18 @@ async def sync_members(guild: discord.Guild) -> list[list]:
         for discord_member in discord_members.values():
             if discord_member.id not in existing_members.keys():
                 safe_nick = normalize_discord_string(discord_member.nick or "")
+                rank = get_rank_from_member(discord_member)
+                if rank in GOD_ALIGNMENT.list():
+                    rank = RANK.GOD
+
                 if not discord_member.nick or len(safe_nick) < 1:
                     output.append([safe_nick, "Error", "No nickname"])
                     continue
 
                 try:
-                    await service.create_member(discord_member.id, safe_nick)
+                    await service.create_member(
+                        discord_member.id, safe_nick, RANK(rank)
+                    )
                 except (UniqueDiscordIdVolation, UniqueNicknameViolation):
                     disabled_member = await service.get_member_by_discord_id(
                         discord_member.id
@@ -87,7 +93,7 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                     if disabled_member and not disabled_member.active:
                         try:
                             await service.reactivate_member(
-                                disabled_member.id, safe_nick
+                                disabled_member.id, safe_nick, RANK(rank)
                             )
                         except UniqueNicknameViolation:
                             output.append(
