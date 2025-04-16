@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -113,11 +113,10 @@ class MemberService:
     async def reactivate_member(
         self, id: str, new_nickname: str, rank: Optional[RANK] = RANK.IRON
     ) -> Member:
+        now = datetime.now(timezone.utc)
         member = await self.get_member_by_id(id)
         if not member:
             raise MemberNotFoundException(f"Member with id {id} does not exist")
-
-        now = datetime.now(timezone.utc)
 
         self.db.add(
             Changelog(
@@ -139,11 +138,25 @@ class MemberService:
                 change_type=ChangeType.JOINED_DATE_CHANGE,
                 previous_value=member.joined_date,
                 new_value=now,
-                comment="Returning member updated join timestamp",
+                comment="Join date updated during reactivation",
                 timestamp=now,
             )
         )
         member.joined_date = now
+
+        if now > member.last_changed_date + timedelta(days=1):
+            self.db.add(
+                Changelog(
+                    member_id=member.id,
+                    admin_id=None,
+                    change_type=ChangeType.RESET_INGOTS,
+                    previous_value=member.ingots,
+                    new_value=0,
+                    comment="Ingots reset during reactivation",
+                    timestamp=now,
+                )
+            )
+            member.ingots = 0
 
         if member.nickname != new_nickname:
             self.db.add(
