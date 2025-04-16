@@ -41,6 +41,10 @@ class GOD_ALIGNMENT(StrEnum):
     GUTHIX = "Guthixian"
     ZAMORAK = "Zamorakian"
 
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
+
 
 def get_rank_from_points(points: int) -> str:
     if points >= RANK_POINTS.GOD:
