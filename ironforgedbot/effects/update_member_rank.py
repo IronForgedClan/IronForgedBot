@@ -18,12 +18,12 @@ async def update_member_rank(
 
     if not rank:
         await report_channel.send(
-            f"**Error:** Rank role changed for {discord_member.mention}, "
-            f"but current rank could not be determined."
+            f"**Error:** Rank changed for {discord_member.mention}, "
+            f"but rank could not be determined."
         )
         return
 
-    if rank in [GOD_ALIGNMENT.GUTHIX, GOD_ALIGNMENT.SARADOMIN, GOD_ALIGNMENT.ZAMORAK]:
+    if rank in GOD_ALIGNMENT.list():
         rank = RANK.GOD
 
     async for session in db.get_session():
