@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -8,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedbot.common.ranks import RANK
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 
@@ -29,6 +30,18 @@ class MemberNotFoundException(Exception):
     def __init__(self, message="The member can not be found"):
         self.message = message
         super().__init__(self.message)
+
+
+@dataclass
+class MemberServiceReactivateResponse:
+    status: bool
+    previous_nick: str
+    ingots_reset: bool
+    previous_ingot_qty: int
+    previous_join_date: datetime
+    approximate_leave_date: datetime
+    previous_rank: RANK
+    new_member: Member
 
 
 logger = logging.getLogger(__name__)
@@ -112,11 +125,22 @@ class MemberService:
 
     async def reactivate_member(
         self, id: str, new_nickname: str, rank: Optional[RANK] = RANK.IRON
-    ) -> Member:
+    ) -> MemberServiceReactivateResponse:
         now = datetime.now(timezone.utc)
         member = await self.get_member_by_id(id)
         if not member:
             raise MemberNotFoundException(f"Member with id {id} does not exist")
+
+        response = MemberServiceReactivateResponse(
+            status=False,
+            previous_nick=member.nickname,
+            ingots_reset=False,
+            previous_ingot_qty=member.ingots,
+            previous_join_date=member.joined_date,
+            approximate_leave_date=member.last_changed_date,
+            previous_rank=member.rank,
+            new_member=member,
+        )
 
         self.db.add(
             Changelog(
@@ -156,6 +180,7 @@ class MemberService:
                     timestamp=now,
                 )
             )
+            response.ingots_reset = True
             member.ingots = 0
 
         if member.nickname != new_nickname:
@@ -198,7 +223,10 @@ class MemberService:
             else:
                 raise e
 
-        return member
+        response.status = True
+        response.new_member = member
+
+        return response
 
     async def disable_member(self, id: str) -> Member:
         member = await self.get_member_by_id(id)
