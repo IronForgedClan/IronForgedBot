@@ -1,6 +1,7 @@
 import logging
 import discord
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.database.database import db
 
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
@@ -13,6 +14,9 @@ logger = logging.getLogger(__name__)
 async def update_member_rank(
     report_channel: discord.TextChannel, discord_member: discord.Member
 ):
+    if not check_member_has_role(discord_member, ROLE.MEMBER):
+        return
+
     logger.info(f"{discord_member.display_name} has had their rank changed...")
     rank = get_rank_from_member(discord_member)
 
