@@ -5,7 +5,7 @@ import discord
 
 
 class ROLE(StrEnum):
-    SLAG = "Slag"
+    BANNED = "Slag"
     GUEST = "Guest"
     APPLICANT = "Applicant"
     PROSPECT = "Prospect"
