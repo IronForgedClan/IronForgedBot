@@ -1,10 +1,12 @@
 import logging
+import time
 
 import discord
 
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
     find_emoji,
+    format_duration,
     get_discord_role,
 )
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
@@ -37,6 +39,7 @@ async def add_member_role(
     report_channel: discord.TextChannel,
     discord_member: discord.Member,
 ):
+    start_time = time.perf_counter()
     rank = get_rank_from_member(discord_member)
     if rank in GOD_ALIGNMENT.list():
         rank = RANK.GOD
@@ -69,38 +72,50 @@ async def add_member_role(
                         conflicting_db_member.id if conflicting_db_member else "unknown"
                     )
                     await _rollback(report_channel, discord_member)
+
+                    end_time = time.perf_counter()
                     return await report_channel.send(
                         f":warning: {discord_member.mention} was given the "
                         f"{text_bold(ROLE.MEMBER)} role. But was unable to be saved "
                         f"due to a **nickname conflict**"
                         + (
                             f" with this user: {conflicting_discord_member.mention} "
-                            f"({conflicting_id})"
+                            f"\n\n**ID:** {conflicting_id}\n"
+                            f"**D_ID:** {conflicting_discord_member.id}"
                             if conflicting_discord_member
                             else "."
                         )
+                        + f" Processed in **{format_duration(start_time, end_time)}**.",
                     )
         except Exception as e:
             logger.error(e)
             await _rollback(report_channel, discord_member)
+
+            end_time = time.perf_counter()
             return await report_channel.send(
                 f":warning: {discord_member.mention} was given the "
-                f"{text_bold(ROLE.MEMBER)} role, but an error occured saving."
+                f"{text_bold(ROLE.MEMBER)} role, but an error occured saving. "
+                f"Processed in **{format_duration(start_time, end_time)}**.",
             )
 
         if not member:
             await _rollback(report_channel, discord_member)
+
+            end_time = time.perf_counter()
             return await report_channel.send(
                 f":warning: {discord_member.mention} was given the "
-                f"{text_bold(ROLE.MEMBER)} role, but an error occured."
+                f"{text_bold(ROLE.MEMBER)} role, but an error occured. "
+                f" Processed in **{format_duration(start_time, end_time)}**.",
             )
 
         if not reactivate_response:
+            end_time = time.perf_counter()
             return await report_channel.send(
                 f":information: {discord_member.mention} has been given the "
                 f"{text_bold(ROLE.MEMBER)} role. Identified as a new member. "
                 "Join date set to "
-                f"{datetime_to_discord_relative(member.joined_date)}.\n",
+                f"{datetime_to_discord_relative(member.joined_date)}. "
+                f"Processed in **{format_duration(start_time, end_time)}**.",
             )
 
         previous_rank_icon = find_emoji(reactivate_response.previous_rank)
@@ -134,10 +149,12 @@ async def add_member_role(
             value=("✅" if reactivate_response.ingots_reset else "❌"),
         )
 
+        end_time = time.perf_counter()
         return await report_channel.send(
             f":information: {discord_member.mention} has been given the "
             f"{text_bold(ROLE.MEMBER)} role. Identified as a "
             "**returning member**. Join date updated to "
-            f"{datetime_to_discord_relative(member.joined_date)}.\n",
+            f"{datetime_to_discord_relative(member.joined_date)}. "
+            f"Processed in **{format_duration(start_time, end_time)}**.",
             embed=embed,
         )
