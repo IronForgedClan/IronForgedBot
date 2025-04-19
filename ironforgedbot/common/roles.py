@@ -31,6 +31,10 @@ class ROLE(StrEnum):
             role.value for role in roles[: index + 1]
         ]  # slice from start to current
 
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
+
     @staticmethod
     def any():
         """Returns all roles in a list"""
