@@ -1,16 +1,60 @@
 import discord
+import time
 
+from discord.errors import Forbidden
+from ironforgedbot.common.helpers import format_duration, get_discord_role
+from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.tasks.job_sync_members import job_sync_members
+from ironforgedbot.common.text_formatters import text_ul
+from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.database.database import db
 
 
 async def remove_member_role(
     report_channel: discord.TextChannel, member: discord.Member
 ):
-    await report_channel.send(
-        f":information: {member.mention} has been stripped of the "
-        f"{text_bold(ROLE.MEMBER)} role. Initiating member sync..."
-    )
+    start_time = time.perf_counter()
+    member_roles = set(role.name for role in member.roles)
+    roles_to_remove = RANK.list() + ROLE.list() + GOD_ALIGNMENT.list()
 
-    await job_sync_members(report_channel.guild, report_channel)
+    roles_removed = []
+    for role_name in roles_to_remove:
+        if role_name == ROLE.BANNED:
+            continue
+
+        if role_name in member_roles:
+            role = get_discord_role(report_channel.guild, role_name)
+
+            if not role:
+                raise ValueError(f"Unable to get role {role_name}")
+
+            roles_removed.append(role)
+
+    try:
+        await member.remove_roles(
+            *roles_removed, reason="Member removed. Cleaning up roles."
+        )
+    except Forbidden:
+        return await report_channel.send(
+            f":warning: The bot lacks permission to manage {member.mention}'s roles."
+        )
+
+    async for session in db.get_session():
+        service = MemberService(session)
+        db_member = await service.get_member_by_discord_id(member.id)
+
+        if not db_member:
+            return await report_channel.send(
+                f":warning: Member {member.mention} has been removed, but "
+                "cannot be found in the database."
+            )
+
+        await service.disable_member(db_member.id)
+
+        end_time = time.perf_counter()
+        await report_channel.send(
+            f":information: **Member disabled:** {member.mention} has been removed. "
+            "**Disabled** member in database. **Removed** the following discord "
+            f"roles from this user:\n{text_ul([r.name for r in roles_removed])}"
+            f"Processed in **{format_duration(start_time, end_time)}**.",
+        )
