@@ -53,8 +53,8 @@ async def remove_member_role(
 
         end_time = time.perf_counter()
         await report_channel.send(
-            f":information: **Member disabled:** {member.mention} has been removed. "
-            "**Disabled** member in database. **Removed** the following discord "
-            f"roles from this user:\n{text_ul([r.name for r in roles_removed])}"
+            f":x: **Member disabled:** {member.mention} has been removed. "
+            "Disabled member in database. Removed the following **discord roles** "
+            f"from this user:\n{text_ul([r.name for r in roles_removed])}"
             f"Processed in **{format_duration(start_time, end_time)}**.",
         )
