@@ -1,9 +1,8 @@
-from datetime import datetime
-from typing import cast
 import unittest
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.models.changelog import ChangeType, Changelog
+from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.ingot_service import IngotService, IngotServiceResponse
 
