@@ -1,11 +1,12 @@
 import functools
 import random
+import sys
 from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 import wom
-from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
 
 VALID_CONFIG = {
     "TEMP_DIR": "/tmp",
@@ -20,16 +21,19 @@ VALID_CONFIG = {
     "RAFFLE_CHANNEL_ID": "123456",
 }
 
+mock_score_breakdown = ScoreBreakdown(skills=[], clues=[], raids=[], bosses=[])
+
+"""
 mock_score_breakdown = ScoreBreakdown(
     skills=[
-        {
-            "name": "Slayer",
-            "display_name": "Slayer",
-            "display_order": 1,
-            "emoji_key": "Slayer",
-            "level": 67,
-            "xp": 547953,
-            "points": 18,
+        SkillScore{
+            name="Slayer"
+            display_name="Slayer"
+            display_order= 1
+            emoji_key="Slayer"
+            level=67
+            xp=547953
+            points=18
         }
     ],
     clues=[
@@ -62,6 +66,7 @@ mock_score_breakdown = ScoreBreakdown(
         }
     ],
 )
+"""
 
 
 def create_mock_discord_interaction(
@@ -201,3 +206,22 @@ def validate_embed(self, expected, actual):
         self.assertEqual(expected.name, actual.name)
         self.assertEqual(expected.value, actual.value)
         self.assertEqual(expected.inline, actual.inline)
+
+
+def deep_getsizeof(obj, seen=None):
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    seen.add(obj_id)
+
+    if isinstance(obj, dict):
+        size += sum(
+            (deep_getsizeof(k, seen) + deep_getsizeof(v, seen)) for k, v in obj.items()
+        )
+    elif isinstance(obj, (list, tuple, set, frozenset)):
+        size += sum(deep_getsizeof(i, seen) for i in obj)
+
+    return size
