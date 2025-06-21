@@ -54,6 +54,8 @@ greenlet==3.1.1
     # via sqlalchemy
 gspread==6.2.0
     # via -r requirements.in
+httplib2==0.22.0
+    # via oauth2client
 idna==3.10
     # via
     #   requests
@@ -68,6 +70,8 @@ multidict==6.4.3
     # via
     #   aiohttp
     #   yarl
+oauth2client==4.1.3
+    # via -r requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib
 pillow==11.1.0
@@ -80,10 +84,15 @@ propcache==0.3.1
     #   yarl
 pyasn1==0.6.1
     # via
+    #   oauth2client
     #   pyasn1-modules
     #   rsa
 pyasn1-modules==0.4.2
-    # via google-auth
+    # via
+    #   google-auth
+    #   oauth2client
+pyparsing==3.2.3
+    # via httplib2
 python-dateutil==2.9.0.post0
     # via -r requirements.in
 python-dotenv==1.1.0
@@ -99,9 +108,13 @@ requests==2.32.3
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
 rsa==4.9
-    # via google-auth
+    # via
+    #   google-auth
+    #   oauth2client
 six==1.17.0
-    # via python-dateutil
+    # via
+    #   oauth2client
+    #   python-dateutil
 sqlalchemy[asyncio]==2.0.40
     # via
     #   -r requirements.in
