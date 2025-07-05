@@ -157,7 +157,9 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
         await member_service.close()
 
         end_time = time.perf_counter()
-        await report_channel.send(
-            f"**{random_rank} Rank & probation check:** Completed in "
-            f"**{format_duration(start_time, end_time)}**."
+        _ = await report_channel.send(
+            (
+                f"**{icon} Rank & probation check:** Completed in "
+                f"**{format_duration(start_time, end_time)}**."
+            )
         )
