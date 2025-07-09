@@ -104,7 +104,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
                 interaction, rank_name, rank_icon, member
             )
 
-    if not member:
+    if not member or not check_member_has_role(member, ROLE.MEMBER):
         return await send_not_clan_member(
             interaction, rank_name, rank_icon, rank_color, points_total, display_name
         )
