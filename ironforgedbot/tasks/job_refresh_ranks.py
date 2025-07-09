@@ -26,19 +26,21 @@ from ironforgedbot.services.score_service import (
     ScoreService,
 )
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(name=__name__)
 
 PROBATION_DAYS = 14
 
 
-async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextChannel):
-    now = datetime.now(timezone.utc)
-    start_time = time.perf_counter()
-    random_rank = random.choice(RANK.list())
-    icon = find_emoji(random_rank)
+async def job_refresh_ranks(
+    guild: discord.Guild, report_channel: discord.TextChannel
+) -> None:
+    now: datetime = datetime.now(tz=timezone.utc)
+    start_time: float = time.perf_counter()
+    random_rank: str = random.choice(seq=RANK.list())
+    icon: str = find_emoji(target=random_rank)
     primary_message_str = (
-        f"{text_h2(f'{icon} Rank & Probation Check')}\n"
-        f"Initiated: {datetime_to_discord_relative(now, 't')}\n"
+        f"{text_h2(input=f'{icon} Rank & Probation Check')}\n"
+        f"Initiated: {datetime_to_discord_relative(dt=now, format='t')}\n"
     )
 
     progress_message = await report_channel.send(primary_message_str)
@@ -53,7 +55,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
             logger.debug(f"Processing member: {member.nickname}")
 
-            await progress_message.edit(
+            _ = await progress_message.edit(
                 content=primary_message_str
                 + f"Progress: **{index + 1}/{len(members)}**"
             )
@@ -62,9 +64,11 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
             if not discord_member:
                 logger.debug("...discord member not found")
-                await report_channel.send(
-                    f"Active member {member.nickname} ({member.id}) could not be "
-                    "found in this guild."
+                _ = await report_channel.send(
+                    (
+                        f"Active member {member.nickname} ({member.id}) could not be "
+                        "found in this guild."
+                    )
                 )
                 continue
 
@@ -80,7 +84,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                     f"{discord_member.mention} has {find_emoji(current_rank)} "
                     "God rank but no alignment."
                 )
-                await report_channel.send(message)
+                _ = await report_channel.send(message)
                 continue
 
             score_service = ScoreService(HTTP)
@@ -95,15 +99,17 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                     and current_rank != RANK.IRON
                 ):
                     logger.debug("...suspected name change or ban")
-                    await report_channel.send(
-                        f"{discord_member.mention} has no presence on the hiscores. "
-                        "This member has either changed their rsn, or been banned."
+                    _ = await report_channel.send(
+                        (
+                            f"{discord_member.mention} has no presence on the hiscores. "
+                            "This member has either changed their rsn, or been banned."
+                        )
                     )
                     continue
                 else:
                     current_points = 0
             except Exception:
-                await report_channel.send(
+                _ = await report_channel.send(
                     f"Unhandled error getting points for {discord_member.mention}."
                 )
                 continue
@@ -113,9 +119,11 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
             if check_member_has_role(discord_member, ROLE.PROSPECT):
                 if not isinstance(member.joined_date, datetime):
                     logger.debug("...has invalid join date")
-                    await report_channel.send(
-                        f"{discord_member.mention} is a {text_bold(ROLE.PROSPECT)} "
-                        "with an invalid join date."
+                    _ = await report_channel.send(
+                        (
+                            f"{discord_member.mention} is a {text_bold(ROLE.PROSPECT)} "
+                            "with an invalid join date."
+                        )
                     )
                     continue
 
@@ -123,11 +131,13 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                     days=PROBATION_DAYS
                 ):
                     logger.debug("...completed probation")
-                    await report_channel.send(
-                        f"{discord_member.mention} has completed their "
-                        f"{text_bold(f'{PROBATION_DAYS} day')} probation period and "
-                        f"is now eligible for {find_emoji(correct_rank)} "
-                        f"{text_bold(correct_rank)} rank."
+                    _ = await report_channel.send(
+                        (
+                            f"{discord_member.mention} has completed their "
+                            f"{text_bold(f'{PROBATION_DAYS} day')} probation period and "
+                            f"is now eligible for {find_emoji(correct_rank)} "
+                            f"{text_bold(correct_rank)} rank."
+                        )
                     )
                     continue
 
@@ -136,9 +146,11 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
 
             if current_rank is None:
                 logger.debug("...has no rank set")
-                await report_channel.send(
-                    f"{discord_member.mention} detected without any rank. Should have "
-                    f"{find_emoji(correct_rank)} {text_bold(correct_rank)}."
+                _ = await report_channel.send(
+                    (
+                        f"{discord_member.mention} detected without any rank. Should have "
+                        f"{find_emoji(correct_rank)} {text_bold(correct_rank)}."
+                    )
                 )
                 continue
 
@@ -149,7 +161,7 @@ async def job_refresh_ranks(guild: discord.Guild, report_channel: discord.TextCh
                     f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
                     f"({text_bold(f'{current_points:,}')} points)"
                 )
-                await report_channel.send(message)
+                _ = await report_channel.send(message)
                 continue
 
             logger.debug("...no change")

@@ -1,49 +1,50 @@
 import logging
-from typing import Optional
 
 from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
-from ironforgedbot.http import AsyncHttpClient
+from ironforgedbot.http import AsyncHttpClient, HttpResponse
 from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(name=__name__)
 
 
 class ScoreService:
-    def __init__(self, http: AsyncHttpClient):
-        self.http = http
-        self.hiscores_url = (
+    def __init__(self, http: AsyncHttpClient) -> None:
+        self.http: AsyncHttpClient = http
+        self.hiscores_url: str = (
             "https://secure.runescape.com/m=hiscore_oldschool/"
             "index_lite.json?player={rsn}"
         )
-        self.level_99_xp = 13_034_431
+        self.level_99_xp: int = 13_034_431
 
     async def get_player_score(
-        self, player_name: str, bypass_cache: Optional[bool] = False
+        self, player_name: str, bypass_cache: bool | None = False
     ) -> ScoreBreakdown:
-        player_name = normalize_discord_string(player_name)
-        breakdown = await SCORE_CACHE.get(player_name)
+        player_name: str = normalize_discord_string(input=player_name)
+        breakdown: ScoreBreakdown | None = await SCORE_CACHE.get(player_name)
 
         if not breakdown or bypass_cache:
             logger.info("fetching live hiscores data")
-            data = await self.http.get(self.hiscores_url.format(rsn=player_name))
+            data: HttpResponse = await self.http.get(
+                self.hiscores_url.format(rsn=player_name)
+            )
 
             if data["status"] == 404:
                 raise HiscoresNotFound()
 
             if data["status"] != 200:
-                logger.error(data["body"])
+                logger.error(data)
                 raise HiscoresError(
                     message=f"Unexpected response code {data['status']}"
                 )
 
-            skills = self._process_skills(data["body"])
+            skills: list[SkillScore] = self._process_skills(data["body"])
             clues, raids, bosses = self._process_activities(data["body"])
 
-            breakdown = ScoreBreakdown(skills, clues, raids, bosses)
+            breakdown: ScoreBreakdown = ScoreBreakdown(skills, clues, raids, bosses)
             await SCORE_CACHE.set(player_name, breakdown)
 
         return breakdown
@@ -174,12 +175,12 @@ class ScoreService:
         return clues, raids, bosses
 
     async def get_player_points_total(
-        self, player_name: str, bypass_cache: Optional[bool] = False
+        self, player_name: str, bypass_cache: bool | None = False
     ) -> int:
-        player_name = normalize_discord_string(player_name)
-        data = await self.get_player_score(player_name, bypass_cache)
+        player_name: str = normalize_discord_string(input=player_name)
+        data: ScoreBreakdown = await self.get_player_score(player_name, bypass_cache)
 
-        activities = data.clues + data.raids + data.bosses
+        activities: list[ActivityScore] = data.clues + data.raids + data.bosses
 
         points = 0
         for skill in data.skills:
@@ -192,8 +193,8 @@ class ScoreService:
 
     async def get_rank(self, player_name: str) -> RANK:
         try:
-            total_points = await self.get_player_points_total(player_name)
+            total_points: int = await self.get_player_points_total(player_name)
         except RuntimeError as e:
             raise e
 
-        return RANK(get_rank_from_points(total_points))
+        return RANK(value=get_rank_from_points(points=total_points))
