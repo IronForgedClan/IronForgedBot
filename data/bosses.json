@@ -348,14 +348,20 @@
         "kc_per_point": 10
     },
     {
-        "name": "Zalcano",
+        "name": "Yama",
         "display_order": 57,
+        "emoji_key": "Yama",
+        "kc_per_point": 7
+    },
+    {
+        "name": "Zalcano",
+        "display_order": 58,
         "emoji_key": "Zalcano",
         "kc_per_point": 5
     },
     {
         "name": "Zulrah",
-        "display_order": 58,
+        "display_order": 59,
         "emoji_key": "Zulrah",
         "kc_per_point": 12
     }

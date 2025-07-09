@@ -19,8 +19,9 @@ from ironforgedbot.services.absent_service import AbsentMemberService
 logger = logging.getLogger(__name__)
 
 DEFAULT_WOM_LIMIT = 50
-IRON_EXP_THRESHOLD = 100_000
-MONTHLY_EXP_THRESHOLD = 200_000
+IRON_EXP_THRESHOLD = 150_000
+MITHRIL_EXP_THRESHOLD = 300_000
+RUNE_EXP_THRESHOLD = 500_000
 
 
 async def job_check_activity(
