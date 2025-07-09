@@ -113,9 +113,13 @@ async def _find_inactive_users(
                 if wom_member.role == GroupRole.Dogsbody:
                     continue
 
-                xp_threshold = MONTHLY_EXP_THRESHOLD
-                if wom_member.role == GroupRole.Iron:
-                    xp_threshold = IRON_EXP_THRESHOLD
+                match wom_member.role:
+                    case GroupRole.Iron:
+                        xp_threshold = IRON_EXP_THRESHOLD
+                    case GroupRole.Mithril | GroupRole.Adamant:
+                        xp_threshold = MITHRIL_EXP_THRESHOLD
+                    case _:
+                        xp_threshold = RUNE_EXP_THRESHOLD
 
                 if member_gains.data.gained < xp_threshold:
                     if not wom_member.role:
