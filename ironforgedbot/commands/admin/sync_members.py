@@ -78,6 +78,9 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                 if rank in GOD_ALIGNMENT.list():
                     rank = RANK.GOD
 
+                if not rank:
+                    rank = RANK.IRON
+
                 if not discord_member.nick or len(safe_nick) < 1:
                     output.append([safe_nick, "Error", "No nickname"])
                     continue
