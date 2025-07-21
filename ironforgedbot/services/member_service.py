@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -15,20 +14,20 @@ from ironforgedbot.models.member import Member
 
 
 class UniqueNicknameViolation(Exception):
-    def __init__(self, message="This nickname already exists"):
-        self.message = message
+    def __init__(self, message: str = "This nickname already exists") -> None:
+        self.message: str = message
         super().__init__(self.message)
 
 
 class UniqueDiscordIdVolation(Exception):
-    def __init__(self, message="This discord id already exists"):
-        self.message = message
+    def __init__(self, message: str = "This discord id already exists") -> None:
+        self.message: str = message
         super().__init__(self.message)
 
 
 class MemberNotFoundException(Exception):
-    def __init__(self, message="The member can not be found"):
-        self.message = message
+    def __init__(self, message: str = "The member can not be found") -> None:
+        self.message: str = message
         super().__init__(self.message)
 
 
@@ -44,39 +43,39 @@ class MemberServiceReactivateResponse:
     new_member: Member
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(name=__name__)
 
 
 class MemberService:
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self, db: AsyncSession) -> None:
+        self.db: AsyncSession = db
 
-    async def close(self):
+    async def close(self) -> None:
         await self.db.close()
 
     async def create_member(
         self,
         discord_id: int,
         nickname: str,
-        rank: Optional[RANK] = RANK.IRON,
-        admin_id: Optional[str] = None,
+        rank: RANK | None = RANK.IRON,
+        admin_id: str | None = None,
     ) -> Member:
-        new_member_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        nickname = normalize_discord_string(nickname)
+        new_member_id: str = str(uuid.uuid4())
+        now: datetime = datetime.now(tz=timezone.utc)
+        nick: str = normalize_discord_string(input=nickname)
 
-        member = Member(
+        member: Member = Member(
             id=new_member_id,
             discord_id=discord_id,
             active=True,
-            nickname=nickname,
+            nickname=nick,
             ingots=0,
             rank=rank,
             joined_date=now,
             last_changed_date=now,
         )
 
-        changelog_entry = Changelog(
+        changelog_entry: Changelog = Changelog(
             member_id=new_member_id,
             admin_id=admin_id,
             change_type=ChangeType.ADD_MEMBER,
@@ -87,8 +86,8 @@ class MemberService:
         )
 
         try:
-            self.db.add(member)
-            self.db.add(changelog_entry)
+            self.db.add(instance=member)
+            self.db.add(instance=changelog_entry)
             await self.db.commit()
         except IntegrityError as e:
             error_message = str(e)
@@ -124,7 +123,7 @@ class MemberService:
         return result.scalars().first()
 
     async def reactivate_member(
-        self, id: str, new_nickname: str, rank: Optional[RANK] = RANK.IRON
+        self, id: str, new_nickname: str, rank: RANK | None = RANK.IRON
     ) -> MemberServiceReactivateResponse:
         now = datetime.now(timezone.utc)
         member = await self.get_member_by_id(id)
