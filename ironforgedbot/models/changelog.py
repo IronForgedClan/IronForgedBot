@@ -32,3 +32,6 @@ class Changelog(Base):
     timestamp: Mapped[datetime] = mapped_column(
         UTCDateTime, default=lambda: datetime.now(timezone.utc)
     )
+
+    def __repr__(self) -> str:
+        return f"<Changelog(id={self.id}, member_id={self.member_id}, admin_id={self.admin_id}, change_type={self.change_type}, previous_value={self.previous_value}, new_value={self.new_value}, comment={self.comment}, timestamp={self.timestamp})>"

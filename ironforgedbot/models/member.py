@@ -28,3 +28,6 @@ class Member(Base):
     last_changed_date: Mapped[datetime] = mapped_column(
         UTCDateTime, default=lambda: datetime.now(timezone.utc)
     )
+
+    def __repr__(self) -> str:
+        return f"<Member(id={self.id}, discord_id={self.discord_id}, active={self.active}, nickname={self.nickname}, ingots={self.ingots}, rank={self.rank}, joined_date={self.joined_date}, last_changed_date={self.last_changed_date})>"
