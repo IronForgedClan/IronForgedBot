@@ -3,9 +3,13 @@ import asyncio
 import os
 import sys
 
-
 # Add the parent directory to sys.path to allow absolute imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedbot.http import HTTP, HttpException
+from ironforgedbot.services.score_service import ScoreService
+
 
 from ironforgedbot.database.database import db
 
@@ -16,7 +20,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from sqlalchemy.orm.session import Session
 
 from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.ranks import RANK
+from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.models.changelog import ChangeType, Changelog
 from ironforgedbot.models.member import Member
 
@@ -47,6 +51,21 @@ def get_sheet_data(sheet_name, worksheet_name) -> list[any]:
     return data
 
 
+async def _get_rank(name: str) -> str:
+    try:
+        await asyncio.sleep(2)
+        data = await ScoreService(HTTP).get_player_points_total(name)
+        rank = get_rank_from_points(data)
+        print(f"  {name} has {data} points and is {rank} rank")
+        return rank
+    except (HiscoresError, HttpException):
+        print(f"  {name} hiscores error, saving as Iron")
+    except HiscoresNotFound:
+        print(f"  {name} not on hiscores, saving as Iron")
+
+    return RANK.IRON
+
+
 async def import_membes(sheet_data) -> None:
     async for session in db.get_session():
         for row in sheet_data:
@@ -54,20 +73,26 @@ async def import_membes(sheet_data) -> None:
             now: datetime = datetime.now(tz=timezone.utc)
             nick: str = normalize_discord_string(input=row["RSN"])
 
-            joined = datetime.fromisoformat(row["Joined Date"])
+            print(f"\nprocessing {nick}...")
 
-            member: Member = Member(
+            try:
+                joined = datetime.fromisoformat(row["Joined Date"])
+            except Exception as e:
+                print(f"! {nick} invalid join date: '{row['Joined Date']}'")
+                continue
+
+            member = Member(
                 id=new_member_id,
                 discord_id=row["Id"],
                 active=True,
                 nickname=nick,
                 ingots=int(row["Ingots"]),
-                rank=RANK.IRON,
+                rank=await _get_rank(nick),
                 joined_date=joined,
                 last_changed_date=now,
             )
 
-            changelog_entry: Changelog = Changelog(
+            changelog_entry = Changelog(
                 member_id=new_member_id,
                 change_type=ChangeType.ADD_MEMBER,
                 previous_value=None,
@@ -80,17 +105,24 @@ async def import_membes(sheet_data) -> None:
                 session.add(instance=member)
                 session.add(instance=changelog_entry)
                 await session.commit()
-                print(f"Imported {member.nickname}")
+                print(f"+ imported {member.nickname}")
             except Exception as e:
+                error_message = str(e)
                 await session.rollback()
-                print(f"Error: {e}")
 
-        await session.close()
+                if "members.discord_id" in error_message:
+                    print(f"- {nick} discord id already exists")
+                elif "members.nickname" in error_message:
+                    print(f"- {nick} nickname already exists")
+                else:
+                    print(f"- {nick} unhandled error:")
+                    print(e)
 
 
 async def main():
+    print("fetching Google Sheets data...")
     sheet_members = get_sheet_data("IronForged_bot_test", "ClanIngots")
-
+    print(f"found {len(sheet_members)} rows of data\n")
     await import_membes(sheet_members)
 
 
