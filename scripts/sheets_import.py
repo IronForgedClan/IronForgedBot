@@ -6,19 +6,17 @@ import sys
 # Add the parent directory to sys.path to allow absolute imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
-from ironforgedbot.http import HTTP, HttpException
-from ironforgedbot.services.score_service import ScoreService
-
-
-from ironforgedbot.database.database import db
-
-from datetime import datetime, timezone
 import uuid
 import gspread
+
+from datetime import datetime, timezone
 from oauth2client.service_account import ServiceAccountCredentials
 from sqlalchemy.orm.session import Session
 
+from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedbot.http import HTTP, HttpException
+from ironforgedbot.services.score_service import ScoreService
+from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.models.changelog import ChangeType, Changelog
