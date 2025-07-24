@@ -9,7 +9,7 @@ from ironforgedbot.services.member_service import MemberService
 
 class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_should_create_member(self, mock_datetime):
+    async def test_should_create_member(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         mock_datetime.now.return_value = now
 
@@ -19,8 +19,8 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         expected_member = {"discord_id": 12345, "nickname": "zezima"}
 
-        result = await service.create_member(
-            expected_member["discord_id"], expected_member["nickname"]
+        result: Member = await service.create_member(
+            int(expected_member["discord_id"]), str(expected_member["nickname"])
         )
 
         expected_changelog = {
@@ -33,13 +33,13 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
             "timestamp": now,
         }
 
-        print(mock_db.add.call_args_list[1])
         result_member = mock_db.add.call_args_list[0][0]
         result_changelog = mock_db.add.call_args_list[1][0]
 
         self.assertEqual(mock_db.add.call_count, 2)
 
-        # self.assertIsInstance(result_changelog, Changelog)
+        self.assertIsInstance(result_member, Member)
+        self.assertIsInstance(result_changelog, Changelog)
         for key, value in expected_changelog.items():
             actual_value = getattr(result_changelog, key, None)
             self.assertEqual(
