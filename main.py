@@ -16,7 +16,7 @@ from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 logger = logging.getLogger(__name__)
 
 
-def init_bot():
+def init_bot() -> None:
     if CONFIG and STATE and HTTP and BOSSES and CLUES and RAIDS and SKILLS:
         logger.info("Requirements loaded")
 
