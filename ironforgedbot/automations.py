@@ -141,6 +141,5 @@ class IronForgedAutomations:
         )
 
         await self.report_channel.send(
-            f"🟢 Bot **v{CONFIG.BOT_VERSION}** is **online** and configured to use this channel for"
-            f" **{len(self.scheduler.get_jobs())}** automation reports. View pinned message for details."
+            f"🟢 Bot **v{CONFIG.BOT_VERSION}** is now **online**"
         )
