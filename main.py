@@ -1,5 +1,4 @@
 import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
-import argparse
 import logging
 import os
 import sys
@@ -22,26 +21,11 @@ def init_bot() -> None:
 
     create_temp_dir(CONFIG.TEMP_DIR)
 
-    args = parse_cli_arguments()
     intents = create_discord_intents()
-    client = create_client(intents, args.upload, CONFIG.GUILD_ID)
+    client = create_client(intents, upload=True, guild_id=CONFIG.GUILD_ID)
 
     logger.info(f"Starting Iron Forged Bot v{CONFIG.BOT_VERSION}")
     client.run(CONFIG.BOT_TOKEN)
-
-
-def parse_cli_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="A discord bot for the Iron Forged Old School RuneScape clan."
-    )
-    parser.add_argument(
-        "--upload",
-        action="store_true",
-        default=False,
-        help="Uploads commands to discord server.",
-    )
-
-    return parser.parse_args()
 
 
 def create_temp_dir(path: str) -> None:
