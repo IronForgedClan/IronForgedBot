@@ -1,0 +1,46 @@
+services:
+    db:
+        image: mariadb:latest
+        restart: unless-stopped
+        environment:
+            MARIADB_ROOT_PASSWORD: ${DB_ROOT}
+            MARIADB_DATABASE: ${DB_NAME}
+            MARIADB_USER: ${DB_USER}
+            MARIADB_PASSWORD: ${DB_PASS}
+        healthcheck:
+            test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+            start_period: 10s
+            interval: 5s
+            timeout: 3s
+            retries: 5
+        volumes:
+            - mariadb_data:/var/lib/mysql
+
+    bot:
+        build:
+            context: .
+            target: dev
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+        environment:
+            ENVIRONMENT: ${ENVIRONMENT}
+            DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
+            SHEET_ID: ${SHEET_ID}
+            GUILD_ID: ${GUILD_ID}
+            BOT_TOKEN: ${BOT_TOKEN}
+            WOM_GROUP_ID: ${WOM_GROUP_ID}
+            WOM_API_KEY: ${WOM_API_KEY}
+            AUTOMATION_CHANNEL_ID: ${AUTOMATION_CHANNEL_ID}
+            TRICK_OR_TREAT_ENABLED: ${TRICK_OR_TREAT_ENABLED}
+            TRICK_OR_TREAT_CHANNEL_ID: ${TRICK_OR_TREAT_CHANNEL_ID}
+            SECRET_SANTA_ENABLED: ${SECRET_SANTA_ENABLED}
+            SECRET_SANTA_CHANNEL_ID: ${SECRET_SANTA_CHANNEL_ID}
+            RAFFLE_CHANNEL_ID: ${RAFFLE_CHANNEL_ID}
+        volumes:
+            - .:/app
+
+volumes:
+    mariadb_data:
+
