@@ -1,36 +1,65 @@
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
-from sqlalchemy.orm import declarative_base
+from contextlib import asynccontextmanager
+import os
 
-DATABASE_URL = "sqlite+aiosqlite:///ironforged_bot.db"
+from typing import AsyncGenerator
 
-Base = declarative_base()
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Database:
-    _instance = None
+    def __init__(self, url: str = None) -> None:
+        self._url = url or os.getenv("DATABASE_URL")
+        if not self._url:
+            raise RuntimeError("DATABASE_URL must be set")
 
-    def __init__(self):
-        """Ensure only one instance is created."""
-        if not hasattr(self, "engine"):
-            self.engine = create_async_engine(DATABASE_URL, echo=False)
-            self.async_session_factory = async_sessionmaker(
-                bind=self.engine, expire_on_commit=False, class_=AsyncSession
-            )
+        self._engine: AsyncEngine = create_async_engine(
+            self._url,
+            echo=False,  # True for SQL debug
+            pool_pre_ping=True,
+            future=True,
+        )
 
-    async def init_db(self):
-        """Initialize the database and create tables."""
-        async with self.engine.begin() as conn:
-            print(Base.metadata.tables.keys())
-            await conn.run_sync(Base.metadata.create_all)
+        self._SessionFactory = sessionmaker(
+            bind=self._engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
 
-    async def get_session(self):
-        """Returns a new session instance in an async context."""
-        async with self.async_session_factory() as session:
-            yield session
+    @asynccontextmanager
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+        """
+        Async context manager that yields a Session and commits/rolls back.
+        Usage:
+            async with db.get_session() as session:
+                ...
+        """
+        async with self._SessionFactory() as session:
+            try:
+                yield session
+                # You can choose to commit here, or do it manually in your code
+                # await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                # optional: close() is auto-called by async contextmanager
+                await session.close()
 
-    async def close(self):
-        """Close the database connection."""
-        await self.engine.dispose()
+    async def dispose(self) -> None:
+        """
+        Cleanly close all connections in the pool.
+        Call at application shutdown.
+        """
+        await self._engine.dispose()
 
 
 db = Database()
