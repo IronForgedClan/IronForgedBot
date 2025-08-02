@@ -7,6 +7,9 @@ from strenum import StrEnum
 
 
 class RANK(StrEnum):
+    GOD_ZAMORAK = "God_Z"
+    GOD_GUTHIX = "God_G"
+    GOD_SARADOMIN = "God_S"
     GOD = "God"
     MYTH = "Myth"
     LEGEND = "Legend"
