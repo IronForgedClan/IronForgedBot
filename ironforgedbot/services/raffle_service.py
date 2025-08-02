@@ -41,7 +41,9 @@ class RaffleService:
 
     async def get_member_ticket_total(self, discord_id: int) -> int:
         result = await self.db.execute(
-            select(RaffleTicket).where(Member.discord_id == discord_id)
+            select(RaffleTicket)
+            .join(Member, RaffleTicket.member_id == Member.id)
+            .where(Member.discord_id == discord_id)
         )
         data: Optional[RaffleTicket] = result.scalars().first()
 
