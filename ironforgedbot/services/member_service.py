@@ -87,6 +87,7 @@ class MemberService:
 
         try:
             self.db.add(instance=member)
+            await self.db.flush()
             self.db.add(instance=changelog_entry)
             await self.db.commit()
         except IntegrityError as e:
