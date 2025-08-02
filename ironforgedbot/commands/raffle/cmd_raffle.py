@@ -50,7 +50,7 @@ async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
     prize_pool = 0
 
     if STATE.state["raffle_on"]:
-        async for session in db.get_session():
+        async with db.get_session() as session:
             service = RaffleService(session)
             my_ticket_count = await service.get_member_ticket_total(interaction.user.id)
             total_tickets = await service.get_raffle_ticket_total()

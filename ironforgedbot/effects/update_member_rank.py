@@ -30,7 +30,7 @@ async def update_member_rank(
     if rank in GOD_ALIGNMENT.list():
         rank = RANK.GOD
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = MemberService(session)
         member = await service.get_member_by_discord_id(discord_member.id)
 

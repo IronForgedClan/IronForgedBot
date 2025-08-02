@@ -45,7 +45,7 @@ async def send_prospect_response(
 ):
     prospect_icon = find_emoji("Prospect")
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         member_service = MemberService(session)
 
         db_member = await member_service.get_member_by_discord_id(member.id)

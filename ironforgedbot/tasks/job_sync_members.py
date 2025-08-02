@@ -24,17 +24,19 @@ async def job_sync_members(
         changes = await sync_members(guild)
     except Exception as e:
         logger.error(e)
-        return await report_channel.send(
-            "An unhandled error occurrend during member sync. Please check the logs."
+        await report_channel.send(
+            "🚨 An unhandled error occurrend during member sync. Please check the logs."
         )
+        return
 
     end_time = time.perf_counter()
 
     if len(changes) < 1:
-        return await report_channel.send(
+        await report_channel.send(
             " 🔁 **Member Sync**: No changes. Completed in "
             f"**{format_duration(start_time,end_time)}**. "
         )
+        return
 
     output_table = tabulate(
         changes, headers=["Member", "Action", "Reason"], tablefmt="simple"
@@ -44,7 +46,7 @@ async def job_sync_members(
         filename=f"sync_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
     )
 
-    return await report_channel.send(
+    await report_channel.send(
         f"{text_h2(" 🔁 Member Synchronization")}\n"
         f"Initiated at {datetime_to_discord_relative(now, 't')} and "
         f"completed in **{format_duration(start_time, end_time)}**.",

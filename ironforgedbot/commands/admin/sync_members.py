@@ -26,7 +26,7 @@ async def sync_members(guild: discord.Guild) -> list[list]:
             discord_members[discord_member.id] = discord_member
 
     output = []
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = MemberService(session)
         db_members = await service.get_all_active_members()
 

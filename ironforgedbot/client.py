@@ -120,7 +120,7 @@ class DiscordClient(discord.Client):
                 logger.warning("Timeout occurred while waiting for outstanding tasks.")
 
         logger.info("Closing database connection...")
-        await db.close()
+        await db.dispose()
 
         if self.automations:
             await self.automations.stop()

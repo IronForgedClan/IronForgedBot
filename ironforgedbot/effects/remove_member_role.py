@@ -39,7 +39,7 @@ async def remove_member_role(
             f":warning: The bot lacks permission to manage {member.mention}'s roles."
         )
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = MemberService(session)
         db_member = await service.get_member_by_discord_id(member.id)
 

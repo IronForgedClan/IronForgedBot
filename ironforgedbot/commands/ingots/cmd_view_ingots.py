@@ -39,7 +39,7 @@ async def cmd_view_ingots(
 
     display_name = discord_member.display_name if discord_member is not None else player
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = MemberService(session)
         member = await service.get_member_by_nickname(display_name)
 

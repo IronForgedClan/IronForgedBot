@@ -42,7 +42,7 @@ async def handle_end_raffle(
 
     ticket_icon = find_emoji("Raffle_Ticket")
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         raffle_service = RaffleService(session)
         total_tickets = await raffle_service.get_raffle_ticket_total()
         valid_tickets = await raffle_service.get_all_valid_raffle_tickets()

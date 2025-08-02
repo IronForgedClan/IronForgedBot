@@ -226,7 +226,7 @@ class TrickOrTreatHandler:
         if not discord_member:
             raise Exception("error no user found")
 
-        async for session in db.get_session():
+        async with db.get_session() as session:
             ingot_service = IngotService(session)
             member_service = MemberService(session)
 
@@ -328,7 +328,7 @@ class TrickOrTreatHandler:
         return await interaction.followup.send(embed=embed)
 
     async def result_remove_all_ingots_trick(self, interaction: discord.Interaction):
-        async for session in db.get_session():
+        async with db.get_session() as session:
             member_service = MemberService(session)
             member = await member_service.get_member_by_discord_id(interaction.user.id)
 

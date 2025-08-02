@@ -65,7 +65,7 @@ async def _get_rank(name: str) -> str:
 
 
 async def import_membes(sheet_data) -> None:
-    async for session in db.get_session():
+    async with db.get_session() as session:
         for row in sheet_data:
             new_member_id: str = str(uuid.uuid4())
             now: datetime = datetime.now(tz=timezone.utc)

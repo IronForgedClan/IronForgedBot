@@ -92,7 +92,7 @@ async def cmd_roster(
 async def _calc_roster(interaction: discord.Interaction, url: str) -> str:
     assert interaction.guild
     result = ""
-    async for session in db.get_session():
+    async with db.get_session() as session:
         member_service = MemberService(session)
         members = await member_service.get_all_active_members()
 

@@ -30,7 +30,7 @@ async def job_check_activity(
     wom_group_id: int,
 ):
     start_time = time.perf_counter()
-    async for session in db.get_session():
+    async with db.get_session() as session:
         absent_service = AbsentMemberService(session)
         absentee_list = await absent_service.process_absent_members()
 

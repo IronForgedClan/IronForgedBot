@@ -69,7 +69,7 @@ async def cmd_add_remove_ingots(
             logger.info(f"Ignoring unknown player: {player}")
             output_data.append([player, 0, "unknown"])
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = IngotService(session)
 
         for player, discord_member in validated_players.items():

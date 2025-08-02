@@ -39,7 +39,7 @@ async def nickname_change(
         return
 
     start_time = time.perf_counter()
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = MemberService(session)
         member = await service.get_member_by_discord_id(after.id)
         safe_new_nickname = normalize_discord_string(after.display_name)

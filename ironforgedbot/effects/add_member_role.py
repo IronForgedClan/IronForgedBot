@@ -46,7 +46,7 @@ async def add_member_role(
     if rank is None:
         rank = RANK.IRON
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         service = MemberService(session)
         reactivate_response = None
 

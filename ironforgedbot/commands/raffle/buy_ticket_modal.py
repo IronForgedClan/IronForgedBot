@@ -59,7 +59,7 @@ class BuyTicketModal(Modal):
 
         cost = qty * STATE.state["raffle_price"]
 
-        async for session in db.get_session():
+        async with db.get_session() as session:
             raffle_service = RaffleService(session)
 
             logger.info(f"Buying {qty:,} tickets for {caller}")

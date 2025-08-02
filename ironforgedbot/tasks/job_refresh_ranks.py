@@ -45,7 +45,7 @@ async def job_refresh_ranks(
 
     progress_message = await report_channel.send(primary_message_str)
 
-    async for session in db.get_session():
+    async with db.get_session() as session:
         member_service = MemberService(session)
         members = await member_service.get_all_active_members()
 

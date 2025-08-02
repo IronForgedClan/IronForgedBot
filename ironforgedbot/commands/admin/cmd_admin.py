@@ -219,7 +219,7 @@ class AdminMenuView(View):
         await interaction.response.defer(thinking=True, ephemeral=False)
         start_time = time.perf_counter()
 
-        async for session in db.get_session():
+        async with db.get_session() as session:
             absent_service = AbsentMemberService(session)
             absentee_list = await absent_service.process_absent_members()
 
