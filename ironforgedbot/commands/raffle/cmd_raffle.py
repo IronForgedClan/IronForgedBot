@@ -55,7 +55,7 @@ async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
             my_ticket_count = await service.get_member_ticket_total(interaction.user.id)
             total_tickets = await service.get_raffle_ticket_total()
 
-        prize_pool = int(total_tickets * (STATE.state["raffle_price"] / 2))
+        prize_pool = int(total_tickets * int(STATE.state["raffle_price"] / 2))
 
     embed = build_response_embed(
         title=f"{ticket_icon} Iron Forged Raffle",

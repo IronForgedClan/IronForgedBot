@@ -95,7 +95,7 @@ async def handle_end_raffle(
 
         # Award winnings
         ingot_service = IngotService(session)
-        winnings = int(total_tickets * (STATE.state["raffle_price"] / 2))
+        winnings = int(total_tickets * int(STATE.state["raffle_price"] / 2))
 
         result = await ingot_service.try_add_ingots(
             winning_member.discord_id, winnings, None, f"Raffle winnings: ({winnings})"
