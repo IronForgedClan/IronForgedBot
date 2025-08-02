@@ -7,16 +7,16 @@ from ironforgedbot.database.database import Base
 from ironforgedbot.models.decorators import UTCDateTime
 
 
-class ChangeType(Enum):
-    ADD_MEMBER
-    NAME_CHANGE
-    ACTIVITY_CHANGE
-    JOINED_DATE_CHANGE
-    RESET_INGOTS
-    ADD_INGOTS
-    REMOVE_INGOTS
-    RANK_CHANGE
-    PURCHASE_RAFFLE_TICKETS
+class ChangeType(IntEnum):
+    ADD_MEMBER = 0
+    NAME_CHANGE = 1
+    ACTIVITY_CHANGE = 2
+    JOINED_DATE_CHANGE = 3
+    RESET_INGOTS = 4
+    ADD_INGOTS = 5
+    REMOVE_INGOTS = 6
+    RANK_CHANGE = 7
+    PURCHASE_RAFFLE_TICKETS = 8
 
 
 class Changelog(Base):
