@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 FROM base AS dev
 RUN pip install --no-cache-dir 'watchdog[watchmedo]'
-CMD ["/home/botuser/.local/bin/watchmedo", "auto-restart", "--wait=2", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
+CMD ["/home/botuser/.local/bin/watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
 
 FROM base AS prod
 CMD ["python", "main.py"]
