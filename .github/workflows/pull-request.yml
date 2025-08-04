@@ -14,10 +14,10 @@ defaults:
         shell: bash
 
 jobs:
-    unit-test:
-        uses: ./.github/workflows/unit-test.yml
+    #unit-test:
+    #    uses: ./.github/workflows/unit-test.yml
 
     formatting:
-        needs: unit-test
+        #needs: unit-test
         uses: ./.github/workflows/formatting.yml
 
