@@ -4,7 +4,7 @@ on:
   workflow_call:
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/IronForgedClan/IronForgedBot
+  IMAGE_NAME: ghcr.io/ironforgedclan/ironforgedbot
 
 jobs:
   push-image:
