@@ -2,6 +2,7 @@ import logging
 import re
 from datetime import datetime
 from io import BytesIO
+import sys
 from typing import List, Tuple, TypedDict
 
 import discord
@@ -238,3 +239,22 @@ def format_duration(start: float, end: float) -> str:
         return f"{duration / 60:.2f} min"
     else:  # More than 1 hour
         return f"{duration / 3600:.2f} hr"
+
+
+def deep_getsizeof(obj, seen=None):
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    seen.add(obj_id)
+
+    if isinstance(obj, dict):
+        size += sum(
+            (deep_getsizeof(k, seen) + deep_getsizeof(v, seen)) for k, v in obj.items()
+        )
+    elif isinstance(obj, (list, tuple, set, frozenset)):
+        size += sum(deep_getsizeof(i, seen) for i in obj)
+
+    return size
