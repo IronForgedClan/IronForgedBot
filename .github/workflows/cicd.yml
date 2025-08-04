@@ -18,8 +18,12 @@ jobs:
     unit-test:
         uses: ./.github/workflows/unit-test.yml
 
-    tag-release:
+    publish:
         needs: unit-test
+        uses: ./.github/workflows/publish.yml
+
+    tag-release:
+        needs: publish
         permissions:
             contents: write
         uses: ./.github/workflows/tag-release.yml
