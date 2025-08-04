@@ -23,3 +23,7 @@ pyrightconfig.json
 README.md
 requirements.in
 update_dependencies.sh
+.envrc
+.devenv.lock
+.devenv.nix
+.devenv.flake.nix
