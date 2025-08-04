@@ -4,8 +4,8 @@ import time
 import zlib
 import pickle
 
+from ironforgedbot.common.helpers import deep_getsizeof
 from ironforgedbot.models.score import ScoreBreakdown
-from tests.helpers import deep_getsizeof
 
 
 logger = logging.getLogger(__name__)
