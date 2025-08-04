@@ -21,9 +21,3 @@ jobs:
         needs: unit-test
         uses: ./.github/workflows/formatting.yml
 
-    bump-version:
-        needs: [unit-test, formatting]
-        #if: github.event.review.state == 'approved'
-        permissions:
-            contents: write
-        uses: ./.github/workflows/bump-version.yml

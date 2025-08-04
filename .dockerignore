@@ -10,9 +10,6 @@ service.json
 service.json.*
 state.json
 
-.bumpversion.cfg
-.editorconfig
-
 docker-compose.yml
 Dockerfile
 .dockerignore
@@ -24,6 +21,7 @@ pyrightconfig.json
 README.md
 requirements.in
 update_dependencies.sh
+.editorconfig
 .direnv
 .devenv
 .envrc
