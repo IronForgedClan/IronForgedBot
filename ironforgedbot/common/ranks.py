@@ -7,9 +7,9 @@ from strenum import StrEnum
 
 
 class RANK(StrEnum):
-    GOD_ZAMORAK = "God_Z"
-    GOD_GUTHIX = "God_G"
-    GOD_SARADOMIN = "God_S"
+    GOD_ZAMORAK = "God_Zamorak"
+    GOD_GUTHIX = "God_Guthix"
+    GOD_SARADOMIN = "God_Saradomin"
     GOD = "God"
     MYTH = "Myth"
     LEGEND = "Legend"
@@ -29,6 +29,9 @@ class RANK(StrEnum):
 
 
 class RANK_POINTS(IntEnum):
+    GOD_ZAMORAK = 20_000
+    GOD_GUTHIX = 20_000
+    GOD_SARADOMIN = 20_000
     GOD = 20_000
     MYTH = 13_000
     LEGEND = 9_000
