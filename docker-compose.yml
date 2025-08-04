@@ -17,6 +17,9 @@ services:
             - mariadb_data:/var/lib/mysql
 
     bot:
+        # When testing prod image remember
+        # to comment out volume mapping
+        #image: ironforgedbot:prod
         build:
             context: .
             target: dev
