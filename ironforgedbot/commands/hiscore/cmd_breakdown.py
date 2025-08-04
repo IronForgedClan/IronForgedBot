@@ -4,12 +4,6 @@ from typing import Optional
 import discord
 from reactionmenu import ViewButton, ViewMenu
 
-from ironforgedbot.commands.hiscore.calculator import (
-    HiscoresError,
-    HiscoresNotFound,
-    ScoreBreakdown,
-    score_info,
-)
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -35,7 +29,13 @@ from ironforgedbot.common.responses import (
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_italic
 from ironforgedbot.decorators import require_role
-from ironforgedbot.http import HttpException
+from ironforgedbot.http import HTTP, HttpException
+from ironforgedbot.services.score_service import (
+    HiscoresError,
+    HiscoresNotFound,
+    ScoreBreakdown,
+    ScoreService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +61,10 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         return await send_error_response(interaction, str(e))
 
     display_name = member.display_name if member is not None else player
+    service = ScoreService(HTTP)
 
     try:
-        data = await score_info(player)
+        data = await service.get_player_score(player)
     except (HiscoresError, HttpException):
         return await send_error_response(
             interaction,
@@ -79,11 +80,11 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     skill_points = 0
     for skill in data.skills:
-        skill_points += skill["points"]
+        skill_points += skill.points
 
     activity_points = 0
     for activity in activities:
-        activity_points += activity["points"]
+        activity_points += activity.points
 
     points_total = skill_points + activity_points
     rank_name = get_rank_from_points(points_total)
@@ -93,10 +94,10 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         god_alignment = get_god_alignment_from_member(member)
 
         rank_color = get_rank_color_from_points(points_total, god_alignment)
-        rank_icon = find_emoji(interaction, god_alignment or rank_name)
+        rank_icon = find_emoji(god_alignment or rank_name)
     else:
         rank_color = get_rank_color_from_points(points_total)
-        rank_icon = find_emoji(interaction, rank_name)
+        rank_icon = find_emoji(rank_name)
 
     if member and member.roles:
         if check_member_has_role(member, ROLE.PROSPECT):
@@ -116,7 +117,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     )
 
     for rank in RANK:
-        icon = find_emoji(interaction, rank)
+        icon = find_emoji(rank)
         point_threshold = RANK_POINTS[rank.upper()]
         rank_breakdown_embed.add_field(
             name=(
@@ -135,13 +136,19 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
     if rank_name == RANK.GOD:
         match god_alignment:
             case GOD_ALIGNMENT.SARADOMIN:
-                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.SARADOMIN} ({find_emoji(interaction, "Saradomin")})"
+                alignment_msg = (
+                    f"{rank_icon} {GOD_ALIGNMENT.SARADOMIN} ({find_emoji('Saradomin')})"
+                )
             case GOD_ALIGNMENT.ZAMORAK:
-                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.ZAMORAK} ({find_emoji(interaction, "Zamorak")})"
+                alignment_msg = (
+                    f"{rank_icon} {GOD_ALIGNMENT.ZAMORAK} ({find_emoji('Zamorak')})"
+                )
             case GOD_ALIGNMENT.GUTHIX:
-                alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.GUTHIX} ({find_emoji(interaction, "Guthix")})"
+                alignment_msg = (
+                    f"{rank_icon} {GOD_ALIGNMENT.GUTHIX} ({find_emoji('Guthix')})"
+                )
             case _:
-                alignment_msg = f"{find_emoji(interaction, "God")} Unaligned!"
+                alignment_msg = f"{find_emoji('God')} Unaligned!"
 
         rank_breakdown_embed.add_field(
             name="God Alignment",
@@ -152,7 +159,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         rank_point_threshold = RANK_POINTS[rank_name.upper()]
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
-        next_rank_icon = find_emoji(interaction, next_rank_name)
+        next_rank_icon = find_emoji(next_rank_name)
         percentage = render_percentage(
             points_total - int(rank_point_threshold),
             int(next_rank_point_threshold) - int(rank_point_threshold),
@@ -165,17 +172,17 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     skill_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Skilling Points",
-        f"Breakdown of {text_bold(f"{skill_points:,}")} points awarded for skill xp.",
+        f"Breakdown of {text_bold(f'{skill_points:,}')} points awarded for skill xp.",
         rank_color,
     )
 
-    ordered_skills = sorted(data.skills, key=lambda x: x["display_order"])
+    ordered_skills = sorted(data.skills, key=lambda x: x.display_order)
 
     for skill in ordered_skills:
-        skill_icon = find_emoji(interaction, skill["emoji_key"])
+        skill_icon = find_emoji(skill.emoji_key)
         skill_breakdown_embed.add_field(
-            name=f"{skill_icon} {skill['points']:,} points",
-            value=f"{EMPTY_SPACE}{skill['xp']:,} xp",
+            name=f"{skill_icon} {skill.points:,} points",
+            value=f"{EMPTY_SPACE}{skill.xp:,} xp",
             inline=True,
         )
 
@@ -200,7 +207,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     boss_point_counter = 0
     for boss in data.bosses:
-        if boss["points"] < 1:
+        if boss.points < 1:
             continue
 
         if field_count == 24:
@@ -212,13 +219,13 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                 rank_color,
             )
 
-        boss_point_counter += boss["points"]
+        boss_point_counter += boss.points
 
         field_count += 1
-        boss_icon = find_emoji(interaction, boss["emoji_key"])
+        boss_icon = find_emoji(boss.emoji_key)
         working_embed.add_field(
-            name=f"{boss_icon} {boss['points']:,} points",
-            value=f"{EMPTY_SPACE}{boss['kc']:,} kc",
+            name=f"{boss_icon} {boss.points:,} points",
+            value=f"{EMPTY_SPACE}{boss.kc:,} kc",
         )
 
     boss_embeds.append(working_embed)
@@ -226,7 +233,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     for index, embed in enumerate(boss_embeds):
         embed.title = f"{rank_icon} {display_name} | Bossing Points"
-        embed.description = f"Breakdown of {text_bold(f"{boss_point_counter:,}")} points awarded for boss kc."
+        embed.description = f"Breakdown of {text_bold(f'{boss_point_counter:,}')} points awarded for boss kc."
 
         if boss_page_count > 1:
             embed.title = "".join(embed.title) + f" ({index + 1}/{boss_page_count})"
@@ -243,14 +250,14 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     raid_point_counter = 0
     for raid in data.raids:
-        raid_point_counter += raid["points"]
-        raid_icon = find_emoji(interaction, raid["emoji_key"])
+        raid_point_counter += raid.points
+        raid_icon = find_emoji(raid.emoji_key)
         raid_breakdown_embed.add_field(
-            name=f"{raid_icon} {raid['points']:,} points",
-            value=f"{EMPTY_SPACE}{raid['kc']:,} kc",
+            name=f"{raid_icon} {raid.points:,} points",
+            value=f"{EMPTY_SPACE}{raid.kc:,} kc",
         )
 
-    raid_breakdown_embed.description = f"Breakdown of {text_bold(f"{raid_point_counter:,}")} points awarded for raid completions."
+    raid_breakdown_embed.description = f"Breakdown of {text_bold(f'{raid_point_counter:,}')} points awarded for raid completions."
 
     clue_breakdown_embed = build_response_embed(
         f"{rank_icon} {display_name} | Cluescroll Points",
@@ -260,15 +267,15 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
     clue_point_counter = 0
     for clue in data.clues:
-        clue_icon = find_emoji(interaction, clue["emoji_key"])
-        clue_point_counter += clue["points"]
+        clue_icon = find_emoji(clue.emoji_key)
+        clue_point_counter += clue.points
         clue_breakdown_embed.add_field(
-            name=f"{clue_icon} {clue['points']:,} points",
-            value=f"{EMPTY_SPACE}{clue['kc']:,} {clue.get("display_name", clue['name'])}",
+            name=f"{clue_icon} {clue.points:,} points",
+            value=f"{EMPTY_SPACE}{clue.kc:,} {clue.display_name or clue.name}",
         )
 
     clue_breakdown_embed.description = (
-        f"Breakdown of {text_bold(f"{clue_point_counter:,}")} "
+        f"Breakdown of {text_bold(f'{clue_point_counter:,}')} "
         "points awarded for cluescroll completions."
     )
 

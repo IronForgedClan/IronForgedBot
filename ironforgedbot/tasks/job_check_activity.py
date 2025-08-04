@@ -1,16 +1,20 @@
+import io
 import logging
+from datetime import datetime
+import time
 
 import discord
 import wom
+from tabulate import tabulate
 from wom import GroupRole, Metric, Period
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
-    fit_log_lines_into_discord_messages,
+    format_duration,
     render_relative_time,
 )
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.database.database import db
+from ironforgedbot.services.absent_service import AbsentMemberService
 
 logger = logging.getLogger(__name__)
 
@@ -20,70 +24,49 @@ MITHRIL_EXP_THRESHOLD = 300_000
 RUNE_EXP_THRESHOLD = 500_000
 
 
-async def job_check_activity_reminder(report_channel: discord.TextChannel):
-    try:
-        absentees = await STORAGE.get_absentees()
-    except StorageError as e:
-        logger.error(f"Failed to read absentees list: {e}")
-        await report_channel.send("Failed to read absentee list")
-        return
-
-    await report_channel.send(
-        (
-            f"**REMINDER:**\nExecuting activity check in one hour.\n"
-            f"Ignoring **{len(absentees)}** member(s). Update storage if necessary."
-        )
-    )
-
-    lines = []
-    for absentee, date in absentees.items():
-        lines.append(f"{absentee} [Added: {date}]")
-
-    discord_messages = fit_log_lines_into_discord_messages(lines)
-    for msg in discord_messages:
-        await report_channel.send(msg)
-
-
 async def job_check_activity(
     report_channel: discord.TextChannel,
     wom_api_key: str,
     wom_group_id: int,
 ):
-    try:
-        absentees = await STORAGE.get_absentees()
-    except StorageError as e:
-        logger.error(f"Failed to read absentees list: {e}")
-        return
+    start_time = time.perf_counter()
+    async with db.get_session() as session:
+        absent_service = AbsentMemberService(session)
+        absentee_list = await absent_service.process_absent_members()
 
-    await report_channel.send("Beginning activity check...")
+        known_absentees = []
+        for absentee in absentee_list:
+            known_absentees.append(absentee.nickname.lower())
 
-    known_absentees = []
-    for absentee in absentees.keys():
-        known_absentees.append(absentee.lower())
+        results = await _find_inactive_users(
+            wom_api_key, wom_group_id, report_channel, known_absentees
+        )
 
-    await report_channel.send(
-        f"Found **{len(known_absentees)}** absent member(s).\n"
-        f"Iron threshold: **{IRON_EXP_THRESHOLD:,}** xp/month.\n"
-        f"Mithril+ threshold: **{MITHRIL_EXP_THRESHOLD:,}** xp/month.\n"
-        f"Rune+ threshold: **{RUNE_EXP_THRESHOLD:,}** xp/month.",
-    )
+        if not results:
+            logger.error("Activity check empty")
+            return
 
-    results = await _find_inactive_users(
-        wom_api_key, wom_group_id, report_channel, known_absentees
-    )
+        sorted_results = sorted(results, key=lambda row: int(row[2].replace(",", "")))
+        result_table = tabulate(
+            sorted_results,
+            headers=["Member", "Role", "Gained", "Last Updated"],
+            tablefmt="github",
+            colalign=("left", "left", "right", "right"),
+        )
 
-    if results is None:
-        return
+        discord_file = discord.File(
+            fp=io.BytesIO(result_table.encode("utf-8")),
+            filename=f"activity_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+        )
 
-    results = {k: v for k, v in sorted(results.items(), key=lambda item: item[1])}
-    discord_messages = fit_log_lines_into_discord_messages(results.keys())
-    for msg in discord_messages:
-        await report_channel.send(msg)
-
-    await report_channel.send(
-        f"Found **{len(results)}** member(s) that do not meet requirements."
-    )
-    await report_channel.send("Finished activity check.")
+        end_time = time.perf_counter()
+        await report_channel.send(
+            "## 🧗 Activity check\n"
+            f"Ignoring **{len(known_absentees)}** absent members.\n"
+            f"Found **{len(results)}** members that do not meet requirements.\n"
+            f"Processed in **{format_duration(start_time, end_time)}**.",
+            file=discord_file,
+        )
 
 
 async def _find_inactive_users(
@@ -91,13 +74,13 @@ async def _find_inactive_users(
     wom_group_id: int,
     report_channel: discord.TextChannel,
     absentees: list[str],
-):
+) -> list[list] | None:
     wom_client = wom.Client(api_key=wom_api_key, user_agent="IronForged")
     await wom_client.start()
 
     is_done = False
     offset = 0
-    results = {}
+    results = []
     wom_grop_result = await wom_client.groups.get_details(wom_group_id)
 
     if wom_grop_result.is_ok:
@@ -127,6 +110,9 @@ async def _find_inactive_users(
                 if wom_member.player.username.lower() in absentees:
                     continue
 
+                if wom_member.role == GroupRole.Dogsbody:
+                    continue
+
                 match wom_member.role:
                     case GroupRole.Iron:
                         xp_threshold = IRON_EXP_THRESHOLD
@@ -136,32 +122,40 @@ async def _find_inactive_users(
                         xp_threshold = RUNE_EXP_THRESHOLD
 
                 if member_gains.data.gained < xp_threshold:
-                    if wom_member.role is None:
+                    if not wom_member.role:
                         role = "Unknown"
                     elif wom_member.role == GroupRole.Helper:
                         role = "Alt"
-                    elif wom_member.role == GroupRole.Dogsbody:
-                        continue
-                    elif wom_member.role == GroupRole.Gold:
-                        role = "Staff"
                     elif wom_member.role == GroupRole.Collector:
-                        role = "Mod"
+                        role = "Moderator"
+                    elif wom_member.role == GroupRole.Administrator:
+                        role = "Admin"
+                    elif wom_member.role in [
+                        GroupRole.Colonel,
+                        GroupRole.Brigadier,
+                        GroupRole.Admiral,
+                        GroupRole.Marshal,
+                    ]:
+                        role = "Staff"
+                    elif wom_member.role in [GroupRole.Deputy_owner, GroupRole.Owner]:
+                        role = "Owner"
                     else:
                         role = str(wom_member.role).title()
 
+                    days_since_progression = "unknown"
                     if wom_member.player.last_changed_at:
                         days_since_progression = render_relative_time(
                             wom_member.player.last_changed_at
                         )
-                    else:
-                        days_since_progression = "unknown"
 
-                    data = (
-                        f"{member_gains.player.username} ({role}) gained {int(member_gains.data.gained / 1_000)}k, "
-                        f"last progressed {days_since_progression} "
-                        f"({member_gains.player.last_changed_at.strftime('%Y-%m-%d')})"
+                    results.append(
+                        [
+                            member_gains.player.username,
+                            role,
+                            f"{int(member_gains.data.gained):,}",
+                            days_since_progression,
+                        ]
                     )
-                    results[data] = member_gains.data.gained
 
             if len(details) < DEFAULT_WOM_LIMIT:
                 is_done = True

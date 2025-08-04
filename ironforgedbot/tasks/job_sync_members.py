@@ -1,10 +1,14 @@
+import io
 import logging
+import time
+from datetime import datetime, timezone
 
 import discord
+from tabulate import tabulate
 
 from ironforgedbot.commands.admin.sync_members import sync_members
-from ironforgedbot.common.helpers import fit_log_lines_into_discord_messages
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.common.helpers import datetime_to_discord_relative, format_duration
+from ironforgedbot.common.text_formatters import text_h2
 
 logger = logging.getLogger(__name__)
 
@@ -13,21 +17,38 @@ async def job_sync_members(
     guild: discord.Guild,
     report_channel: discord.TextChannel,
 ):
-    await report_channel.send("Beginning member sync...")
-    members_change = []
+    now = datetime.now(timezone.utc)
+    start_time = time.perf_counter()
 
     try:
-        members_change = await sync_members(guild)
-    except StorageError as error:
-        logger.error(error)
-        await report_channel.send("Error syncing members.")
-
-    if len(members_change) == 0:
-        await report_channel.send("No changes detected.")
+        changes = await sync_members(guild)
+    except Exception as e:
+        logger.error(e)
+        await report_channel.send(
+            "🚨 An unhandled error occurrend during member sync. Please check the logs."
+        )
         return
 
-    discord_messages = fit_log_lines_into_discord_messages(members_change)
-    for msg in discord_messages:
-        await report_channel.send(msg)
+    end_time = time.perf_counter()
 
-    await report_channel.send("Finished member sync.")
+    if len(changes) < 1:
+        await report_channel.send(
+            " 🔁 **Member Sync**: No changes. Completed in "
+            f"**{format_duration(start_time,end_time)}**. "
+        )
+        return
+
+    output_table = tabulate(
+        changes, headers=["Member", "Action", "Reason"], tablefmt="simple"
+    )
+    discord_file = discord.File(
+        fp=io.BytesIO(output_table.encode("utf-8")),
+        filename=f"sync_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
+    )
+
+    await report_channel.send(
+        f"{text_h2(" 🔁 Member Synchronization")}\n"
+        f"Initiated at {datetime_to_discord_relative(now, 't')} and "
+        f"completed in **{format_duration(start_time, end_time)}**.",
+        file=discord_file,
+    )

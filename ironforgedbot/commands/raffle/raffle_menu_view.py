@@ -82,7 +82,7 @@ class RaffleMenuView(View):
             self.message = await self.message.delete()
 
     async def handle_end_raffle(self, interaction: discord.Interaction):
-        ticket_icon = find_emoji(None, "Raffle_Ticket")
+        ticket_icon = find_emoji("Raffle_Ticket")
         await interaction.response.send_message(
             content=f"## {ticket_icon} How do you want to end the raffle?",
             view=EndRaffleView(interaction=interaction),

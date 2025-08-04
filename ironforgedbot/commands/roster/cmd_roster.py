@@ -3,7 +3,6 @@ from typing import List
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import get_rank
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
@@ -11,9 +10,12 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.database.database import db
 from ironforgedbot.decorators import require_role
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import Member
+from ironforgedbot.http import HTTP
+from ironforgedbot.models.member import Member
+from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.score_service import ScoreService
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +42,10 @@ class Signups(object):
         self.known_ranks = {}
         self.unknowns = []
         self.rank_failures = []
+        self.service = ScoreService(HTTP)
 
     def add_ranked(
-        self, member: discord.Member, rank: RANK, prospect: bool, members: List[Member]
+        self, member: discord.Member, rank: RANK, prospect: bool, members: list[Member]
     ):
         if rank not in self.known_ranks:
             self.ranked[rank] = []
@@ -54,10 +57,10 @@ class Signups(object):
             ranked = Ranked(nick, prospect, _get_ingots(member.id, members))
             self.ranked[rank].append(ranked)
 
-    def add_prospect(self, member: discord.Member, members: List[Member]):
+    async def add_prospect(self, member: discord.Member, members: list[Member]):
         nick = normalize_discord_string(member.display_name)
         try:
-            rank = get_rank(nick)
+            rank = await self.service.get_rank(nick)
         except RuntimeError:
             self.rank_failures.append(nick)
             return
@@ -88,30 +91,35 @@ async def cmd_roster(
 
 async def _calc_roster(interaction: discord.Interaction, url: str) -> str:
     assert interaction.guild
-    msg = await _get_message(url, interaction.guild)
-    members = await STORAGE.read_members()
-    signups = await _get_signups(interaction, msg, members)
-    result = "====STAFF MESSAGE BELOW====\n"
+    result = ""
+    async with db.get_session() as session:
+        member_service = MemberService(session)
+        members = await member_service.get_all_active_members()
 
-    result += _add_rank(signups, RANK.MYTH, False)
-    result += _add_rank(signups, RANK.LEGEND, False)
-    result += _add_rank(signups, RANK.DRAGON, False)
-    result += _add_rank(signups, RANK.RUNE, False)
-    result += _add_rank(signups, RANK.ADAMANT, False)
-    result += _add_rank(signups, RANK.MITHRIL, False)
-    result += _add_rank(signups, RANK.IRON, False)
+        msg = await _get_message(url, interaction.guild)
 
-    result += _add_list("Unknown", signups.unknowns)
-    result += _add_list("Rank lookup failures", signups.rank_failures)
-    result += "====CLEAN MESSAGE BELOW====\n"
+        signups = await _get_signups(interaction, msg, members)
+        result = "====STAFF MESSAGE BELOW====\n"
 
-    result += _add_rank(signups, RANK.MYTH, True)
-    result += _add_rank(signups, RANK.LEGEND, True)
-    result += _add_rank(signups, RANK.DRAGON, True)
-    result += _add_rank(signups, RANK.RUNE, True)
-    result += _add_rank(signups, RANK.ADAMANT, True)
-    result += _add_rank(signups, RANK.MITHRIL, True)
-    result += _add_rank(signups, RANK.IRON, True)
+        result += _add_rank(signups, RANK.MYTH, False)
+        result += _add_rank(signups, RANK.LEGEND, False)
+        result += _add_rank(signups, RANK.DRAGON, False)
+        result += _add_rank(signups, RANK.RUNE, False)
+        result += _add_rank(signups, RANK.ADAMANT, False)
+        result += _add_rank(signups, RANK.MITHRIL, False)
+        result += _add_rank(signups, RANK.IRON, False)
+
+        result += _add_list("Unknown", signups.unknowns)
+        result += _add_list("Rank lookup failures", signups.rank_failures)
+        result += "====CLEAN MESSAGE BELOW====\n"
+
+        result += _add_rank(signups, RANK.MYTH, True)
+        result += _add_rank(signups, RANK.LEGEND, True)
+        result += _add_rank(signups, RANK.DRAGON, True)
+        result += _add_rank(signups, RANK.RUNE, True)
+        result += _add_rank(signups, RANK.ADAMANT, True)
+        result += _add_rank(signups, RANK.MITHRIL, True)
+        result += _add_rank(signups, RANK.IRON, True)
 
     return result
 
@@ -201,7 +209,7 @@ async def _get_signups(
             continue
 
         if check_member_has_role(guild_member, ROLE.PROSPECT):
-            res.add_prospect(member, members)
+            await res.add_prospect(member, members)
             continue
 
         rank = get_rank_from_member(guild_member)

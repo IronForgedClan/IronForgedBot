@@ -10,9 +10,9 @@ from ironforgedbot.common.responses import build_response_embed, send_error_resp
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_channel, require_role
+from ironforgedbot.services.raffle_service import RaffleService
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ async def cmd_raffle(interaction: discord.Interaction):
 
 
 async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
-    ticket_icon = find_emoji(None, "Raffle_Ticket")
-    ingot_icon = find_emoji(None, "Ingot")
+    ticket_icon = find_emoji("Raffle_Ticket")
+    ingot_icon = find_emoji("Ingot")
     ticket_price = STATE.state["raffle_price"]
     embed_color = (
         discord.Colour.green() if STATE.state["raffle_on"] else discord.Colour.red()
@@ -48,22 +48,14 @@ async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
     my_ticket_count = 0
     total_tickets = 0
     prize_pool = 0
+
     if STATE.state["raffle_on"]:
-        try:
-            all_tickets = await STORAGE.read_raffle_tickets()
-        except StorageError as error:
-            await send_error_response(
-                interaction, f"Encountered error ending raffle: {error}"
-            )
-            return None
+        async with db.get_session() as session:
+            service = RaffleService(session)
+            my_ticket_count = await service.get_member_ticket_total(interaction.user.id)
+            total_tickets = await service.get_raffle_ticket_total()
 
-        for id, qty in all_tickets.items():
-            if id == interaction.user.id:
-                my_ticket_count = qty
-
-            total_tickets += qty
-
-        prize_pool = int(total_tickets * (STATE.state["raffle_price"] / 2))
+        prize_pool = int(total_tickets * int(STATE.state["raffle_price"] / 2))
 
     embed = build_response_embed(
         title=f"{ticket_icon} Iron Forged Raffle",

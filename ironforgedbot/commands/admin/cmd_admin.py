@@ -1,24 +1,32 @@
+from datetime import datetime
+import io
 import logging
+import time
 from typing import Optional
 
 import discord
 from discord.ui import View
+from tabulate import tabulate
 
 from ironforgedbot.commands.admin.internal_state import get_internal_state
 from ironforgedbot.commands.admin.latest_log import get_latest_log_file
 from ironforgedbot.common.helpers import (
+    format_duration,
     get_text_channel,
 )
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.text_formatters import text_h2
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
+from ironforgedbot.services.absent_service import AbsentMemberService
 from ironforgedbot.tasks.job_check_activity import job_check_activity
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
 )
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
 from ironforgedbot.tasks.job_sync_members import job_sync_members
+from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +71,7 @@ class AdminMenuView(View):
         label="Sync Members",
         style=discord.ButtonStyle.grey,
         custom_id="sync_members",
-        emoji="🤖",
+        emoji="🔁",
         row=0,
     )
     async def member_sync_button(
@@ -112,7 +120,7 @@ class AdminMenuView(View):
         label="Member Activity Check",
         style=discord.ButtonStyle.grey,
         custom_id="activity_check",
-        emoji="🤖",
+        emoji="🧗",
         row=0,
     )
     async def member_activity_check_button(
@@ -195,3 +203,51 @@ class AdminMenuView(View):
         return await interaction.followup.send(
             content="## Current Internal State", file=file
         )
+
+    @discord.ui.button(
+        label="Process Absentee List",
+        style=discord.ButtonStyle.grey,
+        custom_id="absentee_list",
+        emoji="🚿",
+        row=0,
+    )
+    async def process_absentee_list_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        """Processes and returns absentee list."""
+        await self.clear_parent()
+        await interaction.response.defer(thinking=True, ephemeral=False)
+        start_time = time.perf_counter()
+
+        async with db.get_session() as session:
+            absent_service = AbsentMemberService(session)
+            absentee_list = await absent_service.process_absent_members()
+
+            data = []
+            for member in absentee_list:
+                data.append(
+                    [
+                        member.nickname,
+                        member.date,
+                        member.information,
+                        member.comment,
+                    ]
+                )
+
+            result_table = tabulate(
+                data,
+                headers=["Member", "Date", "Info", "Comment"],
+                tablefmt="github",
+            )
+            discord_file = discord.File(
+                fp=io.BytesIO(result_table.encode("utf-8")),
+                filename=f"absentee_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            )
+            end_time = time.perf_counter()
+
+            return await interaction.followup.send(
+                f"{text_h2('🚿 Absentee List')}\nThe following **{len(absentee_list)}**"
+                " members will be ignored during an activity check. Processed in "
+                f"**{format_duration(start_time, end_time)}**.",
+                file=discord_file,
+            )

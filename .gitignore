@@ -177,3 +177,6 @@ state.json
 .env.staging
 service.json.live
 service.json.staging
+ironforged_bot.db
+.devenv
+.devenv.flake.nix

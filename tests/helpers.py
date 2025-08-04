@@ -1,11 +1,12 @@
 import functools
 import random
+import sys
 from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 import wom
-from ironforgedbot.commands.hiscore.calculator import ScoreBreakdown
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
 
 VALID_CONFIG = {
     "TEMP_DIR": "/tmp",
@@ -20,16 +21,19 @@ VALID_CONFIG = {
     "RAFFLE_CHANNEL_ID": "123456",
 }
 
+mock_score_breakdown = ScoreBreakdown(skills=[], clues=[], raids=[], bosses=[])
+
+"""
 mock_score_breakdown = ScoreBreakdown(
     skills=[
-        {
-            "name": "Slayer",
-            "display_name": "Slayer",
-            "display_order": 1,
-            "emoji_key": "Slayer",
-            "level": 67,
-            "xp": 547953,
-            "points": 18,
+        SkillScore{
+            name="Slayer"
+            display_name="Slayer"
+            display_order= 1
+            emoji_key="Slayer"
+            level=67
+            xp=547953
+            points=18
         }
     ],
     clues=[
@@ -62,6 +66,7 @@ mock_score_breakdown = ScoreBreakdown(
         }
     ],
 )
+"""
 
 
 def create_mock_discord_interaction(

@@ -2,6 +2,7 @@ import logging
 import re
 from datetime import datetime
 from io import BytesIO
+import sys
 from typing import List, Tuple, TypedDict
 
 import discord
@@ -12,7 +13,6 @@ from discord.utils import get
 
 from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.http import HTTP
 
 logger = logging.getLogger(__name__)
 
@@ -111,55 +111,23 @@ def render_percentage(part, whole) -> str:
     return f"{round(value)}%"
 
 
-# TODO: Use discord.py implementation when v2.5 released
-async def populate_emoji_cache(application_id: int, token: str):
-    headers = {
-        "Authorization": f"Bot {token}",
-        "Content-Type": "application/json",
-    }
-
-    data = await HTTP.get(
-        url=f"https://discord.com/api/applications/{application_id}/emojis",
-        headers=headers,
-    )
-
-    if data["status"] != 200:
-        logger.critical("Error populating emoji cache")
-        return
-
-    for emoji in data["body"]["items"]:
-        emojiCache[emoji["name"]] = {
-            "id": emoji["id"],
-            "animated": emoji["animated"],
+async def populate_emoji_cache(emojis: list[discord.Emoji]):
+    for e in emojis:
+        emojiCache[e.name] = {
+            "id": e.id,
+            "animated": e.animated,
         }
 
-    logger.info("Emoji cache loaded successfully")
+    logger.info(f"Emoji cache loaded {len(emojiCache)} successfully")
 
 
-# TODO: when discord.py 2.5 releases remove interaction param and fallback
-def find_emoji(interaction: discord.Interaction | None, target: str):
+def find_emoji(target: str):
     emoji = None
-
     if target in emojiCache:
         emoji = emojiCache[target]
 
-    # fallback if not found in cache, search the guild
-    if emoji is None and interaction is not None:
-        assert interaction.guild
-
-        for guild_emoji in interaction.guild.emojis:
-            if guild_emoji.available and guild_emoji.name == target:
-                logger.warning(
-                    f"Requested emoji '{guild_emoji.name}' found in guild not cache"
-                )
-                emojiCache[guild_emoji.name] = {
-                    "id": guild_emoji.id,
-                    "animated": guild_emoji.animated,
-                }
-                emoji = emojiCache[guild_emoji.name]
-
     if emoji is None:
-        logger.warning(f"Requested emoji '{target}' not found")
+        logger.warning(f"Requested emoji '{target}' not found in cache")
         return ""
 
     return f"<{'a' if emoji['animated'] else ''}:{target}:{emoji['id']}>"
@@ -255,3 +223,38 @@ def datetime_to_discord_relative(dt: datetime, format="d") -> str:
 
 def get_discord_role(guild: discord.Guild, role: ROLE) -> discord.Role | None:
     return get(guild.roles, name=role)
+
+
+def format_duration(start: float, end: float) -> str:
+    """Formats a time duration into the most relevant unit (ms, s, min, hr)."""
+    duration = end - start
+
+    if duration < 1e-3:  # Less than 1 ms
+        return f"{duration * 1e6:.2f} µs"
+    elif duration < 1:  # Less than 1 second
+        return f"{duration * 1e3:.2f} ms"
+    elif duration < 60:  # Less than 1 minute
+        return f"{duration:.2f} s"
+    elif duration < 3600:  # Less than 1 hour
+        return f"{duration / 60:.2f} min"
+    else:  # More than 1 hour
+        return f"{duration / 3600:.2f} hr"
+
+
+def deep_getsizeof(obj, seen=None):
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    seen.add(obj_id)
+
+    if isinstance(obj, dict):
+        size += sum(
+            (deep_getsizeof(k, seen) + deep_getsizeof(v, seen)) for k, v in obj.items()
+        )
+    elif isinstance(obj, (list, tuple, set, frozenset)):
+        size += sum(deep_getsizeof(i, seen) for i in obj)
+
+    return size

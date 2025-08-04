@@ -1,12 +1,11 @@
 import asyncio
+import json
 from typing import Counter
 import unittest
 import aiohttp
 from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.holiday.trick_or_treat_handler import (
-    GIFS,
-    THUMBNAILS,
     TrickOrTreat,
     TrickOrTreatHandler,
 )
@@ -39,7 +38,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     )
     async def test_adjust_ingots_add(self, mock_storage):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLE.MEMBER)
+            caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -62,7 +61,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     )
     async def test_adjust_ingots_remove(self, mock_storage):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLE.MEMBER)
+            caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -85,7 +84,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     )
     async def test_adjust_ingots_member_has_none(self, mock_storage):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLE.MEMBER)
+            caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -107,7 +106,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_storage
     ):
         with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", ROLE.MEMBER)
+            caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
             mock_storage.read_member.return_value = Member(
@@ -126,11 +125,19 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_unique_gifs(self):
+        with open("data/trick_or_treat.json") as f:
+            data = json.load(f)
+            GIFS = data["GIFS"]
+
         duplicates = [gif for gif, count in Counter(GIFS).items() if count > 1]
         assert not duplicates, f"Duplicate gifs: {duplicates}"
 
     @unittest.skip("Network heavy, run only when necessary")
     async def test_gifs_return_200(self):
+        with open("data/trick_or_treat.json") as f:
+            data = json.load(f)
+            GIFS = data["GIFS"]
+
         async with aiohttp.ClientSession() as session:
             tasks = [get_url_status_code(session, url) for url in GIFS]
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -139,11 +146,19 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
                 assert result == 200, f"{url} returned status code {result}"
 
     async def test_unique_thumbnails(self):
+        with open("data/trick_or_treat.json") as f:
+            data = json.load(f)
+            THUMBNAILS = data["THUMBNAILS"]
+
         duplicates = [gif for gif, count in Counter(THUMBNAILS).items() if count > 1]
         assert not duplicates, f"Duplicate thumbnails: {duplicates}"
 
     @unittest.skip("Network heavy, run only when necessary")
     async def test_thumbnails_return_200(self):
+        with open("data/trick_or_treat.json") as f:
+            data = json.load(f)
+            THUMBNAILS = data["THUMBNAILS"]
+
         async with aiohttp.ClientSession() as session:
             tasks = [get_url_status_code(session, url) for url in THUMBNAILS]
             results = await asyncio.gather(*tasks, return_exceptions=True)

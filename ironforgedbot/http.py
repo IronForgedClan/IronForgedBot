@@ -73,6 +73,7 @@ class AsyncHttpClient:
             else:
                 data = await response.read()
 
+            await self.cleanup()
             return HttpResponse(status=response.status, body=data)
 
     async def cleanup(self):

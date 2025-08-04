@@ -1,0 +1,40 @@
+services:
+    db:
+        image: mariadb:latest
+        restart: unless-stopped
+        environment:
+            MARIADB_ROOT_PASSWORD: ${DB_ROOT}
+            MARIADB_DATABASE: ${DB_NAME}
+            MARIADB_USER: ${DB_USER}
+            MARIADB_PASSWORD: ${DB_PASS}
+        healthcheck:
+            test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+            start_period: 10s
+            interval: 5s
+            timeout: 3s
+            retries: 5
+        volumes:
+            - mariadb_data:/var/lib/mysql
+
+    bot:
+        # When testing prod image remember
+        # to comment out volume mapping.
+        # Setting 'image' with take priority
+        # over 'build'.
+        #image: ironforgedbot:prod
+        build:
+            context: .
+            target: dev
+        restart: unless-stopped
+        depends_on:
+            db:
+                condition: service_healthy
+        env_file: .env
+        environment:
+            DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
+        volumes:
+            - .:/app
+
+volumes:
+    mariadb_data:
+

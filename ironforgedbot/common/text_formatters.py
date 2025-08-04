@@ -37,9 +37,9 @@ def text_h3(input: str) -> str:
     return f"### {input}{NEW_LINE}"
 
 
-def text_ul(list: list) -> str:
+def text_ul(input_list: list) -> str:
     output = ""
-    for item in list:
+    for item in input_list:
         output += f"- {item}{NEW_LINE}"
     return output
 
@@ -47,7 +47,7 @@ def text_ul(list: list) -> str:
 def text_ol(list: list) -> str:
     output = ""
     for index, item in enumerate(list):
-        output += f"{index+1}. {item}{NEW_LINE}"
+        output += f"{index + 1}. {item}{NEW_LINE}"
     return output
 
 

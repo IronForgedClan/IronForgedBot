@@ -1,18 +1,17 @@
 import io
 import logging
 from datetime import datetime
+from typing import Dict
 
 import discord
 from tabulate import tabulate
 
 from ironforgedbot.common.helpers import (
     find_emoji,
-    normalize_discord_string,
     validate_playername,
 )
 from ironforgedbot.common.responses import (
     build_ingot_response_embed,
-    send_error_response,
 )
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import (
@@ -21,9 +20,9 @@ from ironforgedbot.common.text_formatters import (
     text_h2,
     text_italic,
 )
+from ironforgedbot.database.database import db
 from ironforgedbot.decorators import require_role
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.services.ingot_service import IngotService, IngotServiceResponse
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,7 @@ async def cmd_add_remove_ingots(
     """
     is_positive = True if ingots > 0 else False
     total_change = 0
-    sanitized_player_names = set()
-    members_to_update = []
+    validated_players: Dict[str, discord.Member] = {}
     output_data = []
 
     assert interaction.guild
@@ -58,76 +56,61 @@ async def cmd_add_remove_ingots(
             continue
 
         try:
-            if player in sanitized_player_names:
+            if player in validated_players:
                 logger.info(f"Ignoring duplicate player: {player}")
                 continue
 
-            _, name = validate_playername(interaction.guild, player)
-            sanitized_player_names.add(name)
-        except ValueError as _:
+            discord_member, name = validate_playername(
+                interaction.guild, player, must_be_member=True
+            )
+            if discord_member:
+                validated_players[name] = discord_member
+        except ValueError:
             logger.info(f"Ignoring unknown player: {player}")
             output_data.append([player, 0, "unknown"])
 
-    try:
-        members = await STORAGE.read_members()
-    except StorageError as error:
-        logger.error(error)
-        return await send_error_response(interaction, "Error reading member data.")
+    async with db.get_session() as session:
+        service = IngotService(session)
 
-    for player in sorted(sanitized_player_names):
-        for member in members:
-            if member.runescape_name.lower() == player.lower():
-                new_total = member.ingots + ingots
-                if new_total < 0:
-                    error_table = tabulate(
-                        [
-                            ["Available:", f"{member.ingots:,}"],
-                            ["Requested:", f"{ingots:,}"],
-                        ],
-                        tablefmt="plain",
-                    )
-                    await send_error_response(
-                        interaction,
-                        (
-                            f"Member {text_bold(player)} does not have enough ingots.\n"
-                            f"No action taken.\n```{error_table}```"
-                        ),
-                    )
+        for player, discord_member in validated_players.items():
+            result = None
+            if is_positive:
+                result = await service.try_add_ingots(
+                    discord_member.id, ingots, interaction.user.id, reason
+                )
+            else:
+                result = await service.try_remove_ingots(
+                    discord_member.id, ingots, interaction.user.id, reason
+                )
+
+            if result and isinstance(result, IngotServiceResponse):
+                if result.status and result.new_total > -1:
+                    total_change += ingots
                     output_data.append(
                         [
                             player,
-                            0,
-                            f"{member.ingots:,}",
+                            f"{'+' if is_positive else ''}{ingots:,}",
+                            f"{result.new_total:,}",
                         ]
                     )
-                    break
+                else:
+                    output_data.append(
+                        [
+                            player,
+                            "0",
+                            f"{result.new_total:,}",
+                        ]
+                    )
 
-                total_change += ingots
-                member.ingots = new_total
-                members_to_update.append(member)
-                output_data.append(
-                    [
-                        player,
-                        f"{'+' if is_positive else ''}{ingots:,}",
-                        f"{member.ingots:,}",
-                    ]
-                )
-                break
+                    logger.info(result.message)
 
-    try:
-        await STORAGE.update_members(
-            members_to_update,
-            normalize_discord_string(interaction.user.display_name),
-            note=reason,
-        )
-    except StorageError as error:
-        logger.error(error)
-        return await send_error_response(interaction, "Error updating ingot values.")
-
-    ingot_icon = find_emoji(None, "Ingot")
+    ingot_icon = find_emoji("Ingot")
     sorted_output_data = sorted(output_data, key=lambda row: row[0])
     result_table = tabulate(
-        sorted_output_data, headers=["Player", "Change", "Total"], tablefmt="github"
+        sorted_output_data,
+        headers=["Player", "Change", "Total"],
+        tablefmt="github",
+        colalign=("left", "right", "right"),
     )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
     result_content = (
@@ -139,7 +122,7 @@ async def cmd_add_remove_ingots(
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),
             description="example description",
-            filename=f"ingot_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt",
+            filename=f"ingot_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         )
 
         return await interaction.followup.send(

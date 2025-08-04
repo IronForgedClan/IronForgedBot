@@ -10,14 +10,17 @@ from ironforgedbot.common.helpers import (
     get_text_channel,
     populate_emoji_cache,
 )
+from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.config import CONFIG
+from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.effects.add_member_role import add_member_role
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
 from ironforgedbot.effects.nickname_change import nickname_change
 from ironforgedbot.effects.remove_member_role import remove_member_role
+from ironforgedbot.effects.update_member_rank import update_member_rank
 from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
+from ironforgedbot.database.database import db
 
 logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -103,7 +106,9 @@ class DiscordClient(discord.Client):
         if pending_tasks:
             logger.info(f"Found {len(pending_tasks)} pending tasks. Waiting...")
             try:
-                timeout_seconds = 60
+                timeout_seconds = (
+                    60 if CONFIG.ENVIRONMENT is ENVIRONMENT.PRODUCTION else 5
+                )
                 await asyncio.wait_for(
                     asyncio.gather(*pending_tasks, return_exceptions=True),
                     timeout=timeout_seconds,
@@ -113,6 +118,9 @@ class DiscordClient(discord.Client):
                 )
             except asyncio.TimeoutError:
                 logger.warning("Timeout occurred while waiting for outstanding tasks.")
+
+        logger.info("Closing database connection...")
+        await db.dispose()
 
         if self.automations:
             await self.automations.stop()
@@ -129,8 +137,7 @@ class DiscordClient(discord.Client):
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
 
-        # TODO: Temporary. See function comment for details.
-        await populate_emoji_cache(self.application_id or 0, CONFIG.BOT_TOKEN)
+        await populate_emoji_cache(await self.fetch_application_emojis())
 
     async def on_connect(self):
         logger.info("Bot connected to Discord")
@@ -148,7 +155,14 @@ class DiscordClient(discord.Client):
 
         logger.info(f"Logged in as {self.user.display_name} (ID: {self.user.id})")
 
-        self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
+        await self.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.listening, name="Sea Shanty 2"
+            )
+        )
+
+        if not self.automations:
+            self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         async with self.effect_lock:
@@ -175,7 +189,10 @@ class DiscordClient(discord.Client):
                 await add_member_role(report_channel, after)
 
             if ROLE.PROSPECT in roles_added:
-                asyncio.create_task(add_prospect_role(report_channel, after))
+                await add_prospect_role(report_channel, after)
+
+            if len(set(RANK.list()) & roles_added) > 0:
+                await update_member_rank(report_channel, after)
 
             if ROLE.MEMBER in roles_removed:
                 await remove_member_role(report_channel, after)

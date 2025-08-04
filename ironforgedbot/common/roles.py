@@ -5,6 +5,7 @@ import discord
 
 
 class ROLE(StrEnum):
+    BANNED = "Slag"
     GUEST = "Guest"
     APPLICANT = "Applicant"
     PROSPECT = "Prospect"
@@ -13,6 +14,7 @@ class ROLE(StrEnum):
     EVENTS_TEAM = "Events Team"
     RECRUITMENT_TEAM = "Recruitment Team"
     DISCORD_TEAM = "Discord Team"
+    BOT_TEAM = "Bot Team"
     LEADERSHIP = "Leadership"
 
     def or_higher(self):
@@ -28,6 +30,10 @@ class ROLE(StrEnum):
         return [
             role.value for role in roles[: index + 1]
         ]  # slice from start to current
+
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
 
     @staticmethod
     def any():

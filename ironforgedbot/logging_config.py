@@ -9,6 +9,9 @@ LOG_DIR = "./logs"
 
 log = logging.getLogger(__name__)
 
+logging.getLogger("sqlalchemy.engine").propagate = False
+logging.getLogger("sqlalchemy.engine").setLevel(logging.ERROR)
+
 
 class IronForgedLogger:
     def __init__(self):

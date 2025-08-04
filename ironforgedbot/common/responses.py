@@ -6,7 +6,9 @@ from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold, text_sub
-from ironforgedbot.storage.types import StorageError
+from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
+from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
@@ -41,26 +43,28 @@ async def send_prospect_response(
     eligible_rank_icon: str,
     member: discord.Member,
 ):
-    from ironforgedbot.storage.sheets import STORAGE
-    from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
+    prospect_icon = find_emoji("Prospect")
 
-    prospect_icon = find_emoji(interaction, "Prospect")
-    storage_member = None
+    async with db.get_session() as session:
+        member_service = MemberService(session)
 
-    try:
-        storage_member = await STORAGE.read_member(member.display_name)
-    except StorageError as e:
-        logger.error(e)
+        db_member = await member_service.get_member_by_discord_id(member.id)
 
-    embed_description = (
-        f"{text_bold(member.display_name)} is currently a {prospect_icon} {text_bold(ROLE.PROSPECT)} and "
-        f"will become eligible for\nthe {eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
-        f"successful acceptance into the clan\nafter completing the {text_bold(f"{PROBATION_DAYS}-day")} "
-        "probation period."
-    )
+        if not db_member:
+            logger.error(f"Member with d_id {member.id} not found in db")
+            return await send_error_response(
+                interaction, "Member not found in database."
+            )
 
-    if storage_member and isinstance(storage_member.joined_date, datetime):
-        target_date = storage_member.joined_date + timedelta(days=PROBATION_DAYS)
+        embed_description = (
+            f"{text_bold(db_member.nickname)} is currently a {prospect_icon} "
+            f"{text_bold(ROLE.PROSPECT)} and will become eligible for the "
+            f"{eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
+            f"successful acceptance into the clan after completing the "
+            f"{text_bold(f'{PROBATION_DAYS}-day')} probation period."
+        )
+
+        target_date = db_member.joined_date + timedelta(days=PROBATION_DAYS)
         remaining_time = target_date - datetime.now(timezone.utc)
 
         days = max(1, remaining_time.days)
@@ -71,19 +75,19 @@ async def send_prospect_response(
             f"\n\n⏳ Approximately {text_bold(days_remaining)} remaining."
         )
 
-    embed = build_response_embed(
-        "",
-        embed_description,
-        discord.Color.from_str("#df781c"),
-    )
+        embed = build_response_embed(
+            "",
+            embed_description,
+            discord.Color.from_str("#df781c"),
+        )
 
-    await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
 
 
 async def send_member_no_hiscore_values(interaction: discord.Interaction, name: str):
     rank_name = get_rank_from_points(0)
     rank_color = get_rank_color_from_points(0)
-    rank_icon = find_emoji(interaction, rank_name)
+    rank_icon = find_emoji(rank_name)
 
     embed = build_response_embed(
         f"{rank_icon} {name}",

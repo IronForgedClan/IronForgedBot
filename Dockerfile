@@ -1,13 +1,28 @@
-FROM python:3-alpine
+FROM python:3.13-slim AS base
 
-RUN adduser -D bot
-USER bot
+RUN apt-get update && apt-get install -y \
+    default-libmysqlclient-dev \
+    build-essential \
+    gcc \
+    libpq-dev \
+ && pip install --no-cache-dir --upgrade pip \
+ && apt-get purge -y gcc \
+ && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
 
-WORKDIR ~
+RUN useradd -m botuser
 
-COPY --chown=bot:bot requirements.txt .
-RUN pip install -r requirements.txt --no-warn-script-location
+WORKDIR /app
+COPY --chown=botuser:botuser . .
 
-COPY --chown=bot:bot . .
+USER botuser
 
-CMD [ "python3", "main.py" ]
+RUN pip install --no-cache-dir -r requirements.txt
+
+FROM base AS dev
+RUN pip install --no-cache-dir 'watchdog[watchmedo]' pip-tools
+CMD ["/home/botuser/.local/bin/watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
+
+FROM base AS prod
+CMD ["python", "main.py"]
+

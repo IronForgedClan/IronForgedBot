@@ -1,19 +1,19 @@
 import logging
 import random
 from typing import Optional
+
 import discord
+from sqlalchemy import text
 
 from ironforgedbot.commands.raffle.build_winner_image import build_winner_image_file
-from ironforgedbot.common.helpers import (
-    find_emoji,
-    find_member_by_nickname,
-    normalize_discord_string,
-)
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold, text_sub
+from ironforgedbot.database.database import db
+from ironforgedbot.services.ingot_service import IngotService
+from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.raffle_service import RaffleService
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.sheets import STORAGE
-from ironforgedbot.storage.types import StorageError
 
 logger = logging.getLogger(__name__)
 
@@ -40,128 +40,122 @@ async def handle_end_raffle(
             view=None,
         )
 
-    try:
-        current_tickets = await STORAGE.read_raffle_tickets()
-    except StorageError as error:
-        return await handle_end_raffle_error(
-            parent_message, interaction, f"Encountered error ending raffle: {error}"
+    ticket_icon = find_emoji("Raffle_Ticket")
+
+    async with db.get_session() as session:
+        raffle_service = RaffleService(session)
+        total_tickets = await raffle_service.get_raffle_ticket_total()
+        valid_tickets = await raffle_service.get_all_valid_raffle_tickets()
+
+        if total_tickets < 1:
+            logger.info("Raffle ended with no tickets sold.")
+            STATE.state["raffle_on"] = False
+            STATE.state["raffle_price"] = 0
+
+            if parent_message:
+                parent_message = await parent_message.delete()
+
+            return await interaction.followup.send(
+                content=(
+                    f"## {ticket_icon} Raffle Ended\n\nNo tickets were sold. "
+                    "There is no winner 🤷‍♂️."
+                )
+            )
+
+        if len(valid_tickets) < 1:
+            logger.info("Raffle ended with no valid tickets to select from.")
+            return await handle_end_raffle_error(
+                parent_message,
+                interaction,
+                "Raffle ended without any valid entries.",
+            )
+
+        # Select winner
+        entries: dict[str, int] = {}
+        for ticket in valid_tickets:
+            entries[ticket.member_id] = ticket.quantity
+
+        winner_id = random.choices(
+            list(entries.keys()), weights=list(entries.values()), k=1
+        )[0]
+        winner_qty = entries[winner_id]
+
+        member_service = MemberService(session)
+        winning_member = await member_service.get_member_by_id(winner_id)
+
+        if not winning_member:
+            return await handle_end_raffle_error(
+                parent_message,
+                interaction,
+                f"Error finding winner's details.\n{winner_id}",
+            )
+
+        logger.info(f"Raffle entries: {entries}")
+        logger.info(f"Raffle winner: {winning_member.nickname}")
+
+        # Award winnings
+        ingot_service = IngotService(session)
+        winnings = int(total_tickets * int(STATE.state["raffle_price"] / 2))
+
+        result = await ingot_service.try_add_ingots(
+            winning_member.discord_id, winnings, None, f"Raffle winnings: ({winnings})"
+        )
+        if not result.status:
+            return await handle_end_raffle_error(
+                parent_message, interaction, result.message
+            )
+
+        # Announce winner
+        winner_spent = winner_qty * STATE.state["raffle_price"]
+        winner_profit = winnings - winner_spent
+
+        winning_discord_member = interaction.guild.get_member(winning_member.discord_id)
+        assert winning_discord_member
+
+        ingot_icon = find_emoji("Ingot")
+        file = await build_winner_image_file(winning_member.nickname, int(winnings))
+
+        tickets_sold_string = (
+            (
+                f"one of your {ticket_icon} {text_bold(f'{winner_qty:,}')} tickets "
+                "was chosen!\n"
+            )
+            if winner_qty > 1
+            else f"your {text_bold('one and only')} ticket was chosen! Nice RNG.\n"
+        )
+        winnings_string = (
+            (
+                f"Leaving you with {ingot_icon} {text_bold(f'{winner_profit:,}')} pure "
+                "profit. Nice.\n"
+            )
+            if winner_profit > 0
+            else (
+                f"Which means you actually lost {ingot_icon} "
+                f"{text_bold(f'{winner_profit:,}')} ingots. Reckless spending. "
+                "Unlucky bud.\n"
+            )
+        )
+        await interaction.followup.send(
+            (
+                f"## {ticket_icon} Congratulations {winning_discord_member.mention}!!\n"
+                f"You have won the raffle jackpot of {ingot_icon} "
+                f"{text_bold(f'{winnings:,}')} ingots!\n\n"
+                f"Out of {ticket_icon} {text_bold(f'{total_tickets:,}')} tickets sold, "
+                + tickets_sold_string
+                + f"\nYou spent a total of {ingot_icon} "
+                f"{text_bold(f'{winner_spent:,}')} ingots. "
+                + winnings_string
+                + "\nThank you everyone for participating!"
+            ),
+            file=file,
         )
 
-    ticket_icon = find_emoji(None, "Raffle_Ticket")
-    if len(current_tickets) < 1:
-        logger.info("Raffle ended with no tickets sold.")
+        # Cleanup
         STATE.state["raffle_on"] = False
         STATE.state["raffle_price"] = 0
+        await raffle_service.delete_all_tickets()
 
         if parent_message:
             parent_message = await parent_message.delete()
 
-        return await interaction.followup.send(
-            content=f"## {ticket_icon} Raffle Ended\n\nNo tickets were sold. There is no winner 🤷‍♂️."
-        )
-
-    try:
-        members = await STORAGE.read_members()
-    except StorageError as error:
-        return await handle_end_raffle_error(
-            parent_message,
-            interaction,
-            f"Encountered error reading current members: {error}",
-        )
-
-    # Calculate valid entries
-    current_members = {}
-    for member in members:
-        current_members[member.id] = member.runescape_name
-
-    total_tickets = 0
-    valid_entries = []
-    for id, ticket_count in current_tickets.items():
-        total_tickets += ticket_count
-        # Ignore members who have left the clan since buying tickets
-        if current_members.get(id) is not None:
-            valid_entries.extend([current_members.get(id)] * ticket_count)
-
-    if len(valid_entries) < 1:
-        logger.info("Raffle ended with no valid tickets to select from.")
-        return await handle_end_raffle_error(
-            parent_message,
-            interaction,
-            "Raffle ended without any valid entries. May require manual data purge.",
-        )
-
-    # Calculate winner
-    random.shuffle(valid_entries)
-    winner = random.choice(valid_entries)
-    winning_discord_member = find_member_by_nickname(interaction.guild, winner)
-
-    winnings = int(total_tickets * (STATE.state["raffle_price"] / 2))
-
-    logger.info(f"Raffle entries: {valid_entries}")
-    logger.info(f"Raffle winner: {winner} ({winning_discord_member.id})")
-
-    # Award winnings
-    try:
-        member = await STORAGE.read_member(
-            normalize_discord_string(winning_discord_member.display_name)
-        )
-    except StorageError as error:
-        return await handle_end_raffle_error(parent_message, interaction, error.message)
-
-    if member is None:
-        return await handle_end_raffle_error(
-            parent_message,
-            interaction,
-            f"Winning member '{winning_discord_member.display_name}' not found in storage.",
-        )
-
-    member.ingots += winnings
-
-    try:
-        await STORAGE.update_members(
-            [member],
-            interaction.user.display_name,
-            note=f"[BOT] Raffle winnings ({winnings:,})",
-        )
-    except StorageError as error:
-        return await handle_end_raffle_error(parent_message, interaction, error.message)
-
-    # Announce winner
-    ingot_icon = find_emoji(None, "Ingot")
-    file = await build_winner_image_file(winner, int(winnings))
-
-    winner_ticket_count = current_tickets[winning_discord_member.id]
-    winner_spent = winner_ticket_count * STATE.state["raffle_price"]
-    winner_profit = winnings - winner_spent
-    await interaction.followup.send(
-        (
-            f"## {ticket_icon} Congratulations {winning_discord_member.mention}!!\n"
-            f"You have won {ingot_icon} {text_bold(f"{winnings:,}")} ingots!\n\n"
-            f"You spent {ingot_icon} {text_bold(f"{winner_spent:,}")} on {ticket_icon} "
-            f"{text_bold(f"{winner_ticket_count:,}")} tickets.\n"
-            f"Resulting in {ingot_icon} {text_bold(f"{winner_profit:,}")} profit.\n"
-            + (f"{text_sub('ouch')}\n\n" if winner_profit < 0 else "\n")
-            + f"There were a total of {ticket_icon} {text_bold(f"{total_tickets:,}")} entries.\n"
-            "Thank you everyone for participating!"
-        ),
-        file=file,
-    )
-
-    # Cleanup
-    STATE.state["raffle_on"] = False
-    STATE.state["raffle_price"] = 0
-    logger.info("Raffle ended.")
-
-    try:
-        await STORAGE.delete_raffle_tickets(
-            normalize_discord_string(interaction.user.display_name).lower()
-        )
-    except StorageError as error:
-        return await handle_end_raffle_error(
-            parent_message,
-            interaction,
-            f"Encountered error clearing ticket storage: {error}",
-        )
-
-    if parent_message:
-        parent_message = await parent_message.delete()
+        logger.info("Raffle ended.")

@@ -8,11 +8,11 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
-    job_check_activity_reminder,
 )
 from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
@@ -49,7 +49,7 @@ class IronForgedAutomations:
         self.scheduler.pause()
         await self.wait_for_jobs_to_complete()
         self.scheduler.remove_all_jobs()
-        await self.report_channel.send("🔴 Bot shutting down...")
+        await self.report_channel.send(f"### 🔴 **v{CONFIG.BOT_VERSION}** now offline")
 
     async def wait_for_jobs_to_complete(self):
         """Waits for all active jobs to complete before completing."""
@@ -78,6 +78,12 @@ class IronForgedAutomations:
         """Wrapper for tracking active jobs."""
         return lambda: self.track_job(job_func, *args, **kwargs)
 
+    async def _clear_caches(self, report_channel: discord.TextChannel):
+        score_cache_output = await SCORE_CACHE.clean()
+
+        if score_cache_output:
+            await report_channel.send(f"**♻️ Score cache:** {score_cache_output}")
+
     async def setup_automations(self):
         """Add jobs to scheduler."""
         offset = (
@@ -85,6 +91,8 @@ class IronForgedAutomations:
             if ENVIRONMENT.PRODUCTION in CONFIG.ENVIRONMENT
             else random.randint(10, 50)
         )
+
+        self.scheduler.remove_all_jobs()
 
         self.scheduler.add_job(
             self._job_wrapper(
@@ -100,14 +108,6 @@ class IronForgedAutomations:
             ),
             # CronTrigger(minute="*"),
             CronTrigger(hour="4,16", minute=10, second=offset, timezone="UTC"),
-        )
-
-        self.scheduler.add_job(
-            self._job_wrapper(job_check_activity_reminder, self.report_channel),
-            # CronTrigger(minute="*"),
-            CronTrigger(
-                day_of_week="mon", hour=0, minute=0, second=offset, timezone="UTC"
-            ),
         )
 
         self.scheduler.add_job(
@@ -137,7 +137,9 @@ class IronForgedAutomations:
             ),
         )
 
-        await self.report_channel.send(
-            f"🟢 Bot **v{CONFIG.BOT_VERSION}** is **online** and configured to use this channel for"
-            f" **{len(self.scheduler.get_jobs())}** automation reports. View pinned message for details."
+        self.scheduler.add_job(
+            self._job_wrapper(self._clear_caches, self.report_channel),
+            CronTrigger(minute="*/10"),
         )
+
+        await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
