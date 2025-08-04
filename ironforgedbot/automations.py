@@ -139,7 +139,7 @@ class IronForgedAutomations:
 
         self.scheduler.add_job(
             self._job_wrapper(self._clear_caches, self.report_channel),
-            CronTrigger(second=10),
+            CronTrigger(minute="*/10"),
         )
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
