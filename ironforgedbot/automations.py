@@ -49,7 +49,7 @@ class IronForgedAutomations:
         self.scheduler.pause()
         await self.wait_for_jobs_to_complete()
         self.scheduler.remove_all_jobs()
-        await self.report_channel.send("🔴 Bot shutting down...")
+        await self.report_channel.send(f"### 🔴 **v{CONFIG.BOT_VERSION}** now offline")
 
     async def wait_for_jobs_to_complete(self):
         """Waits for all active jobs to complete before completing."""
@@ -142,6 +142,4 @@ class IronForgedAutomations:
             CronTrigger(second=10),
         )
 
-        await self.report_channel.send(
-            f"🟢 Bot **v{CONFIG.BOT_VERSION}** is now **online**"
-        )
+        await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
