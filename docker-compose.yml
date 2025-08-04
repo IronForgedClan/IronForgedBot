@@ -18,7 +18,9 @@ services:
 
     bot:
         # When testing prod image remember
-        # to comment out volume mapping
+        # to comment out volume mapping.
+        # Setting 'image' with take priority
+        # over 'build'.
         #image: ironforgedbot:prod
         build:
             context: .
@@ -27,18 +29,9 @@ services:
         depends_on:
             db:
                 condition: service_healthy
+        env_file: .env
         environment:
-            ENVIRONMENT: ${ENVIRONMENT}
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
-            SHEET_ID: ${SHEET_ID}
-            GUILD_ID: ${GUILD_ID}
-            BOT_TOKEN: ${BOT_TOKEN}
-            WOM_GROUP_ID: ${WOM_GROUP_ID}
-            WOM_API_KEY: ${WOM_API_KEY}
-            AUTOMATION_CHANNEL_ID: ${AUTOMATION_CHANNEL_ID}
-            TRICK_OR_TREAT_ENABLED: ${TRICK_OR_TREAT_ENABLED}
-            TRICK_OR_TREAT_CHANNEL_ID: ${TRICK_OR_TREAT_CHANNEL_ID}
-            RAFFLE_CHANNEL_ID: ${RAFFLE_CHANNEL_ID}
         volumes:
             - .:/app
 
