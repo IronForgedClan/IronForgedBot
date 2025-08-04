@@ -92,6 +92,8 @@ class IronForgedAutomations:
             else random.randint(10, 50)
         )
 
+        self.scheduler.remove_all_jobs()
+
         self.scheduler.add_job(
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
