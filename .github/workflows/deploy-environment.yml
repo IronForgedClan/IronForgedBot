@@ -42,6 +42,7 @@ jobs:
                 host: ${{ secrets.SSH_HOST }}
                 username: ${{ secrets.SSH_USER }}
                 key: ${{ secrets.SSH_PRIVATE_KEY }}
+                ssh_options: "-o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
                 script: |
                   cd ${{ secrets.BOT_DIR }}
                   ./deploy.sh ${{inputs.environment}}
