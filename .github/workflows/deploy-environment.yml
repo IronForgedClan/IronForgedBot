@@ -21,35 +21,30 @@ jobs:
         runs-on: ubuntu-latest
         environment: ${{inputs.environment}}
         steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Read version
+              id: version
+              run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
             - name: send-warning-message
               env:
                   WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
               run: |
                   curl -X POST -H "Content-Type: application/json" \
-                  -d '{"content": "## 🔴 OFFLINE\nInstalling an update..."}' \
+                  -d '{"content": "## ⏸️ Installing an update..."}' \
                   $WEBHOOK_URL
 
-            - name: set-up-ssh
-              uses: webfactory/ssh-agent@v0.9.0
+            - name: Update and restart remote server
+              uses: appleboy/ssh-action@v0.1.6
               with:
-                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-            - name: deploy-bot
-              run: |
-                  ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
-                    cd ${{ secrets.BOT_DIR  }}
-                    sudo systemctl stop ${{ secrets.SERVICE_NAME }}
-                    sleep 65
-                    git pull
-                    sudo .venv/bin/pip install -r requirements.txt
-                    sudo systemctl start ${{ secrets.SERVICE_NAME }}
-                  EOF
-
-            - name: fetch-version-number
-              id: ssh_step
-              run: |
-                  VERSION=$(ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cat ${{ secrets.BOT_DIR}}/VERSION")
-                  echo "VERSION=$VERSION" >> $GITHUB_ENV
+                host: ${{ secrets.SSH_HOST }}
+                username: ${{ secrets.SSH_USER }}
+                key: ${{ secrets.SSH_PRIVATE_KEY }}
+                script: |
+                  cd ${{ secrets.BOT_DIR }}
+                  ./deploy.sh ${{inputs.environment}}
 
             - name: send-update-success
               env:
