@@ -15,6 +15,7 @@ state.json
 
 docker-compose.yml
 Dockerfile
+.dockerignore
 
 scripts/
 tests/
@@ -23,7 +24,9 @@ pyrightconfig.json
 README.md
 requirements.in
 update_dependencies.sh
+.direnv
+.devenv
 .envrc
-.devenv.lock
-.devenv.nix
+devenv.lock
+devenv.nix
 .devenv.flake.nix
