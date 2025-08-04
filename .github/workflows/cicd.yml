@@ -41,8 +41,6 @@ jobs:
 
     promote-latest:
         needs: staging-deploy
-        with:
-            environment: prod
         uses: ./.github/workflows/promote-latest.yml
 
     prod-deploy:
