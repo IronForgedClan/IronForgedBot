@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/workflows/promote-latest.yml
 
     prod-deploy:
-        needs: staging-deploy
+        needs: promote-latest
         permissions:
             id-token: write
             contents: read
