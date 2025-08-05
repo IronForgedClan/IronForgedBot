@@ -39,7 +39,7 @@ jobs:
             - name: Set known hosts
               run: |
                 mkdir -p ~/.ssh
-                ssh-keyscan "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+                "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
 
             - name: Deploy
               env:
