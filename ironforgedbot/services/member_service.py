@@ -100,6 +100,10 @@ class MemberService:
                 raise UniqueNicknameViolation()
             else:
                 raise e
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
 
@@ -222,6 +226,10 @@ class MemberService:
                 raise UniqueNicknameViolation()
             else:
                 raise e
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         response.status = True
         response.new_member = member
@@ -249,8 +257,13 @@ class MemberService:
         member.active = False
         member.last_changed_date = now
 
-        await self.db.commit()
-        await self.db.refresh(member)
+        try:
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
 
@@ -287,6 +300,10 @@ class MemberService:
                 raise UniqueNicknameViolation()
             else:
                 raise e
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
 
@@ -311,8 +328,13 @@ class MemberService:
         member.rank = new_rank
         member.last_changed_date = now
 
-        self.db.add(changelog_entry)
-        await self.db.commit()
-        await self.db.refresh(member)
+        try:
+            self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
