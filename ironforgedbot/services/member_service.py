@@ -217,7 +217,7 @@ class MemberService:
             await self.db.commit()
             await self.db.refresh(member)
         except IntegrityError as e:
-            if "members.nickname" in str(e):
+            if "nickname" in str(e):
                 await self.db.rollback()
                 raise UniqueNicknameViolation()
             else:
@@ -282,7 +282,7 @@ class MemberService:
         except IntegrityError as e:
             error_message = str(e)
 
-            if "members.nickname" in error_message:
+            if "nickname" in error_message:
                 await self.db.rollback()
                 raise UniqueNicknameViolation()
             else:
