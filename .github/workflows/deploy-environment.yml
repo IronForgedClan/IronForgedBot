@@ -36,17 +36,27 @@ jobs:
                   -d '{"content": "## ⏸️ Installing an update..."}' \
                   $WEBHOOK_URL
 
-            - name: Set SSH private key
-              uses: webfactory/ssh-agent@v0.9.0
-              with:
-                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            - name: Set known hosts
+              run: |
+                mkdir -p ~/.ssh
+                ssh-keyscan "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
 
             - name: Deploy
+              env:
+                SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+                SSH_USER: ${{ secrets.SSH_USER }}
+                SSH_HOST: ${{ secrets.SSH_HOST }}
+                BOT_DIR: ${{ secrets.BOT_DIR }}
               run: |
-                  ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
-                    cd ${{ secrets.BOT_DIR }}
-                    ./deploy.sh ${{ inputs.environment }}
-                  EOF
+                echo "$SSH_PRIVATE_KEY" > private_key
+                chmod 600 private_key
+
+                ssh -i private_key -o "$SSH_USER@$SSH_HOST" << 'EOF'
+
+                cd "$BOT_DIR"
+
+                /bin/bash deploy.sh ${{ inputs.environment }}
+                EOF
 
             - name: Send success message
               env:
