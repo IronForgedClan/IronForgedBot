@@ -94,9 +94,9 @@ class MemberService:
             error_message = str(e)
             await self.db.rollback()
 
-            if "members.discord_id" in error_message:
+            if "discord_id" in error_message:
                 raise UniqueDiscordIdVolation()
-            elif "members.nickname" in error_message:
+            elif "nickname" in error_message:
                 raise UniqueNicknameViolation()
             else:
                 raise e
