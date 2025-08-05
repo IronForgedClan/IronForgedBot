@@ -14,7 +14,7 @@ docker-compose.yml
 Dockerfile
 .dockerignore
 
-scripts/
+#scripts/
 tests/
 run_tests.py
 pyrightconfig.json

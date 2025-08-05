@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN useradd -m botuser
 
+RUN mkdir /app && chown botuser:botuser /app
 WORKDIR /app
+
 COPY --chown=botuser:botuser . .
 
 USER botuser

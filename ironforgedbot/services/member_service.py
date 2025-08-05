@@ -94,12 +94,16 @@ class MemberService:
             error_message = str(e)
             await self.db.rollback()
 
-            if "members.discord_id" in error_message:
+            if "discord_id" in error_message:
                 raise UniqueDiscordIdVolation()
-            elif "members.nickname" in error_message:
+            elif "nickname" in error_message:
                 raise UniqueNicknameViolation()
             else:
                 raise e
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
 
@@ -217,11 +221,15 @@ class MemberService:
             await self.db.commit()
             await self.db.refresh(member)
         except IntegrityError as e:
-            if "members.nickname" in str(e):
+            if "nickname" in str(e):
                 await self.db.rollback()
                 raise UniqueNicknameViolation()
             else:
                 raise e
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         response.status = True
         response.new_member = member
@@ -249,8 +257,13 @@ class MemberService:
         member.active = False
         member.last_changed_date = now
 
-        await self.db.commit()
-        await self.db.refresh(member)
+        try:
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
 
@@ -282,11 +295,15 @@ class MemberService:
         except IntegrityError as e:
             error_message = str(e)
 
-            if "members.nickname" in error_message:
+            if "nickname" in error_message:
                 await self.db.rollback()
                 raise UniqueNicknameViolation()
             else:
                 raise e
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
 
@@ -311,8 +328,13 @@ class MemberService:
         member.rank = new_rank
         member.last_changed_date = now
 
-        self.db.add(changelog_entry)
-        await self.db.commit()
-        await self.db.refresh(member)
+        try:
+            self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise
 
         return member
