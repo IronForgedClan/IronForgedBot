@@ -145,8 +145,8 @@ async def add_member_role(
             value=f"{ingot_icon} {reactivate_response.previous_ingot_qty:,}",
         )
         embed.add_field(
-            name="Ingots Reset",
-            value=("✅" if reactivate_response.ingots_reset else "❌"),
+            name="Ingots Removed",
+            value=("✅ yes" if reactivate_response.ingots_reset else "❌ no"),
         )
 
         end_time = time.perf_counter()
