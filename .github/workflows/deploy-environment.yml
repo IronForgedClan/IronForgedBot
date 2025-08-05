@@ -37,9 +37,13 @@ jobs:
                   $WEBHOOK_URL
 
             - name: Set known hosts
+              env:
+                  KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
               run: |
                 mkdir -p ~/.ssh
-                "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+                "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+                chmod 700 ~/.ssh
+                chmod 644 ~/.ssh/known_hosts
 
             - name: Deploy
               env:
