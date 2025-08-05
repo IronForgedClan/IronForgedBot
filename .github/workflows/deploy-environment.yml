@@ -36,32 +36,25 @@ jobs:
                   -d '{"content": "## ⏸️ Installing an update..."}' \
                   $WEBHOOK_URL
 
-            - name: Set known hosts
+            - name: Set up keys
               env:
                   KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+                  PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
               run: |
-                mkdir -p ~/.ssh
-                touch ~/.ssh/known_hosts
-                "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-                chmod 700 ~/.ssh
-                chmod 644 ~/.ssh/known_hosts
+                install -m 600 -D /dev/null ~/.ssh/id_rsa
+                echo "$PRIVATE_KEY" > ~/.ssh/id_rsa
+                echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
 
             - name: Deploy
               env:
-                SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
                 SSH_USER: ${{ secrets.SSH_USER }}
                 SSH_HOST: ${{ secrets.SSH_HOST }}
                 BOT_DIR: ${{ secrets.BOT_DIR }}
               run: |
-                echo "$SSH_PRIVATE_KEY" > private_key
-                chmod 600 private_key
-
-                ssh -i private_key -o "$SSH_USER@$SSH_HOST" << 'EOF'
-
-                cd "$BOT_DIR"
-
+                ssh $SSH_USER@$SSH_HOST "
+                cd $BOT_DIR
                 /bin/bash deploy.sh ${{ inputs.environment }}
-                EOF
+                "
 
             - name: Send success message
               env:
