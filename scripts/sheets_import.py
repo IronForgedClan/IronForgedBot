@@ -54,12 +54,13 @@ async def _get_rank(name: str) -> str:
         await asyncio.sleep(2)
         data = await ScoreService(HTTP).get_player_points_total(name)
         rank = get_rank_from_points(data)
-        print(f"  {name} has {data} points and is {rank} rank")
+        print(f"  points: {data}")
+        print(f"  rank: {rank}")
         return rank
     except (HiscoresError, HttpException):
-        print(f"  {name} hiscores error, saving as Iron")
+        print(f"  hiscores error, saving as Iron rank")
     except HiscoresNotFound:
-        print(f"  {name} not on hiscores, saving as Iron")
+        print(f"  not on hiscores, saving as Iron rank")
 
     return RANK.IRON
 
@@ -104,7 +105,6 @@ async def import_membes(sheet_data) -> None:
                 await session.flush()
                 session.add(instance=changelog_entry)
                 await session.commit()
-                print(f"  rank: {member.rank}")
                 print(f"  ingots: {member.ingots}")
                 print(f"  join date: {member.joined_date}")
                 print(f"+ imported {member.nickname}")
