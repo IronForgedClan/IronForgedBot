@@ -104,14 +104,17 @@ async def import_membes(sheet_data) -> None:
                 await session.flush()
                 session.add(instance=changelog_entry)
                 await session.commit()
+                print(f"  rank: {member.rank}")
+                print(f"  ingots: {member.ingots}")
+                print(f"  join date: {member.joined_date}")
                 print(f"+ imported {member.nickname}")
             except Exception as e:
                 error_message = str(e)
                 await session.rollback()
 
-                if "members.discord_id" in error_message:
+                if "discord_id" in error_message:
                     print(f"- {nick} discord id already exists")
-                elif "members.nickname" in error_message:
+                elif "nickname" in error_message:
                     print(f"- {nick} nickname already exists")
                 else:
                     print(f"- {nick} unhandled error:")
