@@ -118,8 +118,13 @@ async def import_membes(sheet_data) -> None:
 
 
 async def main():
-    print("fetching Google Sheets data...")
-    sheet_members = get_sheet_data("IronForged_bot_test", "ClanIngots")
+    sheet = sys.argv[1]
+    if not sheet:
+        print("No sheet specified")
+        print("Expected eg: IronForged_bot_test")
+        sys.exit(1)
+    print(f"fetching {sheet} Sheets data...")
+    sheet_members = get_sheet_data(sheet, "ClanIngots")
     print(f"found {len(sheet_members)} rows of data\n")
     await import_membes(sheet_members)
 
