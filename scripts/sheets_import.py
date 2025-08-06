@@ -52,10 +52,9 @@ def get_sheet_data(sheet_name, worksheet_name) -> list[any]:
 async def _get_rank(name: str) -> str:
     try:
         await asyncio.sleep(2)
-        data = await ScoreService(HTTP).get_player_points_total(name)
-        rank = get_rank_from_points(data)
+        data: int = await ScoreService(HTTP).get_player_points_total(name)
+        rank: str = get_rank_from_points(data)
         print(f"  points: {data}")
-        print(f"  rank: {rank}")
         return rank
     except (HiscoresError, HttpException):
         print(f"  hiscores error, saving as Iron rank")
@@ -65,7 +64,7 @@ async def _get_rank(name: str) -> str:
     return RANK.IRON
 
 
-async def import_membes(sheet_data) -> None:
+async def import_members(sheet_data) -> None:
     async with db.get_session() as session:
         for row in sheet_data:
             new_member_id: str = str(uuid.uuid4())
@@ -77,7 +76,7 @@ async def import_membes(sheet_data) -> None:
             try:
                 joined = datetime.fromisoformat(row["Joined Date"])
             except Exception as e:
-                print(f"! {nick} invalid join date: '{row['Joined Date']}'")
+                print(f"! invalid join date: '{row['Joined Date']}'")
                 continue
 
             member = Member(
@@ -105,6 +104,7 @@ async def import_membes(sheet_data) -> None:
                 await session.flush()
                 session.add(instance=changelog_entry)
                 await session.commit()
+                print(f"  rank: {member.rank}")
                 print(f"  ingots: {member.ingots}")
                 print(f"  join date: {member.joined_date}")
                 print(f"+ imported {member.nickname}")
@@ -113,24 +113,29 @@ async def import_membes(sheet_data) -> None:
                 await session.rollback()
 
                 if "discord_id" in error_message:
-                    print(f"- {nick} discord id already exists")
+                    print("- discord id already exists")
                 elif "nickname" in error_message:
-                    print(f"- {nick} nickname already exists")
+                    print("- nickname already exists")
                 else:
-                    print(f"- {nick} unhandled error:")
+                    print("- unhandled error:")
                     print(e)
 
+        await session.close()
+        await db.dispose()
 
-async def main():
-    sheet = sys.argv[1]
-    if not sheet:
-        print("No sheet specified")
-        print("Expected eg: IronForged_bot_test")
+
+async def main() -> None:
+    try:
+        sheet = sys.argv[1]
+    except Exception as e:
+        print("Expected sheet name as param 1\neg: IronForged_bot_test")
         sys.exit(1)
-    print(f"fetching {sheet} Sheets data...")
+
+    print(f"fetching {sheet} member data...")
     sheet_members = get_sheet_data(sheet, "ClanIngots")
-    print(f"found {len(sheet_members)} rows of data\n")
-    await import_membes(sheet_members)
+    print(f"found {len(sheet_members)} member's data")
+    await import_members(sheet_members)
+    print("\nimport completed")
 
 
 if __name__ == "__main__":
