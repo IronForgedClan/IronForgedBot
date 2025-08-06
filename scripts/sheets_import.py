@@ -101,6 +101,7 @@ async def import_membes(sheet_data) -> None:
 
             try:
                 session.add(instance=member)
+                await session.flush()
                 session.add(instance=changelog_entry)
                 await session.commit()
                 print(f"+ imported {member.nickname}")
