@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import time
 
 import discord
+from ironforgedbot.common.roles import is_member_banned
 from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
@@ -17,7 +18,6 @@ from ironforgedbot.common.ranks import (
     get_rank_from_member,
     get_rank_from_points,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role, member_has_any_roles
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
 from ironforgedbot.services.member_service import MemberService
@@ -70,6 +70,10 @@ async def job_refresh_ranks(
                         "found in this guild."
                     )
                 )
+                continue
+
+            if is_member_banned(discord_member):
+                logger.debug("...banned")
                 continue
 
             current_rank = get_rank_from_member(discord_member)
