@@ -84,4 +84,4 @@ def is_member_banned(member: discord.Member | None) -> bool:
     if not member:
         raise Exception()
 
-    return ROLE.BANNED in member.roles
+    return check_member_has_role(member, ROLE.BANNED)

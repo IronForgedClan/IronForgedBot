@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import time
 
 import discord
-from ironforgedbot.common.roles import is_member_banned
+from ironforgedbot.common.roles import ROLE, check_member_has_role, is_member_banned
 from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
