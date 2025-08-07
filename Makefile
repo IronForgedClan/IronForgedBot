@@ -10,7 +10,7 @@ migrate:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic upgrade head
 
 revision:
-	docker compose run --rm bot /home/botuser/.local/bin/alembic revision -m "$(DESC)"
+	docker compose run --rm bot /home/botuser/.local/bin/alembic revision --autogenerate -m "$(DESC)"
 
 downgrade:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic downgrade -1
