@@ -9,85 +9,96 @@
 
 ## Commands
 
-| Command              | Parameters                                                                      | Permission | Information                                            |
-| -------------------- | ------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------ |
-| `/score`             | Player (str) _Optional_                                                         | Member     | Returns the score for the player                       |
-| `/breakdown`         | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score |
-| `/ingots`            | Player (str) _Optional_                                                         | Member     | Returns ingot count for player                         |
-| `/raffle`            | N/A                                                                             | Member     | Play or manage the raffle                              |
-| `/trick_or_treat`    | N/A                                                                             | Member     | Holiday special command                                |
-| `/add_remove_ingots` | Players (str, comma separated list of player names), Ingots (int), Reason (str) | Leadership | Add or remove ingots from one or many players at once  |
-| `/roster`            | Url (str)                                                                       | Leadership | Produces a roster list of players                      |
-| `/admin`             | N/A                                                                             | Leadership | A menu of administrative commands                      |
-| `/debug_commands`    | N/A                                                                             | -          | Debug tool for testing various commands                |
-| `/stress_test`       | N/A                                                                             | -          | Debug tool for initiating stressful environments       |
+| Command              | Parameters                                                                      | Permission | Information                                                                      |
+| -------------------- | ------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------- |
+| `/score`             | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
+| `/breakdown`         | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
+| `/ingots`            | Player (str) _Optional_                                                         | Member     | Returns ingot count for player                                                   |
+| `/raffle`            | N/A                                                                             | Member     | Play or manage the raffle                                                        |
+| `/trick_or_treat`    | N/A                                                                             | Member     | Holiday special command                                                          |
+| `/whois`             | Player (str) _Optional_                                                         | Member     | Returns name history for the specified member                                    |
+| `/add_remove_ingots` | Players (str, comma separated list of player names), Ingots (int), Reason (str) | Leadership | Add or remove ingots from one or many players at once                            |
+| `/roster`            | Url (str)                                                                       | Leadership | Produces a roster list of players                                                |
+| `/get_role_members`  | Role (str)                                                                      | Leadership | Produces a comma separated list of names for all members with the specified role |
+| `/admin`             | N/A                                                                             | Leadership | A menu of administrative commands                                                |
+| `/debug_commands`    | N/A                                                                             | -          | Debug tool for testing various commands                                          |
+| `/stress_test`       | N/A                                                                             | -          | Debug tool for initiating stressful environments                                 |
 
 > [!IMPORTANT]
-> Many commands will not work unless users have set up their
+> Many commands will not work unless members set up their
 > [Server Nickname](https://support.discord.com/hc/en-us/articles/219070107-Server-Nicknames)
 > to match their OSRS username.
 
 ## Setup
 
-This setup guide does not go over installing Python, detailed setup of an
-application within Discord developer portal, or Google Sheets creation; and
-assumes use of a Linux terminal.
+This setup guide assumes use of a Linux terminal.
 
-## Database
+### Clone the repository
 
-This project uses Docker to spin up a MariaDB database for use in development.
-
-### Migrations
-
-You will need to know the name of the container:
-
-```
-docker ps
-```
-
-Generate a new migration:
-
-```
-docker exec -it <container-name> python -m alembic revision --auotgenerate -m "human readable message"
-```
-
-Run migrations:
-
-```
-docker exec -it <container-name> python -m alembic upgrade head
-```
-
-Tested on Arch Linux with Python 3.12.4, MacOS Sonoma 14.5 with Python 3.12.5.
-
-### Virtual Environment
-
-It is recommended to use Python's virtual environments when installing
-dependencies.
-
-To create a virtual environment for this project, navigate to the project root
-and run:
+Navigate to a location you want to store the project. Then run the following
+command to clone this repository to your machine.
 
 ```sh
-python -m venv .venv
+git clone https://github.com/IronForgedClan/IronForgedBot
 ```
 
-This will create a directory `.venv`. To activate the environment, run:
+### Docker
 
-```sh
-source .venv/bin/activate
-```
-
-> [!NOTE]
-> You will need to activate the virtual environment every time you start a new
-> shell instance.
+This project uses [Docker](https://www.docker.com/) and
+[Docker Compose](https://docs.docker.com/compose/) to streamline setup and
+deployment.
 
 ### Requirements
 
-The project requirements are listed in `requirements.txt` file. To install, run:
+- [Docker](https://www.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- A Discord server you have admin access to
+- A [Discord bot token](https://discord.com/developers/applications)
+- A valid Google Sheet ID
+- A `service.json` file for connecting to Google Sheets
 
-```sh
-pip install -r requirements.txt
-```
+#### Discord
+
+For development, create your own Discord server and dedicated bot instance.
+
+1. In your Discord app, go to User Settings > Advanced and enable "Developer
+   Mode"
+2. Create a Discord Server
+3. In your
+   [Discord Developer Portal](https://discord.com/developers/applications),
+   click "New Application"
+   - In the Settings > OAuth2 section, use the "OAuth2 URL Generator" helper and
+     select:
+     - Scopes: `bot`, `applications.commands`
+     - Bot Permissions: `Administrator`
+   - Use the generated invitation URL at the bottom of the page to invite the
+     bot to your Discord server
+   - Additionally, reference the
+     [Discord Developer Documentation](https://discord.com/developers/docs/intro)
+
+#### How to acquire a `service.json` file
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create or select an existing project.
+3. Enable the **Google Sheets API** for your project:
+   - Navigate to **APIs & Services > Library**.
+   - Search for "Google Sheets API" and enable it.
+4. Create a **Service Account**:
+   - Go to **APIs & Services > Credentials**.
+   - Click **Create Credentials > Service Account**.
+   - Fill in the details and create the account.
+5. Create and download the JSON key:
+   - In the Service Account details, go to the **Keys** tab.
+   - Click **Add Key > Create new key**.
+   - Choose JSON format and download the file.
+6. Rename the downloaded JSON file to `service.json` and place it in the
+   project's root directory.
+
+##### Share Your Google Sheet with the Service Account
+
+- Open your Google Sheet.
+- Share it with the **client_email** from your `service.json` file with at least
+  **Viewer** access.
 
 ### Secrets
 
@@ -116,23 +127,102 @@ Now you can modify the example `.env` file with your values.
 | WOM_API_KEY               | The unique key for connecting to the Wise Old Man API.                                | Ask a project admin.                                                 |
 | WOM_GROUP_ID              | The unique ID for the clan group on Wise Old Man.                                     | Ask a project admin.                                                 |
 | AUTOMATION_CHANNEL_ID     | The unique ID of the channel that automation messages will sent.                      | Your own Discord server channel: right click, "Copy Channel ID".     |
-| TRICK_OR_TREAT_ENABLED    | Boolean flag that determines if the command should be uploaded.                       |                                                                      |
+| TRICK_OR_TREAT_ENABLED    | Boolean flag that determines if the command should be uploaded.                       | Your own Discord server channel: right click, "Copy Channel ID".     |
 | TRICK_OR_TREAT_CHANNEL_ID | The channel ID where the trick or treat command can be run.                           | Your own Discord server: right click, "Copy Channel ID".             |
+| RAFFLE_CHANNEL_ID         | The unique ID of the channel that will house the raffle.                              | Your own Discord server channel: right click, "Copy Channel ID".     |
+| DB_ROOT                   | The password used by the root database account.                                       | Generate a secure password.                                          |
+| DB_USER                   | The name of the user account the bot will use to access the database.                 | Any value. Eg: test_user                                             |
+| DB_PASS                   | The password of the account the bot will use to access the database.                  | Generate a secure password.                                          |
+| DB_NAME                   | The name of the database the bot will attempt to connect to.                          | Any value. Eg: bot_test                                              |
 
-## Running
+### Migrations
 
-With everything installed, and in the base directory of the application, the bot
-can be started with:
+You will need to run the database migrations before the bot will be able to use
+the database. To do so, you can run the following command. You will need to do
+this every time the database schema changes. Migration files live inside the
+`alembic/versions` directory.
 
 ```sh
-python main.py
+make migrate
 ```
 
-To enable uploading of slash commands, you will need to pass the `--upload`
-argument when starting the bot:
+### Running inside Docker
+
+Now everything is ready, you can bring the project online with the following
+command.
 
 ```sh
-python main.py --upload
+make up
+```
+
+You should now see in the console the database spinning up, followed by the bot.
+The bot should then shortly connect to your Discord server. Voilà.
+
+#### Stopping the project
+
+So you've done some work, and want to pack it in for the day? You can kill the
+project by either doing `CTRL+C` twice in the terminal window running the docker
+containers. Or with the following command if running detatched.
+
+```sh
+make down
+```
+
+## Makefile
+
+This project includes a `Makefile` with handy commands to simplify development.
+If at any point a `make` command doesn't work, you can open the `Makefile` to
+view its source command and try running that instead.
+
+### Commands
+
+- `make up`\
+  Starts the containers using `docker compose up`.
+
+- `make down`\
+  Stops and removes the containers.
+
+- `make test`\
+  Runs the test suite.
+
+- `make migrate`\
+  Runs the database migrations.
+
+- `make revision`\
+  Creates a new database migration. Expects a `DESC` parameter. Eg:
+  `make revision DESC="added a new column to the members table"`
+
+- `make downgrade`\
+  Reverts the most recent database migration.
+
+## Tooling
+
+As all dependencies are installed within the Docker container, you might find
+your editor complaining it can't find the library referenced in the code. To
+aleviate this we can install the project dependencies in the project root so our
+tooling can pick them up.
+
+### Virtual Environment
+
+It is recommended to use Python's virtual environments when installing
+dependencies.
+
+```sh
+python -m venv .venv
+```
+
+This will create a directory `.venv`. To activate the environment, run:
+
+```sh
+source .venv/bin/activate
+```
+
+### Requirements
+
+The project requirements are listed in `requirements.txt` file. To install, run:
+
+```sh
+pip install -r requirements.txt
 ```
 
 ## Logs
@@ -151,57 +241,11 @@ directory mirrors `ironforgedbot`.
 To execute the entire test suite run:
 
 ```sh
-python run_tests.py
+make test
 ```
 
-To execute a specific test file, run:
-
-```sh
-python -m unittest tests/path/to/file.py
-```
-
-When creating new test files, the filename must follow this pattern `*_test.py`.
-And the class name must follow this pattern `Test*`.
-
-### Discord
-
-For development, create your own Discord server and dedicated bot instance.
-
-1. In your Discord app, go to User Settings > Advanced and enable "Developer
-   Mode"
-1. Create a Discord Server
-1. In your
-   [Discord Developer Portal](https://discord.com/developers/applications),
-   click "New Application"
-   - In the Settings > OAuth2 section, use the "OAuth2 URL Generator" helper and
-     select:
-     - Scopes: `bot`, `applications.commands`
-     - Bot Permissions: `Administrator`
-   - Use the generated invitation URL at the bottom of the page to invite the
-     bot to your Discord server
-   - Additionally, reference the
-     [Discord Developer Documentation](https://discord.com/developers/docs/intro)
-
-After you have updated your `.env` (see [Keys](#keys)) and uploaded commands to
-your serer (see [Running](#running)), you should be able to:
-
-- See the bot in your Discord's Server Settings > Integrations > Bots and Apps
-- Use [slash commands](#commands) in your Discord channel to trigger bot
-  functionality
-
-### Spreadsheets
-
-Go to GCP, in any of your projects, create a new SA -> Manage Keys -> Add ->
-JSON
-
-Save it as `service.json`
-
-Go to the spreadsheet and share it with the `client_email` from the generated
-key.
-
-If it's a fresh GCP project, or you never enabled Google Sheets API, there will
-be 403 error with the direct link to enable it. You might need to wait for a few
-minutes for chances to kick in.
+When creating new test files, the filename must follow the pattern `*_test.py`.
+And the class name must follow the pattern `Test*`.
 
 ## Data
 
@@ -275,8 +319,9 @@ An `Activity` file looks something like this:
 
 ## Contributing
 
-All contributions must:
+Contributions must:
 
+- Address a specific issue by ticket number.
 - Pass all tests in the test suite.
 - Code style must conform to the black formatter.
 - If the contribution adds new functionality, tests covering this must also be
