@@ -30,6 +30,9 @@ async def remove_member_role(
 
             roles_removed.append(role)
 
+    if len(roles_removed) < 1:
+        return
+
     try:
         await member.remove_roles(
             *roles_removed, reason="Member removed. Cleaning up roles."
