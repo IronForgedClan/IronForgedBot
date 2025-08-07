@@ -1,4 +1,10 @@
-.PHONY: test shell migrate revision downgrade
+.PHONY: up down test shell migrate revision downgrade
+
+up:
+	docker compose up
+
+down:
+	docker compose down
 
 test:
 	docker compose run --rm bot python run_tests.py
