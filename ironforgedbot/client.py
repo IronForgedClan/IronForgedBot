@@ -13,6 +13,7 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG, ENVIRONMENT
+from ironforgedbot.effects.add_banned_role import add_banned_role
 from ironforgedbot.effects.add_member_role import add_member_role
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
 from ironforgedbot.effects.nickname_change import nickname_change
@@ -196,3 +197,6 @@ class DiscordClient(discord.Client):
 
             if ROLE.MEMBER in roles_removed:
                 await remove_member_role(report_channel, after)
+
+            if ROLE.BANNED in roles_added:
+                await add_banned_role(report_channel, after)
