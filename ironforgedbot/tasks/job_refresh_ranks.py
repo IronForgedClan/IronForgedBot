@@ -81,19 +81,6 @@ async def job_refresh_ranks(
 
             current_rank = get_rank_from_member(discord_member)
 
-            if current_rank in GOD_ALIGNMENT:
-                logger.debug("...has God alignment")
-                continue
-
-            if current_rank == RANK.GOD:
-                logger.debug("...has God role but no alignment")
-                message = (
-                    f"{discord_member.mention} has {find_emoji(current_rank)} "
-                    "God rank but no alignment."
-                )
-                _ = await report_channel.send(message)
-                continue
-
             score_service = ScoreService(HTTP)
             current_points = 0
             try:
@@ -121,6 +108,21 @@ async def job_refresh_ranks(
                 )
                 continue
 
+            await history.track_score(member.discord_id, current_points)
+
+            if current_rank in GOD_ALIGNMENT:
+                logger.debug("...has God alignment")
+                continue
+
+            if current_rank == RANK.GOD:
+                logger.debug("...has God role but no alignment")
+                message = (
+                    f"{discord_member.mention} has {find_emoji(current_rank)} "
+                    "God rank but no alignment."
+                )
+                _ = await report_channel.send(message)
+                continue
+
             correct_rank = get_rank_from_points(current_points)
 
             if check_member_has_role(discord_member, ROLE.PROSPECT):
@@ -137,7 +139,6 @@ async def job_refresh_ranks(
                 if datetime.now(timezone.utc) >= member.joined_date + timedelta(
                     days=PROBATION_DAYS
                 ):
-                    await history.track_score(member.discord_id, current_points)
                     logger.debug("...completed probation")
                     _ = await report_channel.send(
                         (
@@ -163,7 +164,6 @@ async def job_refresh_ranks(
                 continue
 
             if current_rank != str(correct_rank):
-                await history.track_score(member.discord_id, current_points)
                 logger.debug("...needs upgrading")
                 message = (
                     f"{discord_member.mention} needs upgrading "
@@ -173,7 +173,6 @@ async def job_refresh_ranks(
                 _ = await report_channel.send(message)
                 continue
 
-            await history.track_score(member.discord_id, current_points)
             logger.debug("...no change")
 
         await member_service.close()
