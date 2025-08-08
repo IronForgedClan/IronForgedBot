@@ -4,7 +4,7 @@ import time
 from discord.errors import Forbidden
 from ironforgedbot.common.helpers import format_duration, get_discord_role
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, is_member_banned
 from ironforgedbot.common.text_formatters import text_ul
 from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.database.database import db
@@ -16,6 +16,7 @@ async def remove_member_role(
     start_time = time.perf_counter()
     member_roles = set(role.name for role in member.roles)
     roles_to_remove = RANK.list() + ROLE.list() + GOD_ALIGNMENT.list()
+    is_banned = is_member_banned(member)
 
     roles_removed = []
     for role_name in roles_to_remove:
@@ -29,6 +30,9 @@ async def remove_member_role(
                 raise ValueError(f"Unable to get role {role_name}")
 
             roles_removed.append(role)
+
+    if len(roles_removed) < 1:
+        return
 
     try:
         await member.remove_roles(
@@ -52,6 +56,16 @@ async def remove_member_role(
         await service.disable_member(db_member.id)
 
         end_time = time.perf_counter()
+
+        if is_banned:
+            await report_channel.send(
+                f":x: **Member banned:** {member.mention} has been removed. "
+                "Disabled member in database. Removed the following **discord roles** "
+                f"from this user:\n{text_ul([r.name for r in roles_removed])}"
+                f"Processed in **{format_duration(start_time, end_time)}**.",
+            )
+            return
+
         await report_channel.send(
             f":x: **Member disabled:** {member.mention} has been removed. "
             "Disabled member in database. Removed the following **discord roles** "

@@ -36,6 +36,9 @@ class Config:
             if self.TRICK_OR_TREAT_ENABLED
             else 1
         )
+        self.TRICK_OR_TREAT_COOLDOWN_SECONDS: int = int(
+            os.getenv("TRICK_OR_TREAT_COOLDOWN_SECONDS") or 3600
+        )
 
         self.validate_config()
 

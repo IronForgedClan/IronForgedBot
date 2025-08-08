@@ -78,3 +78,10 @@ def member_has_any_roles(
     actual_roles = set([r.name.lower() for r in member.roles])
 
     return len(required_roles & actual_roles) > 0
+
+
+def is_member_banned(member: discord.Member | None) -> bool:
+    if not member:
+        raise Exception()
+
+    return check_member_has_role(member, ROLE.BANNED)

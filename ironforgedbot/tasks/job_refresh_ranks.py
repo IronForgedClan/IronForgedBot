@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import time
 
 import discord
+from ironforgedbot.common.roles import ROLE, check_member_has_role, is_member_banned
 from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
@@ -17,10 +18,11 @@ from ironforgedbot.common.ranks import (
     get_rank_from_member,
     get_rank_from_points,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role, member_has_any_roles
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
+from ironforgedbot.models.score_history import ScoreHistory
 from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import (
     HiscoresNotFound,
     ScoreService,
@@ -47,6 +49,7 @@ async def job_refresh_ranks(
 
     async with db.get_session() as session:
         member_service = MemberService(session)
+        history = ScoreHistoryService(session)
         members = await member_service.get_all_active_members()
 
         for index, member in enumerate(members):
@@ -72,20 +75,11 @@ async def job_refresh_ranks(
                 )
                 continue
 
+            if is_member_banned(discord_member):
+                logger.debug("...banned")
+                continue
+
             current_rank = get_rank_from_member(discord_member)
-
-            if current_rank in GOD_ALIGNMENT:
-                logger.debug("...has God alignment")
-                continue
-
-            if current_rank == RANK.GOD:
-                logger.debug("...has God role but no alignment")
-                message = (
-                    f"{discord_member.mention} has {find_emoji(current_rank)} "
-                    "God rank but no alignment."
-                )
-                _ = await report_channel.send(message)
-                continue
 
             score_service = ScoreService(HTTP)
             current_points = 0
@@ -112,6 +106,21 @@ async def job_refresh_ranks(
                 _ = await report_channel.send(
                     f"Unhandled error getting points for {discord_member.mention}."
                 )
+                continue
+
+            await history.track_score(member.discord_id, current_points)
+
+            if current_rank in GOD_ALIGNMENT:
+                logger.debug("...has God alignment")
+                continue
+
+            if current_rank == RANK.GOD:
+                logger.debug("...has God role but no alignment")
+                message = (
+                    f"{discord_member.mention} has {find_emoji(current_rank)} "
+                    "God rank but no alignment."
+                )
+                _ = await report_channel.send(message)
                 continue
 
             correct_rank = get_rank_from_points(current_points)
