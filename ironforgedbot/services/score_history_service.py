@@ -29,7 +29,7 @@ class ScoreHistoryService:
             )
             raise ReferenceError(f"Member with id {discord_id} not found")
 
-        logger.info(f"Recording a score of {score} for {member.nickname} ({member.id)")
+        logger.info(f"Recording a score of {score} for {member.nickname} ({member.id})")
 
         self.db.add(
             ScoreHistory(member_id=member.id, score=score, nickname=member.nickname)
