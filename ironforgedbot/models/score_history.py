@@ -13,7 +13,7 @@ class ScoreHistory(Base):
         String(length=36), ForeignKey(column="members.id"), nullable=False
     )
     nickname: Mapped[str] = mapped_column(
-        String(length=12), unique=True, nullable=False
+        String(length=12), unique=False, nullable=False
     )
     score: Mapped[int] = mapped_column(Integer, default=0)
     date: Mapped[datetime] = mapped_column(
