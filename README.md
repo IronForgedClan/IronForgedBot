@@ -117,23 +117,24 @@ Now you can modify the example `.env` file with your values.
 
 #### Keys
 
-| Key                       | Explanation                                                                           | Source                                                               |
-| ------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| ENVIRONMENT               | Defines the environment the bot is running in: 'dev', 'staging', 'prod'               |                                                                      |
-| TEMP_DIR                  | The location on disk where temporary files are stored. Default value is `./temp`.     |                                                                      |
-| SHEET_ID                  | The ID of the Google Sheet, such as `sheets.google.com/spreadsheets/d/SHEET_ID/edit`. | Ask a project admin for a template sheet, then create your own copy. |
-| GUILD_ID                  | The ID of the Discord guild.                                                          | Your own Discord server: right click, "Copy Server ID".              |
-| BOT_TOKEN                 | The unique token for the application.                                                 | Your own Discord Developer Portal: Applications > Bot > Reset Token. |
-| WOM_API_KEY               | The unique key for connecting to the Wise Old Man API.                                | Ask a project admin.                                                 |
-| WOM_GROUP_ID              | The unique ID for the clan group on Wise Old Man.                                     | Ask a project admin.                                                 |
-| AUTOMATION_CHANNEL_ID     | The unique ID of the channel that automation messages will sent.                      | Your own Discord server channel: right click, "Copy Channel ID".     |
-| TRICK_OR_TREAT_ENABLED    | Boolean flag that determines if the command should be uploaded.                       | Your own Discord server channel: right click, "Copy Channel ID".     |
-| TRICK_OR_TREAT_CHANNEL_ID | The channel ID where the trick or treat command can be run.                           | Your own Discord server: right click, "Copy Channel ID".             |
-| RAFFLE_CHANNEL_ID         | The unique ID of the channel that will house the raffle.                              | Your own Discord server channel: right click, "Copy Channel ID".     |
-| DB_ROOT                   | The password used by the root database account.                                       | Generate a secure password.                                          |
-| DB_USER                   | The name of the user account the bot will use to access the database.                 | Any value. Eg: test_user                                             |
-| DB_PASS                   | The password of the account the bot will use to access the database.                  | Generate a secure password.                                          |
-| DB_NAME                   | The name of the database the bot will attempt to connect to.                          | Any value. Eg: bot_test                                              |
+| Key                             | Explanation                                                                           | Source                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| ENVIRONMENT                     | Defines the environment the bot is running in: 'dev', 'staging', 'prod'               |                                                                      |
+| TEMP_DIR                        | The location on disk where temporary files are stored. Default value is `./temp`.     |                                                                      |
+| SHEET_ID                        | The ID of the Google Sheet, such as `sheets.google.com/spreadsheets/d/SHEET_ID/edit`. | Ask a project admin for a template sheet, then create your own copy. |
+| GUILD_ID                        | The ID of the Discord guild.                                                          | Your own Discord server: right click, "Copy Server ID".              |
+| BOT_TOKEN                       | The unique token for the application.                                                 | Your own Discord Developer Portal: Applications > Bot > Reset Token. |
+| WOM_API_KEY                     | The unique key for connecting to the Wise Old Man API.                                | Ask a project admin.                                                 |
+| WOM_GROUP_ID                    | The unique ID for the clan group on Wise Old Man.                                     | Ask a project admin.                                                 |
+| AUTOMATION_CHANNEL_ID           | The unique ID of the channel that automation messages will sent.                      | Your own Discord server channel: right click, "Copy Channel ID".     |
+| TRICK_OR_TREAT_ENABLED          | Boolean flag that determines if the command should be uploaded.                       | Your own Discord server channel: right click, "Copy Channel ID".     |
+| TRICK_OR_TREAT_CHANNEL_ID       | The channel ID where the trick or treat command can be run.                           | Your own Discord server: right click, "Copy Channel ID".             |
+| TRICK_OR_TREAT_COOLDOWN_SECONDS | The number of seconds allowed between command executions. Default 3600.               |                                                                      |
+| RAFFLE_CHANNEL_ID               | The unique ID of the channel that will house the raffle.                              | Your own Discord server channel: right click, "Copy Channel ID".     |
+| DB_ROOT                         | The password used by the root database account.                                       | Generate a secure password.                                          |
+| DB_USER                         | The name of the user account the bot will use to access the database.                 | Any value. Eg: test_user                                             |
+| DB_PASS                         | The password of the account the bot will use to access the database.                  | Generate a secure password.                                          |
+| DB_NAME                         | The name of the database the bot will attempt to connect to.                          | Any value. Eg: bot_test                                              |
 
 ### Migrations
 
