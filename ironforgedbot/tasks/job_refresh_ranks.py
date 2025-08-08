@@ -20,7 +20,9 @@ from ironforgedbot.common.ranks import (
 )
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
+from ironforgedbot.models.score_history import ScoreHistory
 from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import (
     HiscoresNotFound,
     ScoreService,
@@ -47,6 +49,7 @@ async def job_refresh_ranks(
 
     async with db.get_session() as session:
         member_service = MemberService(session)
+        history = ScoreHistoryService(session)
         members = await member_service.get_all_active_members()
 
         for index, member in enumerate(members):
@@ -134,6 +137,7 @@ async def job_refresh_ranks(
                 if datetime.now(timezone.utc) >= member.joined_date + timedelta(
                     days=PROBATION_DAYS
                 ):
+                    await history.track_score(member.discord_id, current_points)
                     logger.debug("...completed probation")
                     _ = await report_channel.send(
                         (
@@ -159,6 +163,7 @@ async def job_refresh_ranks(
                 continue
 
             if current_rank != str(correct_rank):
+                await history.track_score(member.discord_id, current_points)
                 logger.debug("...needs upgrading")
                 message = (
                     f"{discord_member.mention} needs upgrading "
@@ -168,6 +173,7 @@ async def job_refresh_ranks(
                 _ = await report_channel.send(message)
                 continue
 
+            await history.track_score(member.discord_id, current_points)
             logger.debug("...no change")
 
         await member_service.close()
