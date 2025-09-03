@@ -62,10 +62,12 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                         change_text += "Nickname changed "
 
                     discord_rank = get_rank_from_member(discord_member)
+                    if discord_rank in GOD_ALIGNMENT.list():
+                        discord_rank = RANK.GOD
+
                     if discord_rank:
                         if member.rank != discord_rank:
                             await service.change_rank(member.id, RANK(discord_rank))
-                            change_text += "Rank changed"
 
                     if len(change_text) > 0:
                         output.append([safe_nick, "Updated", change_text])
