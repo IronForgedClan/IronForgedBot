@@ -3,6 +3,7 @@ from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.decorators import require_role
 from ironforgedbot.common.roles import ROLE
 
+
 @require_role(ROLE.MEMBER)
 async def cmd_help(interaction: discord.Interaction):
     """Display a list of available commands and what they do."""
@@ -15,7 +16,6 @@ async def cmd_help(interaction: discord.Interaction):
         "• `/breakdown [player]` - Show a player's point breakdown from skills and activities.\n"
         "• `/ingots [player]` - Show a player's current ingot amount.\n"
         "• `/help` - Show this help message.\n"
-        # Add more as you go...
     )
 
     embed = build_response_embed(
