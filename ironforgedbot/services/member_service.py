@@ -201,7 +201,7 @@ class MemberService:
             )
             member.nickname = new_nickname
 
-        if rank:
+        if member.rank != rank:
             self.db.add(
                 Changelog(
                     member_id=member.id,
@@ -213,7 +213,7 @@ class MemberService:
                     timestamp=now,
                 )
             )
-            member.nickname = new_nickname
+            member.rank = RANK(rank)
 
         member.last_changed_date = now
 
