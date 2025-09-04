@@ -1,13 +1,13 @@
 import discord
+
 from ironforgedbot.common.responses import build_response_embed
-from ironforgedbot.decorators import require_role
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.decorators import require_role
 
 
 @require_role(ROLE.MEMBER)
 async def cmd_help(interaction: discord.Interaction):
     """Display a list of available commands and what they do."""
-
     assert interaction.guild
 
     help_text = (
