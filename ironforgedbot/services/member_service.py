@@ -303,7 +303,7 @@ class MemberService:
         except Exception as e:
             logger.critical(e)
             await self.db.rollback()
-            raise
+            raise e
 
         return member
 
