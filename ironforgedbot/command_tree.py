@@ -18,6 +18,7 @@ from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.commands.help.cmd_help import cmd_help
 from ironforgedbot.config import CONFIG, ENVIRONMENT
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,13 @@ class IronForgedCommands:
                 name="admin",
                 description="Collection of administrative actions.",
                 callback=cmd_admin,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="help",
+                description="Show a list of available commands.",
+                callback=cmd_help,
             )
         )
         if CONFIG.TRICK_OR_TREAT_ENABLED:
