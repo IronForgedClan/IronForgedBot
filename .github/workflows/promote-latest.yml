@@ -31,11 +31,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag image as latest
+      - name: Pull latest build
+        run: docker pull ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+
+      - name: Tag as latest
         run: |
           docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:latest
 
-      - name: Push image to registry
+      - name: Push latest tag to registry
         run: |
           docker push ${{ env.IMAGE_NAME }}:latest
 
