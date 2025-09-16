@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 async def add_banned_role(report_channel: discord.TextChannel, member: discord.Member):
+    # short circuit for now while discussing improved strategy
+    return
     start_time = time.perf_counter()
     roles_to_remove = set(role.name for role in member.roles)
     member_roles = RANK.list() + ROLE.list() + GOD_ALIGNMENT.list()
