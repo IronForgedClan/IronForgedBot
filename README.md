@@ -147,6 +147,14 @@ this every time the database schema changes. Migration files live inside the
 make migrate
 ```
 
+> [!NOTE]\
+> There is a chicken and egg issue here where you can't run the project without
+> a database and its migrations, but you can't run the migrations without a
+> database to talk to. In order to resolve this the first time the project is
+> set up, you will need to spin up the initial containers with `make up` before
+> continuing to run the migrations. Be warned that you will see errors in the
+> output, as we haven't run the migrations yet.
+
 ### Running inside Docker
 
 Now everything is ready, you can bring the project online with the following
