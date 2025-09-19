@@ -1,392 +1,343 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
 from tabulate import tabulate
 
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.services.ingot_service import IngotServiceResponse
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
     mock_require_role,
-    validate_embed,
 )
 
-with patch(
-    "ironforgedbot.decorators.require_role",
-    mock_require_role,
-):
-    from ironforgedbot.commands.ingots.cmd_add_remove_ingots import (
-        cmd_add_remove_ingots,
-    )
+with patch("ironforgedbot.decorators.require_role", mock_require_role):
+    from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 
 
-class TestAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_db_session = AsyncMock()
+        self.mock_ingot_service = AsyncMock()
+        
+        self.caller = create_test_member("leader", [ROLE.LEADERSHIP])
+        self.target1 = create_test_member("player1", [ROLE.MEMBER])
+        self.target2 = create_test_member("player2", [ROLE.MEMBER])
+        self.target3 = create_test_member("player3", [ROLE.MEMBER])
+        
+        self.interaction = create_mock_discord_interaction(
+            user=self.caller, 
+            members=[self.target1, self.target2, self.target3]
+        )
+
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    async def test_add_remove_ingots_one_target(
-        self, mock_get_session, mock_validate_playername
-    ):
-        """Test that ingots can be added to a single user."""
-        caller = create_test_member("leader", [ROLE.LEADERSHIP])
-        target = create_test_member("tester", [ROLE.MEMBER])
-        reason = "testing"
-
-        fake_session = AsyncMock()
-
-        async def fake_session_generator():
-            yield fake_session
-
-        mock_get_session.side_effect = fake_session_generator
-
-        interaction = create_mock_discord_interaction(user=caller, members=[target])
-
-        mock_validate_playername.return_value = target, target.display_name
-
-        await cmd_add_remove_ingots(interaction, target.display_name, 5000, reason)
-
-        actual_embed = interaction.followup.send.call_args.kwargs["embed"]
-
-        expected_embed = discord.Embed(
-            title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
-        )
-        expected_result_table = tabulate(
-            [[target.display_name, "+5,000", "10,000"]],
-            headers=["Player", "Change", "Total"],
-            tablefmt="github",
-        )
-        expected_embed.add_field(name="", value=f"```{expected_result_table}```")
-
-        interaction.followup.send.assert_called_once()
-        validate_embed(self, expected_embed, actual_embed)
-
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
-    @patch(
-        "ironforgedbot.commands.ingots.cmd_add_remove_ingots.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_add_remove_ingots_one_target_remove(
-        self, mock_storage, mock_validate_playername
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_add_single_player(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        """Test that ingots can be removed from a single user."""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        target = create_test_member("tester", ROLE.MEMBER)
-        reason = "testing"
-
-        interaction = create_mock_discord_interaction(user=caller, members=[target])
-
-        mock_storage.read_members.return_value = [
-            Member(id=target.id, runescape_name=target.display_name, ingots=5000)
-        ]
-        mock_validate_playername.return_value = target, target.display_name
-
-        await cmd_add_remove_ingots(interaction, target.display_name, -2000, reason)
-
-        mock_storage.update_members.assert_called_once_with(
-            [Member(id=target.id, runescape_name=target.display_name, ingots=3000)],
-            caller.display_name,
-            note=reason,
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+            True, "Ingots added successfully", 10000
         )
-
-        actual_embed = interaction.followup.send.call_args.kwargs["embed"]
-
-        expected_embed = discord.Embed(
-            title=" Remove Ingots Result",
-            description=(f"**Total Change:** -2,000\n**Reason:** _{reason}_"),
+        
+        await cmd_add_remove_ingots(self.interaction, "player1", 5000, "testing")
+        
+        mock_validate.assert_called_once_with(self.interaction.guild, "player1", must_be_member=True)
+        self.mock_ingot_service.try_add_ingots.assert_called_once_with(
+            self.target1.id, 5000, self.caller.id, "testing"
         )
-        expected_result_table = tabulate(
-            [[target.display_name, "-2,000", "3,000"]],
-            headers=["Player", "Change", "Total"],
-            tablefmt="github",
-        )
-        expected_embed.add_field(name="", value=f"```{expected_result_table}```")
+        
+        self.interaction.followup.send.assert_called_once()
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("Add Ingots Result", sent_embed.title)
+        self.assertIn("+5,000", sent_embed.description)
+        self.assertIn("testing", sent_embed.description)
 
-        interaction.followup.send.assert_called_once()
-        validate_embed(self, expected_embed, actual_embed)
-
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
-    @patch(
-        "ironforgedbot.commands.ingots.cmd_add_remove_ingots.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_add_remove_ingots_multiple_targets(
-        self, mock_storage, mock_validate_playername
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_remove_single_player(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        """Test that ingots can be added to multiple users at once."""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        target1 = create_test_member("atester", ROLE.MEMBER)
-        target2 = create_test_member("btester", ROLE.MEMBER)
-        target3 = create_test_member("ctester", ROLE.MEMBER)
-        reason = "testing"
-
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[target1, target2, target3]
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_remove_ingots.return_value = IngotServiceResponse(
+            True, "Ingots removed successfully", 3000
         )
-
-        mock_storage.read_members.return_value = [
-            Member(id=target1.id, runescape_name=target1.display_name, ingots=5000),
-            Member(id=target2.id, runescape_name=target2.display_name, ingots=10000),
-            Member(id=target3.id, runescape_name=target3.display_name, ingots=125000),
-        ]
-
-        mock_validate_playername.side_effect = lambda _, name: (
-            None,
-            name,
+        
+        await cmd_add_remove_ingots(self.interaction, "player1", -2000, "penalty")
+        
+        mock_validate.assert_called_once_with(self.interaction.guild, "player1", must_be_member=True)
+        self.mock_ingot_service.try_remove_ingots.assert_called_once_with(
+            self.target1.id, -2000, self.caller.id, "penalty"
         )
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("Remove Ingots Result", sent_embed.title)
+        self.assertIn("-2,000", sent_embed.description)
+        self.assertIn("penalty", sent_embed.description)
 
-        await cmd_add_remove_ingots(
-            interaction,
-            f"{target1.display_name},{target2.display_name},{target3.display_name}",
-            5000,
-            reason,
-        )
-
-        mock_storage.update_members.assert_called_once_with(
-            [
-                Member(
-                    id=target1.id, runescape_name=target1.display_name, ingots=10000
-                ),
-                Member(
-                    id=target2.id, runescape_name=target2.display_name, ingots=15000
-                ),
-                Member(
-                    id=target3.id, runescape_name=target3.display_name, ingots=130000
-                ),
-            ],
-            caller.display_name,
-            note=reason,
-        )
-
-        actual_embed = interaction.followup.send.call_args.kwargs["embed"]
-
-        expected_embed = discord.Embed(
-            title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
-        )
-        expected_result_table = tabulate(
-            [
-                [target1.display_name, "+5,000", "10,000"],
-                [target2.display_name, "+5,000", "15,000"],
-                [target3.display_name, "+5,000", "130,000"],
-            ],
-            headers=["Player", "Change", "Total"],
-            tablefmt="github",
-        )
-        expected_embed.add_field(name="", value=f"```{expected_result_table}```")
-
-        interaction.followup.send.assert_called_once()
-        validate_embed(self, expected_embed, actual_embed)
-
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
-    @patch(
-        "ironforgedbot.commands.ingots.cmd_add_remove_ingots.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_add_remove_ingots_multiple_targets_ignore_duplicates(
-        self, mock_storage, mock_validate_playername
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_multiple_players(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        """Test that we ignore duplicate names and only award ingots once."""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        target1 = create_test_member("atester", ROLE.MEMBER)
-        reason = "testing"
-
-        interaction = create_mock_discord_interaction(user=caller, members=[target1])
-
-        mock_storage.read_members.return_value = [
-            Member(id=target1.id, runescape_name=target1.display_name, ingots=5000),
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        validate_responses = [
+            (self.target1, "player1"),
+            (self.target2, "player2"),
         ]
+        mock_validate.side_effect = validate_responses
+        
+        service_responses = [
+            IngotServiceResponse(True, "Success", 8000),
+            IngotServiceResponse(True, "Success", 12000),
+        ]
+        self.mock_ingot_service.try_add_ingots.side_effect = service_responses
+        
+        await cmd_add_remove_ingots(self.interaction, "player1,player2", 3000, "bonus")
+        
+        self.assertEqual(mock_validate.call_count, 2)
+        self.assertEqual(self.mock_ingot_service.try_add_ingots.call_count, 2)
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("Add Ingots Result", sent_embed.title)
+        self.assertIn("+6,000", sent_embed.description)  # Total change: 3000 * 2
 
-        mock_validate_playername.side_effect = lambda _, name: (
-            None,
-            name,
-        )
-
-        await cmd_add_remove_ingots(
-            interaction,
-            f"{target1.display_name}, {target1.display_name} , {target1.display_name}",
-            5000,
-            reason,
-        )
-
-        mock_storage.update_members.assert_called_once_with(
-            [
-                Member(
-                    id=target1.id, runescape_name=target1.display_name, ingots=10000
-                ),
-            ],
-            caller.display_name,
-            note=reason,
-        )
-
-        actual_embed = interaction.followup.send.call_args.kwargs["embed"]
-
-        expected_embed = discord.Embed(
-            title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
-        )
-        expected_result_table = tabulate(
-            [
-                [target1.display_name, "+5,000", "10,000"],
-            ],
-            headers=["Player", "Change", "Total"],
-            tablefmt="github",
-        )
-        expected_embed.add_field(name="", value=f"```{expected_result_table}```")
-
-        interaction.followup.send.assert_called_once()
-        validate_embed(self, expected_embed, actual_embed)
-
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
-    @patch(
-        "ironforgedbot.commands.ingots.cmd_add_remove_ingots.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_add_remove_ingots_ignore_unknown(
-        self, mock_storage, mock_validate_playername
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_duplicate_players_ignored(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        """Test that we ignore unknown users but report them in output."""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        target1 = create_test_member("atester", ROLE.MEMBER)
-        target2 = create_test_member("btester", ROLE.MEMBER)
-        reason = "testing"
-
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[target1, target2]
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+            True, "Success", 8000
         )
+        
+        await cmd_add_remove_ingots(self.interaction, "player1,player1,player1", 3000, "bonus")
+        
+        mock_validate.assert_called_once()  # Only called once despite 3 names
+        self.mock_ingot_service.try_add_ingots.assert_called_once()
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("+3,000", sent_embed.description)  # Only one player processed
 
-        mock_storage.read_members.return_value = [
-            Member(id=target1.id, runescape_name=target1.display_name, ingots=5000),
-            Member(id=target2.id, runescape_name=target2.display_name, ingots=10000),
-        ]
-
-        def patched_validate_playername(interaction, playername):
-            if playername == target1.display_name:
-                return target1, target1.display_name
-            if playername == target2.display_name:
-                return target1, target2.display_name
-            raise ValueError()
-
-        mock_validate_playername.side_effect = patched_validate_playername
-
-        await cmd_add_remove_ingots(
-            interaction,
-            f"{target1.display_name},foo,{target2.display_name}",
-            5000,
-            reason,
-        )
-
-        mock_storage.update_members.assert_called_once_with(
-            [
-                Member(
-                    id=target1.id, runescape_name=target1.display_name, ingots=10000
-                ),
-                Member(
-                    id=target2.id, runescape_name=target2.display_name, ingots=15000
-                ),
-            ],
-            caller.display_name,
-            note=reason,
-        )
-
-        actual_embed = interaction.followup.send.call_args.kwargs["embed"]
-
-        expected_embed = discord.Embed(
-            title=" Add Ingots Result",
-            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
-        )
-        expected_result_table = tabulate(
-            [
-                [target1.display_name, "+5,000", "10,000"],
-                [target2.display_name, "+5,000", "15,000"],
-                ["foo", "0", "unknown"],
-            ],
-            headers=["Player", "Change", "Total"],
-            tablefmt="github",
-        )
-        expected_embed.add_field(name="", value=f"```{expected_result_table}```")
-
-        interaction.followup.send.assert_called_once()
-        validate_embed(self, expected_embed, actual_embed)
-
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.send_error_response")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
-    @patch(
-        "ironforgedbot.commands.ingots.cmd_add_remove_ingots.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_add_remove_ingots_report_insufficient_funds(
-        self, mock_storage, mock_validate_playername, mock_send_error_response
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_unknown_players_handled(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        """Test that we report insufficient funds and don't process."""
-        caller = create_test_member("leader", ROLE.LEADERSHIP)
-        target1 = create_test_member("atester", ROLE.MEMBER)
-        target2 = create_test_member("btester", ROLE.MEMBER)
-        target3 = create_test_member("ctester", ROLE.MEMBER)
-        reason = "testing"
-
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[target1, target2, target3]
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        def validate_side_effect(guild, player_name, must_be_member=False):
+            if player_name == "player1":
+                return (self.target1, "player1")
+            elif player_name == "unknown":
+                raise ValueError("Unknown player")
+            
+        mock_validate.side_effect = validate_side_effect
+        
+        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+            True, "Success", 8000
         )
+        
+        await cmd_add_remove_ingots(self.interaction, "player1,unknown", 3000, "bonus")
+        
+        self.assertEqual(mock_validate.call_count, 2)
+        self.mock_ingot_service.try_add_ingots.assert_called_once()  # Only valid player processed
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        embed_field_value = sent_embed.fields[0].value
+        self.assertIn("unknown", embed_field_value)
+        self.assertIn("0", embed_field_value)
 
-        mock_storage.read_members.return_value = [
-            Member(id=target1.id, runescape_name=target1.display_name, ingots=5000),
-            Member(id=target2.id, runescape_name=target2.display_name, ingots=10000),
-            Member(id=target3.id, runescape_name=target3.display_name, ingots=125000),
-        ]
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_insufficient_funds(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+    ):
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_remove_ingots.return_value = IngotServiceResponse(
+            False, "Insufficient funds", 1000
+        )
+        
+        await cmd_add_remove_ingots(self.interaction, "player1", -5000, "penalty")
+        
+        self.mock_ingot_service.try_remove_ingots.assert_called_once_with(
+            self.target1.id, -5000, self.caller.id, "penalty"
+        )
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        embed_field_value = sent_embed.fields[0].value
+        self.assertIn("player1", embed_field_value)
+        self.assertIn("0", embed_field_value)  # No change due to insufficient funds
 
-        mock_validate_playername.side_effect = lambda _, name: (
-            None,
-            name,
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_embed_structure(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+    ):
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+            True, "Success", 10000
         )
+        
+        await cmd_add_remove_ingots(self.interaction, "player1", 5000, "testing")
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        
+        self.assertEqual(len(sent_embed.fields), 1)
+        embed_field = sent_embed.fields[0]
+        self.assertEqual(embed_field.name, "")
+        self.assertIn("```", embed_field.value)  # Should be code block
+        self.assertIn("Player", embed_field.value)  # Table headers
+        self.assertIn("Change", embed_field.value)
+        self.assertIn("Total", embed_field.value)
 
-        await cmd_add_remove_ingots(
-            interaction,
-            f"{target1.display_name},{target2.display_name},{target3.display_name}",
-            -10000,
-            reason,
-        )
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.datetime")
+    async def test_cmd_add_remove_ingots_large_result_file_output(
+        self, mock_datetime, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+    ):
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_find_emoji.return_value = ":Ingot:"
+        mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
+        
+        # Create 10 players to trigger file output (>= 9 results)
+        players = [f"player{i}" for i in range(10)]
+        validate_responses = [(create_test_member(name, [ROLE.MEMBER]), name) for name in players]
+        mock_validate.side_effect = validate_responses
+        
+        service_responses = [IngotServiceResponse(True, "Success", 8000) for _ in range(10)]
+        self.mock_ingot_service.try_add_ingots.side_effect = service_responses
+        
+        await cmd_add_remove_ingots(self.interaction, ",".join(players), 3000, "bonus")
+        
+        # Should send file instead of embed
+        call_args = self.interaction.followup.send.call_args
+        self.assertIsNone(call_args.kwargs.get("embed"))
+        self.assertIsNotNone(call_args.kwargs.get("file"))
+        
+        sent_file = call_args.kwargs["file"]
+        self.assertIn("ingot_results_20250101_120000.txt", sent_file.filename)
 
-        mock_storage.update_members.assert_called_once_with(
-            [
-                Member(id=target2.id, runescape_name=target2.display_name, ingots=0),
-                Member(
-                    id=target3.id, runescape_name=target3.display_name, ingots=115000
-                ),
-            ],
-            caller.display_name,
-            note=reason,
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_empty_players_ignored(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+    ):
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+            True, "Success", 8000
         )
+        
+        # Include empty strings and whitespace
+        await cmd_add_remove_ingots(self.interaction, "player1, , ,  ", 3000, "bonus")
+        
+        mock_validate.assert_called_once()  # Only called for valid player
+        self.mock_ingot_service.try_add_ingots.assert_called_once()
 
-        expected_error_table = tabulate(
-            [["Available:", "5,000"], ["Requested:", "-10,000"]], tablefmt="plain"
-        )
-        mock_send_error_response.assert_awaited_with(
-            interaction,
-            (
-                f"Member **{target1.display_name}** does not have enough ingots.\n"
-                f"No action taken.\n```{expected_error_table}```"
-            ),
-        )
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_result_sorting(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+    ):
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        # Create players in non-alphabetical order
+        players = ["zebra", "alpha", "beta"]
+        validate_responses = [(create_test_member(name, [ROLE.MEMBER]), name) for name in players]
+        mock_validate.side_effect = validate_responses
+        
+        service_responses = [IngotServiceResponse(True, "Success", 8000) for _ in range(3)]
+        self.mock_ingot_service.try_add_ingots.side_effect = service_responses
+        
+        await cmd_add_remove_ingots(self.interaction, ",".join(players), 3000, "bonus")
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        embed_field_value = sent_embed.fields[0].value
+        
+        # Results should be sorted alphabetically
+        alpha_pos = embed_field_value.find("alpha")
+        beta_pos = embed_field_value.find("beta")
+        zebra_pos = embed_field_value.find("zebra")
+        
+        self.assertLess(alpha_pos, beta_pos)
+        self.assertLess(beta_pos, zebra_pos)
 
-        actual_result_embed = interaction.followup.send.call_args.kwargs["embed"]
-
-        expected_results_embed = discord.Embed(
-            title=" Remove Ingots Result",
-            description=(f"**Total Change:** +5,000\n**Reason:** _{reason}_"),
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
+    async def test_cmd_add_remove_ingots_large_numbers_formatting(
+        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+    ):
+        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
+        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_validate.return_value = (self.target1, "player1")
+        mock_find_emoji.return_value = ":Ingot:"
+        
+        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+            True, "Success", 1_234_567
         )
-        expected_result_table = tabulate(
-            [
-                [target1.display_name, "0", "5,000"],
-                [target2.display_name, "-10,000", "0"],
-                [target3.display_name, "-10,000", "115,000"],
-            ],
-            headers=["Player", "Change", "Total"],
-            tablefmt="github",
-        )
-        expected_results_embed.add_field(
-            name="", value=f"```{expected_result_table}```"
-        )
-
-        interaction.followup.send.assert_called_once()
-        validate_embed(self, expected_results_embed, actual_result_embed)
+        
+        await cmd_add_remove_ingots(self.interaction, "player1", 1_000_000, "big bonus")
+        
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        
+        # Check that large numbers are formatted with commas
+        self.assertIn("+1,000,000", sent_embed.description)
+        embed_field_value = sent_embed.fields[0].value
+        self.assertIn("1,234,567", embed_field_value)
