@@ -64,7 +64,7 @@ class RaffleService:
         return list(result.scalars().all())
 
     async def _get_raffle_ticket(self, id: str) -> RaffleTicket | None:
-        result = await self.db.execute(select(RaffleTicket).where(Member.id == id))
+        result = await self.db.execute(select(RaffleTicket).where(RaffleTicket.member_id == id))
         return result.scalars().first()
 
     async def delete_all_tickets(self):
