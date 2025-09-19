@@ -60,4 +60,4 @@ class ScoreCache:
             return None
 
 
-SCORE_CACHE = ScoreCache(10)
+SCORE_CACHE = ScoreCache(600)
