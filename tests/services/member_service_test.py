@@ -68,7 +68,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.commit.assert_called()
 
-    async def test_rollback_raises_UniqueDiscordIdViolation_when_create_member_if_IntegrityError(
+    async def test_rollback_raises_UniqueDiscordIdViolation_if_IntegrityError(
         self,
     ) -> None:
         mock_db = AsyncMock()
@@ -85,7 +85,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.rollback.assert_awaited_once()
 
-    async def test_rollback_raises_UniqueNicknameViolation_when_create_member_if_IntegrityError(
+    async def test_rollback_raises_UniqueNicknameViolation_if_IntegrityError(
         self,
     ) -> None:
         mock_db = AsyncMock()
@@ -115,6 +115,8 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.rollback.assert_awaited_once()
 
+
+class TestMemberService_ReactivateMember(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.services.member_service.datetime")
     async def test_reactivate_member_should_succeed(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
@@ -204,7 +206,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
         mock_db.commit.assert_called()
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_reactivate_member_should_wipe_ingots(self, mock_datetime) -> None:
+    async def test_should_wipe_ingots_if_over_threshold(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         mock_datetime.now.return_value = now
 
@@ -278,9 +280,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
         mock_db.commit.assert_called()
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_reactivate_member_should_update_nickname(
-        self, mock_datetime
-    ) -> None:
+    async def test_should_update_nickname(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         old_nickname = "zezima"
         new_nickname = "muts"
@@ -355,7 +355,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
         mock_db.commit.assert_called()
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_reactivate_member_should_update_rank(self, mock_datetime) -> None:
+    async def test_should_update_rank(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         old_rank = RANK.IRON
         new_rank = RANK.ADAMANT
@@ -430,7 +430,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
         mock_db.commit.assert_called()
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_reactivate_member_should_raise_UniqueNicknameViolation_if_Integrity_error_and_rollback(
+    async def test_should_raise_UniqueNicknameViolation_if_Integrity_error_and_rollback(
         self, mock_datetime
     ) -> None:
         mock_db = AsyncMock()
@@ -465,6 +465,8 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.rollback.assert_awaited_once()
 
+
+class TestMemberService_DisableMember(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.services.member_service.datetime")
     async def test_disable_member_should_succeed(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
@@ -534,7 +536,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.commit.assert_called()
 
-    async def test_disable_member_should_raise_MemberNotFoundException(self) -> None:
+    async def test_should_raise_MemberNotFoundException(self) -> None:
         mock_db = AsyncMock()
         service = MemberService(db=mock_db)
 
@@ -546,9 +548,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
                 )
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_disable_member_exception_should_rollback(
-        self, mock_datetime
-    ) -> None:
+    async def test_exception_should_rollback(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         mock_datetime.now.return_value = now
 
@@ -579,6 +579,8 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.rollback.assert_called()
 
+
+class TestMemberService_ChangeNickname(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.services.member_service.datetime")
     async def test_change_nickname_should_succeed(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
@@ -648,7 +650,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.commit.assert_called()
 
-    async def test_change_nickname_should_raise_MemberNotFoundException(self) -> None:
+    async def test_should_raise_MemberNotFoundException(self) -> None:
         mock_db = AsyncMock()
         service = MemberService(db=mock_db)
 
@@ -660,9 +662,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
                 )
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_update_nickname_exception_should_rollback(
-        self, mock_datetime
-    ) -> None:
+    async def test_exception_should_rollback(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         mock_datetime.now.return_value = now
 
@@ -691,6 +691,8 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.rollback.assert_called()
 
+
+class TestMemberService_ChangeRank(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.services.member_service.datetime")
     async def test_change_rank_should_succeed(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
@@ -760,7 +762,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
 
         mock_db.commit.assert_called()
 
-    async def test_change_rank_should_raise_MemberNotFoundException(self) -> None:
+    async def test_should_raise_MemberNotFoundException(self) -> None:
         mock_db = AsyncMock()
         service = MemberService(db=mock_db)
 
@@ -772,7 +774,7 @@ class TestMemberService_CreateMember(unittest.IsolatedAsyncioTestCase):
                 )
 
     @patch("ironforgedbot.services.member_service.datetime")
-    async def test_update_rank_exception_should_rollback(self, mock_datetime) -> None:
+    async def test_exception_should_rollback(self, mock_datetime) -> None:
         now = datetime(2025, 1, 1, 12, 0, 0)
         mock_datetime.now.return_value = now
 
