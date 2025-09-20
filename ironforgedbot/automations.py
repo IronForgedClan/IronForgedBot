@@ -48,19 +48,21 @@ class IronForgedAutomations:
     async def stop(self):
         """Initiates shutdown and cleanup of scheduled jobs."""
         logger.info("Initiating shutdown of automations...")
-        
+
         try:
             # Stop scheduler from creating new jobs
             self.scheduler.pause()
-            
+
             # Wait for running jobs to complete with timeout
             await self.wait_for_jobs_to_complete()
-            
+
             # Clean up scheduler
             self.scheduler.remove_all_jobs()
             self.scheduler.shutdown(wait=False)
-            
-            await self.report_channel.send(f"### 🔴 **v{CONFIG.BOT_VERSION}** now offline")
+
+            await self.report_channel.send(
+                f"### 🔴 **v{CONFIG.BOT_VERSION}** now offline"
+            )
             logger.info("Automation shutdown completed successfully")
         except Exception as e:
             logger.error(f"Error during automation shutdown: {e}")
@@ -70,21 +72,23 @@ class IronForgedAutomations:
         """Waits for all active jobs to complete before completing."""
         async with self._job_lock:
             active_jobs = len(self._running_jobs)
-            
+
             if active_jobs < 1:
                 logger.info("No active jobs to wait for...")
                 return
-            
+
             logger.info(f"Waiting for {active_jobs} job(s) to finish...")
-            
+
             try:
                 # Wait for jobs with timeout
                 await asyncio.wait_for(
                     asyncio.gather(*self._running_jobs, return_exceptions=True),
-                    timeout=self._shutdown_timeout
+                    timeout=self._shutdown_timeout,
                 )
             except asyncio.TimeoutError:
-                logger.warning(f"Timeout waiting for jobs to complete after {self._shutdown_timeout}s, forcing shutdown")
+                logger.warning(
+                    f"Timeout waiting for jobs to complete after {self._shutdown_timeout}s, forcing shutdown"
+                )
                 # Cancel remaining jobs
                 for job in self._running_jobs:
                     if not job.done():
@@ -97,15 +101,17 @@ class IronForgedAutomations:
         """Track a running job by wrapping it in a task and storing the reference."""
         try:
             # Create the task
-            task = asyncio.create_task(self._safe_job_wrapper(job_func, *args, **kwargs))
-            
+            task = asyncio.create_task(
+                self._safe_job_wrapper(job_func, *args, **kwargs)
+            )
+
             # Safely add to tracking set
             async with self._job_lock:
                 self._running_jobs.add(task)
-            
+
             # Add cleanup callback
             task.add_done_callback(self._job_done_callback)
-            
+
             logger.debug(f"Started job: {job_func.__name__}")
             return task
         except Exception as e:
@@ -114,19 +120,20 @@ class IronForgedAutomations:
 
     def _job_done_callback(self, task: asyncio.Task):
         """Remove the job from the running_jobs set once it is finished."""
+
         async def cleanup():
             async with self._job_lock:
                 self._running_jobs.discard(task)
                 active_count = len(self._running_jobs)
-            
+
             # Log job completion with any exceptions
             if task.exception():
                 logger.error(f"Job completed with exception: {task.exception()}")
             else:
                 logger.debug(f"Job completed successfully")
-            
+
             logger.info(f"Job completed. {active_count} job(s) active.")
-        
+
         # Schedule cleanup to run in the event loop
         try:
             asyncio.create_task(cleanup())
@@ -136,18 +143,25 @@ class IronForgedAutomations:
 
     def _job_wrapper(self, job_func, *args, **kwargs):
         """Wrapper for tracking active jobs."""
+
         def wrapper():
             # Schedule the job tracking as a coroutine
             try:
                 asyncio.create_task(self.track_job(job_func, *args, **kwargs))
             except RuntimeError:
-                logger.error(f"Could not schedule job {job_func.__name__} - event loop closed")
+                logger.error(
+                    f"Could not schedule job {job_func.__name__} - event loop closed"
+                )
+
+        # Set a more descriptive name for the wrapper function
+        wrapper.__name__ = f"{job_func.__name__}_wrapper"
+        wrapper.__qualname__ = f"IronForgedAutomations.{job_func.__name__}_wrapper"
         return wrapper
-    
+
     async def _safe_job_wrapper(self, job_func, *args, **kwargs):
         """Safely execute a job function with comprehensive error handling."""
-        job_name = getattr(job_func, '__name__', str(job_func))
-        
+        job_name = getattr(job_func, "__name__", str(job_func))
+
         try:
             logger.info(f"Starting job: {job_name}")
             await job_func(*args, **kwargs)
@@ -156,10 +170,12 @@ class IronForgedAutomations:
             logger.warning(f"Job was cancelled: {job_name}")
             raise
         except Exception as e:
-            logger.error(f"Job failed with exception: {job_name} - {type(e).__name__}: {e}")
+            logger.error(
+                f"Job failed with exception: {job_name} - {type(e).__name__}: {e}"
+            )
             # Send error notification to report channel if possible
             try:
-                if hasattr(self, 'report_channel') and self.report_channel:
+                if hasattr(self, "report_channel") and self.report_channel:
                     await self.report_channel.send(
                         f"⚠️ **Job Error**: `{job_name}` failed with: `{type(e).__name__}: {e}`"
                     )
@@ -191,8 +207,10 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
             ),
-            # CronTrigger(minute="*"),
-            CronTrigger(hour="3", minute=50, second=offset, timezone="UTC"),
+            CronTrigger(minute="*"),
+            # CronTrigger(hour="3", minute=50, second=offset, timezone="UTC"),
+            id="sync_members",
+            name="Member Sync Job",
         )
 
         self.scheduler.add_job(
@@ -201,6 +219,8 @@ class IronForgedAutomations:
             ),
             # CronTrigger(minute="*"),
             CronTrigger(hour="4,16", minute=10, second=offset, timezone="UTC"),
+            id="refresh_ranks", 
+            name="Rank Refresh Job",
         )
 
         self.scheduler.add_job(
@@ -214,6 +234,8 @@ class IronForgedAutomations:
             CronTrigger(
                 day_of_week="mon", hour=1, minute=0, second=offset, timezone="UTC"
             ),
+            id="check_activity",
+            name="Activity Check Job",
         )
 
         self.scheduler.add_job(
@@ -228,11 +250,15 @@ class IronForgedAutomations:
             CronTrigger(
                 day_of_week="sun", hour=0, minute=0, second=offset, timezone="UTC"
             ),
+            id="check_membership_discrepancies",
+            name="Membership Discrepancy Check Job",
         )
 
         self.scheduler.add_job(
             self._job_wrapper(self._clear_caches),
             CronTrigger(minute="*/10"),
+            id="clear_caches",
+            name="Cache Cleanup Job",
         )
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
