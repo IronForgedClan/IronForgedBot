@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 import discord
+from tests.helpers import create_mock_discord_interaction
 
 
 class TestCheckActivityCmd(unittest.IsolatedAsyncioTestCase):
@@ -9,9 +10,7 @@ class TestCheckActivityCmd(unittest.IsolatedAsyncioTestCase):
         from ironforgedbot.commands.admin.check_activity import cmd_check_activity
         self.cmd_check_activity = cmd_check_activity
 
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.response.send_message = AsyncMock()
-        
+        self.mock_interaction = create_mock_discord_interaction()
         self.mock_channel = Mock()
 
     @patch("ironforgedbot.commands.admin.check_activity.job_check_activity")

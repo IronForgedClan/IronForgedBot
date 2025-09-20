@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 import discord
+from tests.helpers import create_mock_discord_interaction
 
 
 class TestRefreshRanksCmd(unittest.IsolatedAsyncioTestCase):
@@ -9,10 +10,7 @@ class TestRefreshRanksCmd(unittest.IsolatedAsyncioTestCase):
         from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
         self.cmd_refresh_ranks = cmd_refresh_ranks
 
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.guild = Mock()
-        self.mock_interaction.response.send_message = AsyncMock()
-        
+        self.mock_interaction = create_mock_discord_interaction()
         self.mock_channel = Mock()
 
     @patch("ironforgedbot.commands.admin.refresh_ranks.job_refresh_ranks")

@@ -11,15 +11,14 @@ from ironforgedbot.services.member_service import (
     UniqueDiscordIdVolation,
     UniqueNicknameViolation,
 )
-from tests.helpers import create_test_member
+from tests.helpers import create_test_member, create_mock_discord_guild, setup_database_service_mocks, setup_time_mocks
 
 
 class AddMemberRoleTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_report_channel = Mock(spec=discord.TextChannel)
         self.mock_report_channel.send = AsyncMock()
-        self.mock_guild = Mock(spec=discord.Guild)
-        self.mock_guild.roles = []
+        self.mock_guild = create_mock_discord_guild()
         self.mock_report_channel.guild = self.mock_guild
         self.discord_member = create_test_member("TestUser", [ROLE.MEMBER], "TestUser")
         self.discord_member.id = 123456789
@@ -52,7 +51,7 @@ class AddMemberRoleTest(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.effects.add_member_role.get_rank_from_member")
     @patch("ironforgedbot.effects.add_member_role.db")
     async def test_creates_new_member_successfully(self, mock_db, mock_get_rank, mock_time):
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
+        setup_time_mocks(None, mock_time, duration_seconds=5.0)
         mock_get_rank.return_value = RANK.IRON
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session

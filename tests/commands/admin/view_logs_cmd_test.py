@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
 import discord
+from tests.helpers import create_mock_discord_interaction
 
 
 class TestViewLogsCmd(unittest.IsolatedAsyncioTestCase):
@@ -9,9 +10,7 @@ class TestViewLogsCmd(unittest.IsolatedAsyncioTestCase):
         from ironforgedbot.commands.admin.view_logs import cmd_view_logs
         self.cmd_view_logs = cmd_view_logs
 
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.response.defer = AsyncMock()
-        self.mock_interaction.followup.send = AsyncMock()
+        self.mock_interaction = create_mock_discord_interaction()
 
     @patch("ironforgedbot.commands.admin.view_logs.get_latest_log_file")
     @patch("ironforgedbot.commands.admin.view_logs.send_error_response")
