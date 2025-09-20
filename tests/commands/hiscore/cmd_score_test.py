@@ -15,7 +15,8 @@ from tests.helpers import (
 )
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role):
-    from ironforgedbot.commands.hiscore.cmd_score import cmd_score
+    with patch("ironforgedbot.common.helpers.find_emoji", return_value="<:emoji:123>"):
+        from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 
 
 class TestCmdScore(unittest.IsolatedAsyncioTestCase):
@@ -135,8 +136,10 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_prospect_response")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
     async def test_cmd_score_prospect_response(
         self,
+        mock_find_emoji,
         mock_send_prospect,
         mock_check_role,
         mock_validate,
@@ -145,6 +148,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     ):
         mock_validate.return_value = (self.prospect_user, "ProspectUser")
         mock_check_role.return_value = True  # Is prospect
+        mock_find_emoji.return_value = ":prospect:"
 
         mock_score_service = AsyncMock()
         mock_score_service_class.return_value = mock_score_service
@@ -159,8 +163,10 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_not_clan_member")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
     async def test_cmd_score_not_clan_member_response(
         self,
+        mock_find_emoji,
         mock_send_not_clan,
         mock_check_role,
         mock_validate,
@@ -170,6 +176,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         non_member = create_test_member("NonMember", [])  # No roles
         mock_validate.return_value = (non_member, "NonMember")
         mock_check_role.return_value = False  # Not a member
+        mock_find_emoji.return_value = ":iron:"
 
         mock_score_service = AsyncMock()
         mock_score_service_class.return_value = mock_score_service
@@ -271,7 +278,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.return_value = True
+        # First call checks for PROSPECT role (should return False), second call checks for MEMBER role (should return True)
+        mock_check_role.side_effect = [False, True]
 
         # Mock build_response_embed
         mock_embed = AsyncMock()
@@ -374,7 +382,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.return_value = True
+        # First call checks for PROSPECT role (should return False), second call checks for MEMBER role (should return True)
+        mock_check_role.side_effect = [False, True]
 
         # Mock build_response_embed
         mock_embed = AsyncMock()
