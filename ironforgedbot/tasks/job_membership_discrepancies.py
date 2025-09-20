@@ -88,34 +88,36 @@ async def _get_valid_wom_members(
     wom_client = Client(api_key=wom_api_key, user_agent="IronForged")
     await wom_client.start()
 
-    wom_group_result = await wom_client.groups.get_details(wom_group_id)
+    try:
+        wom_group_result = await wom_client.groups.get_details(wom_group_id)
 
-    if wom_group_result.is_err:
-        await updates_channel.send("Error fetching WOM group details.")
-        return None, []
+        if wom_group_result.is_err:
+            await updates_channel.send("Error fetching WOM group details.")
+            return None, []
 
-    wom_group = wom_group_result.unwrap()
+        wom_group = wom_group_result.unwrap()
 
-    members: List[str] = []
-    ignore_members: List[str] = []
-    for member in wom_group.memberships:
-        member_role = member.role
-        member_rsn = normalize_discord_string(member.player.username)
+        members: List[str] = []
+        ignore_members: List[str] = []
+        for member in wom_group.memberships:
+            member_role = member.role
+            member_rsn = normalize_discord_string(member.player.username)
 
-        if member_role is None:
-            logger.info(f"{member_rsn} has no role, skipping.")
-            continue
+            if member_role is None:
+                logger.info(f"{member_rsn} has no role, skipping.")
+                continue
 
-        if member_role in IGNORED_ROLES:
-            logger.info(f"{member_rsn} has ignored role, skipping.")
-            if member_rsn not in IGNORED_USERS:
-                logger.info(f"adding {member_rsn} to ignored members list.")
-                ignore_members.append(member_rsn)
-            continue
+            if member_role in IGNORED_ROLES:
+                logger.info(f"{member_rsn} has ignored role, skipping.")
+                if member_rsn not in IGNORED_USERS:
+                    logger.info(f"adding {member_rsn} to ignored members list.")
+                    ignore_members.append(member_rsn)
+                continue
 
-        ignored = IGNORED_USERS + ignore_members
-        if member_rsn not in ignored:
-            members.append(member_rsn)
+            ignored = IGNORED_USERS + ignore_members
+            if member_rsn not in ignored:
+                members.append(member_rsn)
 
-    await wom_client.close()
-    return members, ignore_members
+        return members, ignore_members
+    finally:
+        await wom_client.close()
