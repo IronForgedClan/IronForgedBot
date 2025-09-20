@@ -11,10 +11,13 @@ from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
     _find_inactive_users,
     _find_wom_member,
-    IRON_EXP_THRESHOLD,
-    MITHRIL_EXP_THRESHOLD,
-    RUNE_EXP_THRESHOLD,
+    _process_member_gains,
+    _get_role_display_name,
+    _get_threshold_for_role,
+    _sort_results_safely,
+    DEFAULT_THRESHOLDS,
     DEFAULT_WOM_LIMIT,
+    ROLE_DISPLAY_MAPPING,
 )
 
 
@@ -77,6 +80,8 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             self.wom_group_id,
             self.mock_report_channel,
             ["absentplayer"],
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
         )
 
         mock_tabulate.assert_called_once_with(
@@ -119,9 +124,12 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel, self.wom_api_key, self.wom_group_id
         )
 
-        self.mock_report_channel.send.assert_called_once_with(
-            "🧗 Beginning activity check..."
-        )
+        # Should send beginning message and info message about no results
+        self.assertEqual(self.mock_report_channel.send.call_count, 2)
+        first_call = self.mock_report_channel.send.call_args_list[0]
+        self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
+        second_call = self.mock_report_channel.send.call_args_list[1]
+        self.assertEqual(second_call[0][0], "ℹ️ No inactive members found meeting the criteria.")
 
     @patch("ironforgedbot.tasks.job_check_activity.time")
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
@@ -209,6 +217,8 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.wom_group_id,
             self.mock_report_channel,
             self.absentees,
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
         )
 
         self.assertIsNone(result)
@@ -216,7 +226,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_client.close.assert_called_once()
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
-        self.assertIn("Got error, fetching WOM group", call_args[1]["content"])
+        self.assertIn("Error fetching WOM group", call_args[1]["content"])
 
     @patch("ironforgedbot.tasks.job_check_activity.wom.Client")
     async def test_find_inactive_users_gains_error(self, mock_wom_client_class):
@@ -238,13 +248,15 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.wom_group_id,
             self.mock_report_channel,
             self.absentees,
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
         )
 
         self.assertIsNone(result)
         mock_client.close.assert_called_once()
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
-        self.assertIn("Got error, fetching gains from WOM", call_args[1]["content"])
+        self.assertIn("Error fetching gains from WOM", call_args[1]["content"])
 
     @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
     @patch("ironforgedbot.tasks.job_check_activity.render_relative_time")
@@ -266,7 +278,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_player.username = "TestPlayer"
 
         mock_data = Mock()
-        mock_data.gained = 50000  # Below IRON_EXP_THRESHOLD
+        mock_data.gained = 50000  # Below DEFAULT_THRESHOLDS[GroupRole.Iron] which is 150,000
 
         mock_member_gains = Mock()
         mock_member_gains.player = mock_player
@@ -290,6 +302,8 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.wom_group_id,
             self.mock_report_channel,
             self.absentees,
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
         )
 
         self.assertEqual(len(result), 1)
@@ -336,6 +350,8 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.wom_group_id,
             self.mock_report_channel,
             self.absentees,
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
         )
 
         self.assertEqual(len(result), 0)
@@ -380,6 +396,8 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.wom_group_id,
             self.mock_report_channel,
             self.absentees,
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
         )
 
         self.assertEqual(len(result), 0)
@@ -414,7 +432,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                 mock_player.username = f"Player_{wom_role}"
 
                 mock_data = Mock()
-                mock_data.gained = 50000  # Below threshold
+                mock_data.gained = 50000  # Below any threshold
 
                 mock_member_gains = Mock()
                 mock_member_gains.player = mock_player
@@ -432,7 +450,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                 mock_find_member.return_value = mock_wom_member
 
                 result = await _find_inactive_users(
-                    self.wom_api_key, self.wom_group_id, self.mock_report_channel, []
+                    self.wom_api_key, self.wom_group_id, self.mock_report_channel, [], DEFAULT_WOM_LIMIT, DEFAULT_THRESHOLDS
                 )
 
                 self.assertEqual(len(result), 1)
@@ -471,9 +489,155 @@ class TestFindWomMember(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_report_channel = Mock(spec=discord.TextChannel)
+        self.mock_report_channel.send = AsyncMock()
+
+    async def test_job_check_activity_invalid_api_key(self):
+        """Test validation of invalid API key"""
+        await job_check_activity(self.mock_report_channel, "", 12345)
+        
+        self.mock_report_channel.send.assert_called_once_with("❌ Invalid WOM API key configuration")
+
+    async def test_job_check_activity_invalid_group_id(self):
+        """Test validation of invalid group ID"""
+        await job_check_activity(self.mock_report_channel, "valid_key", -1)
+        
+        self.mock_report_channel.send.assert_called_once_with("❌ Invalid WOM group ID: -1")
+
+    def test_get_role_display_name(self):
+        """Test role display name mapping"""
+        self.assertEqual(_get_role_display_name(GroupRole.Helper), "Alt")
+        self.assertEqual(_get_role_display_name(GroupRole.Collector), "Moderator")
+        self.assertEqual(_get_role_display_name(GroupRole.Administrator), "Admin")
+        self.assertEqual(_get_role_display_name(GroupRole.Colonel), "Staff")
+        self.assertEqual(_get_role_display_name(GroupRole.Deputy_owner), "Owner")
+        self.assertEqual(_get_role_display_name(GroupRole.Iron), "Iron")
+        self.assertEqual(_get_role_display_name(None), "Unknown")
+
+    def test_get_threshold_for_role(self):
+        """Test threshold calculation for roles"""
+        thresholds = {GroupRole.Iron: 100_000, GroupRole.Mithril: 200_000}
+        
+        self.assertEqual(_get_threshold_for_role(GroupRole.Iron, thresholds), 100_000)
+        self.assertEqual(_get_threshold_for_role(GroupRole.Mithril, thresholds), 200_000)
+        self.assertEqual(_get_threshold_for_role(GroupRole.Rune, thresholds), 200_000)  # Default to max
+        self.assertEqual(_get_threshold_for_role(None, thresholds), 200_000)  # Default to max
+
+    def test_sort_results_safely(self):
+        """Test safe sorting with malformed data"""
+        results = [
+            ["Player1", "Iron", "300,000", "1 day"],
+            ["Player2", "Iron", "100,000", "2 days"],  
+            ["Player3", "Iron", "invalid", "3 days"],  # Malformed XP
+            ["Player4", "Iron", "200,000", "4 days"],
+        ]
+        
+        sorted_results = _sort_results_safely(results)
+        
+        # Should sort by XP, with malformed data (0) first
+        self.assertEqual(sorted_results[0][0], "Player3")  # 0 (malformed)
+        self.assertEqual(sorted_results[1][0], "Player2")  # 100,000
+        self.assertEqual(sorted_results[2][0], "Player4")  # 200,000
+        self.assertEqual(sorted_results[3][0], "Player1")  # 300,000
+
+    def test_sort_results_safely_empty_list(self):
+        """Test safe sorting with empty list"""
+        self.assertEqual(_sort_results_safely([]), [])
+
+    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
+    @patch("ironforgedbot.tasks.job_check_activity.render_relative_time")
+    def test_process_member_gains_inactive_member(self, mock_render_time, mock_find_member):
+        """Test processing of inactive member"""
+        mock_member_gains = Mock()
+        mock_member_gains.player.id = 123
+        mock_member_gains.player.username = "TestPlayer"
+        mock_member_gains.data.gained = 50000
+
+        mock_wom_member = Mock()
+        mock_wom_member.role = GroupRole.Iron
+        mock_wom_member.player.username = "TestPlayer"
+        mock_wom_member.player.last_changed_at = datetime(2024, 1, 10)
+        mock_find_member.return_value = mock_wom_member
+
+        mock_render_time.return_value = "5 days ago"
+        mock_group = Mock()
+
+        result = _process_member_gains(
+            mock_member_gains, mock_group, [], DEFAULT_THRESHOLDS
+        )
+
+        self.assertEqual(result, ["TestPlayer", "Iron", "50,000", "5 days ago"])
+
+    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
+    def test_process_member_gains_active_member(self, mock_find_member):
+        """Test processing of active member (above threshold)"""
+        mock_member_gains = Mock()
+        mock_member_gains.player.id = 123
+        mock_member_gains.data.gained = 200000  # Above Iron threshold
+
+        mock_wom_member = Mock()
+        mock_wom_member.role = GroupRole.Iron
+        mock_find_member.return_value = mock_wom_member
+
+        mock_group = Mock()
+
+        result = _process_member_gains(
+            mock_member_gains, mock_group, [], DEFAULT_THRESHOLDS
+        )
+
+        self.assertIsNone(result)  # Should return None for active members
+
+    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
+    def test_process_member_gains_absentee(self, mock_find_member):
+        """Test processing of absent member"""
+        mock_member_gains = Mock()
+        mock_member_gains.player.id = 123
+
+        mock_wom_member = Mock()
+        mock_wom_member.player.username = "AbsentPlayer"
+        mock_find_member.return_value = mock_wom_member
+
+        mock_group = Mock()
+        absentees = ["absentplayer"]  # lowercase
+
+        result = _process_member_gains(
+            mock_member_gains, mock_group, absentees, DEFAULT_THRESHOLDS
+        )
+
+        self.assertIsNone(result)  # Should return None for absent members
+
+    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
+    def test_process_member_gains_dogsbody(self, mock_find_member):
+        """Test processing of dogsbody member"""
+        mock_member_gains = Mock()
+        mock_member_gains.player.id = 123
+
+        mock_wom_member = Mock()
+        mock_wom_member.role = GroupRole.Dogsbody
+        mock_find_member.return_value = mock_wom_member
+
+        mock_group = Mock()
+
+        result = _process_member_gains(
+            mock_member_gains, mock_group, [], DEFAULT_THRESHOLDS
+        )
+
+        self.assertIsNone(result)  # Should return None for dogsbody members
+
+
 class TestThresholds(unittest.TestCase):
     def test_threshold_constants(self):
-        self.assertEqual(IRON_EXP_THRESHOLD, 150_000)
-        self.assertEqual(MITHRIL_EXP_THRESHOLD, 300_000)
-        self.assertEqual(RUNE_EXP_THRESHOLD, 500_000)
+        """Test default threshold values"""
+        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Iron], 150_000)
+        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Mithril], 300_000)
+        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Adamant], 300_000)
+        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Rune], 500_000)
         self.assertEqual(DEFAULT_WOM_LIMIT, 50)
+
+    def test_role_display_mapping(self):
+        """Test role display mapping constants"""
+        self.assertEqual(ROLE_DISPLAY_MAPPING[GroupRole.Helper], "Alt")
+        self.assertEqual(ROLE_DISPLAY_MAPPING[GroupRole.Collector], "Moderator")
+        self.assertEqual(ROLE_DISPLAY_MAPPING[GroupRole.Administrator], "Admin")
