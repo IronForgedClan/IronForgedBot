@@ -18,13 +18,9 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_func = AsyncMock()
 
         mock_member = create_test_member("tester", [ROLE.LEADERSHIP])
-        mock_interaction = create_mock_discord_interaction()
+        mock_interaction = create_mock_discord_interaction(user=mock_member)
 
-        mock_guild = Mock(spec=discord.Guild)
-        mock_guild.get_member.return_value = mock_member
-
-        mock_interaction.guild = mock_guild
-        mock_interaction.user = mock_member
+        mock_interaction.guild.get_member.return_value = mock_member
 
         decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
         await decorated_func(mock_interaction)
@@ -60,13 +56,9 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_func = AsyncMock()
 
         mock_member = create_test_member("tester", [ROLE.LEADERSHIP])
-        mock_interaction = Mock(spec=discord.Interaction)
+        mock_interaction = create_mock_discord_interaction(user=mock_member)
 
-        mock_guild = Mock(spec=discord.Guild)
-        mock_guild.get_member.return_value = None
-
-        mock_interaction.guild = mock_guild
-        mock_interaction.user = mock_member
+        mock_interaction.guild.get_member.return_value = None
 
         decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
@@ -82,13 +74,9 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_func = AsyncMock()
 
         mock_member = create_test_member("tester", [ROLE.MEMBER])
-        mock_interaction = Mock(spec=discord.Interaction)
+        mock_interaction = create_mock_discord_interaction(user=mock_member)
 
-        mock_guild = Mock(spec=discord.Guild)
-        mock_guild.get_member.return_value = mock_member
-
-        mock_interaction.guild = mock_guild
-        mock_interaction.user = mock_member
+        mock_interaction.guild.get_member.return_value = mock_member
 
         decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
@@ -107,13 +95,9 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
         mock_func = AsyncMock()
 
         mock_member = create_test_member("tester", [ROLE.MEMBER])
-        mock_interaction = Mock(spec=discord.Interaction)
+        mock_interaction = create_mock_discord_interaction(user=mock_member)
 
-        mock_guild = Mock(spec=discord.Guild)
-        mock_guild.get_member.return_value = mock_member
-
-        mock_interaction.guild = mock_guild
-        mock_interaction.user = mock_member
+        mock_interaction.guild.get_member.return_value = mock_member
         mock_interaction.response.send_message = AsyncMock()
 
         decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)

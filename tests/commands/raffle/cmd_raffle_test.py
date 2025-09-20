@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from tests.helpers import mock_require_role, mock_require_channel
+from ironforgedbot.common.roles import ROLE
+from tests.helpers import mock_require_role, mock_require_channel, create_mock_discord_interaction, create_test_member
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role), \
      patch("ironforgedbot.decorators.require_channel", mock_require_channel):
@@ -12,19 +13,9 @@ with patch("ironforgedbot.decorators.require_role", mock_require_role), \
 
 class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.guild = Mock()
-        self.mock_interaction.user = Mock()
-        self.mock_interaction.user.id = 12345
-        self.mock_interaction.user.display_name = "TestUser"
-        self.mock_interaction.followup.send = AsyncMock()
-        self.mock_interaction.response = AsyncMock()
-        self.mock_interaction.response.defer = AsyncMock()
-        
-        self.mock_member = Mock()
-        self.mock_member.id = 12345
-        self.mock_member.roles = []
-        self.mock_interaction.guild.get_member.return_value = self.mock_member
+        test_member = create_test_member("TestUser", [ROLE.MEMBER])
+        test_member.id = 12345
+        self.mock_interaction = create_mock_discord_interaction(user=test_member)
     @patch("ironforgedbot.commands.raffle.cmd_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.build_response_embed")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.STATE")

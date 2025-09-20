@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 
 from ironforgedbot.common.roles import ROLE
+from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
@@ -17,22 +18,11 @@ class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
         from ironforgedbot.commands.admin.cmd_admin import cmd_admin
         self.cmd_admin = cmd_admin
 
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.guild = Mock()
-        self.mock_interaction.user = Mock()
-        self.mock_interaction.user.display_name = "TestUser"
-        self.mock_interaction.user.id = 123456789
+        test_member = create_test_member("TestUser", [ROLE.LEADERSHIP])
+        test_member.id = 123456789
+        self.mock_interaction = create_mock_discord_interaction(user=test_member)
         
-        mock_member = Mock()
-        mock_member.display_name = "TestUser"
-        mock_role = Mock()
-        mock_role.name = ROLE.LEADERSHIP
-        mock_member.roles = [mock_role]
-        
-        self.mock_interaction.guild.get_member.return_value = mock_member
-        
-        self.mock_interaction.response.defer = AsyncMock()
-        self.mock_interaction.followup.send = AsyncMock()
+        self.mock_interaction.guild.get_member.return_value = test_member
 
     def tearDown(self):
         self.mock_require_role_patcher.stop()
@@ -71,13 +61,8 @@ class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
 class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_channel = Mock()
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.guild = Mock()
-        self.mock_interaction.user = Mock()
-        self.mock_interaction.user.display_name = "TestUser"
-        self.mock_interaction.response.send_message = AsyncMock()
-        self.mock_interaction.response.defer = AsyncMock()
-        self.mock_interaction.followup.send = AsyncMock()
+        test_member = create_test_member("TestUser", [])
+        self.mock_interaction = create_mock_discord_interaction(user=test_member)
 
         with patch("discord.ui.View.__init__", return_value=None):
             from ironforgedbot.commands.admin.cmd_admin import AdminMenuView

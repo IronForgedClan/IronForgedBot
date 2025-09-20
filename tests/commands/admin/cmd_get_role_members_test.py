@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 
 from ironforgedbot.common.roles import ROLE
+from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
@@ -17,20 +18,9 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
         self.cmd_get_role_members = cmd_get_role_members
 
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.guild = Mock(spec=discord.Guild)
-        self.mock_interaction.user = Mock(spec=discord.User)
-        self.mock_interaction.user.display_name = "TestUser"
-        self.mock_interaction.user.id = 123456789
-        self.mock_interaction.followup.send = AsyncMock()
-        self.mock_interaction.response.send_message = AsyncMock()
-        self.mock_interaction.response.defer = AsyncMock()
-        
-        # Mock the member returned by guild.get_member for role checking
-        mock_member = Mock(spec=discord.Member)
-        mock_member.roles = [Mock(name=ROLE.LEADERSHIP)]
-        mock_member.roles[0].name = ROLE.LEADERSHIP
-        self.mock_interaction.guild.get_member.return_value = mock_member
+        mock_member = create_test_member("TestUser", [ROLE.LEADERSHIP])
+        mock_member.id = 123456789
+        self.mock_interaction = create_mock_discord_interaction(user=mock_member)
 
     def tearDown(self):
         self.mock_require_role_patcher.stop()

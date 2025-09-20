@@ -14,15 +14,14 @@ from ironforgedbot.common.responses import (
     send_not_clan_member
 )
 from ironforgedbot.common.roles import ROLE
+from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestResponses(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.followup.send = AsyncMock()
-        
-        self.mock_member = Mock(spec=discord.Member)
+        self.mock_member = create_test_member("TestUser", [ROLE.MEMBER])
         self.mock_member.id = 12345
+        self.mock_interaction = create_mock_discord_interaction(user=self.mock_member)
         
         self.mock_db_member = Mock()
         self.mock_db_member.nickname = "TestPlayer"

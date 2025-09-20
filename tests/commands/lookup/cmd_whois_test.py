@@ -5,7 +5,7 @@ import discord
 from wom import NameChangeStatus
 
 from ironforgedbot.common.roles import ROLE
-from tests.helpers import mock_require_role
+from tests.helpers import mock_require_role, create_mock_discord_interaction, create_test_member
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role):
     from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
@@ -13,17 +13,9 @@ with patch("ironforgedbot.decorators.require_role", mock_require_role):
 
 class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        
-        self.mock_interaction = Mock(spec=discord.Interaction)
-        self.mock_interaction.guild = Mock()
-        self.mock_interaction.followup.send = AsyncMock()
-        self.mock_interaction.user = Mock(spec=discord.User)
-        self.mock_interaction.user.display_name = "TestPlayer"
-        
-        self.mock_member = Mock()
-        self.mock_member.display_name = "TestPlayer"
-        self.mock_member.roles = []
-        self.mock_interaction.guild.get_member.return_value = self.mock_member
+        test_member = create_test_member("TestPlayer", [ROLE.MEMBER], "TestPlayer")
+        self.mock_interaction = create_mock_discord_interaction(user=test_member)
+        self.mock_member = self.mock_interaction.user
         
         self.mock_wom_client = AsyncMock()
         self.mock_wom_client.start = AsyncMock()

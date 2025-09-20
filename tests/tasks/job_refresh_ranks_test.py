@@ -49,8 +49,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_score_service.get_player_points_total.return_value = 150
         mock_score_service_class.return_value = mock_score_service
         
-        mock_discord_member = Mock(spec=discord.Member)
-        mock_discord_member.roles = [Mock(name=RANK.IRON)]
+        mock_discord_member = create_test_member("TestUser", [RANK.IRON])
         self.mock_guild.get_member.return_value = mock_discord_member
         
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
@@ -106,7 +105,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_history_service = AsyncMock()
         mock_history_service_class.return_value = mock_history_service
         
-        mock_discord_member = Mock(spec=discord.Member)
+        mock_discord_member = create_test_member("TestUser", [ROLE.MEMBER])
         mock_is_banned.return_value = True
         self.mock_guild.get_member.return_value = mock_discord_member
         
