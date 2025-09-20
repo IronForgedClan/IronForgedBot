@@ -3,18 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-
-def mock_require_role(role, ephemeral=False):
-    def decorator(func):
-        return func
-    return decorator
-
-
-def mock_require_channel(channels):
-    def decorator(func):
-        return func
-    return decorator
-
+from tests.helpers import mock_require_role, mock_require_channel
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role), \
      patch("ironforgedbot.decorators.require_channel", mock_require_channel):

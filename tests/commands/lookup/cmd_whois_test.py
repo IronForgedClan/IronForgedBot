@@ -5,12 +5,7 @@ import discord
 from wom import NameChangeStatus
 
 from ironforgedbot.common.roles import ROLE
-
-
-def mock_require_role(role):
-    def decorator(func):
-        return func
-    return decorator
+from tests.helpers import mock_require_role
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role):
     from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
