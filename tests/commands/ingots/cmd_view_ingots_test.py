@@ -17,7 +17,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         self.mock_db_session = AsyncMock()
         self.mock_member_service = AsyncMock()
         
-        self.test_user = create_test_member("TestUser", ROLE.MEMBER)
+        self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
         
         self.sample_member = Member(
