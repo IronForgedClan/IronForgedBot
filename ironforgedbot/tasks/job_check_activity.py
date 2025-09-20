@@ -209,7 +209,15 @@ async def _find_inactive_users(
     await wom_client.start()
 
     try:
-        wom_group_result = await wom_client.groups.get_details(wom_group_id)
+        try:
+            wom_group_result = await wom_client.groups.get_details(wom_group_id)
+        except Exception as api_error:
+            logger.error(f"WOM API error fetching group details: {api_error}")
+            await report_channel.send(
+                "❌ WOM API is currently unavailable. Please try again later."
+            )
+            return None
+
         if not wom_group_result.is_ok:
             message = f"Error fetching WOM group: {wom_group_result.unwrap_err()}"
             logger.error(message)
@@ -222,13 +230,22 @@ async def _find_inactive_users(
         is_done = False
 
         while not is_done:
-            gains_result = await wom_client.groups.get_gains(
-                wom_group_id,
-                metric=Metric.Overall,
-                period=Period.Month,
-                limit=wom_limit,
-                offset=offset,
-            )
+            try:
+                gains_result = await wom_client.groups.get_gains(
+                    wom_group_id,
+                    metric=Metric.Overall,
+                    period=Period.Month,
+                    limit=wom_limit,
+                    offset=offset,
+                )
+            except Exception as api_error:
+                logger.error(
+                    f"WOM API error fetching gains at offset {offset}: {api_error}"
+                )
+                await report_channel.send(
+                    "❌ WOM API returned malformed data. Please try again later."
+                )
+                return None
 
             if not gains_result.is_ok:
                 message = f"Error fetching gains from WOM: {gains_result.unwrap_err()}"
@@ -239,11 +256,17 @@ async def _find_inactive_users(
             member_gains_list = gains_result.unwrap()
 
             for member_gains in member_gains_list:
-                inactive_member_data = _process_member_gains(
-                    member_gains, wom_group, absentees, thresholds
-                )
-                if inactive_member_data:
-                    results.append(inactive_member_data)
+                try:
+                    inactive_member_data = _process_member_gains(
+                        member_gains, wom_group, absentees, thresholds
+                    )
+                    if inactive_member_data:
+                        results.append(inactive_member_data)
+                except Exception as process_error:
+                    logger.warning(
+                        f"Error processing member gains for {getattr(member_gains.player, 'username', 'unknown')}: {process_error}"
+                    )
+                    # Continue processing other members instead of failing completely
 
             if len(member_gains_list) < wom_limit:
                 is_done = True
@@ -253,10 +276,17 @@ async def _find_inactive_users(
         return results
 
     except Exception as e:
-        logger.error(f"Unexpected error in _find_inactive_users: {e}")
-        await report_channel.send(
-            f"❌ Unexpected error processing WOM data: {type(e).__name__}"
-        )
+        error_type = type(e).__name__
+        if "JSON" in str(e) or "Decode" in error_type:
+            logger.error(f"WOM API returned malformed JSON data: {e}")
+            await report_channel.send(
+                "❌ WOM API returned malformed data. This is likely a temporary issue with the WOM service."
+            )
+        else:
+            logger.error(f"Unexpected error in _find_inactive_users: {e}")
+            await report_channel.send(
+                f"❌ Unexpected error processing WOM data: {error_type}"
+            )
         return None
     finally:
         await wom_client.close()

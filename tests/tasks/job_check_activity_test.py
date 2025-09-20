@@ -493,6 +493,8 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_report_channel = Mock(spec=discord.TextChannel)
         self.mock_report_channel.send = AsyncMock()
+        self.wom_api_key = "test_api_key"
+        self.wom_group_id = 12345
 
     async def test_job_check_activity_invalid_api_key(self):
         """Test validation of invalid API key"""
@@ -625,6 +627,63 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIsNone(result)  # Should return None for dogsbody members
+
+    @patch("ironforgedbot.tasks.job_check_activity.wom.Client")
+    async def test_find_inactive_users_json_decode_error(self, mock_wom_client_class):
+        """Test handling of JSON decode errors from WOM API"""
+        mock_client = AsyncMock()
+        mock_wom_client_class.return_value = mock_client
+
+        # Mock JSON decode error when fetching group details
+        json_error = Exception("JSON is malformed: invalid character (byte 0)")
+        mock_client.groups.get_details.side_effect = json_error
+
+        result = await _find_inactive_users(
+            self.wom_api_key,
+            self.wom_group_id,
+            self.mock_report_channel,
+            [],
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
+        )
+
+        self.assertIsNone(result)
+        mock_client.start.assert_called_once()
+        mock_client.close.assert_called_once()
+        self.mock_report_channel.send.assert_called_once()
+        call_args = self.mock_report_channel.send.call_args
+        self.assertIn("WOM API is currently unavailable", call_args[0][0])
+
+    @patch("ironforgedbot.tasks.job_check_activity.wom.Client")
+    async def test_find_inactive_users_json_decode_error_in_gains(self, mock_wom_client_class):
+        """Test handling of JSON decode errors when fetching gains"""
+        mock_client = AsyncMock()
+        mock_wom_client_class.return_value = mock_client
+
+        # Mock successful group details
+        mock_group_result = Mock()
+        mock_group_result.is_ok = True
+        mock_group_result.unwrap.return_value = Mock()
+        mock_client.groups.get_details.return_value = mock_group_result
+
+        # Mock JSON decode error when fetching gains
+        json_error = Exception("JSON is malformed: invalid character (byte 0)")
+        mock_client.groups.get_gains.side_effect = json_error
+
+        result = await _find_inactive_users(
+            self.wom_api_key,
+            self.wom_group_id,
+            self.mock_report_channel,
+            [],
+            DEFAULT_WOM_LIMIT,
+            DEFAULT_THRESHOLDS,
+        )
+
+        self.assertIsNone(result)
+        mock_client.close.assert_called_once()
+        self.mock_report_channel.send.assert_called_once()
+        call_args = self.mock_report_channel.send.call_args
+        self.assertIn("WOM API returned malformed data", call_args[0][0])
 
 
 class TestThresholds(unittest.TestCase):
