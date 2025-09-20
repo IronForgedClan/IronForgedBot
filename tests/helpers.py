@@ -359,3 +359,65 @@ def create_test_member_with_scores(nickname="TestUser", discord_id=None, rank="I
     member.total_points = total_points
     member.score_breakdown = create_test_score_data()
     return member
+
+
+def create_test_score_breakdown(skills_count=2, activities_count=2):
+    """Creates real ScoreBreakdown object for cache serialization testing."""
+    from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
+    
+    skills = []
+    for i in range(skills_count):
+        skill = SkillScore(
+            name=f"Skill{i+1}",
+            display_name=f"Skill {i+1}",
+            display_order=i+1,
+            emoji_key=f"skill_{i+1}",
+            xp=13034000 - (i * 1000000),
+            level=99 - (i * 5),
+            points=1000 - (i * 100)
+        )
+        skills.append(skill)
+    
+    clues = []
+    raids = []
+    bosses = []
+    
+    for i in range(min(activities_count, 1)):
+        clue = ActivityScore(
+            name=f"Clue{i+1}",
+            display_name=f"Clue {i+1}",
+            display_order=i+1,
+            emoji_key=f"clue_{i+1}",
+            kc=200 - (i * 50),
+            points=100 - (i * 25)
+        )
+        clues.append(clue)
+    
+    for i in range(min(activities_count, 1)):
+        raid = ActivityScore(
+            name=f"Raid{i+1}",
+            display_name=f"Raid {i+1}",
+            display_order=i+1,
+            emoji_key=f"raid_{i+1}",
+            kc=150 - (i * 30),
+            points=75 - (i * 15)
+        )
+        raids.append(raid)
+    
+    for i in range(max(0, activities_count - 2)):
+        boss = ActivityScore(
+            name=f"Boss{i+1}",
+            display_name=f"Boss {i+1}",
+            display_order=i+1,
+            emoji_key=f"boss_{i+1}",
+            kc=100 - (i * 20),
+            points=50 - (i * 10)
+        )
+        bosses.append(boss)
+    
+    return ScoreBreakdown(
+        skills=skills,
+        clues=clues,
+        raids=raids,
+        bosses=bosses
+    )
