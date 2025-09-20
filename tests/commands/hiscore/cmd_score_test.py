@@ -207,7 +207,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.return_value = True
+        # First call checks for PROSPECT role (should return False), second call checks for MEMBER role (should return True)
+        mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "45%"
 
         # Mock the embed that gets built - create a real embed that can have fields added
@@ -222,8 +223,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             field.value = value
             field.inline = inline
             mock_embed.fields.append(field)
+            return None
 
-        mock_embed.add_field.side_effect = add_field_side_effect
+        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(*args, **kwargs)
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
@@ -244,7 +246,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         )
 
         # Verify add_field was called correctly
-        self.assertEqual(mock_embed.add_field.call_count, 3)
+        self.assertEqual(len(mock_embed.fields), 3)
 
     @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
@@ -312,7 +314,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_color.return_value = discord.Color.blue()
         mock_get_god_alignment.return_value = GOD_ALIGNMENT.SARADOMIN
         mock_find_emoji.return_value = ":saradomin:"
-        mock_check_role.return_value = True
+        # First call checks for PROSPECT role (should return False), second call checks for MEMBER role (should return True)
+        mock_check_role.side_effect = [False, True]
 
         # Mock the embed that gets built - create a real embed that can have fields added
         mock_embed = AsyncMock()
@@ -326,8 +329,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             field.value = value
             field.inline = inline
             mock_embed.fields.append(field)
+            return None
 
-        mock_embed.add_field.side_effect = add_field_side_effect
+        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(*args, **kwargs)
         mock_build_embed.return_value = mock_embed
 
         # High points to trigger GOD rank
@@ -345,7 +349,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.assert_called_once()
 
         # Should have 3 fields: Skill Points, Activity Points, and God alignment
-        self.assertEqual(mock_embed.add_field.call_count, 3)
+        self.assertEqual(len(mock_embed.fields), 3)
 
     @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
@@ -415,7 +419,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.return_value = True
+        # First call checks for PROSPECT role (should return False), second call checks for MEMBER role (should return True)
+        mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "89%"
 
         # Mock the embed that gets built
@@ -429,8 +434,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             field.value = value
             field.inline = inline
             mock_embed.fields.append(field)
+            return None
 
-        mock_embed.add_field.side_effect = add_field_side_effect
+        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(*args, **kwargs)
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
@@ -440,13 +446,16 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         await cmd_score(self.interaction, "TestUser")
 
         # Verify the correct fields were added
-        self.assertEqual(mock_embed.add_field.call_count, 3)
+        self.assertEqual(len(mock_embed.fields), 3)
 
         # Check that skill points and activity points fields were added correctly
-        skill_field_call = mock_embed.add_field.call_args_list[0]
-        activity_field_call = mock_embed.add_field.call_args_list[1]
-
-        self.assertEqual(skill_field_call.kwargs["name"], "Skill Points")
-        self.assertIn("1,500", skill_field_call.kwargs["value"])
-        self.assertEqual(activity_field_call.kwargs["name"], "Activity Points")
-        self.assertIn("175", activity_field_call.kwargs["value"])
+        self.assertEqual(len(mock_embed.fields), 3)
+        
+        # Check the field values that were added
+        skill_field = mock_embed.fields[0]
+        activity_field = mock_embed.fields[1]
+        
+        self.assertEqual(skill_field.name, "Skill Points")
+        self.assertIn("1,500", skill_field.value)
+        self.assertEqual(activity_field.name, "Activity Points")
+        self.assertIn("175", activity_field.value)
