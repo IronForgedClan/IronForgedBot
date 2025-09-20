@@ -85,9 +85,16 @@ def create_mock_discord_interaction(
     interaction = Mock(spec=discord.Interaction)
     interaction.followup = AsyncMock()
     interaction.response = AsyncMock()
+    interaction.response.defer = AsyncMock()
+    interaction.response.send_message = AsyncMock()
     interaction.guild = create_mock_discord_guild(members)
     interaction.user = user
+    interaction.user.id = getattr(user, 'id', 123456789)
+    interaction.user.display_name = getattr(user, 'display_name', 'TestUser')
     interaction.data = data
+    
+    # Set up guild.get_member to return the user for role checking
+    interaction.guild.get_member = Mock(return_value=user)
 
     if channel_id:
         interaction.channel_id = channel_id
