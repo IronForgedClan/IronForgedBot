@@ -22,9 +22,13 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction = Mock(spec=discord.Interaction)
         self.mock_interaction.guild = Mock()
         self.mock_interaction.followup.send = AsyncMock()
+        self.mock_interaction.user = Mock(spec=discord.User)
+        self.mock_interaction.user.display_name = "TestPlayer"
         
         self.mock_member = Mock()
         self.mock_member.display_name = "TestPlayer"
+        self.mock_member.roles = []
+        self.mock_interaction.guild.get_member.return_value = self.mock_member
         
         self.mock_wom_client = AsyncMock()
         self.mock_wom_client.start = AsyncMock()
