@@ -35,9 +35,12 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.client.logger")
     def test_handle_signal_initiates_shutdown(self, mock_logger):
         mock_loop = Mock()
-        mock_task = Mock()
-        mock_loop.create_task.return_value = mock_task
         self.client.loop = mock_loop
+        
+        def mock_graceful_shutdown():
+            return Mock()
+        
+        self.client.graceful_shutdown = mock_graceful_shutdown
         
         self.client.handle_signal(signal.SIGTERM, None)
         
