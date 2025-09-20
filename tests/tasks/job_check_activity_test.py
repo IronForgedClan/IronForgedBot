@@ -5,7 +5,7 @@ import io
 
 import discord
 import wom
-from wom import GroupRole, Metric, Period
+from wom import GroupRole
 
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
@@ -89,12 +89,16 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             colalign=("left", "left", "right", "right"),
         )
 
-        self.mock_report_channel.send.assert_called_once()
-        call_args = self.mock_report_channel.send.call_args
-        self.assertIn("🧗 Activity check", call_args[0][0])
-        self.assertIn("Ignoring **1** absent members", call_args[0][0])
-        self.assertIn("Found **2** members", call_args[0][0])
-        self.assertEqual(call_args[1]["file"], mock_file)
+        self.assertEqual(self.mock_report_channel.send.call_count, 2)
+
+        first_call = self.mock_report_channel.send.call_args_list[0]
+        self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
+
+        second_call = self.mock_report_channel.send.call_args_list[1]
+        self.assertIn("🧗 Activity check", second_call[0][0])
+        self.assertIn("Ignoring **1** absent members", second_call[0][0])
+        self.assertIn("Found **2** members", second_call[0][0])
+        self.assertEqual(second_call[1]["file"], mock_file)
 
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
     @patch("ironforgedbot.tasks.job_check_activity.AbsentMemberService")
@@ -115,7 +119,9 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel, self.wom_api_key, self.wom_group_id
         )
 
-        self.mock_report_channel.send.assert_not_called()
+        self.mock_report_channel.send.assert_called_once_with(
+            "🧗 Beginning activity check..."
+        )
 
     @patch("ironforgedbot.tasks.job_check_activity.time")
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
@@ -147,7 +153,6 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_absent_service.process_absent_members.return_value = []
         mock_absent_service_class.return_value = mock_absent_service
 
-        # Unsorted input - should be sorted by gained XP
         mock_find_inactive.return_value = [
             ["Player2", "Iron", "300,000", "2 days ago"],
             ["Player1", "Iron", "100,000", "1 day ago"],
@@ -162,7 +167,11 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel, self.wom_api_key, self.wom_group_id
         )
 
-        # Verify results were sorted by XP gained (lowest first)
+        self.assertEqual(self.mock_report_channel.send.call_count, 2)
+
+        first_call = self.mock_report_channel.send.call_args_list[0]
+        self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
+
         expected_sorted = [
             ["Player1", "Iron", "100,000", "1 day ago"],
             ["Player3", "Iron", "200,000", "3 days ago"],
@@ -214,13 +223,11 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_client = AsyncMock()
         mock_wom_client_class.return_value = mock_client
 
-        # Mock successful group details
         mock_group_result = Mock()
         mock_group_result.is_ok = True
         mock_group_result.unwrap.return_value = Mock()
         mock_client.groups.get_details.return_value = mock_group_result
 
-        # Mock failed gains request
         mock_gains_result = Mock()
         mock_gains_result.is_ok = False
         mock_gains_result.unwrap_err.return_value = "API rate limit"
@@ -248,14 +255,12 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_client = AsyncMock()
         mock_wom_client_class.return_value = mock_client
 
-        # Mock group details
         mock_group = Mock()
         mock_group_result = Mock()
         mock_group_result.is_ok = True
         mock_group_result.unwrap.return_value = mock_group
         mock_client.groups.get_details.return_value = mock_group_result
 
-        # Mock member gains
         mock_player = Mock()
         mock_player.id = 123
         mock_player.username = "TestPlayer"
@@ -272,7 +277,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_gains_result.unwrap.return_value = [mock_member_gains]
         mock_client.groups.get_gains.return_value = mock_gains_result
 
-        # Mock WOM member
         mock_wom_member = Mock()
         mock_wom_member.role = GroupRole.Iron
         mock_wom_member.player.username = "TestPlayer"
@@ -306,7 +310,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_group_result.unwrap.return_value = mock_group
         mock_client.groups.get_details.return_value = mock_group_result
 
-        # Mock player that is in absentees list
         mock_player = Mock()
         mock_player.id = 123
         mock_player.username = "absent1"  # In absentees list
@@ -395,7 +398,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_group_result.unwrap.return_value = mock_group
         mock_client.groups.get_details.return_value = mock_group_result
 
-        # Test different role mappings
         test_cases = [
             (GroupRole.Helper, "Alt"),
             (GroupRole.Collector, "Moderator"),

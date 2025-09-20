@@ -32,6 +32,9 @@ async def job_check_activity(
     start_time = time.perf_counter()
     async with db.get_session() as session:
         absent_service = AbsentMemberService(session)
+
+        await report_channel.send("🧗 Beginning activity check...")
+
         absentee_list = await absent_service.process_absent_members()
 
         known_absentees = []
