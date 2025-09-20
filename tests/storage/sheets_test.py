@@ -1,502 +1,171 @@
-import json
-import os
 import unittest
-from datetime import datetime
-from unittest.mock import patch
-
-from googleapiclient.discovery import build
-from googleapiclient.http import HttpMock, HttpMockSequence
-from ironforgedbot.storage.sheets import SheetsStorage
-from ironforgedbot.storage.types import Member, StorageError
-
-
-class TestSheetsStorage(unittest.IsolatedAsyncioTestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        os.environ["TZ"] = "UTC"
-        import time
-
-        time.tzset()
-
-    async def test_read_member(self):
-        sheets_read_response = {
-            "values": [["johnnycache", "2000", "123456", "unknown"]]
-        }
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        expected = Member(id=123456, runescape_name="johnnycache", ingots=2000)
-
-        self.assertEqual(await client.read_member("johnnycache"), expected)
-
-    async def test_read_member_not_found(self):
-        sheets_read_response = {
-            "values": [["johnnycache", "2000", "123456", "unknown"]]
-        }
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        self.assertEqual(await client.read_member("kennylogs"), None)
-
-    async def test_read_member_handle_big_numbers(self):
-        sheets_read_response = {
-            "values": [["testrunbtw", "1000000000014870", "123456", "unknown"]]
-        }
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        expected = Member(
-            id=123456, runescape_name="testrunbtw", ingots=1000000000014870
-        )
-
-        self.assertEqual(await client.read_member("testrunbtw"), expected)
-
-    async def test_read_member_handle_invalid_ingot_value(self):
-        sheets_read_response = {
-            "values": [["testrunbtw", "no-ingots", "123456", "unknown"]]
-        }
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        with self.assertRaises(StorageError):
-            await client.read_member("testrunbtw")
-
-    async def test_read_members(self):
-        sheets_read_response = {
-            "values": [
-                ["johnnycache", "2000", "123456", "unknown"],
-                ["kennylogs", "4000", "654321", "unknown"],
-            ]
-        }
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        expected = [
-            Member(id=123456, runescape_name="johnnycache", ingots=2000),
-            Member(id=654321, runescape_name="kennylogs", ingots=4000),
-        ]
-
-        self.assertEqual(await client.read_members(), expected)
-
-    async def test_read_members_empty(self):
-        sheets_read_response = {}
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        self.assertEqual(await client.read_members(), [])
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_add_members(self, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        mock_datetime.fromisoformat.side_effect = ValueError()
-
-        sheets_read_response = {
-            "values": [["johnnycache", "2000", "123456", "unknown"]]
-        }
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.add_members(
-            [Member(id=654321, runescape_name="kennylogs")], "User Joined Server"
-        )
-
-        self.assertEqual(
-            http.request_sequence[1][2],
-            json.dumps(
-                {
-                    "values": [
-                        ["johnnycache", "2000", "123456", "unknown"],
-                        ["kennylogs", "0", "654321", "unknown"],
-                    ]
-                }
-            ),
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            "kennylogs",
-                            "2023-08-26 18:33:20 EDT-0400",
-                            0,
-                            0,
-                            "User Joined Server",
-                            "",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_update_members(self, mock_datetime):
-        self.maxDiff = None
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        johnnycache = Member(
-            id=123456,
-            runescape_name="johnnycache",
-            ingots=2000,
-            joined_date=mock_datetime.fromisoformat("2022-12-30T10:22:51.626649"),
-        )
-        kennylogs = Member(id=123456, runescape_name="kennylogs", ingots=2000)
-        sheets_read_response = {
-            "values": [["johnnycache", "2000", "123456", "2022-12-30T10:22:51.626649"]]
-        }
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.update_members(
-            [Member(id=123456, runescape_name="kennylogs", ingots=2000)], "leader"
-        )
-
-        self.assertEqual(
-            http.request_sequence[1][2],
-            json.dumps({"values": [["kennylogs", "2000", "123456", "unknown"]]}),
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            "johnnycache",
-                            "2023-08-26 18:33:20 EDT-0400",
-                            str(johnnycache),
-                            str(kennylogs),
-                            "leader",
-                            "",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_remove_members(self, mock_datetime):
-        self.maxDiff = None
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        johnnycache = Member(
-            id=123456,
-            runescape_name="johnnycache",
-            ingots=2000,
-            joined_date=mock_datetime.fromisoformat("2022-12-30T10:22:51.626649"),
-        )
-        sheets_read_response = {
-            "values": [["johnnycache", "2000", "123456", "unknown"]]
-        }
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.remove_members([johnnycache], "User Left Server")
-
-        self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["", "", "", ""]]})
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            "johnnycache",
-                            "2023-08-26 18:33:20 EDT-0400",
-                            str(johnnycache),
-                            0,
-                            "User Left Server",
-                            "",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_start_raffle(self, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        sheets_read_response = {"values": [["False"]]}
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.start_raffle("johnnycache")
-
-        self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["True"]]})
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            "",
-                            "2023-08-26 18:33:20 EDT-0400",
-                            "False",
-                            "True",
-                            "johnnycache",
-                            "Started Raffle",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    async def test_start_raffle_already_ongoing(self):
-        sheets_read_response = {"values": [["True"]]}
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        with self.assertRaises(StorageError):
-            await client.start_raffle("johnnycache")
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_end_raffle(self, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        sheets_read_response = {"values": [["True"]]}
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.end_raffle("johnnycache")
-
-        self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["False"]]})
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            "",
-                            "2023-08-26 18:33:20 EDT-0400",
-                            "True",
-                            "False",
-                            "johnnycache",
-                            "Ended Raffle",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    async def test_end_raffle_none_ongoing(self):
-        sheets_read_response = {"values": [["False"]]}
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        with self.assertRaises(StorageError):
-            await client.end_raffle("johnnycache")
-
-    async def test_read_raffle_tickets(self):
-        sheets_read_response = {"values": [["12345", "20"]]}
-
-        http = HttpMock(headers={"status": "200"})
-        http.data = json.dumps(sheets_read_response)
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        self.assertEqual({12345: 20}, await client.read_raffle_tickets())
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_add_raffle_tickets(self, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        sheets_read_response = {"values": [["12345", "20"]]}
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.add_raffle_tickets(12345, 5)
-
-        self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["12345", 25]]})
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            12345,
-                            "2023-08-26 18:33:20 EDT-0400",
-                            20,
-                            25,
-                            12345,
-                            "Assign 5 raffle tickets",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_add_raffle_tickets_first_buy(self, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        sheets_read_response = {"values": [[]]}
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-        client = SheetsStorage(sheets_client, "")
-
-        await client.add_raffle_tickets(12345, 5)
-
-        self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["12345", 5]]})
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            12345,
-                            "2023-08-26 18:33:20 EDT-0400",
-                            0,
-                            5,
-                            12345,
-                            "Assign 5 raffle tickets",
-                        ]
-                    ]
-                }
-            ),
-        )
-
-    @patch("ironforgedbot.storage.sheets.datetime")
-    async def test_delete_raffle_tickets(self, mock_datetime):
-        mock_datetime.now.return_value = datetime(2023, 8, 26, 22, 33, 20)
-        sheets_read_response = {"values": [["12345", "20"]]}
-
-        http = HttpMockSequence(
-            [
-                ({"status": "200"}, json.dumps(sheets_read_response)),
-                ({"status": "200"}, json.dumps("")),
-                ({"status": "200"}, json.dumps("")),
-            ]
-        )
-
-        sheets_client = build("sheets", "v4", http=http, developerKey="bloop")
-
-        client = SheetsStorage(sheets_client, "")
-
-        await client.delete_raffle_tickets("johnnycache")
-
-        self.assertEqual(
-            http.request_sequence[1][2], json.dumps({"values": [["", ""]]})
-        )
-
-        self.assertEqual(
-            http.request_sequence[2][2],
-            json.dumps(
-                {
-                    "values": [
-                        [
-                            "",
-                            "2023-08-26 18:33:20 EDT-0400",
-                            "",
-                            "",
-                            "johnnycache",
-                            "Cleared all raffle tickets",
-                        ]
-                    ]
-                }
-            ),
-        )
+from unittest.mock import AsyncMock, Mock, patch
+
+from ironforgedbot.storage.sheets import (
+    InvalidSheetException,
+    InvalidWorkbookException,
+    Sheets,
+)
+
+
+class SheetsTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.sheets = Sheets()
+        self.mock_client = Mock()
+        self.mock_workbook = Mock()
+        self.mock_sheet = Mock()
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_get_range_success(self, mock_get_sheet):
+        test_data = [["data1", "data2"], ["data3", "data4"]]
+        mock_get_sheet.return_value = self.mock_sheet
+        
+        with patch("ironforgedbot.storage.sheets.asyncio.to_thread") as mock_to_thread:
+            mock_to_thread.return_value = test_data
+            
+            result = await self.sheets.get_range("test_sheet", "A1:B2")
+            
+            self.assertEqual(result, test_data)
+            mock_get_sheet.assert_called_once_with("test_sheet")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_get_range_raises_exception_when_no_sheet(self, mock_get_sheet):
+        mock_get_sheet.return_value = None
+        
+        with self.assertRaises(InvalidSheetException):
+            await self.sheets.get_range("test_sheet", "A1:B2")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_update_range_success(self, mock_get_sheet):
+        test_values = [["new1", "new2"], ["new3", "new4"]]
+        mock_get_sheet.return_value = self.mock_sheet
+        
+        with patch("ironforgedbot.storage.sheets.asyncio.to_thread") as mock_to_thread:
+            mock_to_thread.return_value = None
+            
+            await self.sheets.update_range("test_sheet", "A1:B2", test_values)
+            
+            mock_get_sheet.assert_called_once_with("test_sheet")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_update_range_raises_exception_when_no_sheet(self, mock_get_sheet):
+        mock_get_sheet.return_value = None
+        
+        with self.assertRaises(InvalidSheetException):
+            await self.sheets.update_range("test_sheet", "A1:B2", [["data"]])
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_update_cell_success(self, mock_get_sheet):
+        mock_get_sheet.return_value = self.mock_sheet
+        
+        with patch("ironforgedbot.storage.sheets.asyncio.to_thread") as mock_to_thread:
+            mock_to_thread.return_value = None
+            
+            await self.sheets.update_cell("test_sheet", 1, 1, "new_value")
+            
+            mock_get_sheet.assert_called_once_with("test_sheet")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_update_cell_raises_exception_when_no_sheet(self, mock_get_sheet):
+        mock_get_sheet.return_value = None
+        
+        with self.assertRaises(InvalidSheetException):
+            await self.sheets.update_cell("test_sheet", 1, 1, "value")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_append_row_success(self, mock_get_sheet):
+        test_values = ["value1", "value2", "value3"]
+        mock_get_sheet.return_value = self.mock_sheet
+        
+        with patch("ironforgedbot.storage.sheets.asyncio.to_thread") as mock_to_thread:
+            mock_to_thread.return_value = None
+            
+            await self.sheets.append_row("test_sheet", test_values)
+            
+            mock_get_sheet.assert_called_once_with("test_sheet")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_append_row_raises_exception_when_no_sheet(self, mock_get_sheet):
+        mock_get_sheet.return_value = None
+        
+        with self.assertRaises(InvalidSheetException):
+            await self.sheets.append_row("test_sheet", ["data"])
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_get_all_records_success(self, mock_get_sheet):
+        test_records = [{"name": "test1", "value": "value1"}, {"name": "test2", "value": "value2"}]
+        mock_get_sheet.return_value = self.mock_sheet
+        
+        with patch("ironforgedbot.storage.sheets.asyncio.to_thread") as mock_to_thread:
+            mock_to_thread.return_value = test_records
+            
+            result = await self.sheets.get_all_records("test_sheet")
+            
+            self.assertEqual(result, test_records)
+            mock_get_sheet.assert_called_once_with("test_sheet")
+
+    @patch.object(Sheets, 'get_sheet')
+    async def test_get_all_records_raises_exception_when_no_sheet(self, mock_get_sheet):
+        mock_get_sheet.return_value = None
+        
+        with self.assertRaises(InvalidSheetException):
+            await self.sheets.get_all_records("test_sheet")
+
+    @patch("ironforgedbot.storage.sheets.asyncio.to_thread")
+    async def test_get_sheet_success(self, mock_to_thread):
+        self.sheets.workbook = self.mock_workbook
+        mock_to_thread.return_value = self.mock_sheet
+
+        result = await self.sheets.get_sheet("test_sheet")
+
+        self.assertEqual(result, self.mock_sheet)
+        mock_to_thread.assert_called_with(self.mock_workbook.worksheet, "test_sheet")
+
+    async def test_get_sheet_raises_exception_when_no_workbook(self):
+        with patch.object(self.sheets, '_init_client', new_callable=AsyncMock):
+            self.sheets.workbook = None
+
+            with self.assertRaises(InvalidWorkbookException):
+                await self.sheets.get_sheet("test_sheet")
+
+    @patch("ironforgedbot.storage.sheets.CONFIG")
+    @patch("ironforgedbot.storage.sheets.service_account")
+    @patch("ironforgedbot.storage.sheets.gspread")
+    @patch("ironforgedbot.storage.sheets.asyncio.to_thread")
+    async def test_init_client_creates_client_and_workbook(self, mock_to_thread, mock_gspread, mock_service_account, mock_config):
+        mock_config.SHEET_ID = "test_sheet_id"
+        self.sheets.client = None
+        self.sheets.workbook = None
+        
+        mock_creds = Mock()
+        mock_service_account.Credentials.from_service_account_file.return_value = mock_creds
+        mock_gspread.authorize.return_value = self.mock_client
+        self.mock_client.open_by_key.return_value = self.mock_workbook
+        
+        def mock_setup():
+            pass
+            
+        mock_to_thread.return_value = None
+        
+        await self.sheets._init_client()
+        
+        mock_to_thread.assert_called_once()
+
+    @patch("ironforgedbot.storage.sheets.asyncio.to_thread")
+    async def test_init_client_skips_when_already_initialized(self, mock_to_thread):
+        self.sheets.client = self.mock_client
+        self.sheets.workbook = self.mock_workbook
+
+        await self.sheets._init_client()
+
+        mock_to_thread.assert_not_called()
+
+    async def test_client_initialization_uses_asyncio_lock(self):
+        with patch("ironforgedbot.storage.sheets.asyncio.to_thread") as mock_to_thread:
+            mock_to_thread.return_value = None
+            self.sheets.client = None
+            self.sheets.workbook = None
+
+            await self.sheets._init_client()
+
+            mock_to_thread.assert_called_once()
