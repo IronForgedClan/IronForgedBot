@@ -64,6 +64,8 @@ class DiscordClient(discord.Client):
         self.automations = None
         self.effect_lock = asyncio.Lock()
         self.loop = asyncio.get_event_loop()
+        self._emoji_cache_loaded = False
+        self._setup_complete = False
 
         signal.signal(signal.SIGINT, self.handle_signal)
         signal.signal(signal.SIGTERM, self.handle_signal)
@@ -132,13 +134,24 @@ class DiscordClient(discord.Client):
         await self.close()
 
     async def setup_hook(self):
+        """Called only once when the bot starts up, before connecting to Discord."""
+        if self._setup_complete:
+            logger.debug("Setup hook already completed, skipping...")
+            return
+            
         await STATE.load_state()
 
         if self.upload:
             self._tree.copy_global_to(guild=self.guild)
             await self._tree.sync(guild=self.guild)
+            logger.info("Command tree synced to guild")
 
-        await populate_emoji_cache(await self.fetch_application_emojis())
+        # Load emoji cache only once during initial setup
+        if not self._emoji_cache_loaded:
+            await populate_emoji_cache(await self.fetch_application_emojis())
+            self._emoji_cache_loaded = True
+            
+        self._setup_complete = True
 
     async def on_connect(self):
         logger.info("Bot connected to Discord")
@@ -150,6 +163,7 @@ class DiscordClient(discord.Client):
         logger.info("Bot has disconnected from Discord")
 
     async def on_ready(self):
+        """Called when the bot has successfully connected to Discord and is ready."""
         if not self.user:
             logger.critical("Error logging into discord server")
             sys.exit(1)
@@ -162,8 +176,12 @@ class DiscordClient(discord.Client):
             )
         )
 
+        # Only create automations once
         if not self.automations:
+            logger.info("Initializing automation system...")
             self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
+        else:
+            logger.debug("Automations already initialized, skipping...")
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         async with self.effect_lock:

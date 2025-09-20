@@ -28,8 +28,11 @@ class IronForgedAutomations:
         self._running_jobs: Set[asyncio.Task] = set()
         self._job_lock = asyncio.Lock()
         self._shutdown_timeout = 30.0
+        
+        logger.info("Creating AsyncIOScheduler for automation tasks...")
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()
+        logger.info("Scheduler started successfully")
 
         report_channel = get_text_channel(discord_guild, CONFIG.AUTOMATION_CHANNEL_ID)
 
@@ -40,9 +43,11 @@ class IronForgedAutomations:
         self.report_channel = report_channel
         self.discord_guild = discord_guild
 
+        logger.info("Setting up automation jobs...")
         asyncio.create_task(self.setup_automations())
 
         # Sync on startup to make sure all changes captured.
+        logger.info("Running initial member sync...")
         asyncio.create_task(job_sync_members(self.discord_guild, self.report_channel))
 
     async def stop(self):
