@@ -78,11 +78,11 @@ class IronForgedAutomations:
         """Wrapper for tracking active jobs."""
         return lambda: self.track_job(job_func, *args, **kwargs)
 
-    async def _clear_caches(self, report_channel: discord.TextChannel):
+    async def _clear_caches(self):
         score_cache_output = await SCORE_CACHE.clean()
 
         if score_cache_output:
-            await report_channel.send(f"**♻️ Score cache:** {score_cache_output}")
+            logger.info(score_cache_output)
 
     async def setup_automations(self):
         """Add jobs to scheduler."""
@@ -138,7 +138,7 @@ class IronForgedAutomations:
         )
 
         self.scheduler.add_job(
-            self._job_wrapper(self._clear_caches, self.report_channel),
+            self._job_wrapper(self._clear_caches),
             CronTrigger(minute="*/10"),
         )
 
