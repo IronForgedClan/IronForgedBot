@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
@@ -219,20 +219,22 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_render_percentage.return_value = "45%"
 
         # Mock the embed that gets built - create a real embed that can have fields added
-        mock_embed = AsyncMock()
+        mock_embed = Mock()
         mock_embed.title = ":iron: TestUser | Score: 1,675"
         mock_embed.fields = []
 
         # Mock add_field to track field additions
         def add_field_side_effect(name=None, value=None, inline=True):
-            field = AsyncMock()
+            field = Mock()
             field.name = name
             field.value = value
             field.inline = inline
             mock_embed.fields.append(field)
             return None
 
-        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(*args, **kwargs)
+        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(
+            *args, **kwargs
+        )
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
@@ -282,7 +284,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_check_role.side_effect = [False, True]
 
         # Mock build_response_embed
-        mock_embed = AsyncMock()
+        mock_embed = Mock()
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
@@ -326,20 +328,22 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_check_role.side_effect = [False, True]
 
         # Mock the embed that gets built - create a real embed that can have fields added
-        mock_embed = AsyncMock()
+        mock_embed = Mock()
         mock_embed.title = ":saradomin: TestUser | Score: 50,000"
         mock_embed.fields = []
 
         # Mock add_field to track field additions
         def add_field_side_effect(name=None, value=None, inline=True):
-            field = AsyncMock()
+            field = Mock()
             field.name = name
             field.value = value
             field.inline = inline
             mock_embed.fields.append(field)
             return None
 
-        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(*args, **kwargs)
+        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(
+            *args, **kwargs
+        )
         mock_build_embed.return_value = mock_embed
 
         # High points to trigger GOD rank
@@ -386,7 +390,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_check_role.side_effect = [False, True]
 
         # Mock build_response_embed
-        mock_embed = AsyncMock()
+        mock_embed = Mock()
         mock_embed.title = ":iron: TestUser | Score: 0"
         mock_build_embed.return_value = mock_embed
 
@@ -433,19 +437,21 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_render_percentage.return_value = "89%"
 
         # Mock the embed that gets built
-        mock_embed = AsyncMock()
+        mock_embed = Mock()
         mock_embed.fields = []
 
         # Mock add_field to track field additions
         def add_field_side_effect(name=None, value=None, inline=True):
-            field = AsyncMock()
+            field = Mock()
             field.name = name
             field.value = value
             field.inline = inline
             mock_embed.fields.append(field)
             return None
 
-        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(*args, **kwargs)
+        mock_embed.add_field = lambda *args, **kwargs: add_field_side_effect(
+            *args, **kwargs
+        )
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
@@ -459,11 +465,11 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         # Check that skill points and activity points fields were added correctly
         self.assertEqual(len(mock_embed.fields), 3)
-        
+
         # Check the field values that were added
         skill_field = mock_embed.fields[0]
         activity_field = mock_embed.fields[1]
-        
+
         self.assertEqual(skill_field.name, "Skill Points")
         self.assertIn("1,500", skill_field.value)
         self.assertEqual(activity_field.name, "Activity Points")
