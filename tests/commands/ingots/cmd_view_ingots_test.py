@@ -6,7 +6,14 @@ import discord
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.models.member import Member
-from tests.helpers import create_mock_discord_interaction, create_test_member, mock_require_role
+from tests.helpers import (
+    create_mock_discord_interaction, 
+    create_test_member, 
+    create_test_db_member,
+    setup_database_service_mocks,
+    assert_embed_structure,
+    mock_require_role
+)
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role):
     from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
@@ -14,19 +21,15 @@ with patch("ironforgedbot.decorators.require_role", mock_require_role):
 
 class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_db_session = AsyncMock()
-        self.mock_member_service = AsyncMock()
-        
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
         
-        self.sample_member = Member(
-            id="test-member-id",
-            discord_id=12345,
-            active=True,
+        self.sample_member = create_test_db_member(
             nickname="TestUser",
-            ingots=1000,
+            discord_id=12345,
             rank=RANK.IRON,
+            ingots=1000,
+            id="test-member-id"
         )
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
@@ -37,23 +40,22 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_success_self(
         self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
         
-        self.mock_member_service.get_member_by_nickname.return_value = self.sample_member
+        mock_member_service.get_member_by_nickname.return_value = self.sample_member
         
         await cmd_view_ingots(self.interaction, None)
         
         mock_validate.assert_called_once_with(self.interaction.guild, "TestUser")
-        self.mock_member_service.get_member_by_nickname.assert_called_once_with("TestUser")
-        self.interaction.followup.send.assert_called_once()
+        mock_member_service.get_member_by_nickname.assert_called_once_with("TestUser")
         
-        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("TestUser", sent_embed.title)
-        self.assertIn("Ingots", sent_embed.title)
+        # Use helper to validate embed structure
+        embed = assert_embed_structure(self, self.interaction)
+        self.assertIn("TestUser", embed.title)
+        self.assertIn("Ingots", embed.title)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
@@ -63,28 +65,25 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_success_other_player(
         self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
     ):
-        other_user = create_test_member("OtherUser", ROLE.MEMBER)
-        other_member = Member(
-            id="other-member-id",
-            discord_id=67890,
-            active=True,
+        other_user = create_test_member("OtherUser", [ROLE.MEMBER])
+        other_member = create_test_db_member(
             nickname="OtherUser",
-            ingots=5000,
+            discord_id=67890,
             rank=RANK.MITHRIL,
+            ingots=5000
         )
         
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (other_user, "OtherUser")
         mock_get_rank.return_value = RANK.MITHRIL
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
         
-        self.mock_member_service.get_member_by_nickname.return_value = other_member
+        mock_member_service.get_member_by_nickname.return_value = other_member
         
         await cmd_view_ingots(self.interaction, "OtherUser")
         
         mock_validate.assert_called_once_with(self.interaction.guild, "OtherUser")
-        self.mock_member_service.get_member_by_nickname.assert_called_once_with("OtherUser")
+        mock_member_service.get_member_by_nickname.assert_called_once_with("OtherUser")
         
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("OtherUser", sent_embed.title)
@@ -97,11 +96,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_member_not_found(
         self, mock_send_error, mock_validate, mock_member_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (self.test_user, "UnknownUser")
         
-        self.mock_member_service.get_member_by_nickname.return_value = None
+        mock_member_service.get_member_by_nickname.return_value = None
         
         await cmd_view_ingots(self.interaction, "UnknownUser")
         
@@ -126,13 +124,12 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_embed_fields(
         self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
         
-        self.mock_member_service.get_member_by_nickname.return_value = self.sample_member
+        mock_member_service.get_member_by_nickname.return_value = self.sample_member
         
         await cmd_view_ingots(self.interaction, "TestUser")
         
@@ -152,22 +149,19 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_zero_ingots_thumbnail(
         self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
     ):
-        zero_ingot_member = Member(
-            id="zero-member-id",
-            discord_id=12345,
-            active=True,
+        zero_ingot_member = create_test_db_member(
             nickname="ZeroUser",
-            ingots=0,
+            discord_id=12345,
             rank=RANK.IRON,
+            ingots=0
         )
         
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (self.test_user, "ZeroUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
         
-        self.mock_member_service.get_member_by_nickname.return_value = zero_ingot_member
+        mock_member_service.get_member_by_nickname.return_value = zero_ingot_member
         
         await cmd_view_ingots(self.interaction, "ZeroUser")
         
@@ -182,22 +176,19 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_high_ingots_thumbnail(
         self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
     ):
-        rich_member = Member(
-            id="rich-member-id",
-            discord_id=12345,
-            active=True,
+        rich_member = create_test_db_member(
             nickname="RichUser",
-            ingots=25_000_000,
+            discord_id=12345,
             rank=RANK.IRON,
+            ingots=25_000_000
         )
         
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (self.test_user, "RichUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
         
-        self.mock_member_service.get_member_by_nickname.return_value = rich_member
+        mock_member_service.get_member_by_nickname.return_value = rich_member
         
         await cmd_view_ingots(self.interaction, "RichUser")
         
@@ -233,13 +224,12 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
                     rank=RANK.IRON,
                 )
                 
-                mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-                mock_member_service_class.return_value = self.mock_member_service
+                mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
                 mock_validate.return_value = (self.test_user, "TestUser")
                 mock_get_rank.return_value = RANK.IRON
                 mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
                 
-                self.mock_member_service.get_member_by_nickname.return_value = test_member
+                mock_member_service.get_member_by_nickname.return_value = test_member
                 
                 await cmd_view_ingots(self.interaction, "TestUser")
                 
@@ -263,13 +253,12 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
             rank=RANK.IRON,
         )
         
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_member_service_class.return_value = self.mock_member_service
+        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_validate.return_value = (self.test_user, "LargeUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
         
-        self.mock_member_service.get_member_by_nickname.return_value = large_ingot_member
+        mock_member_service.get_member_by_nickname.return_value = large_ingot_member
         
         await cmd_view_ingots(self.interaction, "LargeUser")
         

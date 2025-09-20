@@ -13,6 +13,8 @@ from ironforgedbot.services.member_service import (
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
+    create_test_db_member,
+    setup_database_service_mocks,
 )
 
 with patch("ironforgedbot.common.helpers.normalize_discord_string", side_effect=lambda x: x):
@@ -29,9 +31,9 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.test_member3 = create_test_member("TestUser3", [ROLE.MEMBER], "testuser3")
         self.test_member3.id = 1003
 
-        self.db_member1 = Member(id=1, discord_id=1001, nickname="testuser1", rank=RANK.IRON, ingots=100, active=True)
-        self.db_member2 = Member(id=2, discord_id=1002, nickname="oldnick", rank=RANK.IRON, ingots=200, active=True)
-        self.db_member3 = Member(id=3, discord_id=9999, nickname="leftuser", rank=RANK.IRON, ingots=300, active=True)
+        self.db_member1 = create_test_db_member(nickname="testuser1", discord_id=1001, rank=RANK.IRON, ingots=100, id=1)
+        self.db_member2 = create_test_db_member(nickname="oldnick", discord_id=1002, rank=RANK.IRON, ingots=200, id=2)
+        self.db_member3 = create_test_db_member(nickname="leftuser", discord_id=9999, rank=RANK.IRON, ingots=300, id=3)
 
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
@@ -43,17 +45,13 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.IRON
 
-        mock_session = AsyncMock()
-        mock_db.get_session.return_value.__aenter__.return_value = mock_session
-
-        mock_service = AsyncMock()
-        mock_service.get_all_active_members.return_value = [
-            self.db_member1,
-            self.db_member2,
-            self.db_member3,
-        ]
-
-        with patch("ironforgedbot.commands.admin.sync_members.MemberService", return_value=mock_service):
+        with patch("ironforgedbot.commands.admin.sync_members.MemberService") as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+            mock_service.get_all_active_members.return_value = [
+                self.db_member1,
+                self.db_member2,
+                self.db_member3,
+            ]
             result = await sync_members(self.guild)
 
         mock_service.disable_member.assert_called_once_with(3)
@@ -69,13 +67,9 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.IRON
 
-        mock_session = AsyncMock()
-        mock_db.get_session.return_value.__aenter__.return_value = mock_session
-
-        mock_service = AsyncMock()
-        mock_service.get_all_active_members.return_value = [self.db_member2]
-
-        with patch("ironforgedbot.commands.admin.sync_members.MemberService", return_value=mock_service):
+        with patch("ironforgedbot.commands.admin.sync_members.MemberService") as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+            mock_service.get_all_active_members.return_value = [self.db_member2]
             result = await sync_members(self.guild)
 
         mock_service.change_nickname.assert_called_once_with(2, "testuser2")

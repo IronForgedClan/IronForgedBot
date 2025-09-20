@@ -11,6 +11,7 @@ from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
+    create_test_score_data,
     mock_require_role,
 )
 

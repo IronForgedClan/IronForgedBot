@@ -9,6 +9,8 @@ from ironforgedbot.services.ingot_service import IngotServiceResponse
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
+    setup_database_service_mocks,
+    assert_embed_structure,
     mock_require_role,
 )
 
@@ -18,8 +20,6 @@ with patch("ironforgedbot.decorators.require_role", mock_require_role):
 
 class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_db_session = AsyncMock()
-        self.mock_ingot_service = AsyncMock()
         
         self.caller = create_test_member("leader", [ROLE.LEADERSHIP])
         self.target1 = create_test_member("player1", [ROLE.MEMBER])
@@ -38,27 +38,25 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_add_single_player(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
             True, "Ingots added successfully", 10000
         )
         
         await cmd_add_remove_ingots(self.interaction, "player1", 5000, "testing")
         
         mock_validate.assert_called_once_with(self.interaction.guild, "player1", must_be_member=True)
-        self.mock_ingot_service.try_add_ingots.assert_called_once_with(
+        mock_ingot_service.try_add_ingots.assert_called_once_with(
             self.target1.id, 5000, self.caller.id, "testing"
         )
         
-        self.interaction.followup.send.assert_called_once()
-        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("Add Ingots Result", sent_embed.title)
-        self.assertIn("+5,000", sent_embed.description)
-        self.assertIn("testing", sent_embed.description)
+        embed = assert_embed_structure(self, self.interaction)
+        self.assertIn("Add Ingots Result", embed.title)
+        self.assertIn("+5,000", embed.description)
+        self.assertIn("testing", embed.description)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
@@ -67,19 +65,18 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_remove_single_player(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_remove_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_remove_ingots.return_value = IngotServiceResponse(
             True, "Ingots removed successfully", 3000
         )
         
         await cmd_add_remove_ingots(self.interaction, "player1", -2000, "penalty")
         
         mock_validate.assert_called_once_with(self.interaction.guild, "player1", must_be_member=True)
-        self.mock_ingot_service.try_remove_ingots.assert_called_once_with(
+        mock_ingot_service.try_remove_ingots.assert_called_once_with(
             self.target1.id, -2000, self.caller.id, "penalty"
         )
         
@@ -95,8 +92,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_multiple_players(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_find_emoji.return_value = ":Ingot:"
         
         validate_responses = [
@@ -109,12 +105,12 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
             IngotServiceResponse(True, "Success", 8000),
             IngotServiceResponse(True, "Success", 12000),
         ]
-        self.mock_ingot_service.try_add_ingots.side_effect = service_responses
+        mock_ingot_service.try_add_ingots.side_effect = service_responses
         
         await cmd_add_remove_ingots(self.interaction, "player1,player2", 3000, "bonus")
         
         self.assertEqual(mock_validate.call_count, 2)
-        self.assertEqual(self.mock_ingot_service.try_add_ingots.call_count, 2)
+        self.assertEqual(mock_ingot_service.try_add_ingots.call_count, 2)
         
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("Add Ingots Result", sent_embed.title)
@@ -127,19 +123,18 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_duplicate_players_ignored(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
             True, "Success", 8000
         )
         
         await cmd_add_remove_ingots(self.interaction, "player1,player1,player1", 3000, "bonus")
         
         mock_validate.assert_called_once()  # Only called once despite 3 names
-        self.mock_ingot_service.try_add_ingots.assert_called_once()
+        mock_ingot_service.try_add_ingots.assert_called_once()
         
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("+3,000", sent_embed.description)  # Only one player processed
@@ -151,8 +146,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_unknown_players_handled(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_find_emoji.return_value = ":Ingot:"
         
         def validate_side_effect(guild, player_name, must_be_member=False):
@@ -163,14 +157,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
             
         mock_validate.side_effect = validate_side_effect
         
-        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
             True, "Success", 8000
         )
         
         await cmd_add_remove_ingots(self.interaction, "player1,unknown", 3000, "bonus")
         
         self.assertEqual(mock_validate.call_count, 2)
-        self.mock_ingot_service.try_add_ingots.assert_called_once()  # Only valid player processed
+        mock_ingot_service.try_add_ingots.assert_called_once()  # Only valid player processed
         
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         embed_field_value = sent_embed.fields[0].value
@@ -184,18 +178,17 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_insufficient_funds(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_remove_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_remove_ingots.return_value = IngotServiceResponse(
             False, "Insufficient funds", 1000
         )
         
         await cmd_add_remove_ingots(self.interaction, "player1", -5000, "penalty")
         
-        self.mock_ingot_service.try_remove_ingots.assert_called_once_with(
+        mock_ingot_service.try_remove_ingots.assert_called_once_with(
             self.target1.id, -5000, self.caller.id, "penalty"
         )
         
@@ -211,12 +204,11 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_embed_structure(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
             True, "Success", 10000
         )
         
@@ -240,8 +232,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_large_result_file_output(
         self, mock_datetime, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_find_emoji.return_value = ":Ingot:"
         mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
         
@@ -251,7 +242,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         mock_validate.side_effect = validate_responses
         
         service_responses = [IngotServiceResponse(True, "Success", 8000) for _ in range(10)]
-        self.mock_ingot_service.try_add_ingots.side_effect = service_responses
+        mock_ingot_service.try_add_ingots.side_effect = service_responses
         
         await cmd_add_remove_ingots(self.interaction, ",".join(players), 3000, "bonus")
         
@@ -270,12 +261,11 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_empty_players_ignored(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
             True, "Success", 8000
         )
         
@@ -283,7 +273,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         await cmd_add_remove_ingots(self.interaction, "player1, , ,  ", 3000, "bonus")
         
         mock_validate.assert_called_once()  # Only called for valid player
-        self.mock_ingot_service.try_add_ingots.assert_called_once()
+        mock_ingot_service.try_add_ingots.assert_called_once()
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
@@ -292,8 +282,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_result_sorting(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_find_emoji.return_value = ":Ingot:"
         
         # Create players in non-alphabetical order
@@ -302,7 +291,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         mock_validate.side_effect = validate_responses
         
         service_responses = [IngotServiceResponse(True, "Success", 8000) for _ in range(3)]
-        self.mock_ingot_service.try_add_ingots.side_effect = service_responses
+        mock_ingot_service.try_add_ingots.side_effect = service_responses
         
         await cmd_add_remove_ingots(self.interaction, ",".join(players), 3000, "bonus")
         
@@ -324,12 +313,11 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_add_remove_ingots_large_numbers_formatting(
         self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
     ):
-        mock_db.get_session.return_value.__aenter__.return_value = self.mock_db_session
-        mock_ingot_service_class.return_value = self.mock_ingot_service
+        mock_db_session, mock_ingot_service = setup_database_service_mocks(mock_db, mock_ingot_service_class)
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
         
-        self.mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
+        mock_ingot_service.try_add_ingots.return_value = IngotServiceResponse(
             True, "Success", 1_234_567
         )
         

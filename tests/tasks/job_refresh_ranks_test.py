@@ -8,7 +8,13 @@ from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.services.score_service import HiscoresNotFound
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
-from tests.helpers import create_mock_discord_guild, create_test_member
+from tests.helpers import (
+    create_mock_discord_guild, 
+    create_test_member, 
+    create_test_db_member,
+    setup_database_service_mocks,
+    setup_time_mocks
+)
 
 
 class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
@@ -21,10 +27,11 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         self.mock_member.id = 12345
         self.mock_member.mention = "<@12345>"
         
-        self.mock_db_member = Mock()
-        self.mock_db_member.nickname = "TestPlayer"
-        self.mock_db_member.discord_id = 12345
-        self.mock_db_member.joined_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        self.mock_db_member = create_test_db_member(
+            nickname="TestPlayer",
+            discord_id=12345,
+            joined_date=datetime(2024, 1, 1, tzinfo=timezone.utc)
+        )
     
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
@@ -33,14 +40,10 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     async def test_job_refresh_ranks_success(self, mock_db, mock_member_service_class, mock_history_service_class, mock_score_service_class, mock_sleep, mock_time):
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
+        setup_time_mocks(None, mock_time, duration_seconds=5.0)
         
-        mock_session = AsyncMock()
-        mock_db.get_session.return_value.__aenter__.return_value = mock_session
-        
-        mock_member_service = AsyncMock()
+        mock_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
         
         mock_history_service = AsyncMock()
         mock_history_service_class.return_value = mock_history_service

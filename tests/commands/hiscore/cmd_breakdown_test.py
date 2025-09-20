@@ -11,6 +11,7 @@ from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
+    create_test_score_data,
     mock_require_role,
 )
 
@@ -25,24 +26,13 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         self.prospect_user = create_test_member("ProspectUser", [ROLE.PROSPECT])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-        self.sample_skills = [
-            SkillScore("Attack", None, 1, "Attack", 13034000, 99, 1000),
-            SkillScore("Defence", None, 2, "Defence", 6517000, 85, 500),
-        ]
-        self.sample_bosses = [
-            ActivityScore("Zulrah", None, 1, "Zulrah", 200, 100),
-            ActivityScore("Vorkath", None, 2, "Vorkath", 150, 75),
-        ]
-        self.sample_clues = [
-            ActivityScore("Beginner", None, 1, "ClueScrolls_Beginner", 100, 50),
-        ]
-        self.sample_raids = [
-            ActivityScore("CoX", None, 1, "CoX", 50, 25),
-        ]
-
-        self.sample_score_breakdown = ScoreBreakdown(
-            self.sample_skills, self.sample_clues, self.sample_raids, self.sample_bosses
-        )
+        self.sample_score_breakdown = create_test_score_data(skills_count=2, activities_count=4)
+        
+        # Extract individual components for tests that need them
+        self.sample_skills = self.sample_score_breakdown.skills
+        self.sample_clues = self.sample_score_breakdown.clues
+        self.sample_raids = self.sample_score_breakdown.raids
+        self.sample_bosses = self.sample_score_breakdown.bosses
 
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.send_error_response")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
