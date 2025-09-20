@@ -8,10 +8,7 @@ from ironforgedbot.common.ranks import RANK
 
 
 class TestScoreService(unittest.IsolatedAsyncioTestCase):
-    """Test cases for ScoreService class"""
-
     def setUp(self):
-        """Set up test fixtures before each test method."""
         self.mock_http = AsyncMock()
         self.score_service = ScoreService(self.mock_http)
 
