@@ -1,152 +1,232 @@
-from datetime import datetime
 import unittest
-from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.effects.add_prospect_role import add_prospect_role
-from ironforgedbot.storage.types import Member, StorageError
-from tests.helpers import create_mock_discord_guild, create_test_member
+from tests.helpers import create_test_member
 
 
-class TestAddProspectRoleEffect(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.effects.add_prospect_role.datetime")
-    @patch("ironforgedbot.effects.add_prospect_role.STORAGE", new_callable=AsyncMock)
-    async def test_timestamp_is_saved(self, mock_storage, mock_datetime):
-        member = create_test_member("tester", [ROLE.PROSPECT], "tester")
-        guild = create_mock_discord_guild(
-            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
-        )
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_report_channel.guild = guild
+class AddProspectRoleTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_report_channel = Mock(spec=discord.TextChannel)
+        self.mock_report_channel.send = AsyncMock()
+        self.mock_guild = Mock(spec=discord.Guild)
+        self.mock_report_channel.guild = self.mock_guild
+        self.member = create_test_member("TestUser", [ROLE.PROSPECT], "TestUser")
+        self.member.id = 123456789
+        self.member.display_name = "TestUser"
+        self.member.mention = "<@123456789>"
+        self.member.add_roles = AsyncMock()
+        self.member.remove_roles = AsyncMock()
 
-        expected_datetime = datetime(2024, 1, 1, 12, 0, 0)
-        mock_datetime.now.return_value = expected_datetime
-
-        mock_storage.read_member.return_value = Member(
-            id=member.id,
-            runescape_name=member.display_name,
-            joined_date="unknown",
-        )
-
-        await add_prospect_role(mock_report_channel, member)
-
-        mock_storage.update_members.assert_called_with(
-            [
-                Member(
-                    id=member.id,
-                    runescape_name=member.display_name,
-                    ingots=0,
-                    joined_date=expected_datetime.isoformat(),
-                )
-            ],
-            "BOT",
-            "Saving Prospect joined timestamp",
-        )
-
-    @patch("ironforgedbot.effects.add_prospect_role.datetime")
-    @patch("ironforgedbot.effects.add_prospect_role.STORAGE", new_callable=AsyncMock)
-    async def test_should_report_when_called_and_update(
-        self, mock_storage, mock_datetime
-    ):
-        member = create_test_member("tester", [ROLE.PROSPECT], "tester")
-        guild = create_mock_discord_guild(
-            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
-        )
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_report_channel.guild = guild
-
-        expected_datetime = datetime.fromisoformat("2024-01-01T12:00:00Z")
-        mock_datetime.now.return_value = expected_datetime
-
-        mock_storage.read_member.return_value = Member(
-            id=member.id,
-            runescape_name=member.display_name,
-            joined_date="unknown",
-        )
-
-        mock_message = MagicMock(spec=discord.Message)
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_adds_prospect_role_without_other_changes(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_get_role.return_value = mock_prospect_role
+        mock_check_role.side_effect = lambda member, role: False
+        mock_message = Mock()
         mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.mock_report_channel.send.assert_called_once()
+        call_args = self.mock_report_channel.send.call_args[0][0]
+        self.assertIn("given the **Prospect** role", call_args)
+        mock_message.edit.assert_called_once()
 
-        mock_report_channel.send.return_value = mock_message
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_removes_applicant_role_when_present(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_applicant_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.APPLICANT: mock_applicant_role,
+            ROLE.GUEST: Mock(),
+            ROLE.MEMBER: Mock()
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role == ROLE.APPLICANT
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.member.remove_roles.assert_called_once_with(
+            mock_applicant_role, reason="Prospect: remove Applicant role"
+        )
+        mock_message.edit.assert_called_once()
+        edit_content = mock_message.edit.call_args[1]["content"]
+        self.assertIn("Removed roles:  **Applicant**", edit_content)
 
-        await add_prospect_role(mock_report_channel, member)
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_removes_guest_role_when_present(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_guest_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.APPLICANT: Mock(),
+            ROLE.GUEST: mock_guest_role,
+            ROLE.MEMBER: Mock()
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role == ROLE.GUEST
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.member.remove_roles.assert_called_once_with(
+            mock_guest_role, reason="Prospect: remove Guest role"
+        )
+        mock_message.edit.assert_called_once()
+        edit_content = mock_message.edit.call_args[1]["content"]
+        self.assertIn("Removed roles:  **Guest**", edit_content)
 
-        mock_report_channel.send.assert_awaited_with(
-            f":information: {member.mention} has been given the "
-            f"{text_bold(ROLE.PROSPECT)} role, saving timestamp..."
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_adds_member_role_when_missing(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_member_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.APPLICANT: Mock(),
+            ROLE.GUEST: Mock(),
+            ROLE.MEMBER: mock_member_role
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role != ROLE.MEMBER
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.member.add_roles.assert_called_once_with(
+            mock_member_role, reason="Prospect: adding Member role"
         )
-        mock_message.edit.assert_awaited_once_with(
-            content=(
-                f":information: {member.mention} has been given the "
-                f"{text_bold(ROLE.PROSPECT)} role.\n"
-                f"Join date saved: <t:{int(expected_datetime.timestamp())}:F>"
-            )
-        )
+        mock_message.edit.assert_called_once()
+        edit_content = mock_message.edit.call_args[1]["content"]
+        self.assertIn("Added roles:  **Member**", edit_content)
 
-    @patch("ironforgedbot.effects.add_prospect_role.STORAGE", new_callable=AsyncMock)
-    async def test_should_report_and_fix_when_called_without_member_in_storage(
-        self, mock_storage
-    ):
-        member = create_test_member(
-            "tester", [ROLE.PROSPECT, ROLE.GUEST, ROLE.APPLICANT], "tester"
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_handles_multiple_role_changes(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_applicant_role = Mock()
+        mock_guest_role = Mock()
+        mock_member_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.APPLICANT: mock_applicant_role,
+            ROLE.GUEST: mock_guest_role,
+            ROLE.MEMBER: mock_member_role
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role in [ROLE.APPLICANT, ROLE.GUEST]
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.member.remove_roles.assert_any_call(
+            mock_applicant_role, reason="Prospect: remove Applicant role"
         )
-        guild = create_mock_discord_guild(
-            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
+        self.member.remove_roles.assert_any_call(
+            mock_guest_role, reason="Prospect: remove Guest role"
         )
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_report_channel.guild = guild
+        self.member.add_roles.assert_called_once_with(
+            mock_member_role, reason="Prospect: adding Member role"
+        )
+        mock_message.edit.assert_called_once()
+        edit_content = mock_message.edit.call_args[1]["content"]
+        self.assertIn("Added roles:  **Member**", edit_content)
+        self.assertIn("Removed roles:  **Applicant**, **Guest**", edit_content)
 
-        mock_storage.read_member.side_effect = StorageError("error")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    async def test_raises_error_when_prospect_role_not_found(self, mock_get_role):
+        mock_get_role.return_value = None
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        with self.assertRaises(ValueError) as context:
+            await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.assertEqual(str(context.exception), "Unable to access Prospect role value")
 
-        await add_prospect_role(mock_report_channel, member)
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_raises_error_when_applicant_role_not_found(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.APPLICANT: None
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role == ROLE.APPLICANT
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        with self.assertRaises(ValueError) as context:
+            await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.assertEqual(str(context.exception), "Unable to access Applicant role values")
 
-        mock_report_channel.send.assert_called_with(
-            f":information: {member.mention} has been given the "
-            f"{text_bold(ROLE.PROSPECT)} role without having the {text_bold(ROLE.MEMBER)} "
-            "role. Adding correct roles to member and trying again..."
-        )
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_raises_error_when_guest_role_not_found(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.GUEST: None
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role == ROLE.GUEST
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        with self.assertRaises(ValueError) as context:
+            await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.assertEqual(str(context.exception), "Unable to access Guest role values")
 
-        member.remove_roles.assert_any_await(
-            guild.roles[2], reason="Prospect: remove Guest role"
-        )
-        member.remove_roles.assert_any_await(
-            guild.roles[3], reason="Prospect: remove Applicant role"
-        )
-
-        member.remove_roles.assert_any_await(
-            guild.roles[0], reason="Prospect: not in storage, toggling role"
-        )
-        member.add_roles.assert_any_await(
-            guild.roles[0], reason="Prospect: adding Prospect role"
-        )
-        member.add_roles.assert_any_await(
-            guild.roles[1], reason="Prospect: adding Member role"
-        )
-
-        mock_storage.update_members.assert_not_called()
-
-    async def test_should_report_and_remove_role_if_no_nickname_set(self):
-        member = create_test_member(
-            "tester", [ROLE.PROSPECT, ROLE.GUEST, ROLE.APPLICANT], ""
-        )
-        guild = create_mock_discord_guild(
-            [member], [ROLE.PROSPECT, ROLE.MEMBER, ROLE.GUEST, ROLE.APPLICANT]
-        )
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_report_channel.guild = guild
-
-        await add_prospect_role(mock_report_channel, member)
-
-        mock_report_channel.send.assert_called_with(
-            f":warning: {member.mention} has been given the "
-            f"{text_bold(ROLE.PROSPECT)} role, but has no nickname set. "
-            "Cannot proceed. It is crucial that all members have a valid nickname.\n\n"
-            f"I have removed the {text_bold(ROLE.PROSPECT)} role. Please add a nickname and try again."
-        )
-
-        member.remove_roles.assert_any_await(
-            guild.roles[0], reason="Prospect: no nickname"
-        )
+    @patch("ironforgedbot.effects.add_prospect_role.find_emoji")
+    @patch("ironforgedbot.effects.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.effects.add_prospect_role.check_member_has_role")
+    async def test_raises_error_when_member_role_not_found(self, mock_check_role, mock_get_role, mock_emoji):
+        mock_emoji.return_value = "🔍"
+        mock_prospect_role = Mock()
+        mock_get_role.side_effect = lambda guild, role: {
+            ROLE.PROSPECT: mock_prospect_role,
+            ROLE.APPLICANT: Mock(),
+            ROLE.GUEST: Mock(),
+            ROLE.MEMBER: None
+        }.get(role)
+        mock_check_role.side_effect = lambda member, role: role != ROLE.MEMBER
+        mock_message = Mock()
+        mock_message.edit = AsyncMock()
+        self.mock_report_channel.send.return_value = mock_message
+        
+        with self.assertRaises(ValueError) as context:
+            await add_prospect_role(self.mock_report_channel, self.member)
+        
+        self.assertEqual(str(context.exception), "Unable to access Member role value")
