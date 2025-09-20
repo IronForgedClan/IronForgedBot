@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import sys
-from typing import Optional
+from typing import Optional, Set
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -25,8 +25,9 @@ logger = logging.getLogger(__name__)
 
 class IronForgedAutomations:
     def __init__(self, discord_guild: Optional[discord.Guild]):
-        self.loop = asyncio.get_event_loop()
-        self.running_jobs = []
+        self._running_jobs: Set[asyncio.Task] = set()
+        self._job_lock = asyncio.Lock()
+        self._shutdown_timeout = 30.0
         self.scheduler = AsyncIOScheduler()
         self.scheduler.start()
 
@@ -46,43 +47,135 @@ class IronForgedAutomations:
 
     async def stop(self):
         """Initiates shutdown and cleanup of scheduled jobs."""
-        self.scheduler.pause()
-        await self.wait_for_jobs_to_complete()
-        self.scheduler.remove_all_jobs()
-        await self.report_channel.send(f"### 🔴 **v{CONFIG.BOT_VERSION}** now offline")
+        logger.info("Initiating shutdown of automations...")
+        
+        try:
+            # Stop scheduler from creating new jobs
+            self.scheduler.pause()
+            
+            # Wait for running jobs to complete with timeout
+            await self.wait_for_jobs_to_complete()
+            
+            # Clean up scheduler
+            self.scheduler.remove_all_jobs()
+            self.scheduler.shutdown(wait=False)
+            
+            await self.report_channel.send(f"### 🔴 **v{CONFIG.BOT_VERSION}** now offline")
+            logger.info("Automation shutdown completed successfully")
+        except Exception as e:
+            logger.error(f"Error during automation shutdown: {e}")
+            raise
 
     async def wait_for_jobs_to_complete(self):
         """Waits for all active jobs to complete before completing."""
-        active_jobs = len(self.running_jobs)
+        async with self._job_lock:
+            active_jobs = len(self._running_jobs)
+            
+            if active_jobs < 1:
+                logger.info("No active jobs to wait for...")
+                return
+            
+            logger.info(f"Waiting for {active_jobs} job(s) to finish...")
+            
+            try:
+                # Wait for jobs with timeout
+                await asyncio.wait_for(
+                    asyncio.gather(*self._running_jobs, return_exceptions=True),
+                    timeout=self._shutdown_timeout
+                )
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout waiting for jobs to complete after {self._shutdown_timeout}s, forcing shutdown")
+                # Cancel remaining jobs
+                for job in self._running_jobs:
+                    if not job.done():
+                        job.cancel()
+                        logger.warning(f"Cancelled job: {job}")
+            except Exception as e:
+                logger.error(f"Error waiting for jobs to complete: {e}")
 
-        if active_jobs < 1:
-            logger.info("No active jobs to wait for...")
-            return
-
-        logger.info(f"Waiting for {active_jobs} job(s) to finish...")
-        await asyncio.gather(*self.running_jobs)
-
-    def track_job(self, job_func, *args, **kwargs):
+    async def track_job(self, job_func, *args, **kwargs):
         """Track a running job by wrapping it in a task and storing the reference."""
-        task = self.loop.create_task(job_func(*args, **kwargs))
-        self.running_jobs.append(task)
-        task.add_done_callback(self.job_done)  # Cleanup once the job is done
-        return task
+        try:
+            # Create the task
+            task = asyncio.create_task(self._safe_job_wrapper(job_func, *args, **kwargs))
+            
+            # Safely add to tracking set
+            async with self._job_lock:
+                self._running_jobs.add(task)
+            
+            # Add cleanup callback
+            task.add_done_callback(self._job_done_callback)
+            
+            logger.debug(f"Started job: {job_func.__name__}")
+            return task
+        except Exception as e:
+            logger.error(f"Error starting job {job_func.__name__}: {e}")
+            raise
 
-    def job_done(self, task):
-        """Remove the job from the running_jobs list once it is finished."""
-        self.running_jobs.remove(task)
-        logger.info(f"A job has completed. {len(self.running_jobs)} job(s) active.")
+    def _job_done_callback(self, task: asyncio.Task):
+        """Remove the job from the running_jobs set once it is finished."""
+        async def cleanup():
+            async with self._job_lock:
+                self._running_jobs.discard(task)
+                active_count = len(self._running_jobs)
+            
+            # Log job completion with any exceptions
+            if task.exception():
+                logger.error(f"Job completed with exception: {task.exception()}")
+            else:
+                logger.debug(f"Job completed successfully")
+            
+            logger.info(f"Job completed. {active_count} job(s) active.")
+        
+        # Schedule cleanup to run in the event loop
+        try:
+            asyncio.create_task(cleanup())
+        except RuntimeError:
+            # Event loop might be closed during shutdown
+            logger.warning("Could not schedule job cleanup - event loop closed")
 
     def _job_wrapper(self, job_func, *args, **kwargs):
         """Wrapper for tracking active jobs."""
-        return lambda: self.track_job(job_func, *args, **kwargs)
+        def wrapper():
+            # Schedule the job tracking as a coroutine
+            try:
+                asyncio.create_task(self.track_job(job_func, *args, **kwargs))
+            except RuntimeError:
+                logger.error(f"Could not schedule job {job_func.__name__} - event loop closed")
+        return wrapper
+    
+    async def _safe_job_wrapper(self, job_func, *args, **kwargs):
+        """Safely execute a job function with comprehensive error handling."""
+        job_name = getattr(job_func, '__name__', str(job_func))
+        
+        try:
+            logger.info(f"Starting job: {job_name}")
+            await job_func(*args, **kwargs)
+            logger.info(f"Job completed successfully: {job_name}")
+        except asyncio.CancelledError:
+            logger.warning(f"Job was cancelled: {job_name}")
+            raise
+        except Exception as e:
+            logger.error(f"Job failed with exception: {job_name} - {type(e).__name__}: {e}")
+            # Send error notification to report channel if possible
+            try:
+                if hasattr(self, 'report_channel') and self.report_channel:
+                    await self.report_channel.send(
+                        f"⚠️ **Job Error**: `{job_name}` failed with: `{type(e).__name__}: {e}`"
+                    )
+            except Exception as notification_error:
+                logger.error(f"Could not send error notification: {notification_error}")
+            raise
 
     async def _clear_caches(self):
-        score_cache_output = await SCORE_CACHE.clean()
-
-        if score_cache_output:
-            logger.info(score_cache_output)
+        """Clear expired cache entries."""
+        try:
+            score_cache_output = await SCORE_CACHE.clean()
+            if score_cache_output:
+                logger.info(score_cache_output)
+        except Exception as e:
+            logger.error(f"Error clearing caches: {e}")
+            raise
 
     async def setup_automations(self):
         """Add jobs to scheduler."""
