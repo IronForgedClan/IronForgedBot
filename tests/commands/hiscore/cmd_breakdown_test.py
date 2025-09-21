@@ -45,17 +45,17 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
 
         mock_send_error.assert_called_once_with(self.interaction, "Invalid player name")
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.send_error_response")
     async def test_cmd_breakdown_hiscores_error(
-        self, mock_send_error, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_error, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HiscoresError("API Error")
 
         await cmd_breakdown(self.interaction, "TestUser")
@@ -65,17 +65,17 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
             "An error has occurred calculating the score for this user. Please try again.",
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.send_error_response")
     async def test_cmd_breakdown_http_exception(
-        self, mock_send_error, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_error, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HttpException("Network Error")
 
         await cmd_breakdown(self.interaction, "TestUser")
@@ -85,17 +85,17 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
             "An error has occurred calculating the score for this user. Please try again.",
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.send_member_no_hiscore_values")
     async def test_cmd_breakdown_member_no_hiscores(
-        self, mock_send_no_hiscore, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_no_hiscore, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HiscoresNotFound(
             "No hiscores found"
         )
@@ -104,17 +104,17 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
 
         mock_send_no_hiscore.assert_called_once_with(self.interaction, "TestUser")
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.send_not_clan_member")
     async def test_cmd_breakdown_non_member_hiscores_not_found(
-        self, mock_send_not_clan, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_not_clan, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (None, "NonMember")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HiscoresNotFound(
             "No hiscores found"
         )
@@ -123,7 +123,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
 
         mock_send_not_clan.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.check_member_has_role")
@@ -136,38 +136,38 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_check_role,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.prospect_user, "ProspectUser")
         mock_check_role.return_value = True
         mock_find_emoji.return_value = ":prospect:"
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_breakdown(self.interaction, "ProspectUser")
 
         mock_send_prospect.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.send_not_clan_member")
     async def test_cmd_breakdown_not_clan_member_response(
-        self, mock_send_not_clan, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_not_clan, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (None, "NonMember")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_breakdown(self.interaction, "NonMember")
 
         mock_send_not_clan.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_from_points")
@@ -184,7 +184,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -200,7 +200,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_view_menu.return_value = mock_menu
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_breakdown(self.interaction, "TestUser")
@@ -213,7 +213,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_menu.add_button.assert_called()
         mock_menu.start.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_from_points")
@@ -232,7 +232,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.GOD
@@ -253,14 +253,14 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = high_score_breakdown
 
         await cmd_breakdown(self.interaction, "TestUser")
 
         mock_menu.start.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_from_points")
@@ -277,7 +277,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -293,7 +293,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_view_menu.return_value = mock_menu
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_breakdown(self.interaction, None)
@@ -302,7 +302,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
             self.interaction.guild, "TestUser", must_be_member=False
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_from_points")
@@ -319,7 +319,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -343,7 +343,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = large_score_breakdown
 
         await cmd_breakdown(self.interaction, "TestUser")
@@ -351,7 +351,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(mock_menu.add_page.call_count, 4)
         mock_menu.start.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_from_points")
@@ -368,7 +368,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -386,14 +386,14 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         empty_score_breakdown = ScoreBreakdown([], [], [], [])
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = empty_score_breakdown
 
         await cmd_breakdown(self.interaction, "TestUser")
 
         mock_menu.start.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_from_points")
@@ -410,7 +410,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -439,7 +439,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = score_breakdown
 
         await cmd_breakdown(self.interaction, "TestUser")

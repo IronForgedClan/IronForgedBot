@@ -70,10 +70,10 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.common.responses.text_bold")
     @patch("ironforgedbot.common.responses.build_response_embed")
     @patch("ironforgedbot.common.responses.db")
-    @patch("ironforgedbot.common.responses.MemberService")
+    @patch("ironforgedbot.common.responses.create_member_service")
     async def test_send_prospect_response_success(
         self,
-        mock_member_service_class,
+        mock_create_member_service,
         mock_db,
         mock_build_embed,
         mock_text_bold,
@@ -87,7 +87,7 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_member_by_discord_id.return_value = self.mock_db_member
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_embed = Mock()
         mock_build_embed.return_value = mock_embed
@@ -116,16 +116,16 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.common.responses.send_error_response")
     @patch("ironforgedbot.common.responses.db")
-    @patch("ironforgedbot.common.responses.MemberService")
+    @patch("ironforgedbot.common.responses.create_member_service")
     async def test_send_prospect_response_member_not_found(
-        self, mock_member_service_class, mock_db, mock_send_error
+        self, mock_create_member_service, mock_db, mock_send_error
     ):
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
         mock_member_service = AsyncMock()
         mock_member_service.get_member_by_discord_id.return_value = None
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         await send_prospect_response(
             self.mock_interaction, "Iron", "⚪", self.mock_member
@@ -238,10 +238,10 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.common.responses.text_bold")
     @patch("ironforgedbot.common.responses.build_response_embed")
     @patch("ironforgedbot.common.responses.db")
-    @patch("ironforgedbot.common.responses.MemberService")
+    @patch("ironforgedbot.common.responses.create_member_service")
     async def test_send_prospect_response_days_calculation(
         self,
-        mock_member_service_class,
+        mock_create_member_service,
         mock_db,
         mock_build_embed,
         mock_text_bold,
@@ -255,7 +255,7 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_member_by_discord_id.return_value = self.mock_db_member
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_embed = Mock()
         mock_build_embed.return_value = mock_embed

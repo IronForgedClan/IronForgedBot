@@ -26,18 +26,18 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.end_raffle.build_winner_image_file")
     @patch("ironforgedbot.commands.raffle.end_raffle.db")
-    @patch("ironforgedbot.commands.raffle.end_raffle.IngotService")
-    @patch("ironforgedbot.commands.raffle.end_raffle.MemberService")
-    @patch("ironforgedbot.commands.raffle.end_raffle.RaffleService")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_ingot_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_member_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.end_raffle.random")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
     async def test_handle_end_raffle_success(
         self,
         mock_state,
         mock_random,
-        mock_raffle_service_class,
-        mock_member_service_class,
-        mock_ingot_service_class,
+        mock_create_raffle_service,
+        mock_create_member_service,
+        mock_create_ingot_service,
         mock_db,
         mock_build_image,
         mock_find_emoji,
@@ -57,7 +57,7 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
         mock_raffle_service.get_raffle_ticket_total.return_value = 20
         mock_raffle_service.get_all_valid_raffle_tickets.return_value = [mock_ticket]
         mock_raffle_service.delete_all_tickets = AsyncMock()
-        mock_raffle_service_class.return_value = mock_raffle_service
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         # Mock winner selection
         mock_random.choices.return_value = ["winner-id-123"]
@@ -69,7 +69,7 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_member_by_id.return_value = mock_winning_member
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         # Mock ingot service
         mock_result = Mock()
@@ -77,7 +77,7 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
 
         mock_ingot_service = AsyncMock()
         mock_ingot_service.try_add_ingots.return_value = mock_result
-        mock_ingot_service_class.return_value = mock_ingot_service
+        mock_create_ingot_service.return_value = mock_ingot_service
 
         # Mock image generation
         mock_image = Mock()
@@ -124,10 +124,10 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.end_raffle.db")
-    @patch("ironforgedbot.commands.raffle.end_raffle.RaffleService")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
     async def test_handle_end_raffle_no_tickets_sold(
-        self, mock_state, mock_raffle_service_class, mock_db, mock_find_emoji
+        self, mock_state, mock_create_raffle_service, mock_db, mock_find_emoji
     ):
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
         mock_find_emoji.return_value = "🎫"
@@ -137,7 +137,7 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
 
         mock_raffle_service = AsyncMock()
         mock_raffle_service.get_raffle_ticket_total.return_value = 0
-        mock_raffle_service_class.return_value = mock_raffle_service
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
 
@@ -155,12 +155,12 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
     @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.end_raffle.db")
-    @patch("ironforgedbot.commands.raffle.end_raffle.RaffleService")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
     async def test_handle_end_raffle_no_valid_tickets(
         self,
         mock_state,
-        mock_raffle_service_class,
+        mock_create_raffle_service,
         mock_db,
         mock_find_emoji,
         mock_handle_error,
@@ -174,7 +174,7 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
         mock_raffle_service = AsyncMock()
         mock_raffle_service.get_raffle_ticket_total.return_value = 10
         mock_raffle_service.get_all_valid_raffle_tickets.return_value = []
-        mock_raffle_service_class.return_value = mock_raffle_service
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
 
@@ -186,16 +186,16 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
     @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.end_raffle.db")
-    @patch("ironforgedbot.commands.raffle.end_raffle.MemberService")
-    @patch("ironforgedbot.commands.raffle.end_raffle.RaffleService")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_member_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.end_raffle.random")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
     async def test_handle_end_raffle_winner_not_found(
         self,
         mock_state,
         mock_random,
-        mock_raffle_service_class,
-        mock_member_service_class,
+        mock_create_raffle_service,
+        mock_create_member_service,
         mock_db,
         mock_find_emoji,
         mock_handle_error,
@@ -213,13 +213,13 @@ class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
         mock_raffle_service = AsyncMock()
         mock_raffle_service.get_raffle_ticket_total.return_value = 20
         mock_raffle_service.get_all_valid_raffle_tickets.return_value = [mock_ticket]
-        mock_raffle_service_class.return_value = mock_raffle_service
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         mock_random.choices.return_value = ["invalid-id"]
 
         mock_member_service = AsyncMock()
         mock_member_service.get_member_by_id.return_value = None
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
 

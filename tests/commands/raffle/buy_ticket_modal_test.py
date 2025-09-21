@@ -30,12 +30,12 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.find_emoji")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.build_response_embed")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.db")
-    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.RaffleService")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.STATE")
     async def test_modal_submission_success(
         self,
         mock_state,
-        mock_raffle_service_class,
+        mock_create_raffle_service,
         mock_db,
         mock_build_embed,
         mock_find_emoji,
@@ -55,7 +55,7 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
 
         mock_raffle_service = AsyncMock()
         mock_raffle_service.try_buy_ticket.return_value = mock_result
-        mock_raffle_service_class.return_value = mock_raffle_service
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         mock_embed = Mock()
         mock_build_embed.return_value = mock_embed
@@ -118,12 +118,12 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.send_error_response")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.normalize_discord_string")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.db")
-    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.RaffleService")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.STATE")
     async def test_modal_submission_insufficient_funds(
         self,
         mock_state,
-        mock_raffle_service_class,
+        mock_create_raffle_service,
         mock_db,
         mock_normalize,
         mock_send_error,
@@ -140,7 +140,7 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
 
         mock_raffle_service = AsyncMock()
         mock_raffle_service.try_buy_ticket.return_value = mock_result
-        mock_raffle_service_class.return_value = mock_raffle_service
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         modal = BuyTicketModal()
         modal.ticket_qty._value = "10"

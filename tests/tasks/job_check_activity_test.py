@@ -37,12 +37,12 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_check_activity.tabulate")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
-    @patch("ironforgedbot.tasks.job_check_activity.AbsentMemberService")
+    @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
     async def test_job_check_activity_success(
         self,
         mock_db,
-        mock_absent_service_class,
+        mock_create_absent_service,
         mock_find_inactive,
         mock_discord_file,
         mock_tabulate,
@@ -59,7 +59,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
 
         mock_absent_service = AsyncMock()
         mock_absent_service.process_absent_members.return_value = [self.mock_absentee]
-        mock_absent_service_class.return_value = mock_absent_service
+        mock_create_absent_service.return_value = mock_absent_service
 
         mock_find_inactive.return_value = [
             ["Player1", "Iron", "100,000", "2 days ago"],
@@ -106,17 +106,17 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second_call[1]["file"], mock_file)
 
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
-    @patch("ironforgedbot.tasks.job_check_activity.AbsentMemberService")
+    @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
     async def test_job_check_activity_empty_results(
-        self, mock_db, mock_absent_service_class, mock_find_inactive
+        self, mock_db, mock_create_absent_service, mock_find_inactive
     ):
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
         mock_absent_service = AsyncMock()
         mock_absent_service.process_absent_members.return_value = []
-        mock_absent_service_class.return_value = mock_absent_service
+        mock_create_absent_service.return_value = mock_absent_service
 
         mock_find_inactive.return_value = None
 
@@ -139,12 +139,12 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_check_activity.tabulate")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
-    @patch("ironforgedbot.tasks.job_check_activity.AbsentMemberService")
+    @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
     async def test_job_check_activity_sorted_results(
         self,
         mock_db,
-        mock_absent_service_class,
+        mock_create_absent_service,
         mock_find_inactive,
         mock_discord_file,
         mock_tabulate,
@@ -161,7 +161,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
 
         mock_absent_service = AsyncMock()
         mock_absent_service.process_absent_members.return_value = []
-        mock_absent_service_class.return_value = mock_absent_service
+        mock_create_absent_service.return_value = mock_absent_service
 
         mock_find_inactive.return_value = [
             ["Player2", "Iron", "300,000", "2 days ago"],

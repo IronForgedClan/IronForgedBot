@@ -33,14 +33,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_add_single_player(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
@@ -64,14 +64,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("testing", embed.description)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_remove_single_player(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
@@ -95,14 +95,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("penalty", sent_embed.description)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_multiple_players(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_find_emoji.return_value = ":Ingot:"
 
@@ -128,14 +128,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("+6,000", sent_embed.description)  # Total change: 3000 * 2
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_duplicate_players_ignored(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
@@ -155,14 +155,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("+3,000", sent_embed.description)  # Only one player processed
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_unknown_players_handled(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_find_emoji.return_value = ":Ingot:"
 
@@ -189,14 +189,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("0", embed_field_value)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_insufficient_funds(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
@@ -217,14 +217,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("0", embed_field_value)  # No change due to insufficient funds
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_embed_structure(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
@@ -246,7 +246,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Total", embed_field.value)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.datetime")
@@ -255,11 +255,11 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         mock_datetime,
         mock_find_emoji,
         mock_validate,
-        mock_ingot_service_class,
+        mock_create_ingot_service,
         mock_db,
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_find_emoji.return_value = ":Ingot:"
         mock_datetime.now.return_value.strftime.return_value = "20250101_120000"
@@ -287,14 +287,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIn("ingot_results_20250101_120000.txt", sent_file.filename)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_empty_players_ignored(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"
@@ -310,14 +310,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         mock_ingot_service.try_add_ingots.assert_called_once()
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_result_sorting(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_find_emoji.return_value = ":Ingot:"
 
@@ -347,14 +347,14 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertLess(beta_pos, zebra_pos)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
-    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.IngotService")
+    @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.find_emoji")
     async def test_cmd_add_remove_ingots_large_numbers_formatting(
-        self, mock_find_emoji, mock_validate, mock_ingot_service_class, mock_db
+        self, mock_find_emoji, mock_validate, mock_create_ingot_service, mock_db
     ):
         mock_db_session, mock_ingot_service = setup_database_service_mocks(
-            mock_db, mock_ingot_service_class
+            mock_db, mock_create_ingot_service
         )
         mock_validate.return_value = (self.target1, "player1")
         mock_find_emoji.return_value = ":Ingot:"

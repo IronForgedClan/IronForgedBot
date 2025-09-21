@@ -53,17 +53,17 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         mock_send_error.assert_called_once_with(self.interaction, "Invalid player name")
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_error_response")
     async def test_cmd_score_hiscores_error(
-        self, mock_send_error, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_error, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HiscoresError("API Error")
 
         await cmd_score(self.interaction, "TestUser")
@@ -73,17 +73,17 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             "An error has occurred calculating the score for this user. Please try again.",
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_error_response")
     async def test_cmd_score_http_exception(
-        self, mock_send_error, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_error, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HttpException("Network Error")
 
         await cmd_score(self.interaction, "TestUser")
@@ -93,17 +93,17 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             "An error has occurred calculating the score for this user. Please try again.",
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_member_no_hiscore_values")
     async def test_cmd_score_member_no_hiscores(
-        self, mock_send_no_hiscore, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_no_hiscore, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HiscoresNotFound(
             "No hiscores found"
         )
@@ -112,17 +112,17 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         mock_send_no_hiscore.assert_called_once_with(self.interaction, "TestUser")
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_not_clan_member")
     async def test_cmd_score_non_member_hiscores_not_found(
-        self, mock_send_not_clan, mock_validate, mock_http, mock_score_service_class
+        self, mock_send_not_clan, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (None, "NonMember")  # Not a guild member
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.side_effect = HiscoresNotFound(
             "No hiscores found"
         )
@@ -132,7 +132,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         # Should create empty score breakdown and eventually call send_not_clan_member
         mock_send_not_clan.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
@@ -145,21 +145,21 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_check_role,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.prospect_user, "ProspectUser")
         mock_check_role.return_value = True  # Is prospect
         mock_find_emoji.return_value = ":prospect:"
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_score(self.interaction, "ProspectUser")
 
         mock_send_prospect.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
@@ -172,7 +172,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_check_role,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         non_member = create_test_member("NonMember", [])  # No roles
         mock_validate.return_value = (non_member, "NonMember")
@@ -180,14 +180,14 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ":iron:"
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_score(self.interaction, "NonMember")
 
         mock_send_not_clan.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
@@ -208,7 +208,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -239,7 +239,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_score(self.interaction, "TestUser")
@@ -258,7 +258,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         # Verify add_field was called correctly
         self.assertEqual(len(mock_embed.fields), 3)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
@@ -275,7 +275,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -289,7 +289,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_score(self.interaction, None)  # No player specified
@@ -299,7 +299,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             self.interaction.guild, "TestUser", must_be_member=False
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
@@ -318,7 +318,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.GOD
@@ -353,7 +353,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         )
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = high_score_breakdown
 
         await cmd_score(self.interaction, "TestUser")
@@ -364,7 +364,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         # Should have 3 fields: Skill Points, Activity Points, and God alignment
         self.assertEqual(len(mock_embed.fields), 3)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
@@ -381,7 +381,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -398,7 +398,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         empty_score_breakdown = ScoreBreakdown([], [], [], [])
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = empty_score_breakdown
 
         await cmd_score(self.interaction, "TestUser")
@@ -408,7 +408,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             ":iron: TestUser | Score: 0", "", discord.Color.greyple()
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreService")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
@@ -427,7 +427,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_validate,
         mock_http,
-        mock_score_service_class,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -456,7 +456,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
         mock_score_service.get_player_score.return_value = self.sample_score_breakdown
 
         await cmd_score(self.interaction, "TestUser")

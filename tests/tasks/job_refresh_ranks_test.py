@@ -35,32 +35,32 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     async def test_job_refresh_ranks_success(
         self,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
         setup_time_mocks(None, mock_time, duration_seconds=5.0)
 
         mock_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
+            mock_db, mock_create_member_service
         )
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.return_value = 150
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
 
         mock_discord_member = create_test_member("TestUser", [RANK.IRON])
         self.mock_guild.get_member.return_value = mock_discord_member
@@ -73,18 +73,18 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     async def test_job_refresh_ranks_member_not_found(
         self,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -95,10 +95,10 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         self.mock_guild.get_member.return_value = None
 
@@ -109,18 +109,18 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     async def test_job_refresh_ranks_banned_member_skipped(
         self,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -131,10 +131,10 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_discord_member = create_test_member("TestUser", [ROLE.MEMBER])
         mock_is_banned.return_value = True
@@ -146,9 +146,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
@@ -157,9 +157,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -170,14 +170,14 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.return_value = 150
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
 
         mock_discord_member = Mock(spec=discord.Member)
         mock_is_banned.return_value = False
@@ -190,9 +190,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
@@ -203,9 +203,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -217,14 +217,14 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.return_value = 150
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
 
         mock_discord_member = Mock(spec=discord.Member)
         mock_discord_member.mention = "<@12345>"
@@ -241,9 +241,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
@@ -258,9 +258,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -274,14 +274,14 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.return_value = 705
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
 
         mock_discord_member = Mock(spec=discord.Member)
         mock_discord_member.mention = "<@12345>"
@@ -298,9 +298,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
@@ -311,9 +311,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -324,14 +324,14 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.side_effect = HiscoresNotFound()
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
 
         mock_discord_member = Mock(spec=discord.Member)
         mock_discord_member.mention = "<@12345>"
@@ -349,9 +349,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.ScoreHistoryService")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.MemberService")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
     @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
@@ -368,9 +368,9 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_get_rank,
         mock_is_banned,
         mock_db,
-        mock_member_service_class,
-        mock_history_service_class,
-        mock_score_service_class,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
         mock_sleep,
         mock_time,
     ):
@@ -386,14 +386,14 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = AsyncMock()
         mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
-        mock_member_service_class.return_value = mock_member_service
+        mock_create_member_service.return_value = mock_member_service
 
         mock_history_service = AsyncMock()
-        mock_history_service_class.return_value = mock_history_service
+        mock_create_score_history_service.return_value = mock_history_service
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.return_value = 705
-        mock_score_service_class.return_value = mock_score_service
+        mock_get_score_service.return_value = mock_score_service
 
         mock_discord_member = Mock(spec=discord.Member)
         mock_discord_member.mention = "<@12345>"

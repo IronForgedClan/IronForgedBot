@@ -141,9 +141,15 @@ async def get_url_status_code(session, url, timeout=5):
 
 
 def setup_database_service_mocks(
-    mock_db, mock_service_class, mock_service_instance=None
+    mock_db, mock_service_factory, mock_service_instance=None
 ):
-    """Sets up common database and service mocking pattern used across many tests."""
+    """Sets up common database and service mocking pattern used across many tests.
+    
+    Args:
+        mock_db: Mock of the database module
+        mock_service_factory: Mock of the service factory function (e.g., create_ingot_service)
+        mock_service_instance: Optional mock service instance to return
+    """
     mock_session = AsyncMock()
 
     # Set up the async context manager pattern
@@ -154,7 +160,9 @@ def setup_database_service_mocks(
 
     if mock_service_instance is None:
         mock_service_instance = AsyncMock()
-    mock_service_class.return_value = mock_service_instance
+    
+    # For factory functions, we set the return value directly
+    mock_service_factory.return_value = mock_service_instance
 
     return mock_session, mock_service_instance
 

@@ -51,10 +51,10 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.cmd_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.build_response_embed")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.db")
-    @patch("ironforgedbot.commands.raffle.cmd_raffle.RaffleService")
+    @patch("ironforgedbot.commands.raffle.cmd_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.STATE")
     async def test_build_embed_raffle_online_no_user_tickets(
-        self, mock_state, mock_service_class, mock_db, mock_build_embed, mock_find_emoji
+        self, mock_state, mock_create_raffle_service, mock_db, mock_build_embed, mock_find_emoji
     ):
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
         mock_find_emoji.side_effect = lambda name: (
@@ -67,7 +67,7 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
         mock_service = AsyncMock()
         mock_service.get_member_ticket_total.return_value = 0
         mock_service.get_raffle_ticket_total.return_value = 150
-        mock_service_class.return_value = mock_service
+        mock_create_raffle_service.return_value = mock_service
 
         mock_embed = Mock()
         mock_embed.add_field = Mock()
@@ -95,10 +95,10 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.cmd_raffle.find_emoji")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.build_response_embed")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.db")
-    @patch("ironforgedbot.commands.raffle.cmd_raffle.RaffleService")
+    @patch("ironforgedbot.commands.raffle.cmd_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.STATE")
     async def test_build_embed_raffle_online_with_user_tickets(
-        self, mock_state, mock_service_class, mock_db, mock_build_embed, mock_find_emoji
+        self, mock_state, mock_create_raffle_service, mock_db, mock_build_embed, mock_find_emoji
     ):
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
         mock_find_emoji.side_effect = lambda name: (
@@ -111,7 +111,7 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
         mock_service = AsyncMock()
         mock_service.get_member_ticket_total.return_value = 10
         mock_service.get_raffle_ticket_total.return_value = 160
-        mock_service_class.return_value = mock_service
+        mock_create_raffle_service.return_value = mock_service
 
         mock_embed = Mock()
         mock_embed.add_field = Mock()

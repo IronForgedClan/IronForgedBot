@@ -83,7 +83,7 @@ async def handle_end_raffle(
         )[0]
         winner_qty = entries[winner_id]
 
-        member_service = MemberService(session)
+        member_service = create_member_service(session)
         winning_member = await member_service.get_member_by_id(winner_id)
 
         if not winning_member:
