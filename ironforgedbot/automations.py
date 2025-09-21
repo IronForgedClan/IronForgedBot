@@ -58,13 +58,10 @@ class IronForgedAutomations:
         logger.info("Initiating shutdown of automations...")
 
         try:
-            # Stop scheduler from creating new jobs
             self.scheduler.pause()
 
-            # Wait for running jobs to complete with timeout
             await self.wait_for_jobs_to_complete()
 
-            # Clean up scheduler
             self.scheduler.remove_all_jobs()
             self.scheduler.shutdown(wait=False)
 
@@ -88,7 +85,6 @@ class IronForgedAutomations:
             logger.info(f"Waiting for {active_jobs} job(s) to finish...")
 
             try:
-                # Wait for jobs with timeout
                 await asyncio.wait_for(
                     asyncio.gather(*self._running_jobs, return_exceptions=True),
                     timeout=self._shutdown_timeout,
@@ -97,7 +93,6 @@ class IronForgedAutomations:
                 logger.warning(
                     f"Timeout waiting for jobs to complete after {self._shutdown_timeout}s, forcing shutdown"
                 )
-                # Cancel remaining jobs
                 for job in self._running_jobs:
                     if not job.done():
                         job.cancel()
@@ -108,16 +103,13 @@ class IronForgedAutomations:
     async def track_job(self, job_func, *args, **kwargs):
         """Track a running job by wrapping it in a task and storing the reference."""
         try:
-            # Create the task
             task = asyncio.create_task(
                 self._safe_job_wrapper(job_func, *args, **kwargs)
             )
 
-            # Safely add to tracking set
             async with self._job_lock:
                 self._running_jobs.add(task)
 
-            # Add cleanup callback
             task.add_done_callback(self._job_done_callback)
 
             logger.debug(f"Started job: {job_func.__name__}")
@@ -137,13 +129,11 @@ class IronForgedAutomations:
                     logger.warning("Event loop is closed, skipping job cleanup")
                     return
 
-                # Create the async cleanup task
                 async def cleanup():
                     async with self._job_lock:
                         self._running_jobs.discard(task)
                         active_count = len(self._running_jobs)
 
-                    # Log job completion with any exceptions
                     if task.exception():
                         logger.error(
                             f"Job completed with exception: {task.exception()}"
@@ -153,21 +143,17 @@ class IronForgedAutomations:
 
                     logger.info(f"Job completed. {active_count} job(s) active.")
 
-                # Schedule cleanup to run in the event loop
                 loop.create_task(cleanup())
 
             except RuntimeError as e:
-                # Event loop might be closed during shutdown or not running
                 logger.warning(f"Could not schedule job cleanup: {e}")
 
-        # Execute the sync cleanup
         sync_cleanup()
 
     def _job_wrapper(self, job_func, *args, **kwargs):
         """Wrapper for tracking active jobs."""
 
         async def async_wrapper():
-            # With AsyncIOExecutor, we're already in an async context
             try:
                 await self.track_job(job_func, *args, **kwargs)
             except Exception as e:
@@ -175,7 +161,6 @@ class IronForgedAutomations:
                     f"Failed to execute job {job_func.__name__}: {type(e).__name__}: {e}"
                 )
 
-        # Set a more descriptive name for the wrapper function
         async_wrapper.__name__ = f"{job_func.__name__}_wrapper"
         async_wrapper.__qualname__ = (
             f"IronForgedAutomations.{job_func.__name__}_wrapper"
@@ -197,7 +182,6 @@ class IronForgedAutomations:
             logger.error(
                 f"Job failed with exception: {job_name} - {type(e).__name__}: {e}"
             )
-            # Send error notification to report channel if possible
             try:
                 if hasattr(self, "report_channel") and self.report_channel:
                     await self.report_channel.send(
@@ -291,7 +275,6 @@ class IronForgedAutomations:
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
 
-        # Run initial sync after scheduler is set up, using the job wrapper for consistency
         logger.info("Running initial member sync...")
         await self.track_job(job_sync_members, self.discord_guild, self.report_channel)
 
