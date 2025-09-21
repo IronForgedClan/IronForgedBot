@@ -194,6 +194,9 @@ view its source command and try running that instead.
 - `make test`\
   Runs the test suite.
 
+- `make format`\
+  Formats the codebase using Black formatter.
+
 - `make migrate`\
   Runs the database migrations.
 
