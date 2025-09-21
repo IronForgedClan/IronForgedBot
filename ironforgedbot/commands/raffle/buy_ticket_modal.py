@@ -4,6 +4,7 @@ import discord
 from discord.ui import Modal, TextInput
 
 from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.services.ingot_service import IngotService
@@ -30,6 +31,7 @@ class BuyTicketModal(Modal):
 
         self.add_item(self.ticket_qty)
 
+    @log_command_execution(logger)
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
         caller = normalize_discord_string(interaction.user.display_name)
@@ -62,7 +64,6 @@ class BuyTicketModal(Modal):
         async with db.get_session() as session:
             raffle_service = RaffleService(session)
 
-            logger.info(f"Buying {qty:,} tickets for {caller}")
             result = await raffle_service.try_buy_ticket(
                 interaction.user.id, STATE.state["raffle_price"], qty
             )

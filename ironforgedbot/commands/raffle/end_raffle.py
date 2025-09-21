@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from ironforgedbot.commands.raffle.build_winner_image import build_winner_image_file
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.database.database import db
@@ -18,6 +19,7 @@ from ironforgedbot.state import STATE
 logger = logging.getLogger(__name__)
 
 
+@log_command_execution(logger)
 async def handle_end_raffle_error(
     parent_message: Optional[discord.Message], interaction: discord.Interaction, message
 ):
@@ -27,6 +29,7 @@ async def handle_end_raffle_error(
     return await send_error_response(interaction, message)
 
 
+@log_command_execution(logger)
 async def handle_end_raffle(
     parent_message: Optional[discord.Message], interaction: discord.Interaction
 ):
@@ -48,7 +51,6 @@ async def handle_end_raffle(
         valid_tickets = await raffle_service.get_all_valid_raffle_tickets()
 
         if total_tickets < 1:
-            logger.info("Raffle ended with no tickets sold.")
             STATE.state["raffle_on"] = False
             STATE.state["raffle_price"] = 0
 
@@ -63,7 +65,6 @@ async def handle_end_raffle(
             )
 
         if len(valid_tickets) < 1:
-            logger.info("Raffle ended with no valid tickets to select from.")
             return await handle_end_raffle_error(
                 parent_message,
                 interaction,
@@ -90,8 +91,7 @@ async def handle_end_raffle(
                 f"Error finding winner's details.\n{winner_id}",
             )
 
-        logger.info(f"Raffle entries: {entries}")
-        logger.info(f"Raffle winner: {winning_member.nickname}")
+
 
         # Award winnings
         ingot_service = IngotService(session)
@@ -157,5 +157,3 @@ async def handle_end_raffle(
 
         if parent_message:
             parent_message = await parent_message.delete()
-
-        logger.info("Raffle ended.")
