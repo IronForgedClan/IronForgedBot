@@ -8,27 +8,36 @@ from typing import Callable, Any, Optional
 import discord
 
 
-def log_command_execution(logger: Optional[logging.Logger] = None):
+def log_command_execution(logger: Optional[logging.Logger] = None, interaction_position: int = 0):
     """Decorator to log Discord command execution.
 
     Args:
         logger: Logger instance to use. If None, creates one from the function module.
+        interaction_position: Position of the interaction parameter in the function signature (0-indexed).
     """
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def wrapper(interaction: discord.Interaction, *args, **kwargs):
+        async def wrapper(*args, **kwargs):
             # Get logger inside wrapper to avoid None issues
             actual_logger = (
                 logger if logger is not None else logging.getLogger(func.__module__)
             )
             start_time = time.time()
-            user_info = f"{interaction.user} (ID: {interaction.user.id})"
-
-            actual_logger.info(f"Command {func.__name__} started by {user_info}")
+            
+            # Get interaction from the specified position
+            if len(args) > interaction_position:
+                interaction = args[interaction_position]
+                if isinstance(interaction, discord.Interaction):
+                    user_info = f"{interaction.user} (ID: {interaction.user.id})"
+                    actual_logger.info(f"Command {func.__name__} started by {user_info}")
+                else:
+                    actual_logger.info(f"Command {func.__name__} started (no interaction)")
+            else:
+                actual_logger.info(f"Command {func.__name__} started (no interaction)")
 
             try:
-                result = await func(interaction, *args, **kwargs)
+                result = await func(*args, **kwargs)
                 elapsed = time.time() - start_time
                 actual_logger.info(
                     f"Command {func.__name__} completed successfully in {elapsed:.2f}s"

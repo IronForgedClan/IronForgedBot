@@ -19,7 +19,7 @@ from ironforgedbot.state import STATE
 logger = logging.getLogger(__name__)
 
 
-@log_command_execution(logger)
+@log_command_execution(logger, interaction_position=1)
 async def handle_end_raffle_error(
     parent_message: Optional[discord.Message], interaction: discord.Interaction, message
 ):
@@ -29,7 +29,7 @@ async def handle_end_raffle_error(
     return await send_error_response(interaction, message)
 
 
-@log_command_execution(logger)
+@log_command_execution(logger, interaction_position=1)
 async def handle_end_raffle(
     parent_message: Optional[discord.Message], interaction: discord.Interaction
 ):
