@@ -6,6 +6,7 @@ from ironforgedbot.commands.raffle.raffle_menu_view import RaffleMenuView
 from ironforgedbot.common.helpers import (
     find_emoji,
 )
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.config import CONFIG
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 @require_channel([CONFIG.RAFFLE_CHANNEL_ID])
 @require_role(ROLE.MEMBER, ephemeral=True)
+@log_command_execution(logger)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
     assert interaction.guild

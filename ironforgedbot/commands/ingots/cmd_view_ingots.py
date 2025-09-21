@@ -5,6 +5,7 @@ import discord
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.ranks import get_rank_from_member
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import (
     build_ingot_response_embed,
     send_error_response,
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER)
+@log_command_execution(logger)
 async def cmd_view_ingots(
     interaction: discord.Interaction, player: Optional[str] = None
 ):

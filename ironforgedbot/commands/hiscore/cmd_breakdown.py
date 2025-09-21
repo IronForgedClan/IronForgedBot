@@ -27,6 +27,7 @@ from ironforgedbot.common.responses import (
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import text_bold, text_italic
 from ironforgedbot.decorators import require_role
 from ironforgedbot.http import HTTP, HttpException
@@ -41,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER)
+@log_command_execution(logger)
 async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute player score with complete source enumeration.
 

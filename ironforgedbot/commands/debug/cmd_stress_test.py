@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 import discord
 from discord.ui import Button, View
 
@@ -11,8 +13,12 @@ from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
 )
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
+from ironforgedbot.common.logging_utils import log_command_execution
+
+logger = logging.getLogger(__name__)
 
 
+@log_command_execution(logger)
 async def cmd_stress_test(interaction: discord.Interaction):
     commands = {
         "message spam": {

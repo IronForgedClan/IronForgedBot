@@ -14,6 +14,7 @@ from ironforgedbot.common.responses import (
     build_ingot_response_embed,
 )
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import (
     text_bold,
     text_code_block,
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.LEADERSHIP)
+@log_command_execution(logger)
 async def cmd_add_remove_ingots(
     interaction: discord.Interaction,
     players: str,

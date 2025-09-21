@@ -11,7 +11,7 @@ from ironforgedbot.tasks.job_membership_discrepancies import (
 logger = logging.getLogger(__name__)
 
 
-@log_command_execution
+@log_command_execution(logger)
 async def cmd_check_discrepancies(
     interaction: discord.Interaction, report_channel: discord.TextChannel
 ):

@@ -126,7 +126,7 @@ async def sync_members(guild: discord.Guild) -> list[list]:
     return output
 
 
-@log_command_execution
+@log_command_execution(logger)
 async def cmd_sync_members(
     interaction: discord.Interaction, report_channel: discord.TextChannel
 ):
