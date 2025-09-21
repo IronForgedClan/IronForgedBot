@@ -63,70 +63,80 @@ class IronForgedCommands:
                 description="Displays player score.",
                 callback=cmd_score,
             )
-        )
+        )  # ROLE:MEMBER | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="breakdown",
                 description="Displays player score breakdown.",
                 callback=cmd_breakdown,
             )
-        )
+        )  # ROLE:MEMBER | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="ingots",
                 description="Displays ingot total.",
                 callback=cmd_view_ingots,
             )
-        )
+        )  # ROLE:MEMBER | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="add_remove_ingots",
                 description="Add or remove ingots to one or multiple member's accounts.",
                 callback=cmd_add_remove_ingots,
             )
-        )
+        )  # ROLE:LEADERSHIP | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="roster",
                 description="Creates an event roster.",
                 callback=cmd_roster,
             )
-        )
+        )  # ROLE:LEADERSHIP | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="whois",
                 description="Get player's rsn history.",
                 callback=cmd_whois,
             )
-        )
+        )  # ROLE:MEMBER | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="get_role_members",
                 description="Generate a list of all members with a certain role.",
                 callback=cmd_get_role_members,
             )
-        )
+        )  # ROLE:LEADERSHIP | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="raffle",
                 description="Play or control the raffle.",
                 callback=cmd_raffle,
             )
-        )
+        )  # ROLE:LEADERSHIP | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="admin",
                 description="Collection of administrative actions.",
                 callback=cmd_admin,
             )
-        )
+        )  # ROLE:LEADERSHIP | TYPE:PERMANENT
+
         self._tree.add_command(
             discord.app_commands.Command(
                 name="help",
                 description="Show a list of available commands.",
                 callback=cmd_help,
             )
-        )
+        )  # ROLE:MEMBER | TYPE:PERMANENT
+
         if CONFIG.TRICK_OR_TREAT_ENABLED:
             self._tree.add_command(
                 discord.app_commands.Command(
@@ -134,7 +144,8 @@ class IronForgedCommands:
                     description="Feeling lucky, punk?",
                     callback=cmd_trick_or_treat,
                 )
-            )
+            )  # ROLE:MEMBER | TYPE:HOLIDAY | RANGE:10/1-11/1
+
         if CONFIG.ENVIRONMENT in [ENVIRONMENT.DEVELOPMENT, ENVIRONMENT.STAGING]:
             self._tree.add_command(
                 discord.app_commands.Command(
@@ -142,11 +153,12 @@ class IronForgedCommands:
                     description="Menu showing all commands",
                     callback=cmd_debug_commands,
                 )
-            )
+            )  # DEV-ONLY
+
             self._tree.add_command(
                 discord.app_commands.Command(
                     name="stress_test",
                     description="Stress test",
                     callback=cmd_stress_test,
                 )
-            )
+            )  # DEV-ONLY
