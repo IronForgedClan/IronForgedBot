@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 import logging
 import os
 
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -19,8 +19,17 @@ class Base(DeclarativeBase):
 
 
 class Database:
-    def __init__(self, url: str = None) -> None:
+    def __init__(self, url: Optional[str] = None) -> None:
         self._url = url or os.getenv("DATABASE_URL")
+        self._engine: Optional[AsyncEngine] = None
+        self._SessionFactory: Optional[sessionmaker] = None
+        self._initialized = False
+
+    def _initialize(self) -> None:
+        """Lazy initialization of database connection."""
+        if self._initialized:
+            return
+            
         if not self._url:
             raise RuntimeError("DATABASE_URL must be set")
 
@@ -39,6 +48,7 @@ class Database:
             expire_on_commit=False,
         )
         
+        self._initialized = True
         logger.info("Database connection initialized successfully")
 
     @asynccontextmanager
@@ -49,6 +59,9 @@ class Database:
             async with db.get_session() as session:
                 ...
         """
+        self._initialize()
+        if self._SessionFactory is None:
+            raise RuntimeError("Database not properly initialized")
         async with self._SessionFactory() as session:
             try:
                 logger.debug("Database session started")
@@ -69,9 +82,10 @@ class Database:
         Cleanly close all connections in the pool.
         Call at application shutdown.
         """
-        logger.info("Disposing database connections")
-        await self._engine.dispose()
-        logger.info("Database connections disposed")
+        if self._engine is not None:
+            logger.info("Disposing database connections")
+            await self._engine.dispose()
+            logger.info("Database connections disposed")
 
 
 db = Database()

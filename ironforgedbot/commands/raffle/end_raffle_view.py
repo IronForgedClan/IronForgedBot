@@ -4,7 +4,7 @@ import discord
 from discord.ui import Select, View
 
 from ironforgedbot.commands.raffle.end_raffle import handle_end_raffle
-from ironforgedbot.common.logging_utils import log_command_execution
+from ironforgedbot.common.logging_utils import log_method_execution
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class EndRaffleView(View):
         self.option.callback = self.option_callback
         self.add_item(self.option)
 
-    @log_command_execution(logger)
+    @log_method_execution(logger)
     async def option_callback(self, interaction: discord.Interaction) -> bool:
         value = self.option.values[0]
 

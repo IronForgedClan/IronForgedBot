@@ -47,6 +47,45 @@ def log_command_execution(logger: Optional[logging.Logger] = None):
     return decorator
 
 
+def log_method_execution(logger: Optional[logging.Logger] = None):
+    """Decorator to log Discord method execution (e.g., modal on_submit, view callbacks).
+
+    Args:
+        logger: Logger instance to use. If None, creates one from the function module.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(self, interaction: discord.Interaction, *args, **kwargs):
+            # Get logger inside wrapper to avoid None issues
+            actual_logger = (
+                logger if logger is not None else logging.getLogger(func.__module__)
+            )
+            start_time = time.time()
+            user_info = f"{interaction.user} (ID: {interaction.user.id})"
+
+            actual_logger.info(f"Method {func.__name__} started by {user_info}")
+
+            try:
+                result = await func(self, interaction, *args, **kwargs)
+                elapsed = time.time() - start_time
+                actual_logger.info(
+                    f"Method {func.__name__} completed successfully in {elapsed:.2f}s"
+                )
+                return result
+            except Exception as e:
+                elapsed = time.time() - start_time
+                actual_logger.error(
+                    f"Method {func.__name__} failed after {elapsed:.2f}s: {e}",
+                    exc_info=True,
+                )
+                raise
+
+        return wrapper
+
+    return decorator
+
+
 def log_task_execution(logger: Optional[logging.Logger] = None):
     """Decorator to log task/job execution.
 

@@ -4,7 +4,7 @@ import discord
 from discord.ui import Modal, TextInput
 
 from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
-from ironforgedbot.common.logging_utils import log_command_execution
+from ironforgedbot.common.logging_utils import log_method_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.services.ingot_service import IngotService
@@ -31,7 +31,7 @@ class BuyTicketModal(Modal):
 
         self.add_item(self.ticket_qty)
 
-    @log_command_execution(logger)
+    @log_method_execution(logger)
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True)
         caller = normalize_discord_string(interaction.user.display_name)
