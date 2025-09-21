@@ -86,9 +86,9 @@ class MemberService:
         )
 
         try:
-            self.db.add(instance=member)
+            self.db.add(member)
             await self.db.flush()
-            self.db.add(instance=changelog_entry)
+            self.db.add(changelog_entry)
             await self.db.commit()
         except IntegrityError as e:
             error_message = str(e)
@@ -201,7 +201,7 @@ class MemberService:
             )
             member.nickname = new_nickname
 
-        if rank:
+        if member.rank != rank:
             self.db.add(
                 Changelog(
                     member_id=member.id,
@@ -213,7 +213,7 @@ class MemberService:
                     timestamp=now,
                 )
             )
-            member.nickname = new_nickname
+            member.rank = RANK(rank)
 
         member.last_changed_date = now
 
@@ -263,7 +263,7 @@ class MemberService:
         except Exception as e:
             logger.critical(e)
             await self.db.rollback()
-            raise
+            raise e
 
         return member
 
@@ -303,7 +303,7 @@ class MemberService:
         except Exception as e:
             logger.critical(e)
             await self.db.rollback()
-            raise
+            raise e
 
         return member
 
@@ -335,6 +335,6 @@ class MemberService:
         except Exception as e:
             logger.critical(e)
             await self.db.rollback()
-            raise
+            raise e
 
         return member
