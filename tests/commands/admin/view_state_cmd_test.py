@@ -7,6 +7,7 @@ import discord
 class TestViewStateCmd(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         from ironforgedbot.commands.admin.view_state import cmd_view_state
+
         self.cmd_view_state = cmd_view_state
 
         self.mock_interaction = Mock(spec=discord.Interaction)

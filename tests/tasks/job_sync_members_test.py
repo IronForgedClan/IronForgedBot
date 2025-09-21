@@ -13,15 +13,15 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.mock_guild = Mock(spec=discord.Guild)
         self.mock_report_channel = Mock(spec=discord.TextChannel)
         self.mock_report_channel.send = AsyncMock()
-        
+
     @patch("ironforgedbot.tasks.job_sync_members.time")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
     async def test_job_sync_members_no_changes(self, mock_sync_members, mock_time):
         mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_sync_members.return_value = []
-        
+
         await job_sync_members(self.mock_guild, self.mock_report_channel)
-        
+
         mock_sync_members.assert_called_once_with(self.mock_guild)
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args[0][0]
@@ -36,12 +36,24 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_sync_members.tabulate")
     @patch("ironforgedbot.tasks.job_sync_members.discord.File")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
-    async def test_job_sync_members_with_changes(self, mock_sync_members, mock_discord_file, mock_tabulate, mock_format_duration, mock_datetime_relative, mock_text_h2, mock_datetime, mock_time):
+    async def test_job_sync_members_with_changes(
+        self,
+        mock_sync_members,
+        mock_discord_file,
+        mock_tabulate,
+        mock_format_duration,
+        mock_datetime_relative,
+        mock_text_h2,
+        mock_datetime,
+        mock_time,
+    ):
         mock_time.perf_counter.side_effect = [0.0, 5.0]
-        mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(
+            2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc
+        )
         mock_sync_members.return_value = [
             ["Player1", "Added", "New member"],
-            ["Player2", "Updated", "Role change"]
+            ["Player2", "Updated", "Role change"],
         ]
         mock_tabulate.return_value = "Member\tAction\tReason\nPlayer1\tAdded\tNew member\nPlayer2\tUpdated\tRole change"
         mock_format_duration.return_value = "5.0s"
@@ -49,22 +61,22 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_text_h2.return_value = "## 🔁 Member Synchronization"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
-        
+
         await job_sync_members(self.mock_guild, self.mock_report_channel)
-        
+
         mock_sync_members.assert_called_once_with(self.mock_guild)
         mock_tabulate.assert_called_once_with(
             [["Player1", "Added", "New member"], ["Player2", "Updated", "Role change"]],
             headers=["Member", "Action", "Reason"],
-            tablefmt="simple"
+            tablefmt="simple",
         )
         mock_discord_file.assert_called_once()
-        
+
         file_call_args = mock_discord_file.call_args
         self.assertIsInstance(file_call_args[1]["fp"], io.BytesIO)
         self.assertTrue(file_call_args[1]["filename"].startswith("sync_results_"))
         self.assertTrue(file_call_args[1]["filename"].endswith(".txt"))
-        
+
         self.mock_report_channel.send.assert_called_once()
         send_call_args = self.mock_report_channel.send.call_args
         self.assertIn("Member Synchronization", send_call_args[0][0])
@@ -72,12 +84,14 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_sync_members.time")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
-    async def test_job_sync_members_handles_exception(self, mock_sync_members, mock_time):
+    async def test_job_sync_members_handles_exception(
+        self, mock_sync_members, mock_time
+    ):
         mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_sync_members.side_effect = Exception("Database error")
-        
+
         await job_sync_members(self.mock_guild, self.mock_report_channel)
-        
+
         mock_sync_members.assert_called_once_with(self.mock_guild)
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args[0][0]
@@ -92,11 +106,25 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_sync_members.tabulate")
     @patch("ironforgedbot.tasks.job_sync_members.discord.File")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
-    async def test_job_sync_members_file_creation(self, mock_sync_members, mock_discord_file, mock_tabulate, mock_format_duration, mock_datetime_relative, mock_text_h2, mock_datetime, mock_time):
+    async def test_job_sync_members_file_creation(
+        self,
+        mock_sync_members,
+        mock_discord_file,
+        mock_tabulate,
+        mock_format_duration,
+        mock_datetime_relative,
+        mock_text_h2,
+        mock_datetime,
+        mock_time,
+    ):
         mock_time.perf_counter.side_effect = [0.0, 2.5]
         mock_datetime.now.side_effect = [
-            datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),  # First call for 'now'
-            datetime(2024, 1, 15, 10, 30, 5, tzinfo=timezone.utc)   # Second call for filename
+            datetime(
+                2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc
+            ),  # First call for 'now'
+            datetime(
+                2024, 1, 15, 10, 30, 5, tzinfo=timezone.utc
+            ),  # Second call for filename
         ]
         mock_sync_members.return_value = [["TestPlayer", "Removed", "Left guild"]]
         mock_tabulate.return_value = "Test table output"
@@ -105,19 +133,19 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_text_h2.return_value = "## 🔁 Member Synchronization"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
-        
+
         await job_sync_members(self.mock_guild, self.mock_report_channel)
-        
+
         mock_discord_file.assert_called_once()
         file_call = mock_discord_file.call_args
-        
+
         # Check that the BytesIO contains the tabulated data
         fp = file_call[1]["fp"]
         self.assertIsInstance(fp, io.BytesIO)
         fp.seek(0)
         content = fp.read().decode("utf-8")
         self.assertEqual(content, "Test table output")
-        
+
         # Check filename format
         filename = file_call[1]["filename"]
         self.assertTrue(filename.startswith("sync_results_"))
@@ -126,12 +154,14 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_sync_members.time")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
-    async def test_job_sync_members_empty_changes_list(self, mock_sync_members, mock_time):
+    async def test_job_sync_members_empty_changes_list(
+        self, mock_sync_members, mock_time
+    ):
         mock_time.perf_counter.side_effect = [0.0, 1.0]
         mock_sync_members.return_value = []
-        
+
         await job_sync_members(self.mock_guild, self.mock_report_channel)
-        
+
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args[0][0]
         self.assertIn("No changes", call_args)
@@ -145,14 +175,26 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_sync_members.tabulate")
     @patch("ironforgedbot.tasks.job_sync_members.discord.File")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
-    async def test_job_sync_members_multiple_changes(self, mock_sync_members, mock_discord_file, mock_tabulate, mock_format_duration, mock_datetime_relative, mock_text_h2, mock_datetime, mock_time):
+    async def test_job_sync_members_multiple_changes(
+        self,
+        mock_sync_members,
+        mock_discord_file,
+        mock_tabulate,
+        mock_format_duration,
+        mock_datetime_relative,
+        mock_text_h2,
+        mock_datetime,
+        mock_time,
+    ):
         mock_time.perf_counter.side_effect = [0.0, 10.0]
-        mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(
+            2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc
+        )
         mock_sync_members.return_value = [
             ["Player1", "Added", "New guild member"],
             ["Player2", "Updated", "Nickname change"],
             ["Player3", "Removed", "Left guild"],
-            ["Player4", "Updated", "Rank promotion"]
+            ["Player4", "Updated", "Rank promotion"],
         ]
         mock_tabulate.return_value = "Multiple changes table"
         mock_format_duration.return_value = "10.0s"
@@ -160,20 +202,20 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_text_h2.return_value = "## 🔁 Member Synchronization"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
-        
+
         await job_sync_members(self.mock_guild, self.mock_report_channel)
-        
+
         mock_tabulate.assert_called_once_with(
             [
                 ["Player1", "Added", "New guild member"],
                 ["Player2", "Updated", "Nickname change"],
                 ["Player3", "Removed", "Left guild"],
-                ["Player4", "Updated", "Rank promotion"]
+                ["Player4", "Updated", "Rank promotion"],
             ],
             headers=["Member", "Action", "Reason"],
-            tablefmt="simple"
+            tablefmt="simple",
         )
-        
+
         self.mock_report_channel.send.assert_called_once()
         send_call_args = self.mock_report_channel.send.call_args
         self.assertEqual(send_call_args[1]["file"], mock_file)

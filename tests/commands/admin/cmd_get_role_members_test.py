@@ -9,13 +9,14 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_require_role_patcher = patch(
-            "ironforgedbot.decorators.require_role"
-        )
+        self.mock_require_role_patcher = patch("ironforgedbot.decorators.require_role")
         self.mock_require_role = self.mock_require_role_patcher.start()
         self.mock_require_role.side_effect = lambda *args, **kwargs: lambda func: func
 
-        from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
+        from ironforgedbot.commands.admin.cmd_get_role_members import (
+            cmd_get_role_members,
+        )
+
         self.cmd_get_role_members = cmd_get_role_members
 
         mock_member = create_test_member("TestUser", [ROLE.LEADERSHIP])
@@ -40,7 +41,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         member1 = self.create_member("member1", [ROLE.MEMBER])
         member2 = self.create_member("member2", [ROLE.MEMBER])
         member3 = self.create_member("member3", [ROLE.PROSPECT])
-        
+
         self.mock_interaction.guild.members = [member1, member2, member3]
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
@@ -51,7 +52,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         call_args = mock_discord_file.call_args
         fp_arg = call_args.kwargs["fp"]
         filename_arg = call_args.kwargs["filename"]
-        
+
         fp_arg.seek(0)
         content = fp_arg.read().decode("utf-8")
         self.assertEqual(content, "member1, member2")
@@ -71,7 +72,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         member1 = self.create_member("user1", [custom_role])
         member2 = self.create_member("user2", [ROLE.MEMBER])
         member3 = self.create_member("user3", [custom_role])
-        
+
         self.mock_interaction.guild.members = [member1, member2, member3]
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
@@ -81,7 +82,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         call_args = mock_discord_file.call_args
         fp_arg = call_args.kwargs["fp"]
         filename_arg = call_args.kwargs["filename"]
-        
+
         fp_arg.seek(0)
         content = fp_arg.read().decode("utf-8")
         self.assertEqual(content, "user1, user3")
@@ -96,7 +97,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         member1 = self.create_member("user1 💩", [ROLE.MEMBER])
         member2 = self.create_member("🤖user2", [ROLE.MEMBER])
         member3 = self.create_member("user3🐼", [ROLE.MEMBER])
-        
+
         self.mock_interaction.guild.members = [member1, member2, member3]
 
         await self.cmd_get_role_members(self.mock_interaction, ROLE.MEMBER)
@@ -110,7 +111,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_cmd_get_role_members_single_member(self, mock_discord_file):
         member1 = self.create_member("onlyuser", [ROLE.PROSPECT])
-        
+
         self.mock_interaction.guild.members = [member1]
 
         await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
@@ -127,7 +128,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_get_role_members_no_matches(self):
         member1 = self.create_member("user1", [ROLE.MEMBER])
         member2 = self.create_member("user2", [ROLE.MEMBER])
-        
+
         self.mock_interaction.guild.members = [member1, member2]
 
         await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
@@ -146,11 +147,13 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
-    async def test_cmd_get_role_members_case_sensitive_role_matching(self, mock_discord_file):
+    async def test_cmd_get_role_members_case_sensitive_role_matching(
+        self, mock_discord_file
+    ):
         member1 = self.create_member("user1", ["Member"])
         member2 = self.create_member("user2", ["MEMBER"])
         member3 = self.create_member("user3", ["member"])
-        
+
         self.mock_interaction.guild.members = [member1, member2, member3]
 
         await self.cmd_get_role_members(self.mock_interaction, "member")
@@ -162,11 +165,13 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(content, "user3")
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
-    async def test_cmd_get_role_members_multiple_roles_per_member(self, mock_discord_file):
+    async def test_cmd_get_role_members_multiple_roles_per_member(
+        self, mock_discord_file
+    ):
         member1 = self.create_member("user1", [ROLE.MEMBER, ROLE.PROSPECT])
         member2 = self.create_member("user2", [ROLE.PROSPECT, ROLE.DISCORD_TEAM])
         member3 = self.create_member("user3", [ROLE.DISCORD_TEAM])
-        
+
         self.mock_interaction.guild.members = [member1, member2, member3]
 
         await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
@@ -180,7 +185,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_cmd_get_role_members_filename_generation(self, mock_discord_file):
         member1 = self.create_member("user1", ["Test Role With Spaces"])
-        
+
         self.mock_interaction.guild.members = [member1]
 
         await self.cmd_get_role_members(self.mock_interaction, "Test Role With Spaces")
@@ -193,7 +198,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_get_role_members_role_case_insensitive_search(self):
         member1 = self.create_member("user1", ["TestRole"])
         member2 = self.create_member("user2", ["testrole"])
-        
+
         self.mock_interaction.guild.members = [member1, member2]
 
         await self.cmd_get_role_members(self.mock_interaction, "TESTROLE")

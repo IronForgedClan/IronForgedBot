@@ -3,7 +3,13 @@ from unittest.mock import Mock
 
 import discord
 
-from ironforgedbot.common.roles import ROLE, check_member_has_role, get_highest_privilage_role_from_member, member_has_any_roles, is_member_banned
+from ironforgedbot.common.roles import (
+    ROLE,
+    check_member_has_role,
+    get_highest_privilage_role_from_member,
+    member_has_any_roles,
+    is_member_banned,
+)
 from tests.helpers import create_test_member, create_mock_discord_role
 
 
@@ -22,7 +28,19 @@ class TestRoles(unittest.TestCase):
         self.assertEqual(expected, result)
 
     def test_role_list(self):
-        expected = ["Slag", "Guest", "Applicant", "Prospect", "Member", "Staff", "Events Team", "Recruitment Team", "Discord Team", "Bot Team", "Leadership"]
+        expected = [
+            "Slag",
+            "Guest",
+            "Applicant",
+            "Prospect",
+            "Member",
+            "Staff",
+            "Events Team",
+            "Recruitment Team",
+            "Discord Team",
+            "Bot Team",
+            "Leadership",
+        ]
         result = ROLE.list()
         self.assertEqual(expected, result)
 
@@ -83,7 +101,10 @@ class TestRoles(unittest.TestCase):
             get_highest_privilage_role_from_member(self.mock_member)
 
     def test_member_has_any_roles_success(self):
-        self.mock_member.roles = [create_mock_discord_role("Member"), create_mock_discord_role("Staff")]
+        self.mock_member.roles = [
+            create_mock_discord_role("Member"),
+            create_mock_discord_role("Staff"),
+        ]
         result = member_has_any_roles(self.mock_member, [ROLE.MEMBER, ROLE.LEADERSHIP])
         self.assertTrue(result)
 
@@ -120,7 +141,7 @@ class TestRoles(unittest.TestCase):
         self.mock_member.roles = [
             create_mock_discord_role("Guest"),
             create_mock_discord_role("Member"),
-            create_mock_discord_role("Staff")
+            create_mock_discord_role("Staff"),
         ]
         result = check_member_has_role(self.mock_member, ROLE.STAFF)
         self.assertTrue(result)

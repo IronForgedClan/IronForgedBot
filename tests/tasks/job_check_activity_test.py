@@ -129,7 +129,9 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         first_call = self.mock_report_channel.send.call_args_list[0]
         self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
         second_call = self.mock_report_channel.send.call_args_list[1]
-        self.assertEqual(second_call[0][0], "ℹ️ No inactive members found meeting the criteria.")
+        self.assertEqual(
+            second_call[0][0], "ℹ️ No inactive members found meeting the criteria."
+        )
 
     @patch("ironforgedbot.tasks.job_check_activity.time")
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
@@ -278,7 +280,9 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_player.username = "TestPlayer"
 
         mock_data = Mock()
-        mock_data.gained = 50000  # Below DEFAULT_THRESHOLDS[GroupRole.Iron] which is 150,000
+        mock_data.gained = (
+            50000  # Below DEFAULT_THRESHOLDS[GroupRole.Iron] which is 150,000
+        )
 
         mock_member_gains = Mock()
         mock_member_gains.player = mock_player
@@ -450,7 +454,12 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                 mock_find_member.return_value = mock_wom_member
 
                 result = await _find_inactive_users(
-                    self.wom_api_key, self.wom_group_id, self.mock_report_channel, [], DEFAULT_WOM_LIMIT, DEFAULT_THRESHOLDS
+                    self.wom_api_key,
+                    self.wom_group_id,
+                    self.mock_report_channel,
+                    [],
+                    DEFAULT_WOM_LIMIT,
+                    DEFAULT_THRESHOLDS,
                 )
 
                 self.assertEqual(len(result), 1)
@@ -499,14 +508,18 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     async def test_job_check_activity_invalid_api_key(self):
         """Test validation of invalid API key"""
         await job_check_activity(self.mock_report_channel, "", 12345)
-        
-        self.mock_report_channel.send.assert_called_once_with("❌ Invalid WOM API key configuration")
+
+        self.mock_report_channel.send.assert_called_once_with(
+            "❌ Invalid WOM API key configuration"
+        )
 
     async def test_job_check_activity_invalid_group_id(self):
         """Test validation of invalid group ID"""
         await job_check_activity(self.mock_report_channel, "valid_key", -1)
-        
-        self.mock_report_channel.send.assert_called_once_with("❌ Invalid WOM group ID: -1")
+
+        self.mock_report_channel.send.assert_called_once_with(
+            "❌ Invalid WOM group ID: -1"
+        )
 
     def test_get_role_display_name(self):
         """Test role display name mapping"""
@@ -521,23 +534,29 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     def test_get_threshold_for_role(self):
         """Test threshold calculation for roles"""
         thresholds = {GroupRole.Iron: 100_000, GroupRole.Mithril: 200_000}
-        
+
         self.assertEqual(_get_threshold_for_role(GroupRole.Iron, thresholds), 100_000)
-        self.assertEqual(_get_threshold_for_role(GroupRole.Mithril, thresholds), 200_000)
-        self.assertEqual(_get_threshold_for_role(GroupRole.Rune, thresholds), 200_000)  # Default to max
-        self.assertEqual(_get_threshold_for_role(None, thresholds), 200_000)  # Default to max
+        self.assertEqual(
+            _get_threshold_for_role(GroupRole.Mithril, thresholds), 200_000
+        )
+        self.assertEqual(
+            _get_threshold_for_role(GroupRole.Rune, thresholds), 200_000
+        )  # Default to max
+        self.assertEqual(
+            _get_threshold_for_role(None, thresholds), 200_000
+        )  # Default to max
 
     def test_sort_results_safely(self):
         """Test safe sorting with malformed data"""
         results = [
             ["Player1", "Iron", "300,000", "1 day"],
-            ["Player2", "Iron", "100,000", "2 days"],  
+            ["Player2", "Iron", "100,000", "2 days"],
             ["Player3", "Iron", "invalid", "3 days"],  # Malformed XP
             ["Player4", "Iron", "200,000", "4 days"],
         ]
-        
+
         sorted_results = _sort_results_safely(results)
-        
+
         # Should sort by XP, with malformed data (0) first
         self.assertEqual(sorted_results[0][0], "Player3")  # 0 (malformed)
         self.assertEqual(sorted_results[1][0], "Player2")  # 100,000
@@ -550,7 +569,9 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
     @patch("ironforgedbot.tasks.job_check_activity.render_relative_time")
-    def test_process_member_gains_inactive_member(self, mock_render_time, mock_find_member):
+    def test_process_member_gains_inactive_member(
+        self, mock_render_time, mock_find_member
+    ):
         """Test processing of inactive member"""
         mock_member_gains = Mock()
         mock_member_gains.player.id = 123
@@ -655,7 +676,9 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("WOM API is currently unavailable", call_args[0][0])
 
     @patch("ironforgedbot.tasks.job_check_activity.wom.Client")
-    async def test_find_inactive_users_json_decode_error_in_gains(self, mock_wom_client_class):
+    async def test_find_inactive_users_json_decode_error_in_gains(
+        self, mock_wom_client_class
+    ):
         """Test handling of JSON decode errors when fetching gains"""
         mock_client = AsyncMock()
         mock_wom_client_class.return_value = mock_client

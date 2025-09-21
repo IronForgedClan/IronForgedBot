@@ -9,19 +9,18 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_require_role_patcher = patch(
-            "ironforgedbot.decorators.require_role"
-        )
+        self.mock_require_role_patcher = patch("ironforgedbot.decorators.require_role")
         self.mock_require_role = self.mock_require_role_patcher.start()
         self.mock_require_role.side_effect = lambda *args, **kwargs: lambda func: func
 
         from ironforgedbot.commands.admin.cmd_admin import cmd_admin
+
         self.cmd_admin = cmd_admin
 
         test_member = create_test_member("TestUser", [ROLE.LEADERSHIP])
         test_member.id = 123456789
         self.mock_interaction = create_mock_discord_interaction(user=test_member)
-        
+
         self.mock_interaction.guild.get_member.return_value = test_member
 
     def tearDown(self):
@@ -48,7 +47,9 @@ class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.cmd_admin.get_text_channel")
     @patch("ironforgedbot.commands.admin.cmd_admin.send_error_response")
-    async def test_cmd_admin_no_channel_found(self, mock_send_error_response, mock_get_text_channel):
+    async def test_cmd_admin_no_channel_found(
+        self, mock_send_error_response, mock_get_text_channel
+    ):
         mock_get_text_channel.return_value = None
 
         await self.cmd_admin(self.mock_interaction)
@@ -66,6 +67,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
 
         with patch("discord.ui.View.__init__", return_value=None):
             from ironforgedbot.commands.admin.cmd_admin import AdminMenuView
+
             self.AdminMenuView = AdminMenuView
             self.menu = self.AdminMenuView(report_channel=self.mock_channel)
 
@@ -120,7 +122,9 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         self.menu.clear_parent = AsyncMock()
         mock_button = Mock()
 
-        await self.menu.member_discrepancy_check_button(self.mock_interaction, mock_button)
+        await self.menu.member_discrepancy_check_button(
+            self.mock_interaction, mock_button
+        )
 
         self.menu.clear_parent.assert_called_once()
         mock_cmd_check_discrepancies.assert_called_once_with(

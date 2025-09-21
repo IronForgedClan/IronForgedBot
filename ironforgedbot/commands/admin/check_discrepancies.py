@@ -3,15 +3,19 @@ import logging
 import discord
 
 from ironforgedbot.config import CONFIG
-from ironforgedbot.tasks.job_membership_discrepancies import job_check_membership_discrepancies
+from ironforgedbot.tasks.job_membership_discrepancies import (
+    job_check_membership_discrepancies,
+)
 
 logger = logging.getLogger(__name__)
 
 
-async def cmd_check_discrepancies(interaction: discord.Interaction, report_channel: discord.TextChannel):
+async def cmd_check_discrepancies(
+    interaction: discord.Interaction, report_channel: discord.TextChannel
+):
     """Execute member discrepancy check job manually."""
     assert interaction.guild
-    
+
     await interaction.response.send_message(
         "## Manually initiating member discrepancy job...\n"
         f"View <#{report_channel.id}> for output.",

@@ -15,10 +15,10 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from tests.helpers import (
-    create_mock_discord_interaction, 
+    create_mock_discord_interaction,
     create_test_member,
     create_mock_discord_guild,
-    setup_time_mocks
+    setup_time_mocks,
 )
 
 
@@ -30,6 +30,7 @@ class TestHelpers(unittest.TestCase):
         member = create_test_member(member_name, roles, nickname)
         guild = create_mock_discord_guild([member])
         return guild, member
+
     def test_normalize_discord_string(self):
         """ "Test to make sure normalization strips non ascii characters"""
         self.assertEqual(normalize_discord_string(""), "")
@@ -186,8 +187,11 @@ class TestHelpers(unittest.TestCase):
     @patch("ironforgedbot.common.helpers.datetime")
     def test_render_relative_time(self, mock_datetime):
         """Test rendering of relative time is correct"""
-        fixed_now = setup_time_mocks(mock_datetime, None, 
-                                   fixed_datetime=datetime(2024, 9, 8, 10, 27, 20).astimezone())
+        fixed_now = setup_time_mocks(
+            mock_datetime,
+            None,
+            fixed_datetime=datetime(2024, 9, 8, 10, 27, 20).astimezone(),
+        )
 
         self.assertEqual(
             render_relative_time(datetime(2024, 9, 8, 10, 27, 19).astimezone()),
@@ -276,17 +280,21 @@ class TestHelpers(unittest.TestCase):
     def test_normalize_discord_string_edge_cases(self):
         """Test normalize_discord_string with additional edge cases"""
         self.assertEqual(normalize_discord_string("abc def"), "abc def")
-        self.assertEqual(normalize_discord_string("  spaces  "), "spaces")  # Strips leading/trailing spaces
-        self.assertEqual(normalize_discord_string("multiple   spaces"), "multiple spaces")  # Normalizes multiple spaces
+        self.assertEqual(
+            normalize_discord_string("  spaces  "), "spaces"
+        )  # Strips leading/trailing spaces
+        self.assertEqual(
+            normalize_discord_string("multiple   spaces"), "multiple spaces"
+        )  # Normalizes multiple spaces
         self.assertEqual(normalize_discord_string("123numbers"), "123numbers")
         self.assertEqual(normalize_discord_string("special!@#$%"), "special!@#$%")
-        
+
     def test_calculate_percentage_edge_cases(self):
         """Test calculate_percentage with additional edge cases"""
         # Test with floating point precision
         self.assertEqual(calculate_percentage(1, 3), 33.333333333333336)
         self.assertEqual(calculate_percentage(2, 3), 66.66666666666667)
-        
+
         # Test with very small numbers
         self.assertEqual(calculate_percentage(0.1, 1000), 0.01)
         self.assertEqual(calculate_percentage(1, 10000), 0.01)
@@ -304,7 +312,7 @@ class TestHelpers(unittest.TestCase):
     def test_validate_playername_case_sensitivity(self):
         """Test validate_playername handles case sensitivity correctly"""
         guild, member = self.create_guild_with_member("TestUser", "testuser")
-        
+
         # Should find member regardless of case
         result_member, result_playername = validate_playername(guild, "TestUser")
         self.assertEqual(result_member, member)
@@ -313,7 +321,7 @@ class TestHelpers(unittest.TestCase):
     def test_find_member_by_nickname_case_variations(self):
         """Test find_member_by_nickname with different case variations"""
         guild, member = self.create_guild_with_member("TestUser", "testuser")
-        
+
         # Should find member by exact nickname match
         result = find_member_by_nickname(guild, "testuser")
         self.assertEqual(result, member)

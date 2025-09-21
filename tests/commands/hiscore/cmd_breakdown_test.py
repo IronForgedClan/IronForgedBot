@@ -26,8 +26,10 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         self.prospect_user = create_test_member("ProspectUser", [ROLE.PROSPECT])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-        self.sample_score_breakdown = create_test_score_data(skills_count=2, activities_count=4)
-        
+        self.sample_score_breakdown = create_test_score_data(
+            skills_count=2, activities_count=4
+        )
+
         # Extract individual components for tests that need them
         self.sample_skills = self.sample_score_breakdown.skills
         self.sample_clues = self.sample_score_breakdown.clues

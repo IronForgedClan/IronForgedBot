@@ -138,7 +138,7 @@ class DiscordClient(discord.Client):
         if self._setup_complete:
             logger.debug("Setup hook already completed, skipping...")
             return
-            
+
         await STATE.load_state()
 
         if self.upload:
@@ -150,7 +150,7 @@ class DiscordClient(discord.Client):
         if not self._emoji_cache_loaded:
             await populate_emoji_cache(await self.fetch_application_emojis())
             self._emoji_cache_loaded = True
-            
+
         self._setup_complete = True
 
     async def on_connect(self):

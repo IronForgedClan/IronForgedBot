@@ -84,7 +84,6 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         self.raffle_service.ingot_service.close.assert_called_once()
         self.mock_db.close.assert_called_once()
 
-
     async def test_get_member_ticket_total_member_has_tickets(self):
         mock_result = MagicMock()
         mock_scalars = MagicMock()
@@ -119,7 +118,6 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.execute.assert_called_once()
 
-
     async def test_get_raffle_ticket_total_with_tickets(self):
         mock_result = MagicMock()
         mock_scalars = MagicMock()
@@ -141,7 +139,6 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         result = await self.raffle_service.get_raffle_ticket_total()
 
         self.assertEqual(result, 0)
-
 
     async def test_get_all_valid_raffle_tickets_returns_active_only(self):
         mock_result = MagicMock()
@@ -170,7 +167,6 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, [])
 
-
     async def test_get_raffle_ticket_found(self):
         mock_result = MagicMock()
         mock_scalars = MagicMock()
@@ -193,13 +189,11 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
 
-
     async def test_delete_all_tickets(self):
         await self.raffle_service.delete_all_tickets()
 
         self.mock_db.execute.assert_called_once()
         self.mock_db.commit.assert_called_once()
-
 
     async def test_try_buy_ticket_invalid_quantity_zero(self):
         result = await self.raffle_service.try_buy_ticket(12345, 1000, 0)
@@ -261,9 +255,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-        result = await self.raffle_service.try_buy_ticket(
-            67890, 1000, 5
-        )
+        result = await self.raffle_service.try_buy_ticket(67890, 1000, 5)
 
         expected = RaffleServiceResponse(
             False, "Member does not have enough ingots to remove that amount", 0
@@ -288,9 +280,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
             IngotServiceResponse(True, "Ingots removed", 8000)
         )
 
-        result = await self.raffle_service.try_buy_ticket(
-            12345, 1000, 2
-        )
+        result = await self.raffle_service.try_buy_ticket(12345, 1000, 2)
 
         expected = RaffleServiceResponse(True, "2 raffle tickets purchased", 2)
         self.assertEqual(result, expected)
@@ -329,9 +319,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
             IngotServiceResponse(True, "Ingots removed", 7000)
         )
 
-        result = await self.raffle_service.try_buy_ticket(
-            12345, 1000, 3
-        )
+        result = await self.raffle_service.try_buy_ticket(12345, 1000, 3)
 
         expected = RaffleServiceResponse(True, "3 raffle tickets purchased", 8)
         self.assertEqual(result, expected)
@@ -376,9 +364,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
             IngotServiceResponse(True, "Ingots removed", 500_000)
         )
 
-        result = await self.raffle_service.try_buy_ticket(
-            12345, 1000, 500
-        )
+        result = await self.raffle_service.try_buy_ticket(12345, 1000, 500)
 
         expected = RaffleServiceResponse(True, "500 raffle tickets purchased", 500)
         self.assertEqual(result, expected)
@@ -401,9 +387,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
             IngotServiceResponse(True, "Ingots removed", 0)
         )
 
-        result = await self.raffle_service.try_buy_ticket(
-            12345, 10000, 1
-        )
+        result = await self.raffle_service.try_buy_ticket(12345, 10000, 1)
 
         expected = RaffleServiceResponse(True, "1 raffle tickets purchased", 1)
         self.assertEqual(result, expected)
@@ -429,7 +413,6 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
             12345, -6000, None, "Purchase raffle tickets"
         )
 
-
     def test_raffle_service_exception_default_message(self):
         exception = RaffleServiceException()
         self.assertEqual(
@@ -442,7 +425,6 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         exception = RaffleServiceException(custom_message)
         self.assertEqual(exception.message, custom_message)
         self.assertEqual(str(exception), custom_message)
-
 
     @patch("ironforgedbot.services.raffle_service.datetime")
     async def test_multiple_purchases_same_member(self, mock_datetime):

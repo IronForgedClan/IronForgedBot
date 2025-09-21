@@ -12,6 +12,7 @@ from ironforgedbot.commands.holiday.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
 from ironforgedbot.common.roles import ROLE
+
 # from ironforgedbot.storage.types import Member  # Disabled for rewrite
 from tests.helpers import (
     create_mock_discord_interaction,

@@ -45,17 +45,17 @@ class TestBuildWinnerImage(unittest.IsolatedAsyncioTestCase):
 
     async def test_image_generation(self):
         image = await build_winner_image_file("oxore", 5123456)
-        
+
         # Verify the image was created and has content
         self.assertIsNotNone(image)
         self.assertIsNotNone(image.fp)
-        
+
         # Verify the image has reasonable size (not empty, not too large)
         image_data = image.fp.read()
         self.assertGreater(len(image_data), 1000)  # At least 1KB
         self.assertLess(len(image_data), 1000000)  # Less than 1MB
-        
+
         # Verify it's a PNG file by checking magic bytes
         image.fp.seek(0)
         magic_bytes = image.fp.read(8)
-        self.assertEqual(magic_bytes, b'\x89PNG\r\n\x1a\n')
+        self.assertEqual(magic_bytes, b"\x89PNG\r\n\x1a\n")

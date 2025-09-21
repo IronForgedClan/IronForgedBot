@@ -7,12 +7,12 @@ from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.models.member import Member
 from tests.helpers import (
-    create_mock_discord_interaction, 
-    create_test_member, 
+    create_mock_discord_interaction,
+    create_test_member,
     create_test_db_member,
     setup_database_service_mocks,
     assert_embed_structure,
-    mock_require_role
+    mock_require_role,
 )
 
 with patch("ironforgedbot.decorators.require_role", mock_require_role):
@@ -23,13 +23,13 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
-        
+
         self.sample_member = create_test_db_member(
             nickname="TestUser",
             discord_id=12345,
             rank=RANK.IRON,
             ingots=1000,
-            id="test-member-id"
+            id="test-member-id",
         )
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
@@ -38,20 +38,27 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_success_self(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-        
+
         mock_member_service.get_member_by_nickname.return_value = self.sample_member
-        
+
         await cmd_view_ingots(self.interaction, None)
-        
+
         mock_validate.assert_called_once_with(self.interaction.guild, "TestUser")
         mock_member_service.get_member_by_nickname.assert_called_once_with("TestUser")
-        
+
         # Use helper to validate embed structure
         embed = assert_embed_structure(self, self.interaction)
         self.assertIn("TestUser", embed.title)
@@ -63,28 +70,32 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_success_other_player(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
         other_user = create_test_member("OtherUser", [ROLE.MEMBER])
         other_member = create_test_db_member(
-            nickname="OtherUser",
-            discord_id=67890,
-            rank=RANK.MITHRIL,
-            ingots=5000
+            nickname="OtherUser", discord_id=67890, rank=RANK.MITHRIL, ingots=5000
         )
-        
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (other_user, "OtherUser")
         mock_get_rank.return_value = RANK.MITHRIL
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-        
+
         mock_member_service.get_member_by_nickname.return_value = other_member
-        
+
         await cmd_view_ingots(self.interaction, "OtherUser")
-        
+
         mock_validate.assert_called_once_with(self.interaction.guild, "OtherUser")
         mock_member_service.get_member_by_nickname.assert_called_once_with("OtherUser")
-        
+
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("OtherUser", sent_embed.title)
         self.assertEqual(len(sent_embed.fields), 2)
@@ -96,24 +107,28 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_view_ingots_member_not_found(
         self, mock_send_error, mock_validate, mock_member_service_class, mock_db
     ):
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (self.test_user, "UnknownUser")
-        
+
         mock_member_service.get_member_by_nickname.return_value = None
-        
+
         await cmd_view_ingots(self.interaction, "UnknownUser")
-        
+
         mock_send_error.assert_called_once_with(
             self.interaction, "Member 'UnknownUser' could not be found."
         )
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.send_error_response")
-    async def test_cmd_view_ingots_validation_error(self, mock_send_error, mock_validate):
+    async def test_cmd_view_ingots_validation_error(
+        self, mock_send_error, mock_validate
+    ):
         mock_validate.side_effect = Exception("Invalid player name")
-        
+
         await cmd_view_ingots(self.interaction, "BadName")
-        
+
         mock_send_error.assert_called_once_with(self.interaction, "Invalid player name")
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
@@ -122,19 +137,26 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_embed_fields(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-        
+
         mock_member_service.get_member_by_nickname.return_value = self.sample_member
-        
+
         await cmd_view_ingots(self.interaction, "TestUser")
-        
+
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        
+
         self.assertEqual(len(sent_embed.fields), 2)
         self.assertEqual(sent_embed.fields[0].name, "Account ID")
         self.assertEqual(sent_embed.fields[0].value, "-member-id")
@@ -147,24 +169,28 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_zero_ingots_thumbnail(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
         zero_ingot_member = create_test_db_member(
-            nickname="ZeroUser",
-            discord_id=12345,
-            rank=RANK.IRON,
-            ingots=0
+            nickname="ZeroUser", discord_id=12345, rank=RANK.IRON, ingots=0
         )
-        
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (self.test_user, "ZeroUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-        
+
         mock_member_service.get_member_by_nickname.return_value = zero_ingot_member
-        
+
         await cmd_view_ingots(self.interaction, "ZeroUser")
-        
+
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertEqual(sent_embed.thumbnail.url, "")
 
@@ -174,24 +200,28 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_high_ingots_thumbnail(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
         rich_member = create_test_db_member(
-            nickname="RichUser",
-            discord_id=12345,
-            rank=RANK.IRON,
-            ingots=25_000_000
+            nickname="RichUser", discord_id=12345, rank=RANK.IRON, ingots=25_000_000
         )
-        
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (self.test_user, "RichUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-        
+
         mock_member_service.get_member_by_nickname.return_value = rich_member
-        
+
         await cmd_view_ingots(self.interaction, "RichUser")
-        
+
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("Platinum_token_detail.png", sent_embed.thumbnail.url)
 
@@ -201,7 +231,12 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_various_thresholds(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
         test_cases = [
             (100_000, "Coins_5_detail.png"),
@@ -212,7 +247,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
             (10_000_000, "Platinum_token_3_detail.png"),
             (15_000_000, "Platinum_token_4_detail.png"),
         ]
-        
+
         for ingots, expected_image in test_cases:
             with self.subTest(ingots=ingots):
                 test_member = Member(
@@ -223,16 +258,18 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
                     ingots=ingots,
                     rank=RANK.IRON,
                 )
-                
-                mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+
+                mock_db_session, mock_member_service = setup_database_service_mocks(
+                    mock_db, mock_member_service_class
+                )
                 mock_validate.return_value = (self.test_user, "TestUser")
                 mock_get_rank.return_value = RANK.IRON
                 mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-                
+
                 mock_member_service.get_member_by_nickname.return_value = test_member
-                
+
                 await cmd_view_ingots(self.interaction, "TestUser")
-                
+
                 sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
                 self.assertIn(expected_image, sent_embed.thumbnail.url)
 
@@ -242,7 +279,12 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
     async def test_cmd_view_ingots_large_ingot_formatting(
-        self, mock_find_emoji, mock_get_rank, mock_validate, mock_member_service_class, mock_db
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
     ):
         large_ingot_member = Member(
             id="large-member-id",
@@ -252,16 +294,18 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
             ingots=1_234_567,
             rank=RANK.IRON,
         )
-        
-        mock_db_session, mock_member_service = setup_database_service_mocks(mock_db, mock_member_service_class)
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
         mock_validate.return_value = (self.test_user, "LargeUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
-        
+
         mock_member_service.get_member_by_nickname.return_value = large_ingot_member
-        
+
         await cmd_view_ingots(self.interaction, "LargeUser")
-        
+
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         balance_field = sent_embed.fields[1]
         self.assertEqual(balance_field.value, ":Ingot: 1,234,567")

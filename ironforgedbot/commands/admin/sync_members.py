@@ -50,11 +50,13 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                         try:
                             await service.change_nickname(member.id, safe_nick)
                         except UniqueNicknameViolation:
-                            output.append([
-                                discord_member.name,
-                                "Error",
-                                "Unique nickname violation",
-                            ])
+                            output.append(
+                                [
+                                    discord_member.name,
+                                    "Error",
+                                    "Unique nickname violation",
+                                ]
+                            )
                             continue
                         change_text += "Nickname changed "
 
@@ -99,11 +101,13 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                                 disabled_member.id, safe_nick, RANK(rank)
                             )
                         except UniqueNicknameViolation:
-                            output.append([
-                                f"[D]{discord_member.name}",
-                                "Error",
-                                "Nickname dupe",
-                            ])
+                            output.append(
+                                [
+                                    f"[D]{discord_member.name}",
+                                    "Error",
+                                    "Nickname dupe",
+                                ]
+                            )
                             continue
 
                         output.append([safe_nick, "Enabled", "Returning member"])
@@ -121,10 +125,12 @@ async def sync_members(guild: discord.Guild) -> list[list]:
     return output
 
 
-async def cmd_sync_members(interaction: discord.Interaction, report_channel: discord.TextChannel):
+async def cmd_sync_members(
+    interaction: discord.Interaction, report_channel: discord.TextChannel
+):
     """Execute member sync job manually."""
     assert interaction.guild
-    
+
     await interaction.response.send_message(
         "## Manually initiating member sync job...\n"
         f"View <#{report_channel.id}> for output.",
@@ -132,7 +138,8 @@ async def cmd_sync_members(interaction: discord.Interaction, report_channel: dis
     )
 
     logger.info("Manually initiating sync member job")
-    
+
     # Import here to avoid circular import
     from ironforgedbot.tasks.job_sync_members import job_sync_members
+
     await job_sync_members(interaction.guild, report_channel)

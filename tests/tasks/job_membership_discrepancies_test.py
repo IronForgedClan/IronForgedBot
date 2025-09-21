@@ -15,11 +15,10 @@ mock_wom_group_detail = SimpleNamespace(
     memberships=[
         SimpleNamespace(
             role=wom.GroupRole.Administrator,
-            player=SimpleNamespace(username="ignored_user")
+            player=SimpleNamespace(username="ignored_user"),
         ),
         SimpleNamespace(
-            role=wom.GroupRole.Adamant,
-            player=SimpleNamespace(username="tester")
+            role=wom.GroupRole.Adamant, player=SimpleNamespace(username="tester")
         ),
     ]
 )
@@ -32,14 +31,20 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         self.mock_report_channel.send = AsyncMock()
         self.wom_api_key = "test_api_key"
         self.wom_group_id = 12345
+
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_job_check_membership_basic_discrepancies(self, mock_wom_members, mock_discord_members):
+    async def test_job_check_membership_basic_discrepancies(
+        self, mock_wom_members, mock_discord_members
+    ):
         mock_wom_members.return_value = (["tester", "another", "foo", "bar"], [])
         mock_discord_members.return_value = ["test", "more", "foo"]
 
         await job_check_membership_discrepancies(
-            self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+            self.mock_guild,
+            self.mock_report_channel,
+            self.wom_api_key,
+            self.wom_group_id,
         )
 
         expected_calls = [
@@ -63,14 +68,19 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_normalizes_usernames_correctly(self, mock_wom_members, mock_discord_members):
-        mock_wom_members.return_value = ([
-            "tester",
-            "another",
-            "foo bar",
-            "bar_foo",
-            "foo bar",
-        ], [])
+    async def test_normalizes_usernames_correctly(
+        self, mock_wom_members, mock_discord_members
+    ):
+        mock_wom_members.return_value = (
+            [
+                "tester",
+                "another",
+                "foo bar",
+                "bar_foo",
+                "foo bar",
+            ],
+            [],
+        )
         mock_discord_members.return_value = [
             "test",
             "more",
@@ -81,7 +91,10 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         await job_check_membership_discrepancies(
-            self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+            self.mock_guild,
+            self.mock_report_channel,
+            self.wom_api_key,
+            self.wom_group_id,
         )
 
         expected_calls = [
@@ -105,14 +118,19 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_ignores_case_differences(self, mock_wom_members, mock_discord_members):
-        mock_wom_members.return_value = ([
-            "tESter",
-            "anothEr",
-            "fOO-bar",
-            "Bar_fOo",
-            "FOO bAr",
-        ], [])
+    async def test_ignores_case_differences(
+        self, mock_wom_members, mock_discord_members
+    ):
+        mock_wom_members.return_value = (
+            [
+                "tESter",
+                "anothEr",
+                "fOO-bar",
+                "Bar_fOo",
+                "FOO bAr",
+            ],
+            [],
+        )
         mock_discord_members.return_value = [
             "Test",
             "More",
@@ -123,7 +141,10 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         ]
 
         await job_check_membership_discrepancies(
-            self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+            self.mock_guild,
+            self.mock_report_channel,
+            self.wom_api_key,
+            self.wom_group_id,
         )
 
         expected_calls = [
@@ -145,20 +166,31 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_report_channel.send.call_args_list, expected_calls)
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.IGNORED_USERS", ["ignored", "also_ignored"])
+    @patch(
+        "ironforgedbot.tasks.job_membership_discrepancies.IGNORED_USERS",
+        ["ignored", "also_ignored"],
+    )
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_ignores_specified_users(self, mock_wom_members, mock_discord_members):
-        mock_wom_members.return_value = ([
-            "tester",
-            "another",
-            "foo",
-            "bar",
-        ], ["also_ignored"])
+    async def test_ignores_specified_users(
+        self, mock_wom_members, mock_discord_members
+    ):
+        mock_wom_members.return_value = (
+            [
+                "tester",
+                "another",
+                "foo",
+                "bar",
+            ],
+            ["also_ignored"],
+        )
         mock_discord_members.return_value = ["test", "more", "foo", "ignored"]
 
         await job_check_membership_discrepancies(
-            self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+            self.mock_guild,
+            self.mock_report_channel,
+            self.wom_api_key,
+            self.wom_group_id,
         )
 
         expected_calls = [
@@ -182,12 +214,17 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_aborts_when_no_wom_members(self, mock_wom_members, mock_discord_members):
+    async def test_aborts_when_no_wom_members(
+        self, mock_wom_members, mock_discord_members
+    ):
         mock_wom_members.return_value = ([], [])
         mock_discord_members.return_value = ["test", "more", "foo"]
 
         await job_check_membership_discrepancies(
-            self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+            self.mock_guild,
+            self.mock_report_channel,
+            self.wom_api_key,
+            self.wom_group_id,
         )
 
         expected_calls = [
@@ -199,12 +236,17 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_aborts_when_no_discord_members(self, mock_wom_members, mock_discord_members):
+    async def test_aborts_when_no_discord_members(
+        self, mock_wom_members, mock_discord_members
+    ):
         mock_wom_members.return_value = (["tester", "another", "foo", "bar"], [])
         mock_discord_members.return_value = []
 
         await job_check_membership_discrepancies(
-            self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+            self.mock_guild,
+            self.mock_report_channel,
+            self.wom_api_key,
+            self.wom_group_id,
         )
 
         expected_calls = [
@@ -246,7 +288,9 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(members, None)
         self.assertEqual(ignored, [])
-        self.mock_report_channel.send.assert_called_with("Error fetching WOM group details.")
+        self.mock_report_channel.send.assert_called_with(
+            "Error fetching WOM group details."
+        )
         mock_wom_client.start.assert_called_once()
         mock_wom_client.close.assert_called_once()
 
@@ -266,13 +310,21 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
-    async def test_handles_none_wom_members_after_filtering(self, mock_wom_members, mock_discord_members):
+    async def test_handles_none_wom_members_after_filtering(
+        self, mock_wom_members, mock_discord_members
+    ):
         mock_wom_members.return_value = (["ignored"], [])
         mock_discord_members.return_value = ["test"]
 
-        with patch("ironforgedbot.tasks.job_membership_discrepancies.IGNORED_USERS", ["ignored"]):
+        with patch(
+            "ironforgedbot.tasks.job_membership_discrepancies.IGNORED_USERS",
+            ["ignored"],
+        ):
             await job_check_membership_discrepancies(
-                self.mock_guild, self.mock_report_channel, self.wom_api_key, self.wom_group_id
+                self.mock_guild,
+                self.mock_report_channel,
+                self.wom_api_key,
+                self.wom_group_id,
             )
 
         expected_calls = [

@@ -26,7 +26,9 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.STATE")
     async def test_modal_submission_success(self, mock_state, mock_find_emoji):
         mock_state.state = {"raffle_on": False, "raffle_price": 0}
-        mock_find_emoji.side_effect = lambda name: "🎫" if name == "Raffle_Ticket" else "💰"
+        mock_find_emoji.side_effect = lambda name: (
+            "🎫" if name == "Raffle_Ticket" else "💰"
+        )
 
         modal = StartRaffleModal()
         modal.ticket_price._value = "5000"
@@ -45,9 +47,13 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.find_emoji")
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.STATE")
-    async def test_modal_submission_fail_invalid_price(self, mock_state, mock_find_emoji, mock_send_error_response):
+    async def test_modal_submission_fail_invalid_price(
+        self, mock_state, mock_find_emoji, mock_send_error_response
+    ):
         mock_state.state = {"raffle_on": False, "raffle_price": 0}
-        mock_find_emoji.side_effect = lambda name: "🎫" if name == "Raffle_Ticket" else "💰"
+        mock_find_emoji.side_effect = lambda name: (
+            "🎫" if name == "Raffle_Ticket" else "💰"
+        )
 
         modal = StartRaffleModal()
         modal.ticket_price._value = "test"
@@ -56,18 +62,23 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_state.state["raffle_on"], False)
         self.assertEqual(mock_state.state["raffle_price"], 0)
-        self.mock_interaction.response.defer.assert_called_once_with(thinking=True, ephemeral=True)
+        self.mock_interaction.response.defer.assert_called_once_with(
+            thinking=True, ephemeral=True
+        )
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction,
-            "💰 **test** is an invalid 🎫 ticket price."
+            self.mock_interaction, "💰 **test** is an invalid 🎫 ticket price."
         )
 
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.find_emoji")
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.STATE")
-    async def test_modal_submission_fail_negative_price(self, mock_state, mock_find_emoji, mock_send_error_response):
+    async def test_modal_submission_fail_negative_price(
+        self, mock_state, mock_find_emoji, mock_send_error_response
+    ):
         mock_state.state = {"raffle_on": False, "raffle_price": 0}
-        mock_find_emoji.side_effect = lambda name: "🎫" if name == "Raffle_Ticket" else "💰"
+        mock_find_emoji.side_effect = lambda name: (
+            "🎫" if name == "Raffle_Ticket" else "💰"
+        )
 
         modal = StartRaffleModal()
         modal.ticket_price._value = "-10"
@@ -76,18 +87,23 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_state.state["raffle_on"], False)
         self.assertEqual(mock_state.state["raffle_price"], 0)
-        self.mock_interaction.response.defer.assert_called_once_with(thinking=True, ephemeral=True)
+        self.mock_interaction.response.defer.assert_called_once_with(
+            thinking=True, ephemeral=True
+        )
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction,
-            "💰 **-10** is an invalid 🎫 ticket price."
+            self.mock_interaction, "💰 **-10** is an invalid 🎫 ticket price."
         )
 
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.find_emoji")
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.STATE")
-    async def test_modal_submission_fail_zero_price(self, mock_state, mock_find_emoji, mock_send_error_response):
+    async def test_modal_submission_fail_zero_price(
+        self, mock_state, mock_find_emoji, mock_send_error_response
+    ):
         mock_state.state = {"raffle_on": False, "raffle_price": 0}
-        mock_find_emoji.side_effect = lambda name: "🎫" if name == "Raffle_Ticket" else "💰"
+        mock_find_emoji.side_effect = lambda name: (
+            "🎫" if name == "Raffle_Ticket" else "💰"
+        )
 
         modal = StartRaffleModal()
         modal.ticket_price._value = "0"
@@ -96,8 +112,9 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(mock_state.state["raffle_on"], False)
         self.assertEqual(mock_state.state["raffle_price"], 0)
-        self.mock_interaction.response.defer.assert_called_once_with(thinking=True, ephemeral=True)
+        self.mock_interaction.response.defer.assert_called_once_with(
+            thinking=True, ephemeral=True
+        )
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction,
-            "💰 **0** is an invalid 🎫 ticket price."
+            self.mock_interaction, "💰 **0** is an invalid 🎫 ticket price."
         )

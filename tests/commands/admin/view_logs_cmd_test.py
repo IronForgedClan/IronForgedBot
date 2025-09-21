@@ -8,13 +8,16 @@ from tests.helpers import create_mock_discord_interaction
 class TestViewLogsCmd(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         from ironforgedbot.commands.admin.view_logs import cmd_view_logs
+
         self.cmd_view_logs = cmd_view_logs
 
         self.mock_interaction = create_mock_discord_interaction()
 
     @patch("ironforgedbot.commands.admin.view_logs.get_latest_log_file")
     @patch("ironforgedbot.commands.admin.view_logs.send_error_response")
-    async def test_cmd_view_logs_success(self, mock_send_error_response, mock_get_latest_log):
+    async def test_cmd_view_logs_success(
+        self, mock_send_error_response, mock_get_latest_log
+    ):
         mock_file = Mock()
         mock_get_latest_log.return_value = mock_file
 
@@ -31,7 +34,9 @@ class TestViewLogsCmd(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.view_logs.get_latest_log_file")
     @patch("ironforgedbot.commands.admin.view_logs.send_error_response")
-    async def test_cmd_view_logs_no_file(self, mock_send_error_response, mock_get_latest_log):
+    async def test_cmd_view_logs_no_file(
+        self, mock_send_error_response, mock_get_latest_log
+    ):
         mock_get_latest_log.return_value = None
 
         await self.cmd_view_logs(self.mock_interaction)

@@ -25,12 +25,14 @@ async def cmd_process_absentees(interaction: discord.Interaction):
 
         data = []
         for member in absentee_list:
-            data.append([
-                member.nickname,
-                member.date,
-                member.information,
-                member.comment,
-            ])
+            data.append(
+                [
+                    member.nickname,
+                    member.date,
+                    member.information,
+                    member.comment,
+                ]
+            )
 
         result_table = tabulate(
             data,

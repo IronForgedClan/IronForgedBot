@@ -29,12 +29,13 @@ class IronForgedAutomations:
         self._job_lock = asyncio.Lock()
         self._shutdown_timeout = 30.0
         self._setup_done = False
-        
+
         logger.info("Creating AsyncIOScheduler for automation tasks...")
         # Configure scheduler with proper executor for async jobs
         from apscheduler.executors.asyncio import AsyncIOExecutor
+
         executors = {
-            'default': AsyncIOExecutor(),
+            "default": AsyncIOExecutor(),
         }
         self.scheduler = AsyncIOScheduler(executors=executors)
         self.scheduler.start()
@@ -127,7 +128,7 @@ class IronForgedAutomations:
 
     def _job_done_callback(self, task: asyncio.Task):
         """Remove the job from the running_jobs set once it is finished."""
-        
+
         def sync_cleanup():
             """Synchronous cleanup that schedules async work safely."""
             try:
@@ -135,7 +136,7 @@ class IronForgedAutomations:
                 if loop.is_closed():
                     logger.warning("Event loop is closed, skipping job cleanup")
                     return
-                    
+
                 # Create the async cleanup task
                 async def cleanup():
                     async with self._job_lock:
@@ -144,7 +145,9 @@ class IronForgedAutomations:
 
                     # Log job completion with any exceptions
                     if task.exception():
-                        logger.error(f"Job completed with exception: {task.exception()}")
+                        logger.error(
+                            f"Job completed with exception: {task.exception()}"
+                        )
                     else:
                         logger.debug(f"Job completed successfully")
 
@@ -152,11 +155,11 @@ class IronForgedAutomations:
 
                 # Schedule cleanup to run in the event loop
                 loop.create_task(cleanup())
-                
+
             except RuntimeError as e:
                 # Event loop might be closed during shutdown or not running
                 logger.warning(f"Could not schedule job cleanup: {e}")
-        
+
         # Execute the sync cleanup
         sync_cleanup()
 
@@ -174,7 +177,9 @@ class IronForgedAutomations:
 
         # Set a more descriptive name for the wrapper function
         async_wrapper.__name__ = f"{job_func.__name__}_wrapper"
-        async_wrapper.__qualname__ = f"IronForgedAutomations.{job_func.__name__}_wrapper"
+        async_wrapper.__qualname__ = (
+            f"IronForgedAutomations.{job_func.__name__}_wrapper"
+        )
         return async_wrapper
 
     async def _safe_job_wrapper(self, job_func, *args, **kwargs):
@@ -217,7 +222,7 @@ class IronForgedAutomations:
         if self._setup_done:
             logger.warning("Automation setup already completed, skipping...")
             return
-            
+
         offset = (
             0
             if ENVIRONMENT.PRODUCTION in CONFIG.ENVIRONMENT
@@ -242,7 +247,7 @@ class IronForgedAutomations:
             ),
             # CronTrigger(minute="*"),
             CronTrigger(hour="4,16", minute=10, second=offset, timezone="UTC"),
-            id="refresh_ranks", 
+            id="refresh_ranks",
             name="Rank Refresh Job",
         )
 
@@ -285,10 +290,10 @@ class IronForgedAutomations:
         )
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
-        
+
         # Run initial sync after scheduler is set up, using the job wrapper for consistency
         logger.info("Running initial member sync...")
         await self.track_job(job_sync_members, self.discord_guild, self.report_channel)
-        
+
         self._setup_done = True
         logger.info("Automation setup completed successfully")
