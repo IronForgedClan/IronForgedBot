@@ -1,4 +1,3 @@
-"""Centralized logging configuration for IronForged Bot."""
 import json
 import logging
 import os
@@ -90,9 +89,7 @@ class IronForgedLogger:
 
         return ConcurrentRotatingFileHandler(
             log_filename,
-            maxBytes=int(
-                os.getenv("LOG_FILE_MAX_BYTES", self.DEFAULT_FILE_MAX_BYTES)
-            ),
+            maxBytes=int(os.getenv("LOG_FILE_MAX_BYTES", self.DEFAULT_FILE_MAX_BYTES)),
             backupCount=int(
                 os.getenv("LOG_FILE_BACKUP_COUNT", self.DEFAULT_FILE_BACKUP_COUNT)
             ),
@@ -112,9 +109,7 @@ class IronForgedLogger:
         if self.use_json_format and self.environment == "prod":
             formatter = JSONFormatter()
         else:
-            formatter = logging.Formatter(
-                self.DEFAULT_FORMAT, self.DEFAULT_DATE_FORMAT
-            )
+            formatter = logging.Formatter(self.DEFAULT_FORMAT, self.DEFAULT_DATE_FORMAT)
 
         # Configure console handler
         console_handler = logging.StreamHandler()
@@ -187,6 +182,9 @@ class IronForgedLogger:
 # Initialize the global logger configuration
 # This will be imported at the start of main.py
 _logger_instance = IronForgedLogger()
+
+# Export LOG_DIR for backwards compatibility
+LOG_DIR = _logger_instance.log_dir
 
 
 def get_logger(name: str) -> logging.Logger:

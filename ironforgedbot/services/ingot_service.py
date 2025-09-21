@@ -57,7 +57,7 @@ class IngotService:
                 )
             admin_id = admin_member.id
 
-        logger.info(f"Attempting to add {quantity} ingots to {member.nickname}")
+        logger.debug(f"Adding {quantity} ingots to {member.nickname}")
 
         new_ingot_total = member.ingots + quantity
 
@@ -112,7 +112,7 @@ class IngotService:
 
             admin_id = admin_member.id
 
-        logger.info(f"Attempting to remove {quantity} ingots from {member.nickname}")
+        logger.debug(f"Removing {quantity} ingots from {member.nickname}")
         new_ingot_total = member.ingots + quantity
 
         if new_ingot_total < 0:

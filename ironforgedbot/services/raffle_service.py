@@ -92,9 +92,7 @@ class RaffleService:
         if not member:
             return RaffleServiceResponse(False, "Member could not be found", -1)
 
-        logger.info(
-            f"Attempting to buy {quantity} raffle tickets for {member.nickname}"
-        )
+        logger.debug(f"Buying {quantity} raffle tickets for {member.nickname}")
 
         current_raffle_ticket = await self._get_raffle_ticket(member.id)
 

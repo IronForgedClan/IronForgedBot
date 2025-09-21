@@ -86,7 +86,7 @@ def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
         normalized_display_name = normalize_discord_string(member.display_name.lower())
         if normalized_display_name == normalize_discord_string(target_name.lower()):
             if not member.nick or len(member.nick) < 1:
-                logger.info(f"{member.display_name} has no nickname set")
+                logger.debug(f"{member.display_name} has no nickname set")
                 raise ValueError(
                     f"Member '**{member.display_name}**' does not have a nickname set"
                 )

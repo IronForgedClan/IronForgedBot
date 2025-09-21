@@ -4,6 +4,7 @@ from typing import Optional
 import discord
 
 from ironforgedbot.common.constants import EMPTY_SPACE
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.helpers import (
     find_emoji,
     render_percentage,
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER)
+@log_command_execution(logger)
 async def cmd_score(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute clan score for a Runescape player name.
 

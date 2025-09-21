@@ -4,6 +4,7 @@ from typing import Any, TypedDict
 
 import aiohttp
 
+
 from ironforgedbot.decorators import retry_on_exception
 from ironforgedbot.event_emitter import event_emitter
 
@@ -33,7 +34,7 @@ class AsyncHttpClient:
     async def _initialize_session(self):
         """Initialize the aiohttp session."""
         if not self.session or self.session.closed:
-            logger.info("Initializing new session...")
+            logger.debug("Initializing new HTTP session")
             self.session = aiohttp.ClientSession()
 
     @retry_on_exception(retries=5)
@@ -46,20 +47,18 @@ class AsyncHttpClient:
             url, params=params, headers=headers, json=json_data
         ) as response:
             if response.status >= 500:
-                logger.debug(await response.text())
-                logger.warning(f"HTTP error code: {response.status}")
+                error_text = await response.text()
+                logger.error(f"Server error {response.status} for {url}: {error_text[:200]}")
                 raise HttpException(f"A remote server error occured: {response.status}")
 
             if response.status == 408:
-                logger.debug(await response.text())
-                logger.warning(f"HTTP error code: {response.status}")
+                logger.warning(f"Request timeout (408) for {url}")
                 raise HttpException(
                     f"No response from remote server: {response.status}"
                 )
 
             if response.status == 429:
-                logger.debug(await response.text())
-                logger.warning(f"HTTP error code: {response.status}")
+                logger.warning(f"Rate limited (429) for {url}")
                 raise HttpException(
                     f"Rate limited or timed out response: {response.status}"
                 )
@@ -78,7 +77,7 @@ class AsyncHttpClient:
 
     async def cleanup(self):
         if self.session:
-            logger.info("Closing http session...")
+            logger.debug("Closing HTTP session")
             await self.session.close()
 
 

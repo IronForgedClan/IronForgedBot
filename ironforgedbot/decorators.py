@@ -34,12 +34,7 @@ def require_role(role: ROLE, ephemeral=False):
                     f"Unable to access guild information ({func.__name__})"
                 )
 
-            logger.info(
-                (
-                    f"Handling '/{func.__name__}: {pformat(kwargs)}' on behalf of "
-                    f"'{normalize_discord_string(interaction.user.display_name)}'"
-                )
-            )
+            # Command execution logging is now handled by log_command_execution decorator
 
             if STATE.state["is_shutting_down"]:
                 logger.warning("Bot has begun shut down. Ignoring command.")
@@ -57,6 +52,9 @@ def require_role(role: ROLE, ephemeral=False):
                 )
 
             if not check_member_has_role(member, role, or_higher=True):
+                logger.warning(
+                    f"Access denied: {interaction.user.display_name} tried {func.__name__} without {role} role"
+                )
                 raise discord.app_commands.CheckFailure(
                     f"Member '{normalize_discord_string(interaction.user.display_name)}' "
                     f"tried using '{func.__name__}' but does not have permission"
@@ -85,9 +83,9 @@ def require_channel(channel_ids: list[int]):
                 )
 
             if interaction.channel_id not in channel_ids:
-                logger.info(
-                    f"Member '{interaction.user.display_name}' tried to use '{func.__name__}' "
-                    f"in an invalid channel '{interaction.channel_id}'"
+                logger.debug(
+                    f"Channel restriction: {interaction.user.display_name} tried {func.__name__} "
+                    f"in channel {interaction.channel_id}"
                 )
                 await interaction.response.defer(thinking=True, ephemeral=True)
 
@@ -175,9 +173,9 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
                 mins = int(retry_after // 60)
                 secs = int(retry_after % 60)
 
-                logger.info(
-                    f"Member '{interaction.user.display_name}' tried to use a rate limited command "
-                    f"'{func.__name__}'. {mins}m and {secs}s remaining on cooldown."
+                logger.debug(
+                    f"Rate limit hit: {interaction.user.display_name} for {func.__name__} "
+                    f"({mins}m {secs}s remaining)"
                 )
 
                 message = (
