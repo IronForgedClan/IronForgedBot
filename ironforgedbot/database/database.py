@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 import os
 
 from typing import AsyncGenerator
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -21,6 +24,8 @@ class Database:
         if not self._url:
             raise RuntimeError("DATABASE_URL must be set")
 
+        logger.info("Initializing database connection")
+        
         self._engine: AsyncEngine = create_async_engine(
             self._url,
             echo=False,  # True for SQL debug
@@ -33,6 +38,8 @@ class Database:
             class_=AsyncSession,
             expire_on_commit=False,
         )
+        
+        logger.info("Database connection initialized successfully")
 
     @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
@@ -44,10 +51,13 @@ class Database:
         """
         async with self._SessionFactory() as session:
             try:
+                logger.debug("Database session started")
                 yield session
                 # You can choose to commit here, or do it manually in your code
                 # await session.commit()
-            except Exception:
+                logger.debug("Database session completed successfully")
+            except Exception as e:
+                logger.error(f"Database session error: {e}", exc_info=True)
                 await session.rollback()
                 raise
             finally:
@@ -59,7 +69,9 @@ class Database:
         Cleanly close all connections in the pool.
         Call at application shutdown.
         """
+        logger.info("Disposing database connections")
         await self._engine.dispose()
+        logger.info("Database connections disposed")
 
 
 db = Database()
