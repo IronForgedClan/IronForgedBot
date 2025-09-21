@@ -2,11 +2,13 @@ import logging
 
 import discord
 
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
 
 logger = logging.getLogger(__name__)
 
 
+@log_command_execution(logger)
 async def cmd_refresh_ranks(
     interaction: discord.Interaction, report_channel: discord.TextChannel
 ):
@@ -19,5 +21,4 @@ async def cmd_refresh_ranks(
         ephemeral=True,
     )
 
-    logger.info("Manually initiating refresh ranks job")
     await job_refresh_ranks(interaction.guild, report_channel)

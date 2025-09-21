@@ -4,6 +4,7 @@ from typing import Dict
 import discord
 
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.database.database import db
@@ -115,7 +116,7 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                     else:
                         output.append([safe_nick, "Error", "Data continuity error"])
                 except Exception as e:
-                    logger.error(e)
+                    logger.error(f"Unexpected error creating member {safe_nick}: {e}")
                     output.append([safe_nick, "Error", "Uncaught exception"])
                     continue
 
@@ -125,6 +126,7 @@ async def sync_members(guild: discord.Guild) -> list[list]:
     return output
 
 
+@log_command_execution
 async def cmd_sync_members(
     interaction: discord.Interaction, report_channel: discord.TextChannel
 ):
@@ -136,8 +138,6 @@ async def cmd_sync_members(
         f"View <#{report_channel.id}> for output.",
         ephemeral=True,
     )
-
-    logger.info("Manually initiating sync member job")
 
     # Import here to avoid circular import
     from ironforgedbot.tasks.job_sync_members import job_sync_members

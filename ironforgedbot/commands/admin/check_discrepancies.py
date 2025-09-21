@@ -2,6 +2,7 @@ import logging
 
 import discord
 
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
@@ -10,6 +11,7 @@ from ironforgedbot.tasks.job_membership_discrepancies import (
 logger = logging.getLogger(__name__)
 
 
+@log_command_execution
 async def cmd_check_discrepancies(
     interaction: discord.Interaction, report_channel: discord.TextChannel
 ):
@@ -22,7 +24,6 @@ async def cmd_check_discrepancies(
         ephemeral=True,
     )
 
-    logger.info("Manually initiating member discrepancy job")
     await job_check_membership_discrepancies(
         interaction.guild,
         report_channel,
