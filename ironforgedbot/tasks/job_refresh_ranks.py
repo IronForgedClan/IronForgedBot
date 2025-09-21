@@ -22,8 +22,10 @@ from ironforgedbot.common.ranks import (
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
 from ironforgedbot.models.score_history import ScoreHistory
-from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.services.score_history_service import ScoreHistoryService
+from ironforgedbot.services.service_factory import (
+    create_member_service,
+    create_score_history_service,
+)
 from ironforgedbot.services.score_service import (
     HiscoresNotFound,
     get_score_service,
@@ -50,8 +52,8 @@ async def job_refresh_ranks(
     progress_message = await report_channel.send(primary_message_str)
 
     async with db.get_session() as session:
-        member_service = MemberService(session)
-        history = ScoreHistoryService(session)
+        member_service = create_member_service(session)
+        history = create_score_history_service(session)
         members = await member_service.get_all_active_members()
 
         for index, member in enumerate(members):

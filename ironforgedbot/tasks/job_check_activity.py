@@ -16,7 +16,7 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.logging_utils import log_task_execution, log_api_call
 from ironforgedbot.database.database import db
-from ironforgedbot.services.absent_service import AbsentMemberService
+from ironforgedbot.services.service_factory import create_absent_service
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ async def job_check_activity(
 
     try:
         async with db.get_session() as session:
-            absent_service = AbsentMemberService(session)
+            absent_service = create_absent_service(session)
 
             await report_channel.send("🧗 Beginning activity check...")
 

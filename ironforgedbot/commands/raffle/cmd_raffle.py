@@ -11,7 +11,7 @@ from ironforgedbot.common.responses import build_response_embed, send_error_resp
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_channel, require_role
-from ironforgedbot.services.raffle_service import RaffleService
+from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db
 
@@ -53,7 +53,7 @@ async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
 
     if STATE.state["raffle_on"]:
         async with db.get_session() as session:
-            service = RaffleService(session)
+            service = create_raffle_service(session)
             my_ticket_count = await service.get_member_ticket_total(interaction.user.id)
             total_tickets = await service.get_raffle_ticket_total()
 

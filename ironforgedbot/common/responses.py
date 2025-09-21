@@ -6,7 +6,7 @@ from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold, text_sub
-from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
 from ironforgedbot.database.database import db
 
@@ -46,7 +46,7 @@ async def send_prospect_response(
     prospect_icon = find_emoji("Prospect")
 
     async with db.get_session() as session:
-        member_service = MemberService(session)
+        member_service = create_member_service(session)
 
         db_member = await member_service.get_member_by_discord_id(member.id)
 

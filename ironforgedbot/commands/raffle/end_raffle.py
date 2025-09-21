@@ -11,9 +11,11 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.database.database import db
-from ironforgedbot.services.ingot_service import IngotService
-from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.services.raffle_service import RaffleService
+from ironforgedbot.services.service_factory import (
+    create_ingot_service,
+    create_member_service,
+    create_raffle_service,
+)
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ async def handle_end_raffle(
     ticket_icon = find_emoji("Raffle_Ticket")
 
     async with db.get_session() as session:
-        raffle_service = RaffleService(session)
+        raffle_service = create_raffle_service(session)
         total_tickets = await raffle_service.get_raffle_ticket_total()
         valid_tickets = await raffle_service.get_all_valid_raffle_tickets()
 
@@ -94,7 +96,7 @@ async def handle_end_raffle(
 
 
         # Award winnings
-        ingot_service = IngotService(session)
+        ingot_service = create_ingot_service(session)
         winnings = int(total_tickets * int(STATE.state["raffle_price"] / 2))
 
         result = await ingot_service.try_add_ingots(

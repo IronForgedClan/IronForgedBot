@@ -23,7 +23,8 @@ from ironforgedbot.common.text_formatters import (
 )
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators import require_role
-from ironforgedbot.services.ingot_service import IngotService, IngotServiceResponse
+from ironforgedbot.services.service_factory import create_ingot_service
+from ironforgedbot.services.ingot_service import IngotServiceResponse
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ async def cmd_add_remove_ingots(
             output_data.append([player, 0, "unknown"])
 
     async with db.get_session() as session:
-        service = IngotService(session)
+        service = create_ingot_service(session)
 
         for player, discord_member in validated_players.items():
             result = None
