@@ -11,6 +11,9 @@ from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)
 
+# Global service instances to avoid recreation
+_score_service_instance = None
+
 
 class ScoreService:
     def __init__(self, http: AsyncHttpClient) -> None:
@@ -195,3 +198,16 @@ class ScoreService:
             raise e
 
         return RANK(value=get_rank_from_points(points=total_points))
+
+
+def get_score_service(http: AsyncHttpClient = None) -> ScoreService:
+    """Get a singleton ScoreService instance to avoid unnecessary recreation."""
+    global _score_service_instance
+    
+    if _score_service_instance is None and http is not None:
+        _score_service_instance = ScoreService(http)
+    
+    if _score_service_instance is None:
+        raise RuntimeError("ScoreService not initialized. Call with http parameter first.")
+    
+    return _score_service_instance

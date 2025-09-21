@@ -26,7 +26,7 @@ from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import (
     HiscoresNotFound,
-    ScoreService,
+    get_score_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ async def job_refresh_ranks(
 
             current_rank = get_rank_from_member(discord_member)
 
-            score_service = ScoreService(HTTP)
+            score_service = get_score_service(HTTP)
             current_points = 0
             try:
                 current_points = await score_service.get_player_points_total(

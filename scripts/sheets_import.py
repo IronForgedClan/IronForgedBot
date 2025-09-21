@@ -15,7 +15,7 @@ from sqlalchemy.orm.session import Session
 
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
-from ironforgedbot.services.score_service import ScoreService
+from ironforgedbot.services.score_service import get_score_service
 from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
@@ -52,7 +52,8 @@ def get_sheet_data(sheet_name, worksheet_name) -> list[any]:
 async def _get_rank(name: str) -> str:
     try:
         await asyncio.sleep(2)
-        data: int = await ScoreService(HTTP).get_player_points_total(name)
+        service = get_score_service(HTTP)
+        data: int = await service.get_player_points_total(name)
         rank: str = get_rank_from_points(data)
         print(f"  points: {data}")
         return rank

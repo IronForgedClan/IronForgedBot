@@ -35,7 +35,7 @@ from ironforgedbot.services.score_service import (
     HiscoresError,
     HiscoresNotFound,
     ScoreBreakdown,
-    ScoreService,
+    get_score_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             return await send_error_response(interaction, str(e))
 
         display_name = member.display_name if member is not None else player
-        service = ScoreService(HTTP)
+        service = get_score_service(HTTP)
 
         try:
             data = await service.get_player_score(player)
