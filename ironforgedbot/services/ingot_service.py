@@ -5,6 +5,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.services.member_service import MemberService
 
@@ -27,6 +28,7 @@ class IngotService:
         await self.member_service.close()
         await self.db.close()
 
+    @log_database_operation(logger)
     async def try_add_ingots(
         self,
         discord_id: int,
@@ -57,7 +59,7 @@ class IngotService:
                 )
             admin_id = admin_member.id
 
-        logger.debug(f"Adding {quantity} ingots to {member.nickname}")
+
 
         new_ingot_total = member.ingots + quantity
 
@@ -81,6 +83,7 @@ class IngotService:
 
         return IngotServiceResponse(True, "Ingots added", new_ingot_total)
 
+    @log_database_operation(logger)
     async def try_remove_ingots(
         self,
         discord_id: int,
@@ -112,7 +115,6 @@ class IngotService:
 
             admin_id = admin_member.id
 
-        logger.debug(f"Removing {quantity} ingots from {member.nickname}")
         new_ingot_total = member.ingots + quantity
 
         if new_ingot_total < 0:

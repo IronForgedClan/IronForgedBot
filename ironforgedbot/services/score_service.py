@@ -24,20 +24,18 @@ class ScoreService:
     async def get_player_score(
         self, player_name: str, bypass_cache: bool | None = False
     ) -> ScoreBreakdown:
-        player_name: str = normalize_discord_string(input=player_name)
-        breakdown: ScoreBreakdown | None = await SCORE_CACHE.get(player_name)
+        normalized_name: str = normalize_discord_string(input=player_name)
+        breakdown: ScoreBreakdown | None = await SCORE_CACHE.get(normalized_name)
 
         if not breakdown or bypass_cache:
-            logger.debug(f"Fetching live hiscores data for {player_name}")
             data: HttpResponse = await self.http.get(
-                self.hiscores_url.format(rsn=player_name)
+                self.hiscores_url.format(rsn=normalized_name)
             )
 
             if data["status"] == 404:
                 raise HiscoresNotFound()
 
             if data["status"] != 200:
-                logger.error(f"Hiscores API error for {player_name}: {data}")
                 raise HiscoresError(
                     message=f"Unexpected response code {data['status']}"
                 )
@@ -45,9 +43,10 @@ class ScoreService:
             skills: list[SkillScore] = self._process_skills(data["body"])
             clues, raids, bosses = self._process_activities(data["body"])
 
-            breakdown: ScoreBreakdown = ScoreBreakdown(skills, clues, raids, bosses)
-            await SCORE_CACHE.set(player_name, breakdown)
+            breakdown = ScoreBreakdown(skills, clues, raids, bosses)
+            await SCORE_CACHE.set(normalized_name, breakdown)
 
+        assert breakdown is not None
         return breakdown
 
     def _process_skills(self, score_data) -> list[SkillScore]:
@@ -67,7 +66,6 @@ class ScoreService:
             )
 
             if skill is None:
-                logger.warning(f"Skill name '{skill_name}' not found in skills data")
                 continue
 
             skill_level = (
@@ -176,8 +174,8 @@ class ScoreService:
     async def get_player_points_total(
         self, player_name: str, bypass_cache: bool | None = False
     ) -> int:
-        player_name: str = normalize_discord_string(input=player_name)
-        data: ScoreBreakdown = await self.get_player_score(player_name, bypass_cache)
+        normalized_name: str = normalize_discord_string(input=player_name)
+        data: ScoreBreakdown = await self.get_player_score(normalized_name, bypass_cache)
 
         activities: list[ActivityScore] = data.clues + data.raids + data.bosses
 

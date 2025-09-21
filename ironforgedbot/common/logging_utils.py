@@ -115,6 +115,43 @@ def log_database_operation(logger: Optional[logging.Logger] = None):
     return decorator
 
 
+def log_service_execution(logger: Optional[logging.Logger] = None):
+    """Decorator to log service method execution.
+
+    Args:
+        logger: Logger instance to use. If None, creates one from the function module.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Get logger inside wrapper to avoid None issues
+            actual_logger = (
+                logger if logger is not None else logging.getLogger(func.__module__)
+            )
+            start_time = time.time()
+            actual_logger.debug(f"Service method {func.__name__} started")
+
+            try:
+                result = await func(*args, **kwargs)
+                elapsed = time.time() - start_time
+                actual_logger.debug(
+                    f"Service method {func.__name__} completed in {elapsed:.2f}s"
+                )
+                return result
+            except Exception as e:
+                elapsed = time.time() - start_time
+                actual_logger.error(
+                    f"Service method {func.__name__} failed after {elapsed:.2f}s: {e}",
+                    exc_info=True,
+                )
+                raise
+
+        return wrapper
+
+    return decorator
+
+
 def log_api_call(service_name: str, logger: Optional[logging.Logger] = None):
     """Decorator to log external API calls.
 

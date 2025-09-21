@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.decorators import retry_on_exception
 from ironforgedbot.models.absent_member import AbsentMember
 from ironforgedbot.services.member_service import MemberService
@@ -17,6 +18,7 @@ class AbsentMemberService:
         self.sheet_name = "AbsenceNotice"
 
     @retry_on_exception(3)
+    @log_database_operation(logger)
     async def get_absentees(self) -> list[AbsentMember]:
         data = await self.sheet.get_range(self.sheet_name, "A2:F")
 
@@ -40,6 +42,7 @@ class AbsentMemberService:
         return members
 
     @retry_on_exception(3)
+    @log_database_operation(logger)
     async def update_absentees(
         self, absentees: list[AbsentMember], removed_count: int = 0
     ) -> None:
@@ -73,6 +76,7 @@ class AbsentMemberService:
             self.sheet_name, f"A2:F{len(values) + removed_count + 2}", values
         )
 
+    @log_database_operation(logger)
     async def process_absent_members(self) -> list[AbsentMember]:
         absentees = await self.get_absentees()
 

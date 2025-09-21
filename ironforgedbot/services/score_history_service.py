@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.models.score_history import ScoreHistory
 from ironforgedbot.services.member_service import MemberService
 
@@ -17,6 +18,7 @@ class ScoreHistoryService:
         await self.member_service.close()
         await self.db.close()
 
+    @log_database_operation(logger)
     async def track_score(
         self,
         discord_id: int,
@@ -24,12 +26,7 @@ class ScoreHistoryService:
     ) -> None:
         member = await self.member_service.get_member_by_discord_id(discord_id)
         if not member:
-            logger.error(
-                f"Member with id {discord_id} not found when attempting to track score"
-            )
             raise ReferenceError(f"Member with id {discord_id} not found")
-
-        logger.debug(f"Recording score {score} for {member.nickname}")
 
         self.db.add(
             ScoreHistory(member_id=member.id, score=score, nickname=member.nickname)

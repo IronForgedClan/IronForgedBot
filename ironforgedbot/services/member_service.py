@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
@@ -53,6 +54,7 @@ class MemberService:
     async def close(self) -> None:
         await self.db.close()
 
+    @log_database_operation(logger)
     async def create_member(
         self,
         discord_id: int,
@@ -127,6 +129,7 @@ class MemberService:
         )
         return result.scalars().first()
 
+    @log_database_operation(logger)
     async def reactivate_member(
         self, id: str, new_nickname: str, rank: RANK | None = RANK.IRON
     ) -> MemberServiceReactivateResponse:
