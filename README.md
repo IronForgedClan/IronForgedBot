@@ -210,6 +210,9 @@ view its source command and try running that instead.
 - `make update-deps`\
   Updates all project dependencies to their latest versions and rebuilds the container.
 
+- `make clean`\
+  Cleans up Docker resources including old containers, images, and volumes to free up disk space.
+
 ## Tooling
 
 As all dependencies are installed within the Docker container, you might find
