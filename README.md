@@ -207,6 +207,9 @@ view its source command and try running that instead.
 - `make downgrade`\
   Reverts the most recent database migration.
 
+- `make update-deps`\
+  Updates all project dependencies to their latest versions and rebuilds the container.
+
 ## Tooling
 
 As all dependencies are installed within the Docker container, you might find

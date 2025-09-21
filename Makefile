@@ -1,4 +1,4 @@
-.PHONY: up down test format shell migrate revision downgrade
+.PHONY: up down test format shell migrate revision downgrade update-deps
 
 up:
 	docker compose up
@@ -23,4 +23,8 @@ revision:
 
 downgrade:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic downgrade -1
+
+update-deps:
+	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
+	docker compose build bot
 
