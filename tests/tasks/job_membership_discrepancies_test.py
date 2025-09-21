@@ -256,14 +256,11 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_report_channel.send.call_args_list, expected_calls)
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.Client")
-    async def test_get_valid_wom_members_success(self, mock_wom):
-        mock_wom_client = AsyncMock(spec=wom.Client)
-        mock_result = MagicMock()
-        mock_result.is_err = False
-        mock_result.unwrap.return_value = mock_wom_group_detail
-        mock_wom_client.groups.get_details = AsyncMock(return_value=mock_result)
-        mock_wom.return_value = mock_wom_client
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
+    async def test_get_valid_wom_members_success(self, mock_get_wom_service):
+        mock_wom_service = AsyncMock()
+        mock_wom_service.get_group_details.return_value = mock_wom_group_detail
+        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         members, ignored = await _get_valid_wom_members(
             self.wom_api_key, self.wom_group_id, self.mock_report_channel
@@ -271,16 +268,15 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(members, ["tester"])
         self.assertEqual(ignored, ["ignored_user"])
-        mock_wom_client.start.assert_called_once()
-        mock_wom_client.close.assert_called_once()
+        mock_wom_service.get_group_details.assert_called_once_with(self.wom_group_id)
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.Client")
-    async def test_get_valid_wom_members_handles_wom_error(self, mock_wom):
-        mock_wom_client = AsyncMock(spec=wom.Client)
-        mock_result = MagicMock()
-        mock_result.is_err = True
-        mock_wom_client.groups.get_details = AsyncMock(return_value=mock_result)
-        mock_wom.return_value = mock_wom_client
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
+    async def test_get_valid_wom_members_handles_wom_error(self, mock_get_wom_service):
+        from ironforgedbot.services.wom_service import WomServiceError
+        
+        mock_wom_service = AsyncMock()
+        mock_wom_service.get_group_details.side_effect = WomServiceError("API error")
+        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         members, ignored = await _get_valid_wom_members(
             self.wom_api_key, self.wom_group_id, self.mock_report_channel
@@ -291,22 +287,20 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         self.mock_report_channel.send.assert_called_with(
             "Error fetching WOM group details."
         )
-        mock_wom_client.start.assert_called_once()
-        mock_wom_client.close.assert_called_once()
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.Client")
-    async def test_get_valid_wom_members_closes_client_on_exception(self, mock_wom):
-        mock_wom_client = AsyncMock(spec=wom.Client)
-        mock_wom_client.groups.get_details.side_effect = Exception("API error")
-        mock_wom.return_value = mock_wom_client
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
+    async def test_get_valid_wom_members_closes_client_on_exception(self, mock_get_wom_service):
+        mock_wom_service = AsyncMock()
+        mock_wom_service.get_group_details.side_effect = Exception("API error")
+        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
-        with self.assertRaises(Exception):
-            await _get_valid_wom_members(
-                self.wom_api_key, self.wom_group_id, self.mock_report_channel
-            )
+        members, ignored = await _get_valid_wom_members(
+            self.wom_api_key, self.wom_group_id, self.mock_report_channel
+        )
 
-        mock_wom_client.start.assert_called_once()
-        mock_wom_client.close.assert_called_once()
+        self.assertEqual(members, None)
+        self.assertEqual(ignored, [])
+        self.mock_report_channel.send.assert_called_with("Error fetching WOM group details.")
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")
