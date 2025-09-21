@@ -2,13 +2,14 @@ import logging
 
 from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.logging_utils import log_api_call
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import AsyncHttpClient, HttpResponse
 from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
-logger: logging.Logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(__name__)
 
 
 class ScoreService:
@@ -27,7 +28,7 @@ class ScoreService:
         breakdown: ScoreBreakdown | None = await SCORE_CACHE.get(player_name)
 
         if not breakdown or bypass_cache:
-            logger.info("fetching live hiscores data")
+            logger.debug(f"Fetching live hiscores data for {player_name}")
             data: HttpResponse = await self.http.get(
                 self.hiscores_url.format(rsn=player_name)
             )
@@ -36,7 +37,7 @@ class ScoreService:
                 raise HiscoresNotFound()
 
             if data["status"] != 200:
-                logger.error(data)
+                logger.error(f"Hiscores API error for {player_name}: {data}")
                 raise HiscoresError(
                     message=f"Unexpected response code {data['status']}"
                 )
@@ -66,7 +67,7 @@ class ScoreService:
             )
 
             if skill is None:
-                logger.info(f"Skill name '{skill_name}' not found")
+                logger.warning(f"Skill name '{skill_name}' not found in skills data")
                 continue
 
             skill_level = (
@@ -169,8 +170,6 @@ class ScoreService:
 
                 bosses.append(data)
                 continue
-
-            logger.debug(f"Activity '{activity_name}' not handled")
 
         return clues, raids, bosses
 

@@ -12,6 +12,7 @@ from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
 from ironforgedbot.common.helpers import get_text_channel
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.LEADERSHIP, ephemeral=True)
+@log_command_execution(logger)
 async def cmd_admin(interaction: discord.Interaction):
     """Allows access to various administrative commands.
 

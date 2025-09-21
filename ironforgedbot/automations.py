@@ -30,7 +30,6 @@ class IronForgedAutomations:
         self._shutdown_timeout = 30.0
         self._setup_done = False
 
-        logger.info("Creating AsyncIOScheduler for automation tasks...")
         # Configure scheduler with proper executor for async jobs
         from apscheduler.executors.asyncio import AsyncIOExecutor
 
@@ -39,7 +38,7 @@ class IronForgedAutomations:
         }
         self.scheduler = AsyncIOScheduler(executors=executors)
         self.scheduler.start()
-        logger.info("Scheduler started successfully")
+        logger.debug("Scheduler started successfully")
 
         report_channel = get_text_channel(discord_guild, CONFIG.AUTOMATION_CHANNEL_ID)
 
@@ -50,7 +49,6 @@ class IronForgedAutomations:
         self.report_channel = report_channel
         self.discord_guild = discord_guild
 
-        logger.info("Setting up automation jobs...")
         asyncio.create_task(self.setup_automations())
 
     async def stop(self):
@@ -138,10 +136,8 @@ class IronForgedAutomations:
                         logger.error(
                             f"Job completed with exception: {task.exception()}"
                         )
-                    else:
-                        logger.debug(f"Job completed successfully")
-
-                    logger.info(f"Job completed. {active_count} job(s) active.")
+                    
+                    logger.debug(f"Job completed. {active_count} job(s) active.")
 
                 loop.create_task(cleanup())
 
@@ -172,9 +168,9 @@ class IronForgedAutomations:
         job_name = getattr(job_func, "__name__", str(job_func))
 
         try:
-            logger.info(f"Starting job: {job_name}")
+            logger.debug(f"Starting job: {job_name}")
             await job_func(*args, **kwargs)
-            logger.info(f"Job completed successfully: {job_name}")
+            logger.debug(f"Job completed successfully: {job_name}")
         except asyncio.CancelledError:
             logger.warning(f"Job was cancelled: {job_name}")
             raise

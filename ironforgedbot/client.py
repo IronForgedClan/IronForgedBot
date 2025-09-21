@@ -10,6 +10,7 @@ from ironforgedbot.common.helpers import (
     get_text_channel,
     populate_emoji_cache,
 )
+
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG, ENVIRONMENT
@@ -23,7 +24,6 @@ from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db
 
-logging.getLogger("discord").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
@@ -136,7 +136,6 @@ class DiscordClient(discord.Client):
     async def setup_hook(self):
         """Called only once when the bot starts up, before connecting to Discord."""
         if self._setup_complete:
-            logger.debug("Setup hook already completed, skipping...")
             return
 
         await STATE.load_state()
@@ -154,13 +153,13 @@ class DiscordClient(discord.Client):
         self._setup_complete = True
 
     async def on_connect(self):
-        logger.info("Bot connected to Discord")
+        logger.debug("Bot connected to Discord")
 
     async def on_reconnect(self):
-        logger.info("Bot re-connected to Discord")
+        logger.warning("Bot reconnected to Discord after disconnection")
 
     async def on_disconnect(self):
-        logger.info("Bot has disconnected from Discord")
+        logger.warning("Bot disconnected from Discord")
 
     async def on_ready(self):
         """Called when the bot has successfully connected to Discord and is ready."""
@@ -180,8 +179,6 @@ class DiscordClient(discord.Client):
         if not self.automations:
             logger.info("Initializing automation system...")
             self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
-        else:
-            logger.debug("Automations already initialized, skipping...")
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         async with self.effect_lock:

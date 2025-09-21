@@ -14,6 +14,7 @@ from ironforgedbot.common.helpers import (
     format_duration,
     render_relative_time,
 )
+from ironforgedbot.common.logging_utils import log_task_execution, log_api_call
 from ironforgedbot.database.database import db
 from ironforgedbot.services.absent_service import AbsentMemberService
 
@@ -43,6 +44,7 @@ ROLE_DISPLAY_MAPPING = {
 }
 
 
+@log_task_execution(logger)
 async def job_check_activity(
     report_channel: discord.TextChannel,
     wom_api_key: str,

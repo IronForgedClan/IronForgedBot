@@ -17,7 +17,7 @@ async def update_member_rank(
     if not check_member_has_role(discord_member, ROLE.MEMBER):
         return
 
-    logger.info(f"{discord_member.display_name} has had their rank changed...")
+    logger.debug(f"Processing rank change for {discord_member.display_name}")
     rank = get_rank_from_member(discord_member)
 
     if not rank:

@@ -12,6 +12,7 @@ from ironforgedbot.common.helpers import (
     find_emoji,
     format_duration,
 )
+from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
     RANK,
@@ -28,11 +29,12 @@ from ironforgedbot.services.score_service import (
     ScoreService,
 )
 
-logger: logging.Logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(__name__)
 
 PROBATION_DAYS = 14
 
 
+@log_task_execution(logger)
 async def job_refresh_ranks(
     guild: discord.Guild, report_channel: discord.TextChannel
 ) -> None:

@@ -9,6 +9,7 @@ from ironforgedbot.common.helpers import (
     get_all_discord_members,
     normalize_discord_string,
 )
+from ironforgedbot.common.logging_utils import log_task_execution
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ IGNORED_ROLES = [GroupRole.Administrator, GroupRole.Helper]
 IGNORED_USERS = ["x flavored"]
 
 
+@log_task_execution(logger)
 async def job_check_membership_discrepancies(
     guild: discord.Guild,
     report_channel: discord.TextChannel,
