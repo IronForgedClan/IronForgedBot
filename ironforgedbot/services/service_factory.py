@@ -11,11 +11,13 @@ from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.services.raffle_service import RaffleService
 from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import get_score_service, ScoreService
+from ironforgedbot.services.wom_service import get_wom_service, WomService
 
 logger = logging.getLogger(__name__)
 
 # Global service instances for stateless/long-lived services
 _score_service_instance: Optional[ScoreService] = None
+_wom_service_instance: Optional[WomService] = None
 
 
 class ServiceFactory:
@@ -50,6 +52,11 @@ class ServiceFactory:
     def create_absent_service(session: AsyncSession) -> AbsentMemberService:
         """Create AbsentMemberService instance."""
         return AbsentMemberService(session)
+    
+    @staticmethod
+    def get_wom_service(api_key: Optional[str] = None) -> WomService:
+        """Get WomService instance (singleton pattern for HTTP-based service)."""
+        return get_wom_service(api_key)
 
 
 # Convenience functions for cleaner imports
@@ -76,3 +83,8 @@ def create_score_history_service(session: AsyncSession) -> ScoreHistoryService:
 def create_absent_service(session: AsyncSession) -> AbsentMemberService:
     """Create AbsentMemberService instance."""
     return ServiceFactory.create_absent_service(session)
+
+
+def get_wom_service(api_key: Optional[str] = None) -> WomService:
+    """Get WomService instance."""
+    return ServiceFactory.get_wom_service(api_key)

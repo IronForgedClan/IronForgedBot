@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple
 
 import discord
-from wom import Client, GroupRole
+from wom import GroupRole
 
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
@@ -10,6 +10,8 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
+from ironforgedbot.services.service_factory import get_wom_service
+from ironforgedbot.services.wom_service import WomServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -87,39 +89,37 @@ async def job_check_membership_discrepancies(
 async def _get_valid_wom_members(
     wom_api_key: str, wom_group_id: int, updates_channel
 ) -> Tuple[List[str] | None, List[str]]:
-    wom_client = Client(api_key=wom_api_key, user_agent="IronForged")
-    await wom_client.start()
-
     try:
-        wom_group_result = await wom_client.groups.get_details(wom_group_id)
+        async with get_wom_service(wom_api_key) as wom_service:
+            try:
+                wom_group = await wom_service.get_group_details(wom_group_id)
+            except WomServiceError as e:
+                await updates_channel.send("Error fetching WOM group details.")
+                return None, []
 
-        if wom_group_result.is_err:
-            await updates_channel.send("Error fetching WOM group details.")
-            return None, []
+            members: List[str] = []
+            ignore_members: List[str] = []
+            for member in wom_group.memberships:
+                member_role = member.role
+                member_rsn = normalize_discord_string(member.player.username)
 
-        wom_group = wom_group_result.unwrap()
+                if member_role is None:
+                    logger.info(f"{member_rsn} has no role, skipping.")
+                    continue
 
-        members: List[str] = []
-        ignore_members: List[str] = []
-        for member in wom_group.memberships:
-            member_role = member.role
-            member_rsn = normalize_discord_string(member.player.username)
+                if member_role in IGNORED_ROLES:
+                    logger.info(f"{member_rsn} has ignored role, skipping.")
+                    if member_rsn not in IGNORED_USERS:
+                        logger.info(f"adding {member_rsn} to ignored members list.")
+                        ignore_members.append(member_rsn)
+                    continue
 
-            if member_role is None:
-                logger.info(f"{member_rsn} has no role, skipping.")
-                continue
+                ignored = IGNORED_USERS + ignore_members
+                if member_rsn not in ignored:
+                    members.append(member_rsn)
 
-            if member_role in IGNORED_ROLES:
-                logger.info(f"{member_rsn} has ignored role, skipping.")
-                if member_rsn not in IGNORED_USERS:
-                    logger.info(f"adding {member_rsn} to ignored members list.")
-                    ignore_members.append(member_rsn)
-                continue
-
-            ignored = IGNORED_USERS + ignore_members
-            if member_rsn not in ignored:
-                members.append(member_rsn)
-
-        return members, ignore_members
-    finally:
-        await wom_client.close()
+            return members, ignore_members
+    except Exception as e:
+        logger.error(f"Unexpected error in _get_valid_wom_members: {e}")
+        await updates_channel.send("Error fetching WOM group details.")
+        return None, []

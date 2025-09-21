@@ -16,7 +16,8 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.logging_utils import log_task_execution, log_api_call
 from ironforgedbot.database.database import db
-from ironforgedbot.services.service_factory import create_absent_service
+from ironforgedbot.services.service_factory import create_absent_service, get_wom_service
+from ironforgedbot.services.wom_service import WomServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -207,57 +208,34 @@ async def _find_inactive_users(
     Returns:
         List of inactive user data or None if error occurred
     """
-    wom_client = wom.Client(api_key=wom_api_key, user_agent="IronForged")
-    await wom_client.start()
-
     try:
-        try:
-            wom_group_result = await wom_client.groups.get_details(wom_group_id)
-        except Exception as api_error:
-            logger.error(f"WOM API error fetching group details: {api_error}")
-            await report_channel.send(
-                "❌ WOM API is currently unavailable. Please try again later."
-            )
-            return None
-
-        if not wom_group_result.is_ok:
-            message = f"Error fetching WOM group: {wom_group_result.unwrap_err()}"
-            logger.error(message)
-            await report_channel.send(content=message)
-            return None
-
-        wom_group = wom_group_result.unwrap()
-        results = []
-        offset = 0
-        is_done = False
-
-        while not is_done:
+        async with get_wom_service(wom_api_key) as wom_service:
+            # Get group details
             try:
-                gains_result = await wom_client.groups.get_gains(
+                wom_group = await wom_service.get_group_details(wom_group_id)
+            except WomServiceError as e:
+                await report_channel.send(
+                    "❌ WOM API is currently unavailable. Please try again later."
+                )
+                return None
+
+            # Get all member gains with pagination
+            try:
+                all_member_gains = await wom_service.get_all_group_gains(
                     wom_group_id,
                     metric=Metric.Overall,
                     period=Period.Month,
                     limit=wom_limit,
-                    offset=offset,
                 )
-            except Exception as api_error:
-                logger.error(
-                    f"WOM API error fetching gains at offset {offset}: {api_error}"
-                )
+            except WomServiceError as e:
                 await report_channel.send(
                     "❌ WOM API returned malformed data. Please try again later."
                 )
                 return None
 
-            if not gains_result.is_ok:
-                message = f"Error fetching gains from WOM: {gains_result.unwrap_err()}"
-                logger.error(message)
-                await report_channel.send(content=message)
-                return None
-
-            member_gains_list = gains_result.unwrap()
-
-            for member_gains in member_gains_list:
+            # Process member gains
+            results = []
+            for member_gains in all_member_gains:
                 try:
                     inactive_member_data = _process_member_gains(
                         member_gains, wom_group, absentees, thresholds
@@ -270,12 +248,7 @@ async def _find_inactive_users(
                     )
                     # Continue processing other members instead of failing completely
 
-            if len(member_gains_list) < wom_limit:
-                is_done = True
-            else:
-                offset += wom_limit
-
-        return results
+            return results
 
     except Exception as e:
         error_type = type(e).__name__
@@ -290,8 +263,6 @@ async def _find_inactive_users(
                 f"❌ Unexpected error processing WOM data: {error_type}"
             )
         return None
-    finally:
-        await wom_client.close()
 
 
 def _process_member_gains(
