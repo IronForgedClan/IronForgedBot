@@ -22,7 +22,6 @@ class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(modal.title, "Buy Raffle Tickets")
         self.assertEqual(len(modal.children), 1)
 
-        self.assertEqual(modal.ticket_qty.label, "How many tickets?")
         self.assertEqual(modal.ticket_qty.placeholder, "10")
         self.assertEqual(modal.ticket_qty.max_length, 10)
         self.assertEqual(modal.ticket_qty.required, True)

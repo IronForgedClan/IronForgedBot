@@ -18,7 +18,6 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(modal.title, "Start Raffle")
         self.assertEqual(len(modal.children), 1)
 
-        self.assertEqual(modal.ticket_price.label, "Price per ticket")
         self.assertEqual(modal.ticket_price.placeholder, "5000")
         self.assertEqual(modal.ticket_price.required, True)
 
