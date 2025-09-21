@@ -311,13 +311,17 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         mock_cleanup_task.cancelled.return_value = False
         mock_cleanup_task.exception.return_value = None
 
+        mock_loop = Mock()
+        mock_loop.is_closed.return_value = False
+        mock_loop.create_task.return_value = mock_cleanup_task
+
         with patch(
-            "ironforgedbot.automations.asyncio.create_task",
-            return_value=mock_cleanup_task,
-        ) as mock_create_cleanup:
+            "ironforgedbot.automations.asyncio.get_running_loop",
+            return_value=mock_loop,
+        ):
             automation._job_done_callback(mock_task)
 
-        mock_create_cleanup.assert_called_once()
+        mock_loop.create_task.assert_called_once()
 
     def test_job_done_callback_handles_runtime_error(self):
         automation = self.create_automation_with_mocks()
@@ -331,7 +335,7 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         ):
             automation._job_done_callback(mock_task)
 
-    def test_job_wrapper_schedules_tracking(self):
+    async def test_job_wrapper_schedules_tracking(self):
         automation = self.create_automation_with_mocks()
 
         async def mock_job_func():
@@ -348,7 +352,7 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.automations.asyncio.create_task",
             return_value=mock_tracking_task,
         ) as mock_create_tracking:
-            wrapper()
+            await wrapper()
 
         mock_create_tracking.assert_called_once()
 

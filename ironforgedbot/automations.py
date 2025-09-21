@@ -136,7 +136,7 @@ class IronForgedAutomations:
                         logger.error(
                             f"Job completed with exception: {task.exception()}"
                         )
-                    
+
                     logger.debug(f"Job completed. {active_count} job(s) active.")
 
                 loop.create_task(cleanup())
@@ -271,7 +271,6 @@ class IronForgedAutomations:
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
 
-        logger.info("Running initial member sync...")
         await self.track_job(job_sync_members, self.discord_guild, self.report_channel)
 
         self._setup_done = True

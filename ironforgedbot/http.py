@@ -48,7 +48,9 @@ class AsyncHttpClient:
         ) as response:
             if response.status >= 500:
                 error_text = await response.text()
-                logger.error(f"Server error {response.status} for {url}: {error_text[:200]}")
+                logger.error(
+                    f"Server error {response.status} for {url}: {error_text[:200]}"
+                )
                 raise HttpException(f"A remote server error occured: {response.status}")
 
             if response.status == 408:

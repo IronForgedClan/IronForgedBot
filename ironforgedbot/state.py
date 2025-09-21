@@ -66,7 +66,9 @@ class BotState:
             except Exception as e:
                 logger.critical(f"Error loading state: {e}")
         else:
-            logger.debug(f"No previous state file found at {self._file_path}, using defaults")
+            logger.debug(
+                f"No previous state file found at {self._file_path}, using defaults"
+            )
 
 
 try:

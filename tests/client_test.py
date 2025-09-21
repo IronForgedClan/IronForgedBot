@@ -155,19 +155,21 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
     async def test_on_connect_logs_message(self, mock_logger):
         await self.client.on_connect()
 
-        mock_logger.info.assert_called_once_with("Bot connected to Discord")
+        mock_logger.debug.assert_called_once_with("Bot connected to Discord")
 
     @patch("ironforgedbot.client.logger")
     async def test_on_reconnect_logs_message(self, mock_logger):
         await self.client.on_reconnect()
 
-        mock_logger.info.assert_called_once_with("Bot re-connected to Discord")
+        mock_logger.warning.assert_called_once_with(
+            "Bot reconnected to Discord after disconnection"
+        )
 
     @patch("ironforgedbot.client.logger")
     async def test_on_disconnect_logs_message(self, mock_logger):
         await self.client.on_disconnect()
 
-        mock_logger.info.assert_called_once_with("Bot has disconnected from Discord")
+        mock_logger.warning.assert_called_once_with("Bot disconnected from Discord")
 
     @patch("ironforgedbot.client.CONFIG")
     @patch("ironforgedbot.client.IronForgedAutomations")

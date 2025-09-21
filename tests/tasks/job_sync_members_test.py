@@ -95,7 +95,7 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_sync_members.assert_called_once_with(self.mock_guild)
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args[0][0]
-        self.assertIn("🚨 An unhandled error occurrend during member sync", call_args)
+        self.assertIn("🚨 An unhandled error occurred during member sync", call_args)
         self.assertIn("Please check the logs", call_args)
 
     @patch("ironforgedbot.tasks.job_sync_members.time")

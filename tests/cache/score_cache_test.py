@@ -247,7 +247,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(result)
             self.assertEqual(len(result.skills), i + 1)
 
-    @patch("logging.info")
+    @patch("ironforgedbot.cache.score_cache.logger.debug")
     @patch("time.time")
     async def test_cleanup_logging(self, mock_time, mock_logging):
         """Test that cleanup operations are properly logged"""
@@ -259,12 +259,15 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
         with patch(
             "ironforgedbot.cache.score_cache.deep_getsizeof", side_effect=[1024, 512]
         ):
-            await self.cache.clean()
+            result = await self.cache.clean()
 
         # Verify logging was called
         mock_logging.assert_called_once()
         call_args = mock_logging.call_args[0][0]
         self.assertIn("Clearing 1 expired item(s)", call_args)
+        # Also verify the result string is returned
+        self.assertIsNotNone(result)
+        self.assertIn("Deleted", result)
 
     async def test_score_data_integrity(self):
         """Test that complex score data maintains integrity through cache operations"""
