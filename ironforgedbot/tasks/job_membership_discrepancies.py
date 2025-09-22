@@ -10,8 +10,8 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
-from ironforgedbot.services.service_factory import get_wom_service
-from ironforgedbot.services.wom_service import WomServiceError, ErrorType
+from ironforgedbot.services.service_factory import get_wom_client
+from ironforgedbot.services.wom_service import WomServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def job_check_membership_discrepancies(
 
     discord_members = get_all_discord_members(guild)
     wom_members, wom_ignore = await _get_valid_wom_members(
-        wom_api_key, wom_group_id, report_channel
+        wom_group_id, report_channel
     )
 
     if len(discord_members) < 1:
@@ -87,18 +87,17 @@ async def job_check_membership_discrepancies(
 
 
 async def _get_valid_wom_members(
-    wom_api_key: str, wom_group_id: int, updates_channel
+    wom_group_id: int, updates_channel
 ) -> Tuple[List[str] | None, List[str]]:
     try:
-        async with get_wom_service(wom_api_key) as wom_service:
+        async with await get_wom_client() as wom_client:
             try:
-                wom_group = await wom_service.get_group_details(wom_group_id)
+                wom_group = await wom_client.get_group_details(wom_group_id)
             except WomServiceError as e:
-                if e.error_type == ErrorType.JSON_MALFORMED:
-                    await updates_channel.send("WOM API returned corrupted data. Please try again in a few minutes.")
-                elif e.error_type == ErrorType.RATE_LIMIT:
+                error_str = str(e).lower()
+                if "rate limit" in error_str:
                     await updates_channel.send("WOM API rate limit exceeded. Please wait before trying again.")
-                elif e.error_type == ErrorType.CONNECTION:
+                elif "timeout" in error_str or "connection" in error_str:
                     await updates_channel.send("WOM API connection timeout. Please check internet connectivity.")
                 else:
                     await updates_channel.send("Error fetching WOM group details.")

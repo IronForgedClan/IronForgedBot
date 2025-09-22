@@ -15,13 +15,13 @@ from ironforgedbot.common.helpers import (
     format_duration,
     render_relative_time,
 )
-from ironforgedbot.common.logging_utils import log_task_execution, log_api_call
+from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.database.database import db
 from ironforgedbot.services.service_factory import (
     create_absent_service,
-    get_wom_service,
+    get_wom_client,
 )
-from ironforgedbot.services.wom_service import WomServiceError, ErrorType
+from ironforgedbot.services.wom_service import WomServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,6 @@ ROLE_DISPLAY_MAPPING = {
 @log_task_execution(logger)
 async def job_check_activity(
     report_channel: discord.TextChannel,
-    wom_api_key: str,
-    wom_group_id: int,
     wom_limit: int = DEFAULT_WOM_LIMIT,
     thresholds: Optional[Dict[GroupRole, int]] = None,
 ) -> None:
@@ -62,32 +60,18 @@ async def job_check_activity(
 
     Args:
         report_channel: Discord channel to send reports to
-        wom_api_key: WiseOldMan API key
-        wom_group_id: WiseOldMan group ID
         wom_limit: Number of records to fetch per API call
         thresholds: XP thresholds by role (uses defaults if None)
     """
     execution_id = f"activity_check_{int(time.time())}"
     logger.info(f"Starting activity check execution: {execution_id}")
 
-    if not wom_api_key or not wom_api_key.strip():
-        logger.error(f"Invalid WOM API key provided for execution {execution_id}")
-        await report_channel.send("❌ Invalid WOM API key configuration")
-        return
-
-    if wom_group_id <= 0:
-        logger.error(
-            f"Invalid WOM group ID: {wom_group_id} for execution {execution_id}"
-        )
-        await report_channel.send(f"❌ Invalid WOM group ID: {wom_group_id}")
-        return
-
     if thresholds is None:
         thresholds = DEFAULT_THRESHOLDS.copy()
 
     start_time = time.perf_counter()
     logger.info(
-        f"Activity check {execution_id} - Starting with group {wom_group_id}, limit {wom_limit}"
+        f"Activity check {execution_id} - Starting with limit {wom_limit}"
     )
 
     try:
@@ -100,8 +84,6 @@ async def job_check_activity(
             known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
 
             results = await _find_inactive_users(
-                wom_api_key,
-                wom_group_id,
                 report_channel,
                 known_absentees,
                 wom_limit,
@@ -204,8 +186,6 @@ def _get_threshold_for_role(
 
 
 async def _find_inactive_users(
-    wom_api_key: str,
-    wom_group_id: int,
     report_channel: discord.TextChannel,
     absentees: List[str],
     wom_limit: int,
@@ -215,8 +195,6 @@ async def _find_inactive_users(
     Find inactive users based on WOM data and configured thresholds.
 
     Args:
-        wom_api_key: WiseOldMan API key
-        wom_group_id: WiseOldMan group ID
         report_channel: Discord channel for error reporting
         absentees: List of known absent member usernames (lowercase)
         wom_limit: Number of records to fetch per API call
@@ -226,45 +204,36 @@ async def _find_inactive_users(
         List of inactive user data or None if error occurred
     """
     try:
-        async with get_wom_service(wom_api_key) as wom_service:
-            # Get group details with timeout and improved error handling
+        async with await get_wom_client() as wom_client:
+            # Get group details with timeout
             try:
                 wom_group = await asyncio.wait_for(
-                    wom_service.get_group_details(wom_group_id), timeout=30.0
+                    wom_client.get_group_details(), timeout=30.0
                 )
             except (WomServiceError, asyncio.TimeoutError) as e:
                 error_msg = f"Failed to get group details: {e}"
                 logger.error(error_msg)
 
-                # Provide more specific user feedback based on error type
-                if isinstance(e, WomServiceError):
-                    if e.error_type == ErrorType.JSON_MALFORMED:
-                        await report_channel.send(
-                            "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
-                        )
-                    elif e.error_type == ErrorType.RATE_LIMIT:
-                        await report_channel.send(
-                            "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
-                        )
-                    elif e.error_type == ErrorType.CONNECTION:
-                        await report_channel.send(
-                            "❌ WOM API connection timed out. Please check internet connectivity and try again."
-                        )
-                    else:
-                        await report_channel.send(
-                            "❌ WOM API is currently unavailable. Please try again later."
-                        )
-                else:
+                # Provide user feedback for different error types
+                error_str = str(e).lower()
+                if "rate limit" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                    )
+                elif "timeout" in error_str or "connection" in error_str:
                     await report_channel.send(
                         "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                    )
+                else:
+                    await report_channel.send(
+                        "❌ WOM API is currently unavailable. Please try again later."
                     )
                 return None
 
             # Get all member gains with pagination and timeout
             try:
                 all_member_gains = await asyncio.wait_for(
-                    wom_service.get_all_group_gains(
-                        wom_group_id,
+                    wom_client.get_all_group_gains(
                         metric=Metric.Overall,
                         period=Period.Month,
                         limit=wom_limit,
@@ -275,27 +244,19 @@ async def _find_inactive_users(
                 error_msg = f"Failed to get group gains: {e}"
                 logger.error(error_msg)
 
-                # Provide more specific user feedback based on error type
-                if isinstance(e, WomServiceError):
-                    if e.error_type == ErrorType.JSON_MALFORMED:
-                        await report_channel.send(
-                            "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
-                        )
-                    elif e.error_type == ErrorType.RATE_LIMIT:
-                        await report_channel.send(
-                            "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
-                        )
-                    elif e.error_type == ErrorType.CONNECTION:
-                        await report_channel.send(
-                            "❌ WOM API connection timed out. Please check internet connectivity and try again."
-                        )
-                    else:
-                        await report_channel.send(
-                            "❌ WOM API error occurred. Please try again later."
-                        )
-                else:
+                # Provide user feedback for different error types
+                error_str = str(e).lower()
+                if "rate limit" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                    )
+                elif "timeout" in error_str or "connection" in error_str:
                     await report_channel.send(
                         "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                    )
+                else:
+                    await report_channel.send(
+                        "❌ WOM API error occurred. Please try again later."
                     )
                 return None
 
