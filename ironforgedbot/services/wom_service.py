@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List, Optional, Tuple
 
@@ -66,8 +67,24 @@ class WomService:
         try:
             result = await client.groups.get_details(group_id)
         except Exception as e:
+            error_msg = str(e)
             logger.error(f"WOM API error fetching group details: {e}")
-            raise WomServiceError(f"Failed to fetch group details: {e}")
+
+            # Handle specific JSON parsing errors more gracefully
+            if "JSON is malformed" in error_msg or "invalid character" in error_msg:
+                raise WomServiceError(
+                    "WOM API returned invalid data format. The service may be temporarily unavailable."
+                )
+            elif "rate limit" in error_msg.lower():
+                raise WomServiceError(
+                    "WOM API rate limit exceeded. Please try again later."
+                )
+            elif "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+                raise WomServiceError(
+                    "WOM API connection timeout. Please check your internet connection and try again."
+                )
+            else:
+                raise WomServiceError(f"Failed to fetch group details: {e}")
 
         if not result.is_ok:
             error_msg = f"Error fetching WOM group: {result.unwrap_err()}"
@@ -110,8 +127,24 @@ class WomService:
                 offset=offset,
             )
         except Exception as e:
+            error_msg = str(e)
             logger.error(f"WOM API error fetching gains at offset {offset}: {e}")
-            raise WomServiceError(f"Failed to fetch group gains: {e}")
+
+            # Handle specific JSON parsing errors more gracefully
+            if "JSON is malformed" in error_msg or "invalid character" in error_msg:
+                raise WomServiceError(
+                    "WOM API returned invalid data format. The service may be temporarily unavailable."
+                )
+            elif "rate limit" in error_msg.lower():
+                raise WomServiceError(
+                    "WOM API rate limit exceeded. Please try again later."
+                )
+            elif "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+                raise WomServiceError(
+                    "WOM API connection timeout. Please check your internet connection and try again."
+                )
+            else:
+                raise WomServiceError(f"Failed to fetch group gains: {e}")
 
         if not result.is_ok:
             error_msg = f"Error fetching gains from WOM: {result.unwrap_err()}"

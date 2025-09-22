@@ -235,9 +235,25 @@ async def _find_inactive_users(
             except (WomServiceError, asyncio.TimeoutError) as e:
                 error_msg = f"Failed to get group details: {e}"
                 logger.error(error_msg)
-                await report_channel.send(
-                    "❌ WOM API is currently unavailable. Please try again later."
-                )
+
+                # Provide more specific user feedback based on error type
+                error_str = str(e).lower()
+                if "invalid data format" in error_str or "malformed" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
+                    )
+                elif "rate limit" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                    )
+                elif "timeout" in error_str or "connection" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                    )
+                else:
+                    await report_channel.send(
+                        "❌ WOM API is currently unavailable. Please try again later."
+                    )
                 return None
 
             # Get all member gains with pagination and timeout
@@ -254,9 +270,25 @@ async def _find_inactive_users(
             except (WomServiceError, asyncio.TimeoutError) as e:
                 error_msg = f"Failed to get group gains: {e}"
                 logger.error(error_msg)
-                await report_channel.send(
-                    "❌ WOM API returned malformed data or timed out. Please try again later."
-                )
+
+                # Provide more specific user feedback based on error type
+                error_str = str(e).lower()
+                if "invalid data format" in error_str or "malformed" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
+                    )
+                elif "rate limit" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                    )
+                elif "timeout" in error_str or "connection" in error_str:
+                    await report_channel.send(
+                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                    )
+                else:
+                    await report_channel.send(
+                        "❌ WOM API error occurred. Please try again later."
+                    )
                 return None
 
             # Process member gains
