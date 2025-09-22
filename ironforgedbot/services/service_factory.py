@@ -11,7 +11,7 @@ from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.services.raffle_service import RaffleService
 from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import get_score_service, ScoreService
-from ironforgedbot.services.wom_service import WomService
+from ironforgedbot.services.wom_service import WomClient
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +55,10 @@ class ServiceFactory:
         return AbsentMemberService(session)
 
     @staticmethod
-    def get_wom_service(api_key: Optional[str] = None) -> WomService:
-        """Get WomService instance (singleton pattern for HTTP-based service)."""
-        # Delegate directly to the wom_service module's singleton management
-        from ironforgedbot.services.wom_service import (
-            get_wom_service as wom_get_service,
-        )
-
-        return wom_get_service(api_key)
+    async def get_wom_client() -> WomClient:
+        """Get WomClient instance with application configuration."""
+        from ironforgedbot.services.wom_service import get_wom_client
+        return await get_wom_client()
 
 
 # Convenience functions for cleaner imports
@@ -91,9 +87,8 @@ def create_absent_service(session: AsyncSession) -> AbsentMemberService:
     return ServiceFactory.create_absent_service(session)
 
 
-def get_wom_service(api_key: Optional[str] = None) -> WomService:
-    """Get WomService instance."""
+async def get_wom_client() -> WomClient:
+    """Get WomClient instance."""
     # Delegate directly to avoid potential circular imports
-    from ironforgedbot.services.wom_service import get_wom_service as wom_get_service
-
-    return wom_get_service(api_key)
+    from ironforgedbot.services.wom_service import get_wom_client as get_client
+    return await get_client()
