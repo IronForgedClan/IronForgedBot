@@ -55,7 +55,7 @@ class WomService:
         """Categorize error based on error message."""
         error_lower = error_msg.lower()
 
-        if "json is malformed" in error_msg or "invalid character" in error_msg:
+        if "json is malformed" in error_lower or "invalid character" in error_lower:
             return ErrorType.JSON_MALFORMED
         elif "rate limit" in error_lower:
             return ErrorType.RATE_LIMIT
@@ -390,11 +390,8 @@ def get_wom_service(api_key: str = None) -> WomService:
 
 def reset_wom_service():
     """Reset the WOM service (useful for testing)."""
-    try:
-        loop = asyncio.get_running_loop()
-        asyncio.create_task(_wom_manager.close())
-    except RuntimeError:
-        # No event loop running, do synchronous cleanup
-        if _wom_manager._instance is not None:
-            _wom_manager._instance = None
-            _wom_manager._api_key = None
+    # Always do synchronous cleanup for testing
+    # This ensures immediate reset without async complications
+    if _wom_manager._instance is not None:
+        _wom_manager._instance = None
+        _wom_manager._api_key = None
