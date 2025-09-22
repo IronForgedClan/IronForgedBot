@@ -20,4 +20,4 @@ async def cmd_check_activity(
         ephemeral=True,
     )
 
-    await job_check_activity(report_channel, CONFIG.WOM_API_KEY, CONFIG.WOM_GROUP_ID)
+    await job_check_activity(report_channel)

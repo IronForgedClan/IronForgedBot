@@ -31,5 +31,5 @@ class TestCheckActivityCmd(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(call_args.kwargs["ephemeral"])
 
         mock_job_check_activity.assert_called_once_with(
-            self.mock_channel, "test_api_key", "test_group_id"
+            self.mock_channel
         )
