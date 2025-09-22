@@ -50,11 +50,12 @@ class WomService:
             finally:
                 self._client = None
 
-    async def get_group_details(self, group_id: int) -> GroupDetail:
+    async def get_group_details(self, group_id: int, retries: int = 2) -> GroupDetail:
         """Get group details from WOM.
 
         Args:
             group_id: WiseOldMan group ID
+            retries: Number of retry attempts for transient errors
 
         Returns:
             GroupDetail object containing group information
@@ -64,34 +65,73 @@ class WomService:
         """
         client = await self._get_client()
 
-        try:
-            result = await client.groups.get_details(group_id)
-        except Exception as e:
-            error_msg = str(e)
-            logger.error(f"WOM API error fetching group details: {e}")
+        for attempt in range(retries + 1):
+            try:
+                result = await client.groups.get_details(group_id)
 
-            # Handle specific JSON parsing errors more gracefully
-            if "JSON is malformed" in error_msg or "invalid character" in error_msg:
-                raise WomServiceError(
-                    "WOM API returned invalid data format. The service may be temporarily unavailable."
-                )
-            elif "rate limit" in error_msg.lower():
-                raise WomServiceError(
-                    "WOM API rate limit exceeded. Please try again later."
-                )
-            elif "timeout" in error_msg.lower() or "connection" in error_msg.lower():
-                raise WomServiceError(
-                    "WOM API connection timeout. Please check your internet connection and try again."
-                )
-            else:
-                raise WomServiceError(f"Failed to fetch group details: {e}")
+                if result.is_ok:
+                    return result.unwrap()
+                else:
+                    error_msg = f"Error fetching WOM group: {result.unwrap_err()}"
+                    logger.error(error_msg)
+                    raise WomServiceError(error_msg)
 
-        if not result.is_ok:
-            error_msg = f"Error fetching WOM group: {result.unwrap_err()}"
-            logger.error(error_msg)
-            raise WomServiceError(error_msg)
+            except Exception as e:
+                error_msg = str(e)
+                is_last_attempt = attempt == retries
 
-        return result.unwrap()
+                # Log the error
+                if is_last_attempt:
+                    logger.error(
+                        f"WOM API error fetching group details (final attempt): {e}"
+                    )
+                else:
+                    logger.warning(
+                        f"WOM API error fetching group details (attempt {attempt + 1}/{retries + 1}): {e}"
+                    )
+
+                # Handle specific JSON parsing errors with retry
+                if "JSON is malformed" in error_msg or "invalid character" in error_msg:
+                    if is_last_attempt:
+                        raise WomServiceError(
+                            "WOM API returned invalid data format. The service may be temporarily unavailable."
+                        )
+                    # Retry JSON errors with exponential backoff
+                    wait_time = 1.0 * (2**attempt)  # 1s, 2s
+                    logger.info(f"Retrying JSON error after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+
+                elif "rate limit" in error_msg.lower():
+                    if is_last_attempt:
+                        raise WomServiceError(
+                            "WOM API rate limit exceeded. Please try again later."
+                        )
+                    # Wait longer for rate limits
+                    wait_time = 5.0 * (attempt + 1)  # 5s, 10s
+                    logger.info(f"Retrying rate limit after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+
+                elif (
+                    "timeout" in error_msg.lower() or "connection" in error_msg.lower()
+                ):
+                    if is_last_attempt:
+                        raise WomServiceError(
+                            "WOM API connection timeout. Please check your internet connection and try again."
+                        )
+                    # Shorter wait for connection issues
+                    wait_time = 2.0 * (attempt + 1)  # 2s, 4s
+                    logger.info(f"Retrying connection error after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+
+                else:
+                    # For unknown errors, don't retry
+                    raise WomServiceError(f"Failed to fetch group details: {e}")
+
+        # This should never be reached due to the logic above
+        raise WomServiceError("Unexpected error in retry logic")
 
     async def get_group_gains(
         self,
@@ -100,6 +140,7 @@ class WomService:
         period: Period = Period.Month,
         limit: int = 50,
         offset: int = 0,
+        retries: int = 3,
     ) -> List[GroupMemberGains]:
         """Get group member gains from WOM.
 
@@ -109,6 +150,7 @@ class WomService:
             period: Time period for gains (default: Month)
             limit: Number of records to fetch (default: 50)
             offset: Offset for pagination (default: 0)
+            retries: Number of retry attempts for transient errors
 
         Returns:
             List of GroupMemberGains objects
@@ -118,40 +160,79 @@ class WomService:
         """
         client = await self._get_client()
 
-        try:
-            result = await client.groups.get_gains(
-                group_id,
-                metric=metric,
-                period=period,
-                limit=limit,
-                offset=offset,
-            )
-        except Exception as e:
-            error_msg = str(e)
-            logger.error(f"WOM API error fetching gains at offset {offset}: {e}")
-
-            # Handle specific JSON parsing errors more gracefully
-            if "JSON is malformed" in error_msg or "invalid character" in error_msg:
-                raise WomServiceError(
-                    "WOM API returned invalid data format. The service may be temporarily unavailable."
+        for attempt in range(retries + 1):
+            try:
+                result = await client.groups.get_gains(
+                    group_id,
+                    metric=metric,
+                    period=period,
+                    limit=limit,
+                    offset=offset,
                 )
-            elif "rate limit" in error_msg.lower():
-                raise WomServiceError(
-                    "WOM API rate limit exceeded. Please try again later."
-                )
-            elif "timeout" in error_msg.lower() or "connection" in error_msg.lower():
-                raise WomServiceError(
-                    "WOM API connection timeout. Please check your internet connection and try again."
-                )
-            else:
-                raise WomServiceError(f"Failed to fetch group gains: {e}")
 
-        if not result.is_ok:
-            error_msg = f"Error fetching gains from WOM: {result.unwrap_err()}"
-            logger.error(error_msg)
-            raise WomServiceError(error_msg)
+                if result.is_ok:
+                    return result.unwrap()
+                else:
+                    error_msg = f"Error fetching gains from WOM: {result.unwrap_err()}"
+                    logger.error(error_msg)
+                    raise WomServiceError(error_msg)
 
-        return result.unwrap()
+            except Exception as e:
+                error_msg = str(e)
+                is_last_attempt = attempt == retries
+
+                # Log the error
+                if is_last_attempt:
+                    logger.error(
+                        f"WOM API error fetching gains at offset {offset} (final attempt): {e}"
+                    )
+                else:
+                    logger.warning(
+                        f"WOM API error fetching gains at offset {offset} (attempt {attempt + 1}/{retries + 1}): {e}"
+                    )
+
+                # Handle specific JSON parsing errors with retry
+                if "JSON is malformed" in error_msg or "invalid character" in error_msg:
+                    if is_last_attempt:
+                        raise WomServiceError(
+                            "WOM API returned invalid data format. The service may be temporarily unavailable."
+                        )
+                    # Retry JSON errors with exponential backoff
+                    wait_time = 0.5 * (2**attempt)  # 0.5s, 1s, 2s
+                    logger.info(f"Retrying JSON error after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+
+                elif "rate limit" in error_msg.lower():
+                    if is_last_attempt:
+                        raise WomServiceError(
+                            "WOM API rate limit exceeded. Please try again later."
+                        )
+                    # Wait longer for rate limits
+                    wait_time = 5.0 * (attempt + 1)  # 5s, 10s, 15s
+                    logger.info(f"Retrying rate limit after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+
+                elif (
+                    "timeout" in error_msg.lower() or "connection" in error_msg.lower()
+                ):
+                    if is_last_attempt:
+                        raise WomServiceError(
+                            "WOM API connection timeout. Please check your internet connection and try again."
+                        )
+                    # Shorter wait for connection issues
+                    wait_time = 1.0 * (attempt + 1)  # 1s, 2s, 3s
+                    logger.info(f"Retrying connection error after {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+
+                else:
+                    # For unknown errors, don't retry
+                    raise WomServiceError(f"Failed to fetch group gains: {e}")
+
+        # This should never be reached due to the logic above
+        raise WomServiceError("Unexpected error in retry logic")
 
     async def get_all_group_gains(
         self,
@@ -203,11 +284,13 @@ class WomService:
             offset += limit
             iterations += 1
 
-            # Add small delay between requests to be respectful to the API
-            if iterations % 10 == 0:
+            # Add small delay between requests to be respectful to the API and reduce corruption
+            if iterations % 5 == 0 and iterations > 0:
                 logger.debug(
                     f"Processed {iterations} pagination requests, total gains: {len(all_gains)}"
                 )
+                # Small delay every 5 requests to reduce load and potential corruption
+                await asyncio.sleep(0.1)
 
         if iterations >= max_iterations:
             logger.warning(

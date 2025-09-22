@@ -251,7 +251,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_wom_service.get_all_group_gains.assert_called_once()
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
-        self.assertIn("WOM API returned malformed data", call_args.args[0])
+        self.assertIn("WOM API rate limit exceeded", call_args.args[0])
 
     @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
     @patch("ironforgedbot.tasks.job_check_activity.render_relative_time")
@@ -645,7 +645,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
-        self.assertIn("WOM API is currently unavailable", call_args[0][0])
+        self.assertIn("WOM API returned corrupted data", call_args[0][0])
 
     @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
     async def test_find_inactive_users_json_decode_error_in_gains(
@@ -676,7 +676,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
-        self.assertIn("WOM API returned malformed data", call_args[0][0])
+        self.assertIn("WOM API returned corrupted data", call_args[0][0])
 
 
 class TestThresholds(unittest.TestCase):
