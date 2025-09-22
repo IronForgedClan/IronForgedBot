@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 from datetime import datetime
@@ -16,7 +17,10 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.logging_utils import log_task_execution, log_api_call
 from ironforgedbot.database.database import db
-from ironforgedbot.services.service_factory import create_absent_service, get_wom_service
+from ironforgedbot.services.service_factory import (
+    create_absent_service,
+    get_wom_service,
+)
 from ironforgedbot.services.wom_service import WomServiceError
 
 logger = logging.getLogger(__name__)
@@ -63,13 +67,18 @@ async def job_check_activity(
         wom_limit: Number of records to fetch per API call
         thresholds: XP thresholds by role (uses defaults if None)
     """
+    execution_id = f"activity_check_{int(time.time())}"
+    logger.info(f"Starting activity check execution: {execution_id}")
+
     if not wom_api_key or not wom_api_key.strip():
-        logger.error("Invalid WOM API key provided")
+        logger.error(f"Invalid WOM API key provided for execution {execution_id}")
         await report_channel.send("❌ Invalid WOM API key configuration")
         return
 
     if wom_group_id <= 0:
-        logger.error(f"Invalid WOM group ID: {wom_group_id}")
+        logger.error(
+            f"Invalid WOM group ID: {wom_group_id} for execution {execution_id}"
+        )
         await report_channel.send(f"❌ Invalid WOM group ID: {wom_group_id}")
         return
 
@@ -77,6 +86,9 @@ async def job_check_activity(
         thresholds = DEFAULT_THRESHOLDS.copy()
 
     start_time = time.perf_counter()
+    logger.info(
+        f"Activity check {execution_id} - Starting with group {wom_group_id}, limit {wom_limit}"
+    )
 
     try:
         async with db.get_session() as session:
@@ -97,7 +109,7 @@ async def job_check_activity(
             )
 
             if not results:
-                logger.warning("Activity check returned no results")
+                logger.warning(f"Activity check {execution_id} returned no results")
                 await report_channel.send(
                     "ℹ️ No inactive members found meeting the criteria."
                 )
@@ -117,6 +129,9 @@ async def job_check_activity(
             )
 
             end_time = time.perf_counter()
+            logger.info(
+                f"Activity check {execution_id} completed successfully - found {len(results)} inactive members"
+            )
             await report_channel.send(
                 "## 🧗 Activity check\n"
                 f"Ignoring **{len(known_absentees)}** absent members.\n"
@@ -125,8 +140,10 @@ async def job_check_activity(
                 file=discord_file,
             )
     except Exception as e:
-        logger.error(f"Activity check failed: {e}")
-        await report_channel.send(f"❌ Activity check failed: {type(e).__name__}: {e}")
+        logger.error(f"Activity check {execution_id} failed: {type(e).__name__}: {e}")
+        await report_channel.send(
+            f"⚠️ Activity check failed (ID: {execution_id}): {type(e).__name__}: {e}"
+        )
         raise
 
 
@@ -210,26 +227,35 @@ async def _find_inactive_users(
     """
     try:
         async with get_wom_service(wom_api_key) as wom_service:
-            # Get group details
+            # Get group details with timeout and improved error handling
             try:
-                wom_group = await wom_service.get_group_details(wom_group_id)
-            except WomServiceError as e:
+                wom_group = await asyncio.wait_for(
+                    wom_service.get_group_details(wom_group_id), timeout=30.0
+                )
+            except (WomServiceError, asyncio.TimeoutError) as e:
+                error_msg = f"Failed to get group details: {e}"
+                logger.error(error_msg)
                 await report_channel.send(
                     "❌ WOM API is currently unavailable. Please try again later."
                 )
                 return None
 
-            # Get all member gains with pagination
+            # Get all member gains with pagination and timeout
             try:
-                all_member_gains = await wom_service.get_all_group_gains(
-                    wom_group_id,
-                    metric=Metric.Overall,
-                    period=Period.Month,
-                    limit=wom_limit,
+                all_member_gains = await asyncio.wait_for(
+                    wom_service.get_all_group_gains(
+                        wom_group_id,
+                        metric=Metric.Overall,
+                        period=Period.Month,
+                        limit=wom_limit,
+                    ),
+                    timeout=120.0,  # Longer timeout for pagination
                 )
-            except WomServiceError as e:
+            except (WomServiceError, asyncio.TimeoutError) as e:
+                error_msg = f"Failed to get group gains: {e}"
+                logger.error(error_msg)
                 await report_channel.send(
-                    "❌ WOM API returned malformed data. Please try again later."
+                    "❌ WOM API returned malformed data or timed out. Please try again later."
                 )
                 return None
 
