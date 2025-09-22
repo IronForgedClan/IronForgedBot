@@ -21,7 +21,7 @@ from ironforgedbot.services.service_factory import (
     create_absent_service,
     get_wom_service,
 )
-from ironforgedbot.services.wom_service import WomServiceError
+from ironforgedbot.services.wom_service import WomServiceError, ErrorType
 
 logger = logging.getLogger(__name__)
 
@@ -237,22 +237,26 @@ async def _find_inactive_users(
                 logger.error(error_msg)
 
                 # Provide more specific user feedback based on error type
-                error_str = str(e).lower()
-                if "invalid data format" in error_str or "malformed" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
-                    )
-                elif "rate limit" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
-                    )
-                elif "timeout" in error_str or "connection" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
-                    )
+                if isinstance(e, WomServiceError):
+                    if e.error_type == ErrorType.JSON_MALFORMED:
+                        await report_channel.send(
+                            "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
+                        )
+                    elif e.error_type == ErrorType.RATE_LIMIT:
+                        await report_channel.send(
+                            "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                        )
+                    elif e.error_type == ErrorType.CONNECTION:
+                        await report_channel.send(
+                            "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                        )
+                    else:
+                        await report_channel.send(
+                            "❌ WOM API is currently unavailable. Please try again later."
+                        )
                 else:
                     await report_channel.send(
-                        "❌ WOM API is currently unavailable. Please try again later."
+                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
                     )
                 return None
 
@@ -272,22 +276,26 @@ async def _find_inactive_users(
                 logger.error(error_msg)
 
                 # Provide more specific user feedback based on error type
-                error_str = str(e).lower()
-                if "invalid data format" in error_str or "malformed" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
-                    )
-                elif "rate limit" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
-                    )
-                elif "timeout" in error_str or "connection" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
-                    )
+                if isinstance(e, WomServiceError):
+                    if e.error_type == ErrorType.JSON_MALFORMED:
+                        await report_channel.send(
+                            "❌ WOM API returned corrupted data. This is usually temporary - please try again in a few minutes."
+                        )
+                    elif e.error_type == ErrorType.RATE_LIMIT:
+                        await report_channel.send(
+                            "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                        )
+                    elif e.error_type == ErrorType.CONNECTION:
+                        await report_channel.send(
+                            "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                        )
+                    else:
+                        await report_channel.send(
+                            "❌ WOM API error occurred. Please try again later."
+                        )
                 else:
                     await report_channel.send(
-                        "❌ WOM API error occurred. Please try again later."
+                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
                     )
                 return None
 

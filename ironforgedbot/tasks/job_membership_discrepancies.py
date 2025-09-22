@@ -11,7 +11,7 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.services.service_factory import get_wom_service
-from ironforgedbot.services.wom_service import WomServiceError
+from ironforgedbot.services.wom_service import WomServiceError, ErrorType
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,14 @@ async def _get_valid_wom_members(
             try:
                 wom_group = await wom_service.get_group_details(wom_group_id)
             except WomServiceError as e:
-                await updates_channel.send("Error fetching WOM group details.")
+                if e.error_type == ErrorType.JSON_MALFORMED:
+                    await updates_channel.send("WOM API returned corrupted data. Please try again in a few minutes.")
+                elif e.error_type == ErrorType.RATE_LIMIT:
+                    await updates_channel.send("WOM API rate limit exceeded. Please wait before trying again.")
+                elif e.error_type == ErrorType.CONNECTION:
+                    await updates_channel.send("WOM API connection timeout. Please check internet connectivity.")
+                else:
+                    await updates_channel.send("Error fetching WOM group details.")
                 return None, []
 
             members: List[str] = []

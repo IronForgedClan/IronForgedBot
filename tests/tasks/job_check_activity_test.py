@@ -206,10 +206,10 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
     async def test_find_inactive_users_wom_group_error(self, mock_get_wom_service):
-        from ironforgedbot.services.wom_service import WomServiceError
-        
+        from ironforgedbot.services.wom_service import WomServiceError, ErrorType
+
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_group_details.side_effect = WomServiceError("Group not found")
+        mock_wom_service.get_group_details.side_effect = WomServiceError("Group not found", ErrorType.UNKNOWN)
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         result = await _find_inactive_users(
@@ -229,12 +229,12 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
     async def test_find_inactive_users_gains_error(self, mock_get_wom_service):
-        from ironforgedbot.services.wom_service import WomServiceError
-        
+        from ironforgedbot.services.wom_service import WomServiceError, ErrorType
+
         mock_wom_service = AsyncMock()
         mock_group_detail = Mock()
         mock_wom_service.get_group_details.return_value = mock_group_detail
-        mock_wom_service.get_all_group_gains.side_effect = WomServiceError("API rate limit")
+        mock_wom_service.get_all_group_gains.side_effect = WomServiceError("API rate limit", ErrorType.RATE_LIMIT)
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         result = await _find_inactive_users(
@@ -629,8 +629,8 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         # Mock JSON decode error when fetching group details
-        from ironforgedbot.services.wom_service import WomServiceError
-        json_error = WomServiceError("JSON is malformed: invalid character (byte 0)")
+        from ironforgedbot.services.wom_service import WomServiceError, ErrorType
+        json_error = WomServiceError("JSON is malformed: invalid character (byte 0)", ErrorType.JSON_MALFORMED)
         mock_wom_service.get_group_details.side_effect = json_error
 
         result = await _find_inactive_users(
@@ -660,8 +660,8 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_wom_service.get_group_details.return_value = mock_group
 
         # Mock JSON decode error when fetching gains
-        from ironforgedbot.services.wom_service import WomServiceError
-        json_error = WomServiceError("JSON is malformed: invalid character (byte 0)")
+        from ironforgedbot.services.wom_service import WomServiceError, ErrorType
+        json_error = WomServiceError("JSON is malformed: invalid character (byte 0)", ErrorType.JSON_MALFORMED)
         mock_wom_service.get_all_group_gains.side_effect = json_error
 
         result = await _find_inactive_users(

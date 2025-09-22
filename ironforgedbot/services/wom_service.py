@@ -390,4 +390,11 @@ def get_wom_service(api_key: str = None) -> WomService:
 
 def reset_wom_service():
     """Reset the WOM service (useful for testing)."""
-    asyncio.create_task(_wom_manager.close())
+    try:
+        loop = asyncio.get_running_loop()
+        asyncio.create_task(_wom_manager.close())
+    except RuntimeError:
+        # No event loop running, do synchronous cleanup
+        if _wom_manager._instance is not None:
+            _wom_manager._instance = None
+            _wom_manager._api_key = None
