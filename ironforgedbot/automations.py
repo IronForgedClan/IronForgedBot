@@ -215,8 +215,8 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
             ),
-            CronTrigger(minute="*"),
-            # CronTrigger(hour="3", minute=50, second=offset, timezone="UTC"),
+            # CronTrigger(minute="*"),
+            CronTrigger(hour="3", minute=50, second=offset, timezone="UTC"),
             id="sync_members",
             name="Member Sync Job",
         )
