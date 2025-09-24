@@ -51,15 +51,13 @@ async def job_check_activity(
     logger.info(f"Starting activity check execution: {execution_id}")
 
     start_time = time.perf_counter()
-    logger.info(
-        f"Activity check {execution_id} - Starting with limit {wom_limit}"
-    )
+    logger.info(f"Activity check {execution_id} - Starting with limit {wom_limit}")
 
     try:
         async with db.get_session() as session:
             absent_service = create_absent_service(session)
 
-            await report_channel.send("🧗 Beginning activity check...")
+            await report_channel.send("🧗 **Activity Check:** starting...")
 
             absentee_list = await absent_service.process_absent_members()
             known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
