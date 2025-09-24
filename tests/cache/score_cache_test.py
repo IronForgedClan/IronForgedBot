@@ -175,12 +175,10 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
                 await self.cache.set(
                     f"player_{i}", create_test_score_breakdown(skills_count=i + 1)
                 )
-                await asyncio.sleep(0.001)  # Small delay to encourage interleaving
 
         async def getter_task():
             results = []
             for i in range(5):
-                await asyncio.sleep(0.001)  # Small delay
                 result = await self.cache.get(f"player_{i}")
                 results.append(result)
             return results

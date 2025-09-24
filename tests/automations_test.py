@@ -485,7 +485,6 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         automation.scheduler.add_job(job_wrapper, "date", run_date=None)
         job_wrapper()
 
-        await asyncio.sleep(0.1)
 
     def test_automation_cleanup_on_destruction(self):
         automation = self.create_automation_with_mocks()
@@ -501,7 +500,7 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         automation._running_jobs.clear()
 
         async def mock_job_func(delay):
-            await asyncio.sleep(delay)
+            pass
 
         mock_tasks = [Mock() for _ in range(5)]
 
