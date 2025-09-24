@@ -7,6 +7,7 @@ from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_admin import cmd_admin
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
+from ironforgedbot.commands.debug.cmd_debug_error_report import cmd_debug_error_report
 from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
@@ -134,6 +135,13 @@ class IronForgedCommands:
                     name="debug_commands",
                     description="Menu showing all commands",
                     callback=cmd_debug_commands,
+                )
+            )
+            self._tree.add_command(
+                discord.app_commands.Command(
+                    name="debug_error_report",
+                    description="Test error reporting system with phantom command",
+                    callback=cmd_debug_error_report,
                 )
             )
             self._tree.add_command(

@@ -88,10 +88,10 @@ async def _send_error_report(interaction: discord.Interaction, error_message: st
                 for option in interaction.data["options"]:
                     param_name = option.get("name", "unknown")
                     param_value = option.get("value", "N/A")
-                    parameters.append(f"`{param_name}`: {param_value}")
+                    parameters.append(f"• `{param_name}`: {param_value}")
 
             if parameters:
-                param_text = ", ".join(parameters)
+                param_text = "\n".join(parameters)
                 if len(param_text) > 800:  # Truncate if too long
                     param_text = param_text[:800] + "..."
             else:
