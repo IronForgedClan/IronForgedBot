@@ -108,12 +108,12 @@ class AsyncHttpClient:
 
                 return HttpResponse(status=response.status, body=data)
 
+        except (aiohttp.ServerTimeoutError, aiohttp.ConnectionTimeoutError, aiohttp.SocketTimeoutError) as e:
+            logger.error(f"Timeout error for {url}: {e}")
+            raise HttpException(f"Request timed out: {e}")
         except aiohttp.ClientConnectionError as e:
             logger.error(f"Connection error for {url}: {e}")
             raise HttpException(f"Connection failed: {e}")
-        except aiohttp.ClientTimeout as e:
-            logger.error(f"Timeout error for {url}: {e}")
-            raise HttpException(f"Request timed out: {e}")
         except aiohttp.ClientError as e:
             logger.error(f"Client error for {url}: {e}")
             raise HttpException(f"HTTP client error: {e}")

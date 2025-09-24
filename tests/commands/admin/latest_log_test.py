@@ -6,6 +6,7 @@ from ironforgedbot.logging_config import LOG_DIR
 
 
 class TestLatestLog(unittest.TestCase):
+    @patch("ironforgedbot.commands.admin.latest_log.LOG_DIR", "./logs")
     @patch("os.listdir")
     @patch("os.path.isfile")
     @patch("os.path.getmtime")
@@ -28,6 +29,7 @@ class TestLatestLog(unittest.TestCase):
         mock_discord_file.assert_called_once_with("./logs/log2.txt")
         self.assertEqual(result, mock_file)
 
+    @patch("ironforgedbot.commands.admin.latest_log.LOG_DIR", "./logs")
     @patch("os.listdir")
     @patch("os.path.isfile")
     @patch("os.path.getmtime")
@@ -37,9 +39,9 @@ class TestLatestLog(unittest.TestCase):
     ):
         mock_listdir.return_value = ["log1.txt", "subdirectory", "log2.txt", "log3.txt"]
         mock_isfile.side_effect = lambda path: path in {
-            f"{LOG_DIR}/log1.txt",
-            f"{LOG_DIR}/log2.txt",
-            f"{LOG_DIR}/log3.txt",
+            "./logs/log1.txt",
+            "./logs/log2.txt",
+            "./logs/log3.txt",
         }
         mock_getmtime.side_effect = lambda path: {
             "./logs/log1.txt": 100,
@@ -54,6 +56,7 @@ class TestLatestLog(unittest.TestCase):
         mock_discord_file.assert_called_once_with("./logs/log2.txt")
         self.assertEqual(result, mock_file)
 
+    @patch("ironforgedbot.commands.admin.latest_log.LOG_DIR", "./logs")
     @patch("os.listdir")
     @patch("os.path.isfile")
     @patch("os.path.getmtime")
@@ -141,6 +144,7 @@ class TestLatestLog(unittest.TestCase):
         self.assertIsNone(result)
         mock_logger.error.assert_called_once()
 
+    @patch("ironforgedbot.commands.admin.latest_log.LOG_DIR", "./logs")
     @patch("os.listdir")
     @patch("os.path.isfile")
     @patch("os.path.getmtime")
@@ -156,6 +160,6 @@ class TestLatestLog(unittest.TestCase):
 
         result = get_latest_log_file()
 
-        expected_path = f"{LOG_DIR}/test.log"
+        expected_path = "./logs/test.log"
         mock_discord_file.assert_called_once_with(expected_path)
         self.assertEqual(result, mock_file)
