@@ -93,7 +93,7 @@ class AsyncHttpClient:
                         text_data = await response.text()
                         # Official hiscores api doesn't correctly report content type
                         # it returns json data while reporting plaintext content.
-                        # Fallback to text raw text only if json parsing fails.
+                        # Fallback to raw text only if json parsing fails.
                         try:
                             import json
 
