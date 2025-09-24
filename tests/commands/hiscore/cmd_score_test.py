@@ -51,7 +51,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         await cmd_score(self.interaction, "BadName")
 
-        mock_send_error.assert_called_once_with(self.interaction, "Invalid player name")
+        mock_send_error.assert_called_once_with(self.interaction, "Invalid player name", report_to_channel=False)
 
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")

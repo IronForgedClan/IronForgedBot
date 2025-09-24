@@ -217,7 +217,7 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
         await cmd_whois(self.mock_interaction, "InvalidPlayer")
 
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction, "Invalid player name"
+            self.mock_interaction, "Invalid player name", report_to_channel=False
         )
 
     @patch("ironforgedbot.commands.lookup.cmd_whois.send_error_response")
@@ -252,7 +252,7 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
         await cmd_whois(self.mock_interaction, "TestPlayer")
 
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction, "Error getting name change history"
+            self.mock_interaction, "Error getting name change history", report_to_channel=False
         )
         self.mock_wom_client.close.assert_called_once()
 

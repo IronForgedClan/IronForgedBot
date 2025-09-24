@@ -96,7 +96,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
 
         first_call = self.mock_report_channel.send.call_args_list[0]
-        self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
+        self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
 
         second_call = self.mock_report_channel.send.call_args_list[1]
         self.assertIn("🧗 Activity check", second_call[0][0])
@@ -126,7 +126,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         # Should send beginning message and info message about no results
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
         first_call = self.mock_report_channel.send.call_args_list[0]
-        self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
+        self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
         second_call = self.mock_report_channel.send.call_args_list[1]
         self.assertEqual(
             second_call[0][0], "ℹ️ No inactive members found meeting the criteria."
@@ -179,7 +179,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
 
         first_call = self.mock_report_channel.send.call_args_list[0]
-        self.assertEqual(first_call[0][0], "🧗 Beginning activity check...")
+        self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
 
         expected_sorted = [
             ["Player1", "Iron", "100,000", "1 day ago"],
