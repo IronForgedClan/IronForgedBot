@@ -1,7 +1,9 @@
 import logging
 import sys
+import time
 from typing import Any, TypedDict
 import asyncio
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -30,6 +32,8 @@ class AsyncHttpClient:
     def __init__(self):
         self.session = None
         self._session_lock = asyncio.Lock()
+        self._last_request_time = {}  # Track last request time per host
+        self._min_request_delay = 1.0  # Minimum 1 second between requests to same host
 
         event_emitter.on("shutdown", self.cleanup, priority=20)
 
@@ -39,19 +43,54 @@ class AsyncHttpClient:
             if not self.session or self.session.closed:
                 logger.debug("Initializing new HTTP session")
 
-                timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=20)
+                # More conservative timeouts for API compatibility
+                timeout = aiohttp.ClientTimeout(
+                    total=15,        # Reduce from 30 to 15 seconds
+                    connect=5,       # Reduce from 10 to 5 seconds
+                    sock_read=10,    # Reduce from 20 to 10 seconds
+                    sock_connect=3   # Add explicit socket connect timeout
+                )
 
+                # Less aggressive connection pooling to avoid rate limiting
                 connector = aiohttp.TCPConnector(
-                    limit=100,
-                    limit_per_host=30,
-                    ttl_dns_cache=300,
+                    limit=10,               # Reduce from 100 to 10 total connections
+                    limit_per_host=2,       # Reduce from 30 to 2 connections per host
+                    ttl_dns_cache=300,      # Keep DNS cache
                     use_dns_cache=True,
                     enable_cleanup_closed=True,
                 )
 
+                # Browser-like headers to avoid being flagged as a bot
+                default_headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive'
+                }
+
                 self.session = aiohttp.ClientSession(
-                    timeout=timeout, connector=connector, raise_for_status=False
+                    timeout=timeout,
+                    connector=connector,
+                    headers=default_headers,
+                    raise_for_status=False
                 )
+
+    async def _rate_limit_check(self, url: str):
+        """Ensure minimum delay between requests to the same host."""
+        parsed_url = urlparse(url)
+        host = parsed_url.netloc
+
+        current_time = time.time()
+        last_request = self._last_request_time.get(host, 0)
+        time_since_last = current_time - last_request
+
+        if time_since_last < self._min_request_delay:
+            delay = self._min_request_delay - time_since_last
+            logger.debug(f"Rate limiting: waiting {delay:.2f}s before request to {host}")
+            await asyncio.sleep(delay)
+
+        self._last_request_time[host] = time.time()
 
     @retry_on_exception(retries=5)
     async def get(self, url, params=None, headers=None, json_data=None) -> HttpResponse:
@@ -59,6 +98,9 @@ class AsyncHttpClient:
         try:
             await self._initialize_session()
             assert self.session
+
+            # Apply rate limiting before making request
+            await self._rate_limit_check(url)
 
             async with self.session.get(
                 url, params=params, headers=headers, json=json_data
@@ -128,6 +170,9 @@ class AsyncHttpClient:
         try:
             await self._initialize_session()
             assert self.session
+
+            # Apply rate limiting before making request
+            await self._rate_limit_check(url)
 
             async with self.session.post(
                 url, data=data, json=json_data, params=params, headers=headers

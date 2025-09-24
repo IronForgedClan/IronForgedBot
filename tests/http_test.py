@@ -89,7 +89,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             await self.client._initialize_session()
 
-            mock_timeout.assert_called_once_with(total=30, connect=10, sock_read=20)
+            mock_timeout.assert_called_once_with(total=15, connect=5, sock_read=10, sock_connect=3)
             mock_session_class.assert_called_once()
 
     async def test_initialize_session_uses_correct_connector_config(self):
@@ -101,8 +101,8 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
             await self.client._initialize_session()
 
             mock_connector.assert_called_once_with(
-                limit=100,
-                limit_per_host=30,
+                limit=10,
+                limit_per_host=2,
                 ttl_dns_cache=300,
                 use_dns_cache=True,
                 enable_cleanup_closed=True,
@@ -1090,6 +1090,98 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             # Session initialization should be called
             self.assertGreaterEqual(mock_init.call_count, 1)
+
+    @patch("ironforgedbot.http.asyncio.sleep")
+    async def test_rate_limiting_enforces_minimum_delay(self, mock_sleep):
+        """Test that rate limiting enforces minimum delay between requests to same host."""
+        url = "https://example.com/api"
+
+        # Manually set last request time to simulate rapid requests
+        self.client._last_request_time["example.com"] = 0.0
+
+        with patch("ironforgedbot.http.time.time") as mock_time:
+            # Current time is 0.1s after last request
+            mock_time.side_effect = [0.1, 0.1]
+
+            await self.client._rate_limit_check(url)
+
+            # Should sleep for 0.9s to reach 1s minimum delay
+            mock_sleep.assert_called_once_with(0.9)
+
+    async def test_rate_limiting_different_hosts_no_delay(self):
+        """Test that rate limiting doesn't apply delays between different hosts."""
+        with patch("ironforgedbot.http.asyncio.sleep") as mock_sleep:
+            # Set up timing for different hosts
+            self.client._last_request_time["first.com"] = 0.0
+            # Don't set anything for "different.com" - it should get default of 0
+
+            with patch("ironforgedbot.http.time.time") as mock_time:
+                mock_time.return_value = 2.0  # Well past the 1s limit for both hosts
+
+                # Request to different host should not be rate limited
+                await self.client._rate_limit_check("https://different.com/api")
+
+                mock_sleep.assert_not_called()  # No delays when enough time has passed
+
+    @patch("ironforgedbot.http.asyncio.sleep")
+    async def test_rate_limiting_bypassed_after_sufficient_delay(self, mock_sleep):
+        """Test that rate limiting is bypassed when sufficient time has passed."""
+        url = "https://example.com/api"
+
+        # Set previous request time
+        self.client._last_request_time["example.com"] = 0.0
+
+        with patch("ironforgedbot.http.time.time") as mock_time:
+            # Current time is 1.5s after last request (> 1s minimum)
+            mock_time.side_effect = [1.5, 1.5]
+
+            await self.client._rate_limit_check(url)
+
+            mock_sleep.assert_not_called()  # No sleep needed when enough time has passed
+
+    async def test_rate_limiting_applied_to_get_requests(self):
+        """Test that rate limiting is applied to GET requests."""
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.content_type = "application/json"
+        mock_response.json.return_value = {"test": "data"}
+
+        with patch.object(self.client, "_initialize_session"), \
+             patch.object(self.client, "_rate_limit_check") as mock_rate_limit:
+
+            mock_session = Mock()
+            mock_context_manager = AsyncMock()
+            mock_context_manager.__aenter__.return_value = mock_response
+            mock_context_manager.__aexit__.return_value = None
+            mock_session.get.return_value = mock_context_manager
+            self.client.session = mock_session
+
+            await self.client.get(self.test_url)
+
+            # Verify rate limiting was called with correct URL
+            mock_rate_limit.assert_called_once_with(self.test_url)
+
+    async def test_rate_limiting_applied_to_post_requests(self):
+        """Test that rate limiting is applied to POST requests."""
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.content_type = "application/json"
+        mock_response.json.return_value = {"test": "data"}
+
+        with patch.object(self.client, "_initialize_session"), \
+             patch.object(self.client, "_rate_limit_check") as mock_rate_limit:
+
+            mock_session = Mock()
+            mock_context_manager = AsyncMock()
+            mock_context_manager.__aenter__.return_value = mock_response
+            mock_context_manager.__aexit__.return_value = None
+            mock_session.post.return_value = mock_context_manager
+            self.client.session = mock_session
+
+            await self.client.post(self.test_url, json_data={"test": "data"})
+
+            # Verify rate limiting was called with correct URL
+            mock_rate_limit.assert_called_once_with(self.test_url)
 
 
 class TestHttpResponse(unittest.TestCase):
