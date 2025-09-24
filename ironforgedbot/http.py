@@ -32,49 +32,24 @@ class AsyncHttpClient:
     def __init__(self):
         self.session = None
         self._session_lock = asyncio.Lock()
-        self._last_request_time = {}  # Track last request time per host
-        self._min_request_delay = 1.0  # Minimum 1 second between requests to same host
+        self._last_request_time = {}
+        self._min_request_delay = 1.0
+
+        # Hosts that require session reset after each request to avoid blocking
+        self._session_reset_hosts = {
+            "secure.runescape.com",
+            "hiscores.runescape.com",
+            "services.runescape.com",
+        }
 
         event_emitter.on("shutdown", self.cleanup, priority=20)
 
     async def _initialize_session(self):
-        """Initialize the aiohttp session with proper configuration."""
+        """Initialize the aiohttp session."""
         async with self._session_lock:
             if not self.session or self.session.closed:
-                logger.debug("Initializing new HTTP session")
-
-                # More conservative timeouts for API compatibility
-                timeout = aiohttp.ClientTimeout(
-                    total=15,        # Reduce from 30 to 15 seconds
-                    connect=5,       # Reduce from 10 to 5 seconds
-                    sock_read=10,    # Reduce from 20 to 10 seconds
-                    sock_connect=3   # Add explicit socket connect timeout
-                )
-
-                # Less aggressive connection pooling to avoid rate limiting
-                connector = aiohttp.TCPConnector(
-                    limit=10,               # Reduce from 100 to 10 total connections
-                    limit_per_host=2,       # Reduce from 30 to 2 connections per host
-                    ttl_dns_cache=300,      # Keep DNS cache
-                    use_dns_cache=True,
-                    enable_cleanup_closed=True,
-                )
-
-                # Browser-like headers to avoid being flagged as a bot
-                default_headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Connection': 'keep-alive'
-                }
-
-                self.session = aiohttp.ClientSession(
-                    timeout=timeout,
-                    connector=connector,
-                    headers=default_headers,
-                    raise_for_status=False
-                )
+                logger.debug("Initializing new session...")
+                self.session = aiohttp.ClientSession()
 
     async def _rate_limit_check(self, url: str):
         """Ensure minimum delay between requests to the same host."""
@@ -87,10 +62,24 @@ class AsyncHttpClient:
 
         if time_since_last < self._min_request_delay:
             delay = self._min_request_delay - time_since_last
-            logger.debug(f"Rate limiting: waiting {delay:.2f}s before request to {host}")
+            logger.debug(
+                f"Rate limiting: waiting {delay:.2f}s before request to {host}"
+            )
             await asyncio.sleep(delay)
 
         self._last_request_time[host] = time.time()
+
+    def _should_reset_session(self, url: str) -> bool:
+        """Check if the URL requires session reset to avoid blocking.
+
+        Args:
+            url: The target URL to check
+
+        Returns:
+            True if session should be reset after the request, False otherwise
+        """
+        parsed_url = urlparse(url)
+        return parsed_url.netloc in self._session_reset_hosts
 
     @retry_on_exception(retries=5)
     async def get(self, url, params=None, headers=None, json_data=None) -> HttpResponse:
@@ -99,29 +88,28 @@ class AsyncHttpClient:
             await self._initialize_session()
             assert self.session
 
-            # Apply rate limiting before making request
             await self._rate_limit_check(url)
 
             async with self.session.get(
                 url, params=params, headers=headers, json=json_data
             ) as response:
                 if response.status >= 500:
-                    error_text = await response.text()
-                    logger.error(
-                        f"Server error {response.status} for {url}: {error_text[:200]}"
-                    )
+                    logger.debug(await response.text())
+                    logger.warning(f"HTTP error code: {response.status}")
                     raise HttpException(
                         f"A remote server error occurred: {response.status}"
                     )
 
                 if response.status == 408:
-                    logger.warning(f"Request timeout (408) for {url}")
+                    logger.debug(await response.text())
+                    logger.warning(f"HTTP error code: {response.status}")
                     raise HttpException(
                         f"No response from remote server: {response.status}"
                     )
 
                 if response.status == 429:
-                    logger.warning(f"Rate limited (429) for {url}")
+                    logger.debug(await response.text())
+                    logger.warning(f"HTTP error code: {response.status}")
                     raise HttpException(
                         f"Rate limited or timed out response: {response.status}"
                     )
@@ -132,36 +120,29 @@ class AsyncHttpClient:
                     if "json" in content_type:
                         data = await response.json()
                     elif "text" in content_type or "html" in content_type:
-                        text_data = await response.text()
-                        # Official hiscores api doesn't correctly report content type
-                        # it returns json data while reporting plaintext content.
-                        # Fallback to raw text only if json parsing fails.
-                        try:
-                            import json
-
-                            data = json.loads(text_data)
-                        except (json.JSONDecodeError, ValueError):
-                            data = text_data
+                        data = await response.text()
                     else:
                         data = await response.read()
                 except Exception as e:
-                    logger.error(f"Error reading response body from {url}: {e}")
+                    logger.error(f"Error reading GET response body from {url}: {e}")
                     raise HttpException(f"Failed to read response data: {e}")
 
-                return HttpResponse(status=response.status, body=data)
+            if self._should_reset_session(url):
+                await self.cleanup()
+                logger.debug(
+                    f"Session reset for {urlparse(url).netloc} to prevent blocking"
+                )
 
-        except (aiohttp.ServerTimeoutError, aiohttp.ConnectionTimeoutError, aiohttp.SocketTimeoutError) as e:
-            logger.error(f"Timeout error for {url}: {e}")
-            raise HttpException(f"Request timed out: {e}")
-        except aiohttp.ClientConnectionError as e:
-            logger.error(f"Connection error for {url}: {e}")
-            raise HttpException(f"Connection failed: {e}")
+            return HttpResponse(status=response.status, body=data)
+
+        except aiohttp.ServerTimeoutError:
+            raise
         except aiohttp.ClientError as e:
-            logger.error(f"Client error for {url}: {e}")
-            raise HttpException(f"HTTP client error: {e}")
+            logger.error(f"GET client error for {url}: {e}")
+            raise HttpException(f"GET request failed: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error for {url}: {e}", exc_info=True)
-            raise HttpException(f"Unexpected error: {e}")
+            logger.error(f"Unexpected GET error for {url}: {e}", exc_info=True)
+            raise HttpException(f"Unexpected GET error: {e}")
 
     async def post(
         self, url, data=None, json_data=None, params=None, headers=None
@@ -170,9 +151,6 @@ class AsyncHttpClient:
         try:
             await self._initialize_session()
             assert self.session
-
-            # Apply rate limiting before making request
-            await self._rate_limit_check(url)
 
             async with self.session.post(
                 url, data=data, json=json_data, params=params, headers=headers
@@ -210,18 +188,10 @@ class AsyncHttpClient:
             return False
 
     async def cleanup(self):
-        """Cleanup the HTTP session and connector."""
-        async with self._session_lock:
-            if self.session and not self.session.closed:
-                logger.debug("Closing HTTP session")
-                try:
-                    await self.session.close()
-                    # Wait a bit for the underlying connections to close
-                    await asyncio.sleep(0.1)
-                except Exception as e:
-                    logger.error(f"Error during session cleanup: {e}")
-                finally:
-                    self.session = None
+        """Cleanup the HTTP session."""
+        if self.session:
+            logger.debug("Closing http session...")
+            await self.session.close()
 
     async def __aenter__(self):
         """Async context manager entry."""
