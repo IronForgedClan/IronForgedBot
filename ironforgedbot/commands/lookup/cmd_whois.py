@@ -30,7 +30,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
             interaction.guild, player, must_be_member=False
         )
     except Exception as e:
-        return await send_error_response(interaction, str(e))
+        return await send_error_response(interaction, str(e), report_to_channel=False)
 
     display_name = member.display_name if member is not None else player
 
@@ -46,7 +46,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
     if result.is_err:
         await wom_client.close()
         return await send_error_response(
-            interaction, "Error getting name change history"
+            interaction, "Error getting name change history", report_to_channel=False
         )
 
     embed = build_response_embed(

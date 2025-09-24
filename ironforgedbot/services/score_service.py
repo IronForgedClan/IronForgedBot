@@ -178,7 +178,9 @@ class ScoreService:
         self, player_name: str, bypass_cache: bool | None = False
     ) -> int:
         normalized_name: str = normalize_discord_string(input=player_name)
-        data: ScoreBreakdown = await self.get_player_score(normalized_name, bypass_cache)
+        data: ScoreBreakdown = await self.get_player_score(
+            normalized_name, bypass_cache
+        )
 
         activities: list[ActivityScore] = data.clues + data.raids + data.bosses
 
@@ -203,11 +205,13 @@ class ScoreService:
 def get_score_service(http: AsyncHttpClient = None) -> ScoreService:
     """Get a singleton ScoreService instance to avoid unnecessary recreation."""
     global _score_service_instance
-    
+
     if _score_service_instance is None and http is not None:
         _score_service_instance = ScoreService(http)
-    
+
     if _score_service_instance is None:
-        raise RuntimeError("ScoreService not initialized. Call with http parameter first.")
-    
+        raise RuntimeError(
+            "ScoreService not initialized. Call with http parameter first."
+        )
+
     return _score_service_instance

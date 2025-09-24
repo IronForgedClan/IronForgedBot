@@ -35,6 +35,7 @@ class IronForgedCommandTree(discord.app_commands.CommandTree):
             return await send_error_response(
                 interaction,
                 "You do not have permission to run that command.",
+                report_to_channel=False,
             )
 
         logger.error(f"Unhandled command error: {error}\n%s", traceback.format_exc())

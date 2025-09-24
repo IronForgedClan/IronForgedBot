@@ -55,7 +55,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
             interaction.guild, player, must_be_member=False
         )
     except Exception as e:
-        return await send_error_response(interaction, str(e))
+        return await send_error_response(interaction, str(e), report_to_channel=False)
 
     display_name = member.display_name if member is not None else player
 

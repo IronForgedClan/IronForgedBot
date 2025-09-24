@@ -39,6 +39,7 @@ class StartRaffleModal(Modal):
                 interaction,
                 f"{ingot_icon} {text_bold(self.ticket_price.value)} is an "
                 f"invalid {ticket_icon} ticket price.",
+                report_to_channel=False,
             )
 
         if price < 1:
@@ -47,6 +48,7 @@ class StartRaffleModal(Modal):
                 interaction,
                 f"{ingot_icon} {text_bold(self.ticket_price.value)} is an "
                 f"invalid {ticket_icon} ticket price.",
+                report_to_channel=False,
             )
 
         STATE.state["raffle_on"] = True

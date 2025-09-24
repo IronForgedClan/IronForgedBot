@@ -95,7 +95,7 @@ def require_channel(channel_ids: list[int]):
                 for channel in channel_ids:
                     message += f"\n- <#{channel}>"
 
-                return await send_error_response(interaction, message)
+                return await send_error_response(interaction, message, report_to_channel=False)
 
             await func(*args, **kwargs)
 
@@ -182,7 +182,7 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
                     "**Woah, tiger.** You are using this command too quickly.\n\n"
                     f"Try again in **{mins}** minutes and **{secs}** seconds."
                 )
-                return await send_error_response(interaction, message)
+                return await send_error_response(interaction, message, report_to_channel=False)
 
             timestamps.append(now)
 
