@@ -27,9 +27,11 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.mock_db_member.nickname = "TestPlayer"
         self.mock_db_member.joined_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
-    async def test_send_error_response(self):
+    @patch('ironforgedbot.common.responses._send_error_report')
+    async def test_send_error_response(self, mock_send_error_report):
         await send_error_response(self.mock_interaction, "Test error message")
 
+        # Verify the user error response was sent
         self.mock_interaction.followup.send.assert_called_once()
         call_args = self.mock_interaction.followup.send.call_args
         embed = call_args.kwargs["embed"]
@@ -37,6 +39,222 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.title, ":exclamation: Error")
         self.assertEqual(embed.description, "Test error message")
         self.assertEqual(embed.color, discord.Colour.red())
+
+        # Verify the error report was sent
+        mock_send_error_report.assert_called_once_with(self.mock_interaction, "Test error message")
+
+    @patch('ironforgedbot.common.responses._send_error_report')
+    async def test_send_error_response_opt_out(self, mock_send_error_report):
+        await send_error_response(self.mock_interaction, "Test error message", report_to_channel=False)
+
+        # Verify the user error response was sent
+        self.mock_interaction.followup.send.assert_called_once()
+        call_args = self.mock_interaction.followup.send.call_args
+        embed = call_args.kwargs["embed"]
+
+        self.assertEqual(embed.title, ":exclamation: Error")
+        self.assertEqual(embed.description, "Test error message")
+        self.assertEqual(embed.color, discord.Colour.red())
+
+        # Verify the error report was NOT sent
+        mock_send_error_report.assert_not_called()
+
+    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
+    @patch('ironforgedbot.common.responses.check_member_has_role')
+    @patch('ironforgedbot.common.responses.get_text_channel')
+    async def test_send_error_report_success(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+        # Set up mocks
+        mock_channel = Mock()
+        mock_channel.send = AsyncMock()
+        mock_get_text_channel.return_value = mock_channel
+
+        # Mock log file
+        mock_log_file = Mock()
+        mock_get_log_file.return_value = mock_log_file
+
+        # Mock role checking - simulate user has Member role but not Leadership
+        mock_check_role.side_effect = lambda member, role: role == ROLE.MEMBER
+
+        # Add mock guild member lookup
+        mock_guild_member = Mock()
+        self.mock_interaction.guild.get_member.return_value = mock_guild_member
+
+        # Add mock command data with parameters
+        self.mock_interaction.data = {
+            "options": [
+                {"name": "player", "value": "TestPlayer"},
+                {"name": "amount", "value": 100}
+            ]
+        }
+
+        # Import the private function
+        from ironforgedbot.common.responses import _send_error_report
+
+        await _send_error_report(self.mock_interaction, "Test error message")
+
+        # Verify channel was found and message was sent with file attachment
+        mock_get_text_channel.assert_called_once()
+        mock_channel.send.assert_called_once()
+
+        # Verify the send call includes both embed and file
+        call_args = mock_channel.send.call_args
+        self.assertIn("embed", call_args.kwargs)
+        self.assertIn("file", call_args.kwargs)
+        self.assertEqual(call_args.kwargs["file"], mock_log_file)
+
+        # Verify the embed structure
+        call_args = mock_channel.send.call_args
+        embed = call_args.kwargs["embed"]
+        self.assertEqual(embed.title, "🚨 Command Error Report")
+
+        # Check role field shows "Member"
+        role_field = next((field for field in embed.fields if field.name == "Role"), None)
+        self.assertIsNotNone(role_field)
+        self.assertEqual(role_field.value, "Member")
+
+        # Check parameters field exists and contains our test data
+        param_field = next((field for field in embed.fields if field.name == "Parameters"), None)
+        self.assertIsNotNone(param_field)
+        self.assertIn("player", param_field.value)
+        self.assertIn("TestPlayer", param_field.value)
+        self.assertIn("amount", param_field.value)
+        self.assertIn("100", param_field.value)
+
+        # Check timestamp field exists and has proper format
+        timestamp_field = next((field for field in embed.fields if field.name == "Timestamp"), None)
+        self.assertIsNotNone(timestamp_field)
+        self.assertIn("UTC", timestamp_field.value)
+
+        # Check error details field still contains the error message
+        error_field = next((field for field in embed.fields if field.name == "Error Message"), None)
+        self.assertIsNotNone(error_field)
+        self.assertIn("Test error message", error_field.value)
+
+    @patch('ironforgedbot.common.responses.get_text_channel')
+    @patch('ironforgedbot.common.responses.logger')
+    async def test_send_error_report_no_channel(self, mock_logger, mock_get_text_channel):
+        # Return None for no channel found
+        mock_get_text_channel.return_value = None
+
+        # Import the private function
+        from ironforgedbot.common.responses import _send_error_report
+
+        await _send_error_report(self.mock_interaction, "Test error message")
+
+        # Verify warning was logged
+        mock_logger.warning.assert_called_once_with("Unable to find report channel for error reporting")
+
+    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
+    @patch('ironforgedbot.common.responses.check_member_has_role')
+    @patch('ironforgedbot.common.responses.get_text_channel')
+    async def test_send_error_report_leadership_role(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+        # Set up mocks
+        mock_channel = Mock()
+        mock_channel.send = AsyncMock()
+        mock_get_text_channel.return_value = mock_channel
+
+        # Mock log file
+        mock_log_file = Mock()
+        mock_get_log_file.return_value = mock_log_file
+
+        # Mock role checking - simulate user has Leadership role
+        mock_check_role.side_effect = lambda member, role: role == ROLE.LEADERSHIP
+
+        # Add mock guild member lookup
+        mock_guild_member = Mock()
+        self.mock_interaction.guild.get_member.return_value = mock_guild_member
+        self.mock_interaction.data = None  # No parameters
+
+        # Import the private function
+        from ironforgedbot.common.responses import _send_error_report
+
+        await _send_error_report(self.mock_interaction, "Test error message")
+
+        # Verify the embed structure
+        call_args = mock_channel.send.call_args
+        embed = call_args.kwargs["embed"]
+
+        # Check role field shows "Leadership"
+        role_field = next((field for field in embed.fields if field.name == "Role"), None)
+        self.assertIsNotNone(role_field)
+        self.assertEqual(role_field.value, "Leadership")
+
+        # Check parameters field shows "No parameters"
+        param_field = next((field for field in embed.fields if field.name == "Parameters"), None)
+        self.assertIsNotNone(param_field)
+        self.assertEqual(param_field.value, "No parameters")
+
+    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
+    @patch('ironforgedbot.common.responses.check_member_has_role')
+    @patch('ironforgedbot.common.responses.get_text_channel')
+    async def test_send_error_report_guest_role(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+        # Set up mocks
+        mock_channel = Mock()
+        mock_channel.send = AsyncMock()
+        mock_get_text_channel.return_value = mock_channel
+
+        # Mock log file
+        mock_log_file = Mock()
+        mock_get_log_file.return_value = mock_log_file
+
+        # Mock role checking - simulate user has neither Member nor Leadership role
+        mock_check_role.return_value = False
+
+        # Add mock guild member lookup
+        mock_guild_member = Mock()
+        self.mock_interaction.guild.get_member.return_value = mock_guild_member
+
+        # Mock data without options key
+        self.mock_interaction.data = {"type": 1}
+
+        # Import the private function
+        from ironforgedbot.common.responses import _send_error_report
+
+        await _send_error_report(self.mock_interaction, "Test error message")
+
+        # Verify the embed structure
+        call_args = mock_channel.send.call_args
+        embed = call_args.kwargs["embed"]
+
+        # Check role field shows "Guest/Other"
+        role_field = next((field for field in embed.fields if field.name == "Role"), None)
+        self.assertIsNotNone(role_field)
+        self.assertEqual(role_field.value, "Guest/Other")
+
+        # Check parameters field shows "No parameters" when options key is missing
+        param_field = next((field for field in embed.fields if field.name == "Parameters"), None)
+        self.assertIsNotNone(param_field)
+        self.assertEqual(param_field.value, "No parameters")
+
+    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
+    @patch('ironforgedbot.common.responses.check_member_has_role')
+    @patch('ironforgedbot.common.responses.get_text_channel')
+    async def test_send_error_report_no_log_file(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+        # Set up mocks
+        mock_channel = Mock()
+        mock_channel.send = AsyncMock()
+        mock_get_text_channel.return_value = mock_channel
+
+        # Mock log file returns None (no log file available)
+        mock_get_log_file.return_value = None
+
+        # Mock role checking - simulate user has Member role
+        mock_check_role.side_effect = lambda member, role: role == ROLE.MEMBER
+
+        # Add mock guild member lookup
+        mock_guild_member = Mock()
+        self.mock_interaction.guild.get_member.return_value = mock_guild_member
+        self.mock_interaction.data = None
+
+        # Import the private function
+        from ironforgedbot.common.responses import _send_error_report
+
+        await _send_error_report(self.mock_interaction, "Test error message")
+
+        # Verify the send call includes embed but no file
+        call_args = mock_channel.send.call_args
+        self.assertIn("embed", call_args.kwargs)
+        self.assertNotIn("file", call_args.kwargs)
 
     def test_build_error_message_string(self):
         result = build_error_message_string("Test message")
