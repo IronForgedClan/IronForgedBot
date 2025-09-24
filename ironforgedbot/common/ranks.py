@@ -42,6 +42,21 @@ class RANK_POINTS(IntEnum):
     IRON = 0
 
 
+class RANK_ACTIVITY_THRESHOLDS(IntEnum):
+    """Monthly XP thresholds for activity checks based on achievement rank."""
+    GOD_ZAMORAK = 500_000
+    GOD_GUTHIX = 500_000
+    GOD_SARADOMIN = 500_000
+    GOD = 500_000
+    MYTH = 400_000
+    LEGEND = 350_000
+    DRAGON = 300_000
+    RUNE = 250_000
+    ADAMANT = 200_000
+    MITHRIL = 150_000
+    IRON = 150_000
+
+
 class GOD_ALIGNMENT(StrEnum):
     SARADOMIN = "Saradominist"
     GUTHIX = "Guthixian"
@@ -163,3 +178,21 @@ def get_god_alignment_from_member(member: discord.Member | None) -> str | None:
                 return role.name
 
     return None
+
+
+def get_activity_threshold_for_rank(rank: RANK) -> int:
+    """
+    Get the monthly XP activity threshold for a given rank.
+
+    Args:
+        rank: Achievement rank
+
+    Returns:
+        Monthly XP threshold for activity checks
+    """
+    # Try to get the threshold using the rank name
+    try:
+        return RANK_ACTIVITY_THRESHOLDS[rank.name]
+    except KeyError:
+        # Default to Iron threshold for unknown ranks
+        return RANK_ACTIVITY_THRESHOLDS.IRON

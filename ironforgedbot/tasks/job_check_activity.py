@@ -3,7 +3,7 @@ import io
 import logging
 from datetime import datetime
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import discord
 import wom
@@ -22,52 +22,33 @@ from ironforgedbot.services.service_factory import (
     get_wom_client,
 )
 from ironforgedbot.services.wom_service import WomServiceError
+from ironforgedbot.common.wom_role_mapping import (
+    get_threshold_for_wom_role,
+    get_display_name_for_wom_role,
+    get_discord_role_for_wom_role,
+)
+from ironforgedbot.common.roles import is_exempt_from_activity_check
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_WOM_LIMIT = 50
-DEFAULT_THRESHOLDS = {
-    GroupRole.Iron: 150_000,
-    GroupRole.Mithril: 300_000,
-    GroupRole.Adamant: 300_000,
-    GroupRole.Rune: 500_000,
-    GroupRole.Dragon: 500_000,
-    GroupRole.Steel: 500_000,
-    GroupRole.Bronze: 500_000,
-}
-
-ROLE_DISPLAY_MAPPING = {
-    GroupRole.Helper: "Alt",
-    GroupRole.Collector: "Moderator",
-    GroupRole.Administrator: "Admin",
-    GroupRole.Colonel: "Staff",
-    GroupRole.Brigadier: "Staff",
-    GroupRole.Admiral: "Staff",
-    GroupRole.Marshal: "Staff",
-    GroupRole.Deputy_owner: "Owner",
-    GroupRole.Owner: "Owner",
-}
 
 
 @log_task_execution(logger)
 async def job_check_activity(
     report_channel: discord.TextChannel,
     wom_limit: int = DEFAULT_WOM_LIMIT,
-    thresholds: Optional[Dict[GroupRole, int]] = None,
 ) -> None:
     """
-    Check member activity against configured thresholds and report inactive members.
+    Check member activity against rank-based thresholds and report inactive members.
+    Uses role-based exemptions to exclude certain roles from activity checks.
 
     Args:
         report_channel: Discord channel to send reports to
         wom_limit: Number of records to fetch per API call
-        thresholds: XP thresholds by role (uses defaults if None)
     """
     execution_id = f"activity_check_{int(time.time())}"
     logger.info(f"Starting activity check execution: {execution_id}")
-
-    if thresholds is None:
-        thresholds = DEFAULT_THRESHOLDS.copy()
 
     start_time = time.perf_counter()
     logger.info(
@@ -87,7 +68,6 @@ async def job_check_activity(
                 report_channel,
                 known_absentees,
                 wom_limit,
-                thresholds,
             )
 
             if not results:
@@ -160,45 +140,35 @@ def _get_role_display_name(role: Optional[GroupRole]) -> str:
     Returns:
         Clan relevant role name
     """
-    if not role:
-        return "Unknown"
-
-    return ROLE_DISPLAY_MAPPING.get(role, str(role).title())
+    return get_display_name_for_wom_role(role)
 
 
-def _get_threshold_for_role(
-    role: Optional[GroupRole], thresholds: Dict[GroupRole, int]
-) -> int:
+def _get_threshold_for_role(role: Optional[GroupRole]) -> int:
     """
-    Get XP threshold for a given role.
+    Get XP threshold for a given role using the new rank-based system.
 
     Args:
         role: WOM GroupRole enum value
-        thresholds: Dict mapping roles to XP thresholds
 
     Returns:
-        XP threshold for the role, defaults to highest threshold if role not found
+        XP threshold for the role based on Discord rank mapping
     """
-    if not role:
-        return max(thresholds.values()) if thresholds else 500_000
-
-    return thresholds.get(role, max(thresholds.values()) if thresholds else 500_000)
+    return get_threshold_for_wom_role(role)
 
 
 async def _find_inactive_users(
     report_channel: discord.TextChannel,
     absentees: List[str],
     wom_limit: int,
-    thresholds: Dict[GroupRole, int],
 ) -> Optional[List[List[str]]]:
     """
-    Find inactive users based on WOM data and configured thresholds.
+    Find inactive users based on WOM data and rank-based thresholds.
+    Uses role-based exemptions to exclude certain roles from checks.
 
     Args:
         report_channel: Discord channel for error reporting
         absentees: List of known absent member usernames (lowercase)
         wom_limit: Number of records to fetch per API call
-        thresholds: XP thresholds by role
 
     Returns:
         List of inactive user data or None if error occurred
@@ -265,7 +235,7 @@ async def _find_inactive_users(
             for member_gains in all_member_gains:
                 try:
                     inactive_member_data = _process_member_gains(
-                        member_gains, wom_group, absentees, thresholds
+                        member_gains, wom_group, absentees
                     )
                     if inactive_member_data:
                         results.append(inactive_member_data)
@@ -296,16 +266,15 @@ def _process_member_gains(
     member_gains,
     wom_group: GroupDetail,
     absentees: List[str],
-    thresholds: Dict[GroupRole, int],
 ) -> Optional[List[str]]:
     """
     Process individual member gains data to determine if they're inactive.
+    Uses rank-based thresholds and role-based exemptions.
 
     Args:
         member_gains: WOM member gains data
         wom_group: WOM group details
         absentees: List of known absent member usernames (lowercase)
-        thresholds: XP thresholds by role
 
     Returns:
         List of member data if inactive, None otherwise
@@ -318,11 +287,16 @@ def _process_member_gains(
     if wom_member.player.username.lower() in absentees:
         return None
 
-    # Skip prospects
+    # Check if member's Discord role is exempt from activity checks
+    discord_role = get_discord_role_for_wom_role(wom_member.role)
+    if discord_role and is_exempt_from_activity_check(discord_role):
+        return None
+
+    # Skip prospects (legacy check for unmapped roles)
     if wom_member.role == GroupRole.Dogsbody:
         return None
 
-    xp_threshold = _get_threshold_for_role(wom_member.role, thresholds)
+    xp_threshold = _get_threshold_for_role(wom_member.role)
 
     if member_gains.data.gained >= xp_threshold:
         return None

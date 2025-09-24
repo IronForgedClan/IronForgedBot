@@ -15,10 +15,12 @@ from ironforgedbot.tasks.job_check_activity import (
     _get_role_display_name,
     _get_threshold_for_role,
     _sort_results_safely,
-    DEFAULT_THRESHOLDS,
     DEFAULT_WOM_LIMIT,
-    ROLE_DISPLAY_MAPPING,
 )
+from ironforgedbot.common.wom_role_mapping import (
+    get_threshold_for_wom_role,
+)
+from ironforgedbot.common.roles import ROLE
 
 
 class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
@@ -79,7 +81,6 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             ["absentplayer"],
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         mock_tabulate.assert_called_once_with(
@@ -214,7 +215,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             self.absentees,
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertIsNone(result)
@@ -237,7 +237,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             self.absentees,
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertIsNone(result)
@@ -265,7 +264,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
 
         mock_data = Mock()
         mock_data.gained = (
-            50000  # Below DEFAULT_THRESHOLDS[GroupRole.Iron] which is 150,000
+            50000  # Below member threshold which is 150,000
         )
 
         mock_member_gains = Mock()
@@ -286,11 +285,10 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             self.absentees,
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0], ["TestPlayer", "Iron", "50,000", "5 days ago"])
+        self.assertEqual(result[0], ["TestPlayer", "Member", "50,000", "5 days ago"])
         mock_wom_service.get_group_details.assert_called_once_with()
         mock_wom_service.get_all_group_gains.assert_called_once()
 
@@ -327,7 +325,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             self.absentees,
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertEqual(len(result), 0)
@@ -365,7 +362,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             self.absentees,
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertEqual(len(result), 0)
@@ -382,12 +378,12 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_wom_service.get_group_details.return_value = mock_group
 
         test_cases = [
-            (GroupRole.Helper, "Alt"),
-            (GroupRole.Collector, "Moderator"),
-            (GroupRole.Administrator, "Admin"),
-            (GroupRole.Colonel, "Staff"),
-            (GroupRole.Deputy_owner, "Owner"),
-            (GroupRole.Mithril, "Mithril"),  # Default case
+            (GroupRole.Helper, "Staff"),           # Maps to ROLE.STAFF
+            (GroupRole.Collector, "Staff"),       # Maps to ROLE.STAFF
+            (GroupRole.Administrator, "Leadership"),  # Maps to ROLE.LEADERSHIP
+            (GroupRole.Colonel, "Staff"),       # Maps to ROLE.STAFF
+            (GroupRole.Deputy_owner, "Leadership"),  # Maps to ROLE.LEADERSHIP
+            (GroupRole.Mithril, "Member"),          # Maps to ROLE.MEMBER
         ]
 
         for wom_role, expected_role in test_cases:
@@ -418,11 +414,14 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                     self.mock_report_channel,
                     [],
                     DEFAULT_WOM_LIMIT,
-                    DEFAULT_THRESHOLDS,
-                )
+                        )
 
-                self.assertEqual(len(result), 1)
-                self.assertEqual(result[0][1], expected_role)
+                # Staff and Leadership roles should be exempt from activity checks
+                if expected_role in ["Staff", "Leadership"]:
+                    self.assertEqual(len(result), 0, f"{wom_role} should be exempt from activity checks")
+                else:
+                    self.assertEqual(len(result), 1, f"{wom_role} should be subject to activity checks")
+                    self.assertEqual(result[0][1], expected_role)
 
 
 class TestFindWomMember(unittest.TestCase):
@@ -466,28 +465,25 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 
     def test_get_role_display_name(self):
         """Test role display name mapping"""
-        self.assertEqual(_get_role_display_name(GroupRole.Helper), "Alt")
-        self.assertEqual(_get_role_display_name(GroupRole.Collector), "Moderator")
-        self.assertEqual(_get_role_display_name(GroupRole.Administrator), "Admin")
+        self.assertEqual(_get_role_display_name(GroupRole.Helper), "Staff")
+        self.assertEqual(_get_role_display_name(GroupRole.Collector), "Staff")
+        self.assertEqual(_get_role_display_name(GroupRole.Administrator), "Leadership")
         self.assertEqual(_get_role_display_name(GroupRole.Colonel), "Staff")
-        self.assertEqual(_get_role_display_name(GroupRole.Deputy_owner), "Owner")
-        self.assertEqual(_get_role_display_name(GroupRole.Iron), "Iron")
+        self.assertEqual(_get_role_display_name(GroupRole.Deputy_owner), "Leadership")
+        self.assertEqual(_get_role_display_name(GroupRole.Iron), "Member")
         self.assertEqual(_get_role_display_name(None), "Unknown")
 
     def test_get_threshold_for_role(self):
         """Test threshold calculation for roles"""
-        thresholds = {GroupRole.Iron: 100_000, GroupRole.Mithril: 200_000}
+        # Test that the new system uses rank-based thresholds
+        # GroupRole.Iron maps to RANK.IRON (150k threshold)
+        self.assertEqual(_get_threshold_for_role(GroupRole.Iron), 150_000)
+        # GroupRole.Mithril maps to RANK.MITHRIL (150k threshold)
+        self.assertEqual(_get_threshold_for_role(GroupRole.Mithril), 150_000)
 
-        self.assertEqual(_get_threshold_for_role(GroupRole.Iron, thresholds), 100_000)
-        self.assertEqual(
-            _get_threshold_for_role(GroupRole.Mithril, thresholds), 200_000
-        )
-        self.assertEqual(
-            _get_threshold_for_role(GroupRole.Rune, thresholds), 200_000
-        )  # Default to max
-        self.assertEqual(
-            _get_threshold_for_role(None, thresholds), 200_000
-        )  # Default to max
+        # Test that None returns max threshold (GOD rank)
+        # Should be 500k for GOD rank
+        self.assertEqual(_get_threshold_for_role(None), 500_000)
 
     def test_sort_results_safely(self):
         """Test safe sorting with malformed data"""
@@ -531,10 +527,10 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_group = Mock()
 
         result = _process_member_gains(
-            mock_member_gains, mock_group, [], DEFAULT_THRESHOLDS
+            mock_member_gains, mock_group, []
         )
 
-        self.assertEqual(result, ["TestPlayer", "Iron", "50,000", "5 days ago"])
+        self.assertEqual(result, ["TestPlayer", "Member", "50,000", "5 days ago"])
 
     @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
     def test_process_member_gains_active_member(self, mock_find_member):
@@ -550,7 +546,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_group = Mock()
 
         result = _process_member_gains(
-            mock_member_gains, mock_group, [], DEFAULT_THRESHOLDS
+            mock_member_gains, mock_group, []
         )
 
         self.assertIsNone(result)  # Should return None for active members
@@ -569,7 +565,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         absentees = ["absentplayer"]  # lowercase
 
         result = _process_member_gains(
-            mock_member_gains, mock_group, absentees, DEFAULT_THRESHOLDS
+            mock_member_gains, mock_group, absentees
         )
 
         self.assertIsNone(result)  # Should return None for absent members
@@ -587,7 +583,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_group = Mock()
 
         result = _process_member_gains(
-            mock_member_gains, mock_group, [], DEFAULT_THRESHOLDS
+            mock_member_gains, mock_group, []
         )
 
         self.assertIsNone(result)  # Should return None for dogsbody members
@@ -607,7 +603,6 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             [],
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertIsNone(result)
@@ -636,7 +631,6 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
             self.mock_report_channel,
             [],
             DEFAULT_WOM_LIMIT,
-            DEFAULT_THRESHOLDS,
         )
 
         self.assertIsNone(result)
@@ -648,14 +642,28 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 class TestThresholds(unittest.TestCase):
     def test_threshold_constants(self):
         """Test default threshold values"""
-        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Iron], 150_000)
-        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Mithril], 300_000)
-        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Adamant], 300_000)
-        self.assertEqual(DEFAULT_THRESHOLDS[GroupRole.Rune], 500_000)
+        # Test that default constants are available
         self.assertEqual(DEFAULT_WOM_LIMIT, 50)
 
+    def test_wom_role_thresholds(self):
+        """Test WOM role threshold mapping"""
+        # Test that WOM roles map correctly to rank-based thresholds
+        # GroupRole.Iron maps to RANK.IRON (150k threshold)
+        self.assertEqual(get_threshold_for_wom_role(GroupRole.Iron), 150_000)
+        # GroupRole.Mithril maps to RANK.MITHRIL (150k threshold)
+        self.assertEqual(get_threshold_for_wom_role(GroupRole.Mithril), 150_000)
+        # GroupRole.Adamant maps to RANK.ADAMANT (200k threshold)
+        self.assertEqual(get_threshold_for_wom_role(GroupRole.Adamant), 200_000)
+        # GroupRole.Helper has no rank mapping, should get GOD threshold (500k)
+        self.assertEqual(get_threshold_for_wom_role(GroupRole.Helper), 500_000)
+        # GroupRole.Administrator has no rank mapping, should get GOD threshold (500k)
+        self.assertEqual(get_threshold_for_wom_role(GroupRole.Administrator), 500_000)
+
     def test_role_display_mapping(self):
-        """Test role display mapping constants"""
-        self.assertEqual(ROLE_DISPLAY_MAPPING[GroupRole.Helper], "Alt")
-        self.assertEqual(ROLE_DISPLAY_MAPPING[GroupRole.Collector], "Moderator")
-        self.assertEqual(ROLE_DISPLAY_MAPPING[GroupRole.Administrator], "Admin")
+        """Test role display mapping using new system"""
+        # Test that role display names work correctly
+        self.assertEqual(_get_role_display_name(GroupRole.Helper), "Staff")
+        self.assertEqual(_get_role_display_name(GroupRole.Collector), "Staff")
+        self.assertEqual(_get_role_display_name(GroupRole.Administrator), "Leadership")
+        self.assertEqual(_get_role_display_name(GroupRole.Iron), "Member")
+        self.assertEqual(_get_role_display_name(None), "Unknown")
