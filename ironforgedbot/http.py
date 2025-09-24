@@ -38,25 +38,19 @@ class AsyncHttpClient:
         async with self._session_lock:
             if not self.session or self.session.closed:
                 logger.debug("Initializing new HTTP session")
-                
-                timeout = aiohttp.ClientTimeout(
-                    total=30,
-                    connect=10,
-                    sock_read=20
-                )
-                
+
+                timeout = aiohttp.ClientTimeout(total=30, connect=10, sock_read=20)
+
                 connector = aiohttp.TCPConnector(
                     limit=100,
                     limit_per_host=30,
                     ttl_dns_cache=300,
                     use_dns_cache=True,
-                    enable_cleanup_closed=True
+                    enable_cleanup_closed=True,
                 )
-                
+
                 self.session = aiohttp.ClientSession(
-                    timeout=timeout,
-                    connector=connector,
-                    raise_for_status=False
+                    timeout=timeout, connector=connector, raise_for_status=False
                 )
 
     @retry_on_exception(retries=5)
@@ -74,7 +68,9 @@ class AsyncHttpClient:
                     logger.error(
                         f"Server error {response.status} for {url}: {error_text[:200]}"
                     )
-                    raise HttpException(f"A remote server error occurred: {response.status}")
+                    raise HttpException(
+                        f"A remote server error occurred: {response.status}"
+                    )
 
                 if response.status == 408:
                     logger.warning(f"Request timeout (408) for {url}")
@@ -94,7 +90,16 @@ class AsyncHttpClient:
                     if "json" in content_type:
                         data = await response.json()
                     elif "text" in content_type or "html" in content_type:
-                        data = await response.text()
+                        text_data = await response.text()
+                        # Official hiscores api doesn't correctly report content type
+                        # it returns json data while reporting plaintext content.
+                        # Fallback to text raw text only if json parsing fails.
+                        try:
+                            import json
+
+                            data = json.loads(text_data)
+                        except (json.JSONDecodeError, ValueError):
+                            data = text_data
                     else:
                         data = await response.read()
                 except Exception as e:
@@ -102,7 +107,7 @@ class AsyncHttpClient:
                     raise HttpException(f"Failed to read response data: {e}")
 
                 return HttpResponse(status=response.status, body=data)
-                
+
         except aiohttp.ClientConnectionError as e:
             logger.error(f"Connection error for {url}: {e}")
             raise HttpException(f"Connection failed: {e}")
@@ -116,7 +121,9 @@ class AsyncHttpClient:
             logger.error(f"Unexpected error for {url}: {e}", exc_info=True)
             raise HttpException(f"Unexpected error: {e}")
 
-    async def post(self, url, data=None, json_data=None, params=None, headers=None) -> HttpResponse:
+    async def post(
+        self, url, data=None, json_data=None, params=None, headers=None
+    ) -> HttpResponse:
         """Make a POST request to the provided URL."""
         try:
             await self._initialize_session()
