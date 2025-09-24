@@ -1,4 +1,6 @@
-import ironforgedbot.logging_config  # pyright: ignore  # noqa: F401 # isort:skip
+from ironforgedbot.logging_config import get_logger_instance  # pyright: ignore  # isort:skip
+# Initialize logging configuration
+get_logger_instance()
 import logging
 import os
 import sys
