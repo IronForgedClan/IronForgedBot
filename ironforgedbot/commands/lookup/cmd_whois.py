@@ -4,6 +4,7 @@ import discord
 from discord import app_commands
 
 from wom import Client, NameChangeStatus
+from ironforgedbot.common.autocompletes import member_nickname_autocomplete
 from ironforgedbot.common.helpers import render_relative_time, validate_playername
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 @app_commands.describe(
     player="Player name to get RuneScape name change history for"
 )
+@app_commands.autocomplete(player=member_nickname_autocomplete)
 async def cmd_whois(interaction: discord.Interaction, player: str):
     """Get player's rsn history
 

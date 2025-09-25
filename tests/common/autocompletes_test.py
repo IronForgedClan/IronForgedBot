@@ -159,3 +159,153 @@ class TestAutocompletes(unittest.IsolatedAsyncioTestCase):
         # Should be sorted by position (highest first)
         self.assertEqual(choices[0].name, "Role29")  # Highest position
         self.assertEqual(choices[24].name, "Role05")  # 25th highest position
+
+
+class TestMemberNicknameAutocomplete(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        mock_member = create_test_member("TestUser", [])
+        mock_member.id = 123456789
+        self.mock_interaction = create_mock_discord_interaction(user=mock_member)
+
+    def create_member_with_nickname(self, display_name, nickname):
+        member = Mock()
+        member.display_name = display_name
+        member.nick = nickname
+        return member
+
+    async def test_member_nickname_autocomplete_filters_by_input(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        member1 = self.create_member_with_nickname("PlayerOne", "PlayerOne")
+        member2 = self.create_member_with_nickname("PlayerTwo", "PlayerTwo")
+        member3 = self.create_member_with_nickname("TestPlayer", "TestPlayer")
+
+        self.mock_interaction.guild.members = [member1, member2, member3]
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "player")
+
+        # Should return all members with "player" in their name
+        self.assertEqual(len(choices), 3)
+        choice_names = [choice.name for choice in choices]
+        self.assertIn("PlayerOne", choice_names)
+        self.assertIn("PlayerTwo", choice_names)
+        self.assertIn("TestPlayer", choice_names)
+
+    async def test_member_nickname_autocomplete_case_insensitive(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        member1 = self.create_member_with_nickname("TestUser", "TestUser")
+        member2 = self.create_member_with_nickname("testplayer", "testplayer")
+
+        self.mock_interaction.guild.members = [member1, member2]
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "TEST")
+
+        self.assertEqual(len(choices), 2)
+        choice_names = [choice.name for choice in choices]
+        self.assertIn("TestUser", choice_names)
+        self.assertIn("testplayer", choice_names)
+
+    async def test_member_nickname_autocomplete_excludes_no_nickname(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        # Members without nicknames
+        member1 = Mock()
+        member1.display_name = "NoNickUser"
+        member1.nick = None
+
+        member2 = Mock()
+        member2.display_name = "EmptyNickUser"
+        member2.nick = ""
+
+        # Member with nickname
+        member3 = self.create_member_with_nickname("HasNickUser", "HasNickUser")
+
+        self.mock_interaction.guild.members = [member1, member2, member3]
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "user")
+
+        # Should only return the member with a nickname
+        self.assertEqual(len(choices), 1)
+        self.assertEqual(choices[0].name, "HasNickUser")
+
+    async def test_member_nickname_autocomplete_empty_guild(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        self.mock_interaction.guild = None
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "test")
+
+        self.assertEqual(choices, [])
+
+    async def test_member_nickname_autocomplete_no_members(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        self.mock_interaction.guild.members = []
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "test")
+
+        self.assertEqual(choices, [])
+
+    async def test_member_nickname_autocomplete_sorts_alphabetically(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        member1 = self.create_member_with_nickname("ZebraUser", "ZebraUser")
+        member2 = self.create_member_with_nickname("AlphaUser", "AlphaUser")
+        member3 = self.create_member_with_nickname("BetaUser", "BetaUser")
+
+        self.mock_interaction.guild.members = [member1, member2, member3]
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "user")
+
+        # Should be sorted alphabetically
+        self.assertEqual(len(choices), 3)
+        self.assertEqual(choices[0].name, "AlphaUser")
+        self.assertEqual(choices[1].name, "BetaUser")
+        self.assertEqual(choices[2].name, "ZebraUser")
+
+    async def test_member_nickname_autocomplete_limits_to_25_results(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        members = []
+        for i in range(30):  # Create 30 members
+            member = self.create_member_with_nickname(f"User{i:02d}", f"User{i:02d}")
+            members.append(member)
+
+        self.mock_interaction.guild.members = members
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "user")
+
+        # Should be limited to 25 results
+        self.assertEqual(len(choices), 25)
+        # Should be sorted alphabetically
+        self.assertEqual(choices[0].name, "User00")
+        self.assertEqual(choices[24].name, "User24")
+
+    async def test_member_nickname_autocomplete_handles_emoji_normalization(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        member1 = self.create_member_with_nickname("TestUser 💩", "TestUser 💩")
+        member2 = self.create_member_with_nickname("🤖TestUser", "🤖TestUser")
+
+        self.mock_interaction.guild.members = [member1, member2]
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "testuser")
+
+        # Should find both members after emoji normalization
+        self.assertEqual(len(choices), 2)
+        choice_names = [choice.name for choice in choices]
+        self.assertIn("TestUser 💩", choice_names)
+        self.assertIn("🤖TestUser", choice_names)
+
+    async def test_member_nickname_autocomplete_no_matches(self):
+        from ironforgedbot.common.autocompletes import member_nickname_autocomplete
+
+        member1 = self.create_member_with_nickname("PlayerOne", "PlayerOne")
+        member2 = self.create_member_with_nickname("PlayerTwo", "PlayerTwo")
+
+        self.mock_interaction.guild.members = [member1, member2]
+
+        choices = await member_nickname_autocomplete(self.mock_interaction, "xyz")
+
+        self.assertEqual(choices, [])
