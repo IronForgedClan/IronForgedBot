@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import discord
+from discord import app_commands
 from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.common.constants import EMPTY_SPACE
@@ -43,6 +44,9 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
+@app_commands.describe(
+    player="Player name to break down score for (defaults to your nickname)"
+)
 async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute player score with complete source enumeration.
 
@@ -62,7 +66,9 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                 interaction.guild, player, must_be_member=False
             )
         except Exception as e:
-            return await send_error_response(interaction, str(e), report_to_channel=False)
+            return await send_error_response(
+                interaction, str(e), report_to_channel=False
+            )
 
         display_name = member.display_name if member is not None else player
         service = get_score_service(HTTP)
@@ -111,7 +117,12 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
         if not member:
             return await send_not_clan_member(
-                interaction, rank_name, rank_icon, rank_color, points_total, display_name
+                interaction,
+                rank_name,
+                rank_icon,
+                rank_color,
+                points_total,
+                display_name,
             )
 
         rank_breakdown_embed = build_response_embed(
@@ -140,9 +151,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
         if rank_name == RANK.GOD:
             match god_alignment:
                 case GOD_ALIGNMENT.SARADOMIN:
-                    alignment_msg = (
-                        f"{rank_icon} {GOD_ALIGNMENT.SARADOMIN} ({find_emoji('Saradomin')})"
-                    )
+                    alignment_msg = f"{rank_icon} {GOD_ALIGNMENT.SARADOMIN} ({find_emoji('Saradomin')})"
                 case GOD_ALIGNMENT.ZAMORAK:
                     alignment_msg = (
                         f"{rank_icon} {GOD_ALIGNMENT.ZAMORAK} ({find_emoji('Zamorak')})"
@@ -312,5 +321,5 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
                 pass
         return await send_error_response(
             interaction,
-            "An unexpected error occurred while generating the breakdown. Please try again."
+            "An unexpected error occurred while generating the breakdown. Please try again.",
         )

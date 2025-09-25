@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import discord
+from discord import app_commands
 
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.logging_utils import log_command_execution
@@ -38,6 +39,9 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
+@app_commands.describe(
+    player="Player name to display score for (defaults to your nickname)"
+)
 async def cmd_score(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute clan score for a Runescape player name.
 

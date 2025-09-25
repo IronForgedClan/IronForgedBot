@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict
 
 import discord
+from discord import app_commands
 from tabulate import tabulate
 
 from ironforgedbot.common.helpers import (
@@ -31,6 +32,11 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLE.LEADERSHIP)
 @log_command_execution(logger)
+@app_commands.describe(
+    players="Comma-separated list of player names to modify ingots for",
+    ingots="Number of ingots to add (positive) or remove (negative)",
+    reason="Reason for the ingot modification",
+)
 async def cmd_add_remove_ingots(
     interaction: discord.Interaction,
     players: str,

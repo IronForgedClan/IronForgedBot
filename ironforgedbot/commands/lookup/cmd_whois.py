@@ -1,6 +1,7 @@
 import logging
 
 import discord
+from discord import app_commands
 
 from wom import Client, NameChangeStatus
 from ironforgedbot.common.helpers import render_relative_time, validate_playername
@@ -16,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
+@app_commands.describe(
+    player="Player name to get RuneScape name change history for"
+)
 async def cmd_whois(interaction: discord.Interaction, player: str):
     """Get player's rsn history
 

@@ -2,6 +2,7 @@ import logging
 from typing import List
 
 import discord
+from discord import app_commands
 
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
@@ -73,6 +74,10 @@ class Signups(object):
 
 
 @require_role(ROLE.LEADERSHIP)
+@log_command_execution(logger)
+@app_commands.describe(
+    url="URL of the event or spreadsheet to generate roster from"
+)
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,

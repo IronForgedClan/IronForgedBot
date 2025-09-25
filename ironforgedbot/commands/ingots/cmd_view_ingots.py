@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 import discord
+from discord import app_commands
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.ranks import get_rank_from_member
@@ -20,6 +21,9 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
+@app_commands.describe(
+    player="Player name to view ingots for (defaults to your nickname)"
+)
 async def cmd_view_ingots(
     interaction: discord.Interaction, player: Optional[str] = None
 ):
