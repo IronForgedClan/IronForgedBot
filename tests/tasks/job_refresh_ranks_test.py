@@ -172,7 +172,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         expected_messages = [
             call("Rank check progress: [0/1]"),
             call(
-                f"{member.mention} has completed their **14 day** probation period "
+                f"{member.mention} has completed their **28 day** probation period "
                 "and is now eligible for  **Iron** rank."
             ),
             call("Finished rank check: [1/1]"),
@@ -265,7 +265,7 @@ class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
         expected_messages = [
             call("Rank check progress: [0/1]"),
             call(
-                f"{member.mention} has completed their **14 day** probation period and "
+                f"{member.mention} has completed their **28 day** probation period and "
                 f"is now eligible for  **Mithril** rank."
             ),
             call("Finished rank check: [1/1]"),
