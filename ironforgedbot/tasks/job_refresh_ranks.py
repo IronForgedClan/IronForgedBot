@@ -30,7 +30,7 @@ from ironforgedbot.services.score_service import (
 
 logger: logging.Logger = logging.getLogger(name=__name__)
 
-PROBATION_DAYS = 14
+PROBATION_DAYS = 28
 
 
 async def job_refresh_ranks(
