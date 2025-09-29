@@ -82,7 +82,7 @@ class IronForgedAutomations:
         score_cache_output = await SCORE_CACHE.clean()
 
         if score_cache_output:
-            await report_channel.send(f"**♻️ Score cache:** {score_cache_output}")
+            logger.info(score_cache_output)
 
     async def setup_automations(self):
         """Add jobs to scheduler."""
