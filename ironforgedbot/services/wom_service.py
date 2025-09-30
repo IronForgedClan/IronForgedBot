@@ -203,39 +203,15 @@ class WomService:
     async def _get_group_details(
         self, client: wom.Client, group_id: int
     ) -> GroupDetail:
-        """Get group details with retry logic."""
-        for attempt in range(2):
-            try:
-                result = await client.groups.get_details(group_id)
+        """Get group details."""
+        result = await client.groups.get_details(group_id)
 
-                if result.is_ok:
-                    return result.unwrap()
-                else:
-                    error_details = result.unwrap_err()
-                    if attempt == 0:
-                        logger.warning(
-                            f"WOM API error getting group details (attempt {attempt + 1}): {error_details}"
-                        )
-                        await asyncio.sleep(1.0)
-                        continue
-                    else:
-                        logger.error(
-                            f"WOM API error getting group details: {error_details}"
-                        )
-                        raise WomServiceError(f"WOM API error: {error_details}")
-
-            except Exception as e:
-                error_str = str(e).lower()
-                if attempt == 0 and (
-                    "timeout" in error_str or "connection" in error_str
-                ):
-                    logger.warning(
-                        f"Connection error getting group details (attempt {attempt + 1}): {e}"
-                    )
-                    await asyncio.sleep(1.0)
-                    continue
-                else:
-                    raise
+        if result.is_ok:
+            return result.unwrap()
+        else:
+            error_details = result.unwrap_err()
+            logger.error(f"WOM API error getting group details: {error_details}")
+            raise WomServiceError(f"WOM API error: {error_details}")
 
     async def _get_all_group_gains(
         self, client: wom.Client, group_id: int
@@ -250,50 +226,38 @@ class WomService:
         logger.debug("Starting to fetch group gains with pagination")
 
         while page < max_pages:
-            try:
-                result = await client.groups.get_gains(
-                    group_id,
-                    metric=Metric.Overall,
-                    period=Period.Month,
-                    limit=limit,
-                    offset=offset,
-                )
+            result = await client.groups.get_gains(
+                group_id,
+                metric=Metric.Overall,
+                period=Period.Month,
+                limit=limit,
+                offset=offset,
+            )
 
-                if result.is_ok:
-                    gains = result.unwrap()
-                else:
-                    error_details = result.unwrap_err()
-                    logger.error(f"WOM API error getting group gains: {error_details}")
-                    raise WomServiceError(f"WOM API error: {error_details}")
+            if result.is_ok:
+                gains = result.unwrap()
+            else:
+                error_details = result.unwrap_err()
+                logger.error(f"WOM API error getting group gains: {error_details}")
+                raise WomServiceError(f"WOM API error: {error_details}")
 
-                logger.debug(f"Page {page + 1}: retrieved {len(gains)} gains")
+            logger.debug(f"Page {page + 1}: retrieved {len(gains)} gains")
 
-                if not gains:
-                    break
+            if not gains:
+                break
 
-                all_gains.extend(gains)
+            all_gains.extend(gains)
 
-                # If we got fewer results than the limit, we've reached the end
-                if len(gains) < limit:
-                    break
+            # If we got fewer results than the limit, we've reached the end
+            if len(gains) < limit:
+                break
 
-                offset += limit
-                page += 1
+            offset += limit
+            page += 1
 
-                # Small delay every 5 pages to be respectful to the API
-                if page % 5 == 0:
-                    await asyncio.sleep(0.1)
-
-            except Exception as e:
-                error_str = str(e).lower()
-                if "timeout" in error_str or "connection" in error_str:
-                    logger.warning(
-                        f"Connection error getting gains page {page + 1}: {e}"
-                    )
-                    # Don't retry pagination errors - just return what we have
-                    break
-                else:
-                    raise
+            # Small delay every 5 pages to be respectful to the API
+            if page % 5 == 0:
+                await asyncio.sleep(0.1)
 
         if page >= max_pages:
             logger.warning(
