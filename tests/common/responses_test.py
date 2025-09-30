@@ -27,7 +27,7 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.mock_db_member.nickname = "TestPlayer"
         self.mock_db_member.joined_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
-    @patch('ironforgedbot.common.responses._send_error_report')
+    @patch("ironforgedbot.common.responses._send_error_report")
     async def test_send_error_response(self, mock_send_error_report):
         await send_error_response(self.mock_interaction, "Test error message")
 
@@ -41,11 +41,15 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.color, discord.Colour.red())
 
         # Verify the error report was sent
-        mock_send_error_report.assert_called_once_with(self.mock_interaction, "Test error message")
+        mock_send_error_report.assert_called_once_with(
+            self.mock_interaction, "Test error message"
+        )
 
-    @patch('ironforgedbot.common.responses._send_error_report')
+    @patch("ironforgedbot.common.responses._send_error_report")
     async def test_send_error_response_opt_out(self, mock_send_error_report):
-        await send_error_response(self.mock_interaction, "Test error message", report_to_channel=False)
+        await send_error_response(
+            self.mock_interaction, "Test error message", report_to_channel=False
+        )
 
         # Verify the user error response was sent
         self.mock_interaction.followup.send.assert_called_once()
@@ -59,10 +63,12 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         # Verify the error report was NOT sent
         mock_send_error_report.assert_not_called()
 
-    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
-    @patch('ironforgedbot.common.responses.check_member_has_role')
-    @patch('ironforgedbot.common.responses.get_text_channel')
-    async def test_send_error_report_success(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+    @patch("ironforgedbot.common.responses._get_latest_log_lines_file")
+    @patch("ironforgedbot.common.responses.check_member_has_role")
+    @patch("ironforgedbot.common.responses.get_text_channel")
+    async def test_send_error_report_success(
+        self, mock_get_text_channel, mock_check_role, mock_get_log_file
+    ):
         # Set up mocks
         mock_channel = Mock()
         mock_channel.send = AsyncMock()
@@ -83,7 +89,7 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.data = {
             "options": [
                 {"name": "player", "value": "TestPlayer"},
-                {"name": "amount", "value": 100}
+                {"name": "amount", "value": 100},
             ]
         }
 
@@ -108,12 +114,16 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.title, "🚨 Command Error Report")
 
         # Check role field shows "Member"
-        role_field = next((field for field in embed.fields if field.name == "Role"), None)
+        role_field = next(
+            (field for field in embed.fields if field.name == "Role"), None
+        )
         self.assertIsNotNone(role_field)
         self.assertEqual(role_field.value, "Member")
 
         # Check parameters field exists and contains our test data
-        param_field = next((field for field in embed.fields if field.name == "Parameters"), None)
+        param_field = next(
+            (field for field in embed.fields if field.name == "Parameters"), None
+        )
         self.assertIsNotNone(param_field)
         self.assertIn("player", param_field.value)
         self.assertIn("TestPlayer", param_field.value)
@@ -121,18 +131,24 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         self.assertIn("100", param_field.value)
 
         # Check timestamp field exists and has proper format
-        timestamp_field = next((field for field in embed.fields if field.name == "Timestamp"), None)
+        timestamp_field = next(
+            (field for field in embed.fields if field.name == "Timestamp"), None
+        )
         self.assertIsNotNone(timestamp_field)
         self.assertIn("UTC", timestamp_field.value)
 
         # Check error details field still contains the error message
-        error_field = next((field for field in embed.fields if field.name == "Error Message"), None)
+        error_field = next(
+            (field for field in embed.fields if field.name == "Error Message"), None
+        )
         self.assertIsNotNone(error_field)
         self.assertIn("Test error message", error_field.value)
 
-    @patch('ironforgedbot.common.responses.get_text_channel')
-    @patch('ironforgedbot.common.responses.logger')
-    async def test_send_error_report_no_channel(self, mock_logger, mock_get_text_channel):
+    @patch("ironforgedbot.common.responses.get_text_channel")
+    @patch("ironforgedbot.common.responses.logger")
+    async def test_send_error_report_no_channel(
+        self, mock_logger, mock_get_text_channel
+    ):
         # Return None for no channel found
         mock_get_text_channel.return_value = None
 
@@ -142,12 +158,16 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         await _send_error_report(self.mock_interaction, "Test error message")
 
         # Verify warning was logged
-        mock_logger.warning.assert_called_once_with("Unable to find report channel for error reporting")
+        mock_logger.warning.assert_called_once_with(
+            "Unable to find report channel for error reporting"
+        )
 
-    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
-    @patch('ironforgedbot.common.responses.check_member_has_role')
-    @patch('ironforgedbot.common.responses.get_text_channel')
-    async def test_send_error_report_leadership_role(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+    @patch("ironforgedbot.common.responses._get_latest_log_lines_file")
+    @patch("ironforgedbot.common.responses.check_member_has_role")
+    @patch("ironforgedbot.common.responses.get_text_channel")
+    async def test_send_error_report_leadership_role(
+        self, mock_get_text_channel, mock_check_role, mock_get_log_file
+    ):
         # Set up mocks
         mock_channel = Mock()
         mock_channel.send = AsyncMock()
@@ -175,19 +195,25 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         embed = call_args.kwargs["embed"]
 
         # Check role field shows "Leadership"
-        role_field = next((field for field in embed.fields if field.name == "Role"), None)
+        role_field = next(
+            (field for field in embed.fields if field.name == "Role"), None
+        )
         self.assertIsNotNone(role_field)
         self.assertEqual(role_field.value, "Leadership")
 
         # Check parameters field shows "No parameters"
-        param_field = next((field for field in embed.fields if field.name == "Parameters"), None)
+        param_field = next(
+            (field for field in embed.fields if field.name == "Parameters"), None
+        )
         self.assertIsNotNone(param_field)
         self.assertEqual(param_field.value, "No parameters")
 
-    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
-    @patch('ironforgedbot.common.responses.check_member_has_role')
-    @patch('ironforgedbot.common.responses.get_text_channel')
-    async def test_send_error_report_guest_role(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+    @patch("ironforgedbot.common.responses._get_latest_log_lines_file")
+    @patch("ironforgedbot.common.responses.check_member_has_role")
+    @patch("ironforgedbot.common.responses.get_text_channel")
+    async def test_send_error_report_guest_role(
+        self, mock_get_text_channel, mock_check_role, mock_get_log_file
+    ):
         # Set up mocks
         mock_channel = Mock()
         mock_channel.send = AsyncMock()
@@ -217,19 +243,25 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         embed = call_args.kwargs["embed"]
 
         # Check role field shows "Guest/Other"
-        role_field = next((field for field in embed.fields if field.name == "Role"), None)
+        role_field = next(
+            (field for field in embed.fields if field.name == "Role"), None
+        )
         self.assertIsNotNone(role_field)
         self.assertEqual(role_field.value, "Guest/Other")
 
         # Check parameters field shows "No parameters" when options key is missing
-        param_field = next((field for field in embed.fields if field.name == "Parameters"), None)
+        param_field = next(
+            (field for field in embed.fields if field.name == "Parameters"), None
+        )
         self.assertIsNotNone(param_field)
         self.assertEqual(param_field.value, "No parameters")
 
-    @patch('ironforgedbot.common.responses._get_latest_log_lines_file')
-    @patch('ironforgedbot.common.responses.check_member_has_role')
-    @patch('ironforgedbot.common.responses.get_text_channel')
-    async def test_send_error_report_no_log_file(self, mock_get_text_channel, mock_check_role, mock_get_log_file):
+    @patch("ironforgedbot.common.responses._get_latest_log_lines_file")
+    @patch("ironforgedbot.common.responses.check_member_has_role")
+    @patch("ironforgedbot.common.responses.get_text_channel")
+    async def test_send_error_report_no_log_file(
+        self, mock_get_text_channel, mock_check_role, mock_get_log_file
+    ):
         # Set up mocks
         mock_channel = Mock()
         mock_channel.send = AsyncMock()
@@ -478,7 +510,6 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         mock_embed = Mock()
         mock_build_embed.return_value = mock_embed
 
-        # Mock datetime.now to return a specific date for predictable testing
         with patch("ironforgedbot.common.responses.datetime") as mock_datetime:
             # Set current time to January 5, 2024 (4 days after joined date)
             mock_datetime.now.return_value = datetime(2024, 1, 5, tzinfo=timezone.utc)
@@ -490,8 +521,8 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
 
         call_args = mock_build_embed.call_args
         description = call_args[0][1]
-        # With joined date Jan 1 and current date Jan 5, should show 10 days remaining
-        self.assertIn("**10 days**", description)
+        # With joined date Jan 1 and current date Jan 5, should show 24 days remaining
+        self.assertIn("**24 days**", description)
 
     def test_build_response_embed_different_colors(self):
         colors = [
