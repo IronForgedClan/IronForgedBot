@@ -62,11 +62,15 @@ async def job_check_activity(
             absentee_list = await absent_service.process_absent_members()
             known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
 
+            logger.debug(known_absentees)
+
             results = await _find_inactive_users(
                 report_channel,
                 known_absentees,
                 wom_limit,
             )
+
+            logger.debug(results)
 
             if not results:
                 logger.warning(f"Activity check {execution_id} returned no results")
@@ -172,9 +176,9 @@ async def _find_inactive_users(
         List of inactive user data or None if error occurred
     """
     try:
-        async with await get_wom_client() as wom_client:
-            # Get group details with timeout
+        async with get_wom_client() as wom_client:
             try:
+                logger.debug("Getting group details...")
                 wom_group = await asyncio.wait_for(
                     wom_client.get_group_details(), timeout=30.0
                 )
@@ -182,7 +186,6 @@ async def _find_inactive_users(
                 error_msg = f"Failed to get group details: {e}"
                 logger.error(error_msg)
 
-                # Provide user feedback for different error types
                 error_str = str(e).lower()
                 if "rate limit" in error_str:
                     await report_channel.send(
@@ -198,8 +201,8 @@ async def _find_inactive_users(
                     )
                 return None
 
-            # Get all member gains with pagination and timeout
             try:
+                logger.debug("getting member monthly gains..")
                 all_member_gains = await asyncio.wait_for(
                     wom_client.get_all_group_gains(
                         metric=Metric.Overall,
@@ -212,7 +215,6 @@ async def _find_inactive_users(
                 error_msg = f"Failed to get group gains: {e}"
                 logger.error(error_msg)
 
-                # Provide user feedback for different error types
                 error_str = str(e).lower()
                 if "rate limit" in error_str:
                     await report_channel.send(
@@ -228,7 +230,6 @@ async def _find_inactive_users(
                     )
                 return None
 
-            # Process member gains
             results = []
             for member_gains in all_member_gains:
                 try:
@@ -241,7 +242,6 @@ async def _find_inactive_users(
                     logger.warning(
                         f"Error processing member gains for {getattr(member_gains.player, 'username', 'unknown')}: {process_error}"
                     )
-                    # Continue processing other members instead of failing completely
 
             return results
 
@@ -290,7 +290,7 @@ def _process_member_gains(
     if discord_role and is_exempt_from_activity_check(discord_role):
         return None
 
-    # Skip prospects (legacy check for unmapped roles)
+    # Skip prospects
     if wom_member.role == GroupRole.Dogsbody:
         return None
 

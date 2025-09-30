@@ -334,29 +334,29 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ignored, [])
 
 
-class TestGetWomClient(unittest.IsolatedAsyncioTestCase):
+class TestGetWomClient(unittest.TestCase):
     """Test the get_wom_client function."""
 
     @patch("ironforgedbot.services.wom_service.CONFIG")
-    async def test_get_wom_client_success(self, mock_config):
+    def test_get_wom_client_success(self, mock_config):
         """Test successful client creation."""
         mock_config.WOM_API_KEY = "test_key"
         mock_config.WOM_GROUP_ID = 12345
 
-        client = await get_wom_client()
+        client = get_wom_client()
 
         self.assertIsInstance(client, WomClient)
         self.assertEqual(client.api_key, "test_key")
         self.assertEqual(client.group_id, 12345)
 
     @patch("ironforgedbot.services.wom_service.CONFIG")
-    async def test_get_wom_client_missing_config(self, mock_config):
+    def test_get_wom_client_missing_config(self, mock_config):
         """Test client creation with missing configuration."""
         mock_config.WOM_API_KEY = ""
         mock_config.WOM_GROUP_ID = 12345
 
         with self.assertRaises(WomServiceError):
-            await get_wom_client()
+            get_wom_client()
 
 
 if __name__ == "__main__":

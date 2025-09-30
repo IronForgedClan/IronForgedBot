@@ -88,7 +88,7 @@ async def _get_valid_wom_members(
     wom_group_id: int, updates_channel
 ) -> Tuple[List[str] | None, List[str]]:
     try:
-        async with await get_wom_client() as wom_client:
+        async with get_wom_client() as wom_client:
             try:
                 wom_group = await wom_client.get_group_details(wom_group_id)
             except WomServiceError as e:

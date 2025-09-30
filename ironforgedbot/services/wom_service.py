@@ -182,6 +182,8 @@ class WomClient:
         offset = 0
         page = 0
 
+        logger.debug(f"getting group gains")
+
         while page < max_pages:
             gains = await self.get_group_gains(
                 group_id=group_id,
@@ -190,6 +192,8 @@ class WomClient:
                 limit=limit,
                 offset=offset,
             )
+
+            logger.debug(f"gains: {gains}")
 
             if not gains:
                 break
@@ -265,7 +269,7 @@ class WomClient:
         await self.close()
 
 
-async def get_wom_client() -> WomClient:
+def get_wom_client() -> WomClient:
     """Create a configured WOM client.
 
     Returns:
