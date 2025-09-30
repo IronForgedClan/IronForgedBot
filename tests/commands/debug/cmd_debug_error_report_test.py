@@ -121,20 +121,25 @@ class TestCmdDebugErrorReport(unittest.IsolatedAsyncioTestCase):
     async def test_no_original_data_cleanup(self, mock_send_error_response):
         """Test cleanup when there was no original data."""
         # Don't set any original data
-        if hasattr(self.mock_interaction, 'data'):
-            delattr(self.mock_interaction, 'data')
+        if hasattr(self.mock_interaction, "data"):
+            delattr(self.mock_interaction, "data")
 
         await cmd_debug_error_report(self.mock_interaction)
 
         # After the command, data should be cleaned up
-        self.assertFalse(hasattr(self.mock_interaction, 'data'))
+        self.assertFalse(hasattr(self.mock_interaction, "data"))
 
     def test_phantom_command_parameters(self):
         """Test that the phantom command has all expected parameters."""
         # This test validates the expected parameter structure
         expected_params = [
-            "player_name", "amount", "reason", "debug_flag",
-            "category", "nested_param", "emoji_param"
+            "player_name",
+            "amount",
+            "reason",
+            "debug_flag",
+            "category",
+            "nested_param",
+            "emoji_param",
         ]
 
         # We can't directly test the mocked data without running the command

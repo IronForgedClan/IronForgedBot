@@ -19,7 +19,7 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         # Mock CONFIG to have valid values
-        self.config_patcher = patch('ironforgedbot.services.wom_service.CONFIG')
+        self.config_patcher = patch("ironforgedbot.services.wom_service.CONFIG")
         self.mock_config = self.config_patcher.start()
         self.mock_config.WOM_API_KEY = "test_api_key"
         self.mock_config.WOM_GROUP_ID = 12345
@@ -147,7 +147,9 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
 
         result = await client.get_group_details()  # No group_id provided
 
-        mock_wom_client.groups.get_details.assert_called_once_with(12345)  # Uses default
+        mock_wom_client.groups.get_details.assert_called_once_with(
+            12345
+        )  # Uses default
 
     async def test_get_group_details_api_error(self):
         """Test group details retrieval with API error."""
@@ -171,7 +173,7 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
         mock_wom_client = AsyncMock()
         mock_wom_client.groups.get_details.side_effect = [
             Exception("Connection timeout"),
-            Mock(is_ok=True, unwrap=lambda: SimpleNamespace(id=12345))
+            Mock(is_ok=True, unwrap=lambda: SimpleNamespace(id=12345)),
         ]
 
         client = WomClient()
@@ -230,7 +232,9 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
         ]
 
         client = WomClient()
-        with patch.object(client, 'get_group_gains', return_value=gains_page) as mock_get_gains:
+        with patch.object(
+            client, "get_group_gains", return_value=gains_page
+        ) as mock_get_gains:
             result = await client.get_all_group_gains(12345, limit=50)
 
         self.assertEqual(len(result), 30)
@@ -247,11 +251,18 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
     async def test_get_all_group_gains_multiple_pages(self, mock_sleep):
         """Test get_all_group_gains with multiple pages."""
         # First page: full 50 items
-        page1 = [SimpleNamespace(player=SimpleNamespace(username=f"Player{i}")) for i in range(1, 51)]
+        page1 = [
+            SimpleNamespace(player=SimpleNamespace(username=f"Player{i}"))
+            for i in range(1, 51)
+        ]
         # Second page: 30 items (less than limit, so end of data)
-        page2 = [SimpleNamespace(player=SimpleNamespace(username=f"Player{i}")) for i in range(51, 81)]
+        page2 = [
+            SimpleNamespace(player=SimpleNamespace(username=f"Player{i}"))
+            for i in range(51, 81)
+        ]
 
         call_count = 0
+
         async def mock_get_gains(**kwargs):
             nonlocal call_count
             call_count += 1
@@ -261,7 +272,7 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
                 return page2
 
         client = WomClient()
-        with patch.object(client, 'get_group_gains', side_effect=mock_get_gains):
+        with patch.object(client, "get_group_gains", side_effect=mock_get_gains):
             result = await client.get_all_group_gains(12345, limit=50)
 
         self.assertEqual(len(result), 80)
@@ -292,7 +303,7 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
         )
 
         client = WomClient()
-        with patch.object(client, 'get_group_details', return_value=group_detail):
+        with patch.object(client, "get_group_details", return_value=group_detail):
             valid, ignored = await client.get_group_members_with_roles(
                 12345, ignored_roles=[GroupRole.Helper]
             )
@@ -316,7 +327,7 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
         )
 
         client = WomClient()
-        with patch.object(client, 'get_group_details', return_value=group_detail):
+        with patch.object(client, "get_group_details", return_value=group_detail):
             valid, ignored = await client.get_group_members_with_roles(12345)
 
         self.assertEqual(valid, ["Player1", "Player2"])
@@ -326,7 +337,7 @@ class TestWomClient(unittest.IsolatedAsyncioTestCase):
 class TestGetWomClient(unittest.IsolatedAsyncioTestCase):
     """Test the get_wom_client function."""
 
-    @patch('ironforgedbot.services.wom_service.CONFIG')
+    @patch("ironforgedbot.services.wom_service.CONFIG")
     async def test_get_wom_client_success(self, mock_config):
         """Test successful client creation."""
         mock_config.WOM_API_KEY = "test_key"
@@ -338,7 +349,7 @@ class TestGetWomClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(client.api_key, "test_key")
         self.assertEqual(client.group_id, 12345)
 
-    @patch('ironforgedbot.services.wom_service.CONFIG')
+    @patch("ironforgedbot.services.wom_service.CONFIG")
     async def test_get_wom_client_missing_config(self, mock_config):
         """Test client creation with missing configuration."""
         mock_config.WOM_API_KEY = ""

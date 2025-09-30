@@ -141,7 +141,7 @@ def _get_latest_log_lines_file(line_count: int = 50) -> discord.File | None:
     try:
         # Find all log files in the log directory
         files = [os.path.join(str(LOG_DIR), f) for f in os.listdir(str(LOG_DIR))]
-        files = [f for f in files if os.path.isfile(f) and f.endswith('.log')]
+        files = [f for f in files if os.path.isfile(f) and f.endswith(".log")]
 
         if not files:
             logger.warning("No log files found for error report attachment")
@@ -152,7 +152,7 @@ def _get_latest_log_lines_file(line_count: int = 50) -> discord.File | None:
 
         # Read the last N lines efficiently
         lines = []
-        with open(latest_file, 'r', encoding='utf-8') as file:
+        with open(latest_file, "r", encoding="utf-8") as file:
             # Read all lines and get the last N
             all_lines = file.readlines()
             lines = all_lines[-line_count:]
@@ -162,7 +162,7 @@ def _get_latest_log_lines_file(line_count: int = 50) -> discord.File | None:
             return None
 
         # Create file content preserving original formatting
-        log_content = ''.join(lines)
+        log_content = "".join(lines)
 
         # Create filename with timestamp
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")

@@ -29,12 +29,12 @@ class Database:
         """Lazy initialization of database connection."""
         if self._initialized:
             return
-            
+
         if not self._url:
             raise RuntimeError("DATABASE_URL must be set")
 
         logger.info("Initializing database connection")
-        
+
         self._engine: AsyncEngine = create_async_engine(
             self._url,
             echo=False,  # True for SQL debug
@@ -47,7 +47,7 @@ class Database:
             class_=AsyncSession,
             expire_on_commit=False,
         )
-        
+
         self._initialized = True
         logger.info("Database connection initialized successfully")
 

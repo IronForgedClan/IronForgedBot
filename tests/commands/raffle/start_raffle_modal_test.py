@@ -65,7 +65,9 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
             thinking=True, ephemeral=True
         )
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction, "💰 **test** is an invalid 🎫 ticket price.", report_to_channel=False
+            self.mock_interaction,
+            "💰 **test** is an invalid 🎫 ticket price.",
+            report_to_channel=False,
         )
 
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
@@ -90,7 +92,9 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
             thinking=True, ephemeral=True
         )
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction, "💰 **-10** is an invalid 🎫 ticket price.", report_to_channel=False
+            self.mock_interaction,
+            "💰 **-10** is an invalid 🎫 ticket price.",
+            report_to_channel=False,
         )
 
     @patch("ironforgedbot.commands.raffle.start_raffle_modal.send_error_response")
@@ -115,5 +119,7 @@ class TestStartRaffleModal(unittest.IsolatedAsyncioTestCase):
             thinking=True, ephemeral=True
         )
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction, "💰 **0** is an invalid 🎫 ticket price.", report_to_channel=False
+            self.mock_interaction,
+            "💰 **0** is an invalid 🎫 ticket price.",
+            report_to_channel=False,
         )

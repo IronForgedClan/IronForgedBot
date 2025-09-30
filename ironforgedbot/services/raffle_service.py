@@ -103,7 +103,9 @@ class RaffleService:
 
         if ingot_response.status is False:
             return RaffleServiceResponse(
-                False, ingot_response.message, current_raffle_ticket.quantity if current_raffle_ticket else 0
+                False,
+                ingot_response.message,
+                current_raffle_ticket.quantity if current_raffle_ticket else 0,
             )
 
         if current_raffle_ticket:

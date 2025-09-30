@@ -54,7 +54,12 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.cmd_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.STATE")
     async def test_build_embed_raffle_online_no_user_tickets(
-        self, mock_state, mock_create_raffle_service, mock_db, mock_build_embed, mock_find_emoji
+        self,
+        mock_state,
+        mock_create_raffle_service,
+        mock_db,
+        mock_build_embed,
+        mock_find_emoji,
     ):
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
         mock_find_emoji.side_effect = lambda name: (
@@ -98,7 +103,12 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.raffle.cmd_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.cmd_raffle.STATE")
     async def test_build_embed_raffle_online_with_user_tickets(
-        self, mock_state, mock_create_raffle_service, mock_db, mock_build_embed, mock_find_emoji
+        self,
+        mock_state,
+        mock_create_raffle_service,
+        mock_db,
+        mock_build_embed,
+        mock_find_emoji,
     ):
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
         mock_find_emoji.side_effect = lambda name: (

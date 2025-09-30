@@ -44,6 +44,7 @@ class RANK_POINTS(IntEnum):
 
 class RANK_ACTIVITY_THRESHOLDS(IntEnum):
     """Monthly XP thresholds for activity checks based on achievement rank."""
+
     GOD_ZAMORAK = 500_000
     GOD_GUTHIX = 500_000
     GOD_SARADOMIN = 500_000

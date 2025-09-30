@@ -193,7 +193,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         expected_hosts = {
             "secure.runescape.com",
             "hiscores.runescape.com",
-            "services.runescape.com"
+            "services.runescape.com",
         }
         self.assertEqual(self.client._session_reset_hosts, expected_hosts)
 
@@ -246,7 +246,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         test_urls = [
             "https://secure.runescape.com/api/test",
             "https://hiscores.runescape.com/data",
-            "https://services.runescape.com/service"
+            "https://services.runescape.com/service",
         ]
 
         for url in test_urls:
@@ -266,10 +266,18 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
         # Only HTTP should match (same netloc), custom port should NOT match (security)
         self.assertTrue(self.client._should_reset_session(edge_case_urls[0]))  # HTTP
-        self.assertFalse(self.client._should_reset_session(edge_case_urls[1]))  # Custom port - security feature
-        self.assertFalse(self.client._should_reset_session(edge_case_urls[2]))  # Case sensitive
-        self.assertFalse(self.client._should_reset_session(edge_case_urls[3]))  # Fake subdomain
-        self.assertFalse(self.client._should_reset_session(edge_case_urls[4]))  # Spoofed domain
+        self.assertFalse(
+            self.client._should_reset_session(edge_case_urls[1])
+        )  # Custom port - security feature
+        self.assertFalse(
+            self.client._should_reset_session(edge_case_urls[2])
+        )  # Case sensitive
+        self.assertFalse(
+            self.client._should_reset_session(edge_case_urls[3])
+        )  # Fake subdomain
+        self.assertFalse(
+            self.client._should_reset_session(edge_case_urls[4])
+        )  # Spoofed domain
 
     async def test_session_reset_with_post_method(self):
         """Test that POST method doesn't have smart session management (yet)."""
@@ -533,7 +541,9 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.client, "_initialize_session"):
             with patch.object(self.client, "_rate_limit_check"):
                 mock_session = Mock()
-                mock_session.get.side_effect = aiohttp.ServerTimeoutError("Test timeout")
+                mock_session.get.side_effect = aiohttp.ServerTimeoutError(
+                    "Test timeout"
+                )
                 self.client.session = mock_session
 
                 with self.assertRaises(aiohttp.ServerTimeoutError):
@@ -545,7 +555,9 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.client, "_initialize_session"):
             with patch.object(self.client, "_rate_limit_check"):
                 mock_session = Mock()
-                mock_session.get.side_effect = aiohttp.ClientError("Generic client error")
+                mock_session.get.side_effect = aiohttp.ClientError(
+                    "Generic client error"
+                )
                 self.client.session = mock_session
 
                 with self.assertRaises(HttpException) as context:
@@ -1160,8 +1172,9 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         mock_response.content_type = "application/json"
         mock_response.json.return_value = {"test": "data"}
 
-        with patch.object(self.client, "_initialize_session"), \
-             patch.object(self.client, "_rate_limit_check") as mock_rate_limit:
+        with patch.object(self.client, "_initialize_session"), patch.object(
+            self.client, "_rate_limit_check"
+        ) as mock_rate_limit:
 
             mock_session = Mock()
             mock_context_manager = AsyncMock()
@@ -1183,8 +1196,9 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         mock_response.content_type = "application/json"
         mock_response.json.return_value = {"test": "data"}
 
-        with patch.object(self.client, "_initialize_session"), \
-             patch.object(self.client, "_rate_limit_check") as mock_rate_limit:
+        with patch.object(self.client, "_initialize_session"), patch.object(
+            self.client, "_rate_limit_check"
+        ) as mock_rate_limit:
 
             mock_session = Mock()
             mock_context_manager = AsyncMock()

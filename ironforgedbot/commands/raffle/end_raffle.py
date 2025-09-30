@@ -93,8 +93,6 @@ async def handle_end_raffle(
                 f"Error finding winner's details.\n{winner_id}",
             )
 
-
-
         # Award winnings
         ingot_service = create_ingot_service(session)
         winnings = int(total_tickets * int(STATE.state["raffle_price"] / 2))

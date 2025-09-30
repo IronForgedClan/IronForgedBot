@@ -252,7 +252,9 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
         await cmd_whois(self.mock_interaction, "TestPlayer")
 
         mock_send_error_response.assert_called_once_with(
-            self.mock_interaction, "Error getting name change history", report_to_channel=False
+            self.mock_interaction,
+            "Error getting name change history",
+            report_to_channel=False,
         )
         self.mock_wom_client.close.assert_called_once()
 

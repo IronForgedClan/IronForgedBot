@@ -485,7 +485,6 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         automation.scheduler.add_job(job_wrapper, "date", run_date=None)
         job_wrapper()
 
-
     def test_automation_cleanup_on_destruction(self):
         automation = self.create_automation_with_mocks()
 

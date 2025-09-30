@@ -206,4 +206,3 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.followup.send.assert_called_once_with(
             "No members with role '**TESTROLE**' found."
         )
-

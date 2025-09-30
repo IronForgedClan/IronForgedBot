@@ -182,12 +182,14 @@ class IronForgedLogger:
 # Global logger instance (lazy initialization)
 _logger_instance = None
 
+
 def get_logger_instance() -> IronForgedLogger:
     """Get the global logger instance, initializing it if necessary."""
     global _logger_instance
     if _logger_instance is None:
         _logger_instance = IronForgedLogger()
     return _logger_instance
+
 
 # Create a lazy LOG_DIR that will initialize the logger when first accessed
 class _LazyLogDir:
@@ -196,6 +198,7 @@ class _LazyLogDir:
 
     def __repr__(self) -> str:
         return get_logger_instance().log_dir
+
 
 # Export LOG_DIR for backwards compatibility
 LOG_DIR = _LazyLogDir()

@@ -58,6 +58,7 @@ class ServiceFactory:
     async def get_wom_client() -> WomClient:
         """Get WomClient instance with application configuration."""
         from ironforgedbot.services.wom_service import get_wom_client
+
         return await get_wom_client()
 
 
@@ -91,4 +92,5 @@ async def get_wom_client() -> WomClient:
     """Get WomClient instance."""
     # Delegate directly to avoid potential circular imports
     from ironforgedbot.services.wom_service import get_wom_client as get_client
+
     return await get_client()

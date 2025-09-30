@@ -72,9 +72,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
 
-        await job_check_activity(
-            self.mock_report_channel
-        )
+        await job_check_activity(self.mock_report_channel)
 
         mock_absent_service.process_absent_members.assert_called_once()
         mock_find_inactive.assert_called_once_with(
@@ -119,9 +117,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
 
         mock_find_inactive.return_value = None
 
-        await job_check_activity(
-            self.mock_report_channel
-        )
+        await job_check_activity(self.mock_report_channel)
 
         # Should send beginning message and info message about no results
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
@@ -172,9 +168,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
 
-        await job_check_activity(
-            self.mock_report_channel
-        )
+        await job_check_activity(self.mock_report_channel)
 
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
 
@@ -208,7 +202,9 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         from ironforgedbot.services.wom_service import WomServiceError
 
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_group_details.side_effect = WomServiceError("Group not found")
+        mock_wom_service.get_group_details.side_effect = WomServiceError(
+            "Group not found"
+        )
         mock_get_wom_client.return_value.__aenter__.return_value = mock_wom_service
 
         result = await _find_inactive_users(
@@ -230,7 +226,9 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_wom_service = AsyncMock()
         mock_group_detail = Mock()
         mock_wom_service.get_group_details.return_value = mock_group_detail
-        mock_wom_service.get_all_group_gains.side_effect = WomServiceError("API rate limit")
+        mock_wom_service.get_all_group_gains.side_effect = WomServiceError(
+            "API rate limit"
+        )
         mock_get_wom_client.return_value.__aenter__.return_value = mock_wom_service
 
         result = await _find_inactive_users(
@@ -263,9 +261,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_player.username = "TestPlayer"
 
         mock_data = Mock()
-        mock_data.gained = (
-            50000  # Below member threshold which is 150,000
-        )
+        mock_data.gained = 50000  # Below member threshold which is 150,000
 
         mock_member_gains = Mock()
         mock_member_gains.player = mock_player
@@ -378,12 +374,12 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_wom_service.get_group_details.return_value = mock_group
 
         test_cases = [
-            (GroupRole.Helper, "Staff"),           # Maps to ROLE.STAFF
-            (GroupRole.Collector, "Staff"),       # Maps to ROLE.STAFF
+            (GroupRole.Helper, "Staff"),  # Maps to ROLE.STAFF
+            (GroupRole.Collector, "Staff"),  # Maps to ROLE.STAFF
             (GroupRole.Administrator, "Leadership"),  # Maps to ROLE.LEADERSHIP
-            (GroupRole.Colonel, "Staff"),       # Maps to ROLE.STAFF
+            (GroupRole.Colonel, "Staff"),  # Maps to ROLE.STAFF
             (GroupRole.Deputy_owner, "Leadership"),  # Maps to ROLE.LEADERSHIP
-            (GroupRole.Mithril, "Member"),          # Maps to ROLE.MEMBER
+            (GroupRole.Mithril, "Member"),  # Maps to ROLE.MEMBER
         ]
 
         for wom_role, expected_role in test_cases:
@@ -414,13 +410,21 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                     self.mock_report_channel,
                     [],
                     DEFAULT_WOM_LIMIT,
-                        )
+                )
 
                 # Staff and Leadership roles should be exempt from activity checks
                 if expected_role in ["Staff", "Leadership"]:
-                    self.assertEqual(len(result), 0, f"{wom_role} should be exempt from activity checks")
+                    self.assertEqual(
+                        len(result),
+                        0,
+                        f"{wom_role} should be exempt from activity checks",
+                    )
                 else:
-                    self.assertEqual(len(result), 1, f"{wom_role} should be subject to activity checks")
+                    self.assertEqual(
+                        len(result),
+                        1,
+                        f"{wom_role} should be subject to activity checks",
+                    )
                     self.assertEqual(result[0][1], expected_role)
 
 
@@ -526,9 +530,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_render_time.return_value = "5 days ago"
         mock_group = Mock()
 
-        result = _process_member_gains(
-            mock_member_gains, mock_group, []
-        )
+        result = _process_member_gains(mock_member_gains, mock_group, [])
 
         self.assertEqual(result, ["TestPlayer", "Member", "50,000", "5 days ago"])
 
@@ -545,9 +547,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 
         mock_group = Mock()
 
-        result = _process_member_gains(
-            mock_member_gains, mock_group, []
-        )
+        result = _process_member_gains(mock_member_gains, mock_group, [])
 
         self.assertIsNone(result)  # Should return None for active members
 
@@ -564,9 +564,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_group = Mock()
         absentees = ["absentplayer"]  # lowercase
 
-        result = _process_member_gains(
-            mock_member_gains, mock_group, absentees
-        )
+        result = _process_member_gains(mock_member_gains, mock_group, absentees)
 
         self.assertIsNone(result)  # Should return None for absent members
 
@@ -582,9 +580,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 
         mock_group = Mock()
 
-        result = _process_member_gains(
-            mock_member_gains, mock_group, []
-        )
+        result = _process_member_gains(mock_member_gains, mock_group, [])
 
         self.assertIsNone(result)  # Should return None for dogsbody members
 
@@ -596,6 +592,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 
         # Mock JSON decode error when fetching group details
         from ironforgedbot.services.wom_service import WomServiceError
+
         json_error = WomServiceError("JSON is malformed: invalid character (byte 0)")
         mock_wom_service.get_group_details.side_effect = json_error
 
@@ -624,6 +621,7 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
 
         # Mock JSON decode error when fetching gains
         from ironforgedbot.services.wom_service import WomServiceError
+
         json_error = WomServiceError("JSON is malformed: invalid character (byte 0)")
         mock_wom_service.get_all_group_gains.side_effect = json_error
 

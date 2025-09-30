@@ -77,14 +77,18 @@ class TestWomRoleMapping(unittest.TestCase):
         # Unmapped roles should get the highest threshold
         result = get_threshold_for_wom_role(GroupRole.Wizard)
         # Should be GOD rank threshold (highest)
-        expected_god_threshold = get_threshold_for_wom_role(GroupRole.Sage)  # GOD_GUTHIX
+        expected_god_threshold = get_threshold_for_wom_role(
+            GroupRole.Sage
+        )  # GOD_GUTHIX
         self.assertGreaterEqual(result, expected_god_threshold)
 
     def test_get_threshold_for_wom_role_none(self):
         """Test getting threshold for None role."""
         result = get_threshold_for_wom_role(None)
         # Should be GOD rank threshold (highest)
-        expected_god_threshold = get_threshold_for_wom_role(GroupRole.Sage)  # GOD_GUTHIX
+        expected_god_threshold = get_threshold_for_wom_role(
+            GroupRole.Sage
+        )  # GOD_GUTHIX
         self.assertGreaterEqual(result, expected_god_threshold)
 
     def test_get_display_name_for_wom_role_mapped(self):

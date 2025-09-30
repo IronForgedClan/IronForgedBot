@@ -224,12 +224,14 @@ osrs_player_names = [
 async def main():
     start_time = time.time()
     service = get_score_service(HTTP)
-    
+
     for player in osrs_player_names:
         points = 0
 
         try:
-            points = await service.get_player_points_total(normalize_discord_string(player))
+            points = await service.get_player_points_total(
+                normalize_discord_string(player)
+            )
         except HttpException as e:
             points = "HttpException"
             print(e)

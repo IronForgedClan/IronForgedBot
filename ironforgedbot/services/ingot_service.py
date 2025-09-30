@@ -59,8 +59,6 @@ class IngotService:
                 )
             admin_id = admin_member.id
 
-
-
         new_ingot_total = member.ingots + quantity
 
         self.db.add(

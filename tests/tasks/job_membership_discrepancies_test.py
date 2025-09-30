@@ -289,7 +289,9 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_client")
-    async def test_get_valid_wom_members_closes_client_on_exception(self, mock_get_wom_client):
+    async def test_get_valid_wom_members_closes_client_on_exception(
+        self, mock_get_wom_client
+    ):
         mock_wom_service = AsyncMock()
         mock_wom_service.get_group_details.side_effect = Exception("API error")
         mock_get_wom_client.return_value.__aenter__.return_value = mock_wom_service
@@ -300,7 +302,9 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(members, None)
         self.assertEqual(ignored, [])
-        self.mock_report_channel.send.assert_called_with("Error fetching WOM group details.")
+        self.mock_report_channel.send.assert_called_with(
+            "Error fetching WOM group details."
+        )
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_all_discord_members")
     @patch("ironforgedbot.tasks.job_membership_discrepancies._get_valid_wom_members")

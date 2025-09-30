@@ -144,7 +144,7 @@ def setup_database_service_mocks(
     mock_db, mock_service_factory, mock_service_instance=None
 ):
     """Sets up common database and service mocking pattern used across many tests.
-    
+
     Args:
         mock_db: Mock of the database module
         mock_service_factory: Mock of the service factory function (e.g., create_ingot_service)
@@ -160,7 +160,7 @@ def setup_database_service_mocks(
 
     if mock_service_instance is None:
         mock_service_instance = AsyncMock()
-    
+
     # For factory functions, we set the return value directly
     mock_service_factory.return_value = mock_service_instance
 

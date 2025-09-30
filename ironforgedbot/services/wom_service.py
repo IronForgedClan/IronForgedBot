@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class WomServiceError(Exception):
     """Exception raised for WOM service operations."""
+
     pass
 
 
@@ -35,10 +36,7 @@ class WomClient:
     async def _get_client(self) -> wom.Client:
         """Get or create a WOM client instance."""
         if self._client is None:
-            self._client = wom.Client(
-                api_key=self.api_key,
-                user_agent="IronForged"
-            )
+            self._client = wom.Client(api_key=self.api_key, user_agent="IronForged")
             await self._client.start()
         return self._client
 
@@ -87,7 +85,9 @@ class WomClient:
 
             except Exception as e:
                 error_str = str(e).lower()
-                if attempt == 0 and ("timeout" in error_str or "connection" in error_str):
+                if attempt == 0 and (
+                    "timeout" in error_str or "connection" in error_str
+                ):
                     logger.warning(f"Connection error: {e}, retrying...")
                     await asyncio.sleep(1.0)
                     continue
@@ -146,7 +146,9 @@ class WomClient:
 
             except Exception as e:
                 error_str = str(e).lower()
-                if attempt == 0 and ("timeout" in error_str or "connection" in error_str):
+                if attempt == 0 and (
+                    "timeout" in error_str or "connection" in error_str
+                ):
                     logger.warning(f"Connection error: {e}, retrying...")
                     await asyncio.sleep(1.0)
                     continue
@@ -206,7 +208,9 @@ class WomClient:
                 await asyncio.sleep(0.1)
 
         if page >= max_pages:
-            logger.warning(f"Reached max pages limit ({max_pages}), may have incomplete data")
+            logger.warning(
+                f"Reached max pages limit ({max_pages}), may have incomplete data"
+            )
 
         logger.info(f"Retrieved {len(all_gains)} total gains across {page} pages")
         return all_gains
@@ -214,7 +218,7 @@ class WomClient:
     async def get_group_members_with_roles(
         self,
         group_id: Optional[int] = None,
-        ignored_roles: Optional[List[GroupRole]] = None
+        ignored_roles: Optional[List[GroupRole]] = None,
     ) -> tuple[List[str], List[str]]:
         """Get group members, filtering by roles.
 

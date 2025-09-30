@@ -30,6 +30,4 @@ class TestCheckActivityCmd(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Manually initiating activity check job", call_args.args[0])
         self.assertTrue(call_args.kwargs["ephemeral"])
 
-        mock_job_check_activity.assert_called_once_with(
-            self.mock_channel
-        )
+        mock_job_check_activity.assert_called_once_with(self.mock_channel)

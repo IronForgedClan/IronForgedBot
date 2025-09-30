@@ -89,12 +89,12 @@ def is_member_banned(member: discord.Member | None) -> bool:
 
 # Roles that are exempt from activity checks
 ACTIVITY_EXEMPT_ROLES = {
-    ROLE.STAFF,           # Staff exempt from activity requirements
-    ROLE.EVENTS_TEAM,     # Event team exempt
-    ROLE.RECRUITMENT_TEAM, # Recruitment team exempt
-    ROLE.DISCORD_TEAM,    # Discord team exempt
-    ROLE.BOT_TEAM,        # Bot team exempt
-    ROLE.LEADERSHIP,      # Leadership exempt
+    ROLE.STAFF,  # Staff exempt from activity requirements
+    ROLE.EVENTS_TEAM,  # Event team exempt
+    ROLE.RECRUITMENT_TEAM,  # Recruitment team exempt
+    ROLE.DISCORD_TEAM,  # Discord team exempt
+    ROLE.BOT_TEAM,  # Bot team exempt
+    ROLE.LEADERSHIP,  # Leadership exempt
 }
 
 

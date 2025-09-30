@@ -8,7 +8,9 @@ from typing import Callable, Any, Optional
 import discord
 
 
-def log_command_execution(logger: Optional[logging.Logger] = None, interaction_position: int = 0):
+def log_command_execution(
+    logger: Optional[logging.Logger] = None, interaction_position: int = 0
+):
     """Decorator to log Discord command execution.
 
     Args:
@@ -24,15 +26,19 @@ def log_command_execution(logger: Optional[logging.Logger] = None, interaction_p
                 logger if logger is not None else logging.getLogger(func.__module__)
             )
             start_time = time.time()
-            
+
             # Get interaction from the specified position
             if len(args) > interaction_position:
                 interaction = args[interaction_position]
                 if isinstance(interaction, discord.Interaction):
                     user_info = f"{interaction.user} (ID: {interaction.user.id})"
-                    actual_logger.info(f"Command {func.__name__} started by {user_info}")
+                    actual_logger.info(
+                        f"Command {func.__name__} started by {user_info}"
+                    )
                 else:
-                    actual_logger.info(f"Command {func.__name__} started (no interaction)")
+                    actual_logger.info(
+                        f"Command {func.__name__} started (no interaction)"
+                    )
             else:
                 actual_logger.info(f"Command {func.__name__} started (no interaction)")
 

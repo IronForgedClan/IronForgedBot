@@ -8,7 +8,6 @@ from ironforgedbot.common.roles import ROLE
 WOM_TO_DISCORD_ROLE_MAPPING: Dict[GroupRole, ROLE] = {
     # Prospect
     GroupRole.Dogsbody: ROLE.PROSPECT,
-
     # Member roles
     GroupRole.Iron: ROLE.MEMBER,
     GroupRole.Mithril: ROLE.MEMBER,
@@ -17,18 +16,15 @@ WOM_TO_DISCORD_ROLE_MAPPING: Dict[GroupRole, ROLE] = {
     GroupRole.Dragon: ROLE.MEMBER,
     GroupRole.Legend: ROLE.MEMBER,
     GroupRole.Myth: ROLE.MEMBER,
-
     # God alignment roles
     GroupRole.Sage: ROLE.MEMBER,
     GroupRole.Destroyer: ROLE.MEMBER,
     GroupRole.Mediator: ROLE.MEMBER,
-
     # Staff roles
     GroupRole.Collector: ROLE.STAFF,
     GroupRole.Colonel: ROLE.STAFF,
     GroupRole.Brigadier: ROLE.STAFF,
     GroupRole.Helper: ROLE.STAFF,
-
     # Leadership roles
     GroupRole.Admiral: ROLE.LEADERSHIP,
     GroupRole.Marshal: ROLE.LEADERSHIP,
@@ -46,12 +42,10 @@ WOM_TO_DISCORD_RANK_MAPPING: Dict[GroupRole, RANK] = {
     GroupRole.Dragon: RANK.DRAGON,
     GroupRole.Legend: RANK.LEGEND,
     GroupRole.Myth: RANK.MYTH,
-
     # God alignment roles map to GOD rank with alignment
     GroupRole.Sage: RANK.GOD_GUTHIX,
     GroupRole.Destroyer: RANK.GOD_ZAMORAK,
     GroupRole.Mediator: RANK.GOD_SARADOMIN,
-
     # Staff/leadership roles have no specific rank mapping (None handled separately)
     # These are permission-based roles, not achievement ranks
 }
@@ -140,7 +134,7 @@ def get_display_name_for_wom_role(wom_role: Optional[GroupRole]) -> str:
 
     if discord_role is None:
         # For unmapped roles, use the WOM role name with title case
-        return str(wom_role).replace('_', ' ').title()
+        return str(wom_role).replace("_", " ").title()
 
     # Use Discord role name for mapped roles
     return discord_role.value
@@ -156,8 +150,11 @@ def get_all_wom_roles_for_discord_role(discord_role: ROLE) -> list[GroupRole]:
     Returns:
         List of WOM GroupRole values that map to the Discord role
     """
-    return [wom_role for wom_role, mapped_role in WOM_TO_DISCORD_ROLE_MAPPING.items()
-            if mapped_role == discord_role]
+    return [
+        wom_role
+        for wom_role, mapped_role in WOM_TO_DISCORD_ROLE_MAPPING.items()
+        if mapped_role == discord_role
+    ]
 
 
 def get_all_wom_roles_for_discord_rank(discord_rank: RANK) -> list[GroupRole]:
@@ -170,8 +167,11 @@ def get_all_wom_roles_for_discord_rank(discord_rank: RANK) -> list[GroupRole]:
     Returns:
         List of WOM GroupRole values that map to the Discord rank
     """
-    return [wom_role for wom_role, mapped_rank in WOM_TO_DISCORD_RANK_MAPPING.items()
-            if mapped_rank == discord_rank]
+    return [
+        wom_role
+        for wom_role, mapped_rank in WOM_TO_DISCORD_RANK_MAPPING.items()
+        if mapped_rank == discord_rank
+    ]
 
 
 def validate_role_mappings() -> list[str]:

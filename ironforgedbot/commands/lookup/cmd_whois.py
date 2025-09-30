@@ -18,9 +18,7 @@ logger = logging.getLogger(__name__)
 
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
-@app_commands.describe(
-    player="Player name to get RuneScape name change history for"
-)
+@app_commands.describe(player="Player name to get RuneScape name change history for")
 @app_commands.autocomplete(player=member_nickname_autocomplete)
 async def cmd_whois(interaction: discord.Interaction, player: str):
     """Get player's rsn history
