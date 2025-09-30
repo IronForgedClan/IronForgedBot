@@ -11,7 +11,7 @@ from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.services.raffle_service import RaffleService
 from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import get_score_service, ScoreService
-from ironforgedbot.services.wom_service import WomClient
+from ironforgedbot.services.wom_service import WomService
 
 logger = logging.getLogger(__name__)
 
@@ -55,11 +55,11 @@ class ServiceFactory:
         return AbsentMemberService(session)
 
     @staticmethod
-    def get_wom_client() -> WomClient:
-        """Get WomClient instance with application configuration."""
-        from ironforgedbot.services.wom_service import get_wom_client
+    def get_wom_service() -> WomService:
+        """Get WomService instance with application configuration."""
+        from ironforgedbot.services.wom_service import get_wom_service
 
-        return get_wom_client()
+        return get_wom_service()
 
 
 # Convenience functions for cleaner imports
@@ -88,9 +88,9 @@ def create_absent_service(session: AsyncSession) -> AbsentMemberService:
     return ServiceFactory.create_absent_service(session)
 
 
-def get_wom_client() -> WomClient:
-    """Get WomClient instance."""
+def get_wom_service() -> WomService:
+    """Get WomService instance."""
     # Delegate directly to avoid potential circular imports
-    from ironforgedbot.services.wom_service import get_wom_client as get_client
+    from ironforgedbot.services.wom_service import get_wom_service as get_service
 
-    return get_client()
+    return get_service()
