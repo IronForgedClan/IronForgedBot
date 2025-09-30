@@ -33,7 +33,7 @@ from ironforgedbot.services.score_service import (
 
 logger = logging.getLogger(__name__)
 
-PROBATION_DAYS = 14
+PROBATION_DAYS = 28
 
 
 @log_task_execution(logger)
