@@ -32,9 +32,7 @@ async def job_check_membership_discrepancies(
     await report_channel.send("Beginning membership discrepancy check...")
 
     discord_members = get_all_discord_members(guild)
-    wom_members, wom_ignore = await _get_valid_wom_members(
-        wom_group_id, report_channel
-    )
+    wom_members, wom_ignore = await _get_valid_wom_members(wom_group_id, report_channel)
 
     if len(discord_members) < 1:
         return await report_channel.send(
@@ -45,7 +43,7 @@ async def job_check_membership_discrepancies(
         return await report_channel.send("Error computing wom member list, aborting.")
 
     ignored = wom_ignore + IGNORED_USERS
-    logger.info(ignored)
+    logger.debug(ignored)
 
     discord_members = [
         normalize_username(member)
@@ -96,9 +94,13 @@ async def _get_valid_wom_members(
             except WomServiceError as e:
                 error_str = str(e).lower()
                 if "rate limit" in error_str:
-                    await updates_channel.send("WOM API rate limit exceeded. Please wait before trying again.")
+                    await updates_channel.send(
+                        "WOM API rate limit exceeded. Please wait before trying again."
+                    )
                 elif "timeout" in error_str or "connection" in error_str:
-                    await updates_channel.send("WOM API connection timeout. Please check internet connectivity.")
+                    await updates_channel.send(
+                        "WOM API connection timeout. Please check internet connectivity."
+                    )
                 else:
                     await updates_channel.send("Error fetching WOM group details.")
                 return None, []
@@ -110,13 +112,13 @@ async def _get_valid_wom_members(
                 member_rsn = normalize_discord_string(member.player.username)
 
                 if member_role is None:
-                    logger.info(f"{member_rsn} has no role, skipping.")
+                    logger.debug(f"{member_rsn} has no role, skipping.")
                     continue
 
                 if member_role in IGNORED_ROLES:
-                    logger.info(f"{member_rsn} has ignored role, skipping.")
+                    logger.debug(f"{member_rsn} has ignored role, skipping.")
                     if member_rsn not in IGNORED_USERS:
-                        logger.info(f"adding {member_rsn} to ignored members list.")
+                        logger.debug(f"adding {member_rsn} to ignored members list.")
                         ignore_members.append(member_rsn)
                     continue
 
