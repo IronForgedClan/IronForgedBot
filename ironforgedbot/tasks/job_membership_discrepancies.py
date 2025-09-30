@@ -10,8 +10,12 @@ from ironforgedbot.common.helpers import (
     normalize_discord_string,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
-from ironforgedbot.services.service_factory import get_wom_client
-from ironforgedbot.services.wom_service import WomServiceError
+from ironforgedbot.services.wom_service import (
+    get_wom_service,
+    WomServiceError,
+    WomRateLimitError,
+    WomTimeoutError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -88,21 +92,21 @@ async def _get_valid_wom_members(
     wom_group_id: int, updates_channel
 ) -> Tuple[List[str] | None, List[str]]:
     try:
-        async with get_wom_client() as wom_client:
+        async with get_wom_service() as wom_service:
             try:
-                wom_group = await wom_client.get_group_details(wom_group_id)
-            except WomServiceError as e:
-                error_str = str(e).lower()
-                if "rate limit" in error_str:
-                    await updates_channel.send(
-                        "WOM API rate limit exceeded. Please wait before trying again."
-                    )
-                elif "timeout" in error_str or "connection" in error_str:
-                    await updates_channel.send(
-                        "WOM API connection timeout. Please check internet connectivity."
-                    )
-                else:
-                    await updates_channel.send("Error fetching WOM group details.")
+                wom_group = await wom_service.get_group_membership_data(wom_group_id)
+            except WomRateLimitError:
+                await updates_channel.send(
+                    "WOM API rate limit exceeded. Please wait before trying again."
+                )
+                return None, []
+            except WomTimeoutError:
+                await updates_channel.send(
+                    "WOM API connection timeout. Please check internet connectivity."
+                )
+                return None, []
+            except WomServiceError:
+                await updates_channel.send("Error fetching WOM group details.")
                 return None, []
 
             members: List[str] = []

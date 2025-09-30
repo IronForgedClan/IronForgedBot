@@ -3,15 +3,20 @@ import logging
 import discord
 from discord import app_commands
 
-from wom import Client, NameChangeStatus
+from wom import NameChangeStatus
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
 from ironforgedbot.common.helpers import render_relative_time, validate_playername
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
+from ironforgedbot.services.wom_service import (
+    get_wom_service,
+    WomServiceError,
+    WomRateLimitError,
+    WomTimeoutError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,16 +44,21 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
     display_name = member.display_name if member is not None else player
 
     try:
-        wom_client = Client(api_key=CONFIG.WOM_API_KEY, user_agent="IronForged")
-        await wom_client.start()
-    except Exception as e:
-        logger.critical(e)
-        return await send_error_response(interaction, "Error connecting to api")
-
-    result = await wom_client.players.get_name_changes(player)
-
-    if result.is_err:
-        await wom_client.close()
+        async with get_wom_service() as wom_service:
+            name_changes = await wom_service.get_player_name_history(player)
+    except WomRateLimitError:
+        return await send_error_response(
+            interaction,
+            "WOM API rate limit exceeded. Please try again later.",
+            report_to_channel=False,
+        )
+    except WomTimeoutError:
+        return await send_error_response(
+            interaction,
+            "WOM API connection timed out. Please try again.",
+            report_to_channel=False,
+        )
+    except WomServiceError:
         return await send_error_response(
             interaction, "Error getting name change history", report_to_channel=False
         )
@@ -59,9 +69,7 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
         discord.Colour.purple(),
     )
 
-    details = result.unwrap()
-
-    if len(details) <= 0:
+    if len(name_changes) <= 0:
         embed.add_field(
             name="",
             value="No name changes found for this user.",
@@ -69,11 +77,11 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
         )
     else:
         field_count = 0
-        for change in details:
+        for change in name_changes:
             if field_count == 24:
                 embed.add_field(
                     name="",
-                    value=f"...and {text_bold(str(len(details) - field_count))} more not shown.",
+                    value=f"...and {text_bold(str(len(name_changes) - field_count))} more not shown.",
                     inline=False,
                 )
                 break
@@ -93,5 +101,4 @@ async def cmd_whois(interaction: discord.Interaction, player: str):
                 inline=False,
             )
 
-    await wom_client.close()
     await interaction.followup.send(embed=embed)

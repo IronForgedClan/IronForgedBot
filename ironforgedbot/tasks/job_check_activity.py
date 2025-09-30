@@ -1,4 +1,3 @@
-import asyncio
 import io
 import logging
 from datetime import datetime
@@ -6,9 +5,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 import discord
-import wom
 from tabulate import tabulate
-from wom import GroupRole, Metric, Period
+from wom import GroupRole
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
@@ -19,9 +17,13 @@ from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.database.database import db
 from ironforgedbot.services.service_factory import (
     create_absent_service,
-    get_wom_client,
 )
-from ironforgedbot.services.wom_service import WomServiceError
+from ironforgedbot.services.wom_service import (
+    get_wom_service,
+    WomServiceError,
+    WomRateLimitError,
+    WomTimeoutError,
+)
 from ironforgedbot.common.wom_role_mapping import (
     get_threshold_for_wom_role,
     get_display_name_for_wom_role,
@@ -176,58 +178,27 @@ async def _find_inactive_users(
         List of inactive user data or None if error occurred
     """
     try:
-        async with get_wom_client() as wom_client:
+        async with get_wom_service() as wom_service:
             try:
-                logger.debug("Getting group details...")
-                wom_group = await asyncio.wait_for(
-                    wom_client.get_group_details(), timeout=30.0
+                logger.debug("Getting monthly activity data...")
+                wom_group, all_member_gains = (
+                    await wom_service.get_monthly_activity_data()
                 )
-            except (WomServiceError, asyncio.TimeoutError) as e:
-                error_msg = f"Failed to get group details: {e}"
-                logger.error(error_msg)
 
-                error_str = str(e).lower()
-                if "rate limit" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
-                    )
-                elif "timeout" in error_str or "connection" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
-                    )
-                else:
-                    await report_channel.send(
-                        "❌ WOM API is currently unavailable. Please try again later."
-                    )
+            except WomRateLimitError:
+                await report_channel.send(
+                    "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                )
                 return None
-
-            try:
-                logger.debug("getting member monthly gains..")
-                all_member_gains = await asyncio.wait_for(
-                    wom_client.get_all_group_gains(
-                        metric=Metric.Overall,
-                        period=Period.Month,
-                        limit=wom_limit,
-                    ),
-                    timeout=120.0,  # Longer timeout for pagination
+            except WomTimeoutError:
+                await report_channel.send(
+                    "❌ WOM API connection timed out. Please check internet connectivity and try again."
                 )
-            except (WomServiceError, asyncio.TimeoutError) as e:
-                error_msg = f"Failed to get group gains: {e}"
-                logger.error(error_msg)
-
-                error_str = str(e).lower()
-                if "rate limit" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
-                    )
-                elif "timeout" in error_str or "connection" in error_str:
-                    await report_channel.send(
-                        "❌ WOM API connection timed out. Please check internet connectivity and try again."
-                    )
-                else:
-                    await report_channel.send(
-                        "❌ WOM API error occurred. Please try again later."
-                    )
+                return None
+            except WomServiceError:
+                await report_channel.send(
+                    "❌ WOM API is currently unavailable. Please try again later."
+                )
                 return None
 
             results = []
@@ -246,17 +217,10 @@ async def _find_inactive_users(
             return results
 
     except Exception as e:
-        error_type = type(e).__name__
-        if "JSON" in str(e) or "Decode" in error_type:
-            logger.error(f"WOM API returned malformed JSON data: {e}")
-            await report_channel.send(
-                "❌ WOM API returned malformed data. This is likely a temporary issue with the WOM service."
-            )
-        else:
-            logger.error(f"Unexpected error in _find_inactive_users: {e}")
-            await report_channel.send(
-                f"❌ Unexpected error processing WOM data: {error_type}"
-            )
+        logger.error(f"Unexpected error in _find_inactive_users: {e}")
+        await report_channel.send(
+            "❌ Unexpected error processing WOM data. Please try again later."
+        )
         return None
 
 
