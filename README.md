@@ -197,6 +197,9 @@ view its source command and try running that instead.
 - `make format`\
   Formats the codebase using Black formatter.
 
+- `make shell`\
+  Opens an interactive bash shell inside the bot container.
+
 - `make migrate`\
   Runs the database migrations.
 
@@ -211,7 +214,7 @@ view its source command and try running that instead.
   Updates all project dependencies to their latest versions and rebuilds the container.
 
 - `make clean`\
-  Cleans up Docker resources including old containers, images, and volumes to free up disk space.
+  Stops containers, removes project containers and images, and prunes unused Docker resources to free up disk space.
 
 ## Tooling
 
