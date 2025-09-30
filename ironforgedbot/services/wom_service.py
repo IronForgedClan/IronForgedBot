@@ -98,10 +98,10 @@ class WomService:
                 self._get_group_details(client, group_id), timeout=30.0
             )
 
-            # Get monthly member gains with pagination
+            # Get monthly member gains with extended timeout for slow WOM API
             logger.debug(f"Fetching monthly gains for group {group_id}")
             member_gains = await asyncio.wait_for(
-                self._get_all_group_gains(client, group_id), timeout=120.0
+                self._get_all_group_gains(client, group_id), timeout=300.0
             )
 
             logger.info(
@@ -110,8 +110,12 @@ class WomService:
             return group_details, member_gains
 
         except asyncio.TimeoutError as e:
-            logger.error(f"Timeout getting activity data for group {group_id}: {e}")
-            raise WomTimeoutError("WOM API request timed out")
+            logger.error(
+                f"Timeout getting activity data for group {group_id} after 300s: {e}"
+            )
+            raise WomTimeoutError(
+                "WOM API request timed out - the gains endpoint is currently very slow"
+            )
         except Exception as e:
             logger.error(f"Error getting activity data for group {group_id}: {e}")
             self._handle_wom_error(e)
@@ -198,9 +202,16 @@ class WomService:
             raise
         except Exception as e:
             error_str = str(e).lower()
-            logger.error(f"Error getting name history for {player_name}: {type(e).__name__}: {e}")
-            if any(keyword in error_str for keyword in ['json', 'decode', 'parse', 'invalid']):
-                logger.error(f"Detected JSON parsing error for {player_name}, WOM API may have returned HTML instead of JSON")
+            logger.error(
+                f"Error getting name history for {player_name}: {type(e).__name__}: {e}"
+            )
+            if any(
+                keyword in error_str
+                for keyword in ["json", "decode", "parse", "invalid"]
+            ):
+                logger.error(
+                    f"Detected JSON parsing error for {player_name}, WOM API may have returned HTML instead of JSON"
+                )
             self._handle_wom_error(e)
 
     async def _get_group_details(
@@ -220,9 +231,16 @@ class WomService:
 
         except Exception as e:
             error_str = str(e).lower()
-            logger.error(f"Unexpected error getting group details: {type(e).__name__}: {e}")
-            if any(keyword in error_str for keyword in ['json', 'decode', 'parse', 'invalid']):
-                logger.error("Detected JSON parsing error, WOM API may have returned HTML instead of JSON")
+            logger.error(
+                f"Unexpected error getting group details: {type(e).__name__}: {e}"
+            )
+            if any(
+                keyword in error_str
+                for keyword in ["json", "decode", "parse", "invalid"]
+            ):
+                logger.error(
+                    "Detected JSON parsing error, WOM API may have returned HTML instead of JSON"
+                )
             raise
 
     async def _get_all_group_gains(
@@ -238,60 +256,47 @@ class WomService:
         logger.debug("Starting to fetch group gains with pagination")
 
         while page < max_pages:
-            # Retry logic for transient errors
-            max_retries = 2  # Reduced from 3 to minimize delay accumulation
-            retry_delay = 1.0
+            try:
+                logger.debug(
+                    f"Fetching gains page {page + 1}, offset={offset}, limit={limit}"
+                )
 
-            for attempt in range(max_retries):
-                try:
-                    logger.debug(f"Fetching gains page {page + 1}, offset={offset}, limit={limit} (attempt {attempt + 1})")
+                result = await client.groups.get_gains(
+                    group_id,
+                    metric=Metric.Overall,
+                    period=Period.Month,
+                    limit=limit,
+                    offset=offset,
+                )
 
-                    # Remove nested timeout - rely on outer timeout for entire operation
-                    result = await client.groups.get_gains(
-                        group_id,
-                        metric=Metric.Overall,
-                        period=Period.Month,
-                        limit=limit,
-                        offset=offset,
+                if result.is_ok:
+                    gains = result.unwrap()
+                    logger.debug(
+                        f"Page {page + 1}: successfully retrieved {len(gains)} gains"
+                    )
+                else:
+                    error_details = result.unwrap_err()
+                    logger.error(
+                        f"WOM API error getting group gains page {page + 1}: {error_details}"
+                    )
+                    raise WomServiceError(f"WOM API error: {error_details}")
+
+            except Exception as e:
+                error_str = str(e).lower()
+                logger.error(
+                    f"Unexpected error fetching gains page {page + 1}: {type(e).__name__}: {e}"
+                )
+
+                # Check if this looks like a JSON parsing error
+                if any(
+                    keyword in error_str
+                    for keyword in ["json", "decode", "parse", "invalid"]
+                ):
+                    logger.error(
+                        f"Detected JSON parsing error on page {page + 1}, this may indicate WOM API returned unexpected response format"
                     )
 
-                    if result.is_ok:
-                        gains = result.unwrap()
-                        logger.debug(f"Page {page + 1}: successfully retrieved {len(gains)} gains")
-                        break  # Success, exit retry loop
-                    else:
-                        error_details = result.unwrap_err()
-                        logger.error(f"WOM API error getting group gains page {page + 1}: {error_details}")
-
-                        # Check if this is a transient error that we should retry
-                        error_str = str(error_details).lower()
-                        if attempt < max_retries - 1 and any(keyword in error_str for keyword in ['timeout', 'rate limit', 'server error', '502', '503', '504']):
-                            logger.warning(f"Transient error on page {page + 1}, attempt {attempt + 1}, retrying in {retry_delay}s...")
-                            await asyncio.sleep(retry_delay)
-                            retry_delay *= 2  # Exponential backoff
-                            continue
-                        else:
-                            raise WomServiceError(f"WOM API error: {error_details}")
-
-                except Exception as e:
-                    error_str = str(e).lower()
-                    logger.error(f"Unexpected error fetching gains page {page + 1}, attempt {attempt + 1}: {type(e).__name__}: {e}")
-
-                    # Check if this looks like a JSON parsing error or other transient issue
-                    is_json_error = any(keyword in error_str for keyword in ['json', 'decode', 'parse', 'invalid'])
-                    is_connection_error = any(keyword in error_str for keyword in ['connection', 'network', 'timeout'])
-
-                    if is_json_error:
-                        logger.error(f"Detected JSON parsing error on page {page + 1}, this may indicate WOM API returned HTML instead of JSON")
-
-                    # Retry for certain types of errors
-                    if attempt < max_retries - 1 and (is_json_error or is_connection_error):
-                        logger.warning(f"Retrying page {page + 1} due to transient error in {retry_delay}s...")
-                        await asyncio.sleep(retry_delay)
-                        retry_delay *= 2
-                        continue
-                    else:
-                        raise
+                raise
 
             if not gains:
                 logger.debug(f"Page {page + 1}: no gains returned, ending pagination")
@@ -301,7 +306,9 @@ class WomService:
 
             # If we got fewer results than the limit, we've reached the end
             if len(gains) < limit:
-                logger.debug(f"Page {page + 1}: received {len(gains)} gains (less than limit {limit}), ending pagination")
+                logger.debug(
+                    f"Page {page + 1}: received {len(gains)} gains (less than limit {limit}), ending pagination"
+                )
                 break
 
             offset += limit
