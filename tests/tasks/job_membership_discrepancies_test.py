@@ -256,11 +256,11 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_report_channel.send.call_args_list, expected_calls)
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_client")
-    async def test_get_valid_wom_members_success(self, mock_get_wom_client):
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
+    async def test_get_valid_wom_members_success(self, mock_get_wom_service):
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_group_details.return_value = mock_wom_group_detail
-        mock_get_wom_client.return_value.__aenter__.return_value = mock_wom_service
+        mock_wom_service.get_group_membership_data.return_value = mock_wom_group_detail
+        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         members, ignored = await _get_valid_wom_members(
             self.wom_group_id, self.mock_report_channel
@@ -268,15 +268,15 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(members, ["tester"])
         self.assertEqual(ignored, ["ignored_user"])
-        mock_wom_service.get_group_details.assert_called_once_with(self.wom_group_id)
+        mock_wom_service.get_group_membership_data.assert_called_once_with(self.wom_group_id)
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_client")
-    async def test_get_valid_wom_members_handles_wom_error(self, mock_get_wom_client):
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
+    async def test_get_valid_wom_members_handles_wom_error(self, mock_get_wom_service):
         from ironforgedbot.services.wom_service import WomServiceError
 
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_group_details.side_effect = WomServiceError("API error")
-        mock_get_wom_client.return_value.__aenter__.return_value = mock_wom_service
+        mock_wom_service.get_group_membership_data.side_effect = WomServiceError("API error")
+        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         members, ignored = await _get_valid_wom_members(
             self.wom_group_id, self.mock_report_channel
@@ -288,13 +288,13 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
             "Error fetching WOM group details."
         )
 
-    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_client")
+    @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
     async def test_get_valid_wom_members_closes_client_on_exception(
-        self, mock_get_wom_client
+        self, mock_get_wom_service
     ):
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_group_details.side_effect = Exception("API error")
-        mock_get_wom_client.return_value.__aenter__.return_value = mock_wom_service
+        mock_wom_service.get_group_membership_data.side_effect = Exception("API error")
+        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         members, ignored = await _get_valid_wom_members(
             self.wom_group_id, self.mock_report_channel
