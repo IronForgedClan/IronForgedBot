@@ -9,7 +9,6 @@ import discord
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.database.database import db
-from ironforgedbot.decorators import singleton
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.state import STATE
@@ -47,7 +46,6 @@ class TrickOrTreat(Enum):
     JACKPOT_INGOTS = 10_000
 
 
-@singleton
 class TrickOrTreatHandler:
     """Handler for the trick-or-treat Halloween event minigame.
 
@@ -572,3 +570,23 @@ class TrickOrTreatHandler:
         self._add_to_history(chosen_gif, self.gif_history, GIF_HISTORY_LIMIT)
 
         return await interaction.followup.send(chosen_gif)
+
+
+# Module-level handler instance cache
+_handler_instance: Optional[TrickOrTreatHandler] = None
+
+
+def get_handler() -> TrickOrTreatHandler:
+    """Get the singleton TrickOrTreatHandler instance.
+
+    Uses lazy initialization to create the handler only once and cache it
+    for subsequent calls. This avoids reloading JSON data and maintains
+    message/GIF history across multiple command invocations.
+
+    Returns:
+        The cached TrickOrTreatHandler instance.
+    """
+    global _handler_instance
+    if _handler_instance is None:
+        _handler_instance = TrickOrTreatHandler()
+    return _handler_instance

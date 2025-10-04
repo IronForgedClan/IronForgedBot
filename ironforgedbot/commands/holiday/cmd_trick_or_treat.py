@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.holiday.trick_or_treat_handler import TrickOrTreatHandler
+from ironforgedbot.commands.holiday.trick_or_treat_handler import get_handler
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
@@ -16,5 +16,5 @@ logger = logging.getLogger(__name__)
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
 async def cmd_trick_or_treat(interaction: discord.Interaction):
-    handler = await TrickOrTreatHandler()
+    handler = get_handler()
     return await handler.random_result(interaction)
