@@ -1,7 +1,7 @@
 {
     "GENERAL": {
         "POSITIVE_MESSAGES": [
-            ":tada: Treat! **{ingots}**!\ngzzzzzzzzzzzzz :jack_o_lantern:",
+            ":tada: **{ingots}**!\ngzzzzzzzzzzzzz :jack_o_lantern:",
             "Oh fine.\n**{ingots}** is a small price to pay to get out of this interaction.",
             "Congratulations on your life changing payout of...\n\n**{ingots}**!",
             "I'm feeling generous.\nHere is **{ingots}** ingots, go get yourself something nice.",
@@ -66,13 +66,13 @@
         "MESSAGE": "You lost **{ingot_icon}-{amount:,}**...\nNow that's gotta sting."
     },
     "DOUBLE_OR_NOTHING": {
-        "OFFER": "🎲 **Double or Nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick below within 30 seconds to risk it all for a chance to **double your winnings**!",
+        "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick below within ⏳ **30 seconds** to risk it all for a chance to __double__ your winnings!",
         "WIN": "💰 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
         "LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
     },
     "STEAL": {
-        "OFFER": "**Steal?**\n\nYou have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following **staff** members.\n\nChoose your target wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing. You have **60 seconds** to decice.",
+        "OFFER": "**Steal?**\n\nYou have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following **staff** members.\n\nChoose your target wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing. You have **60 seconds** to decide.",
         "SUCCESS": "💰 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
         "FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
         "WALK_AWAY": "🚶 **You walked away.**\n\nSometimes the best heist is the one you don't attempt.",
