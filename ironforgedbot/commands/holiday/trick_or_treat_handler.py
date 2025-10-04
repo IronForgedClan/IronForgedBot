@@ -177,7 +177,11 @@ class TrickOrTreatHandler:
             A message template string with {ingots} placeholder.
         """
         chosen = random.choice(
-            [s for s in self.POSITIVE_MESSAGES if s not in self.positive_message_history]
+            [
+                s
+                for s in self.POSITIVE_MESSAGES
+                if s not in self.positive_message_history
+            ]
         )
         self._add_to_history(
             chosen, self.positive_message_history, POSITIVE_MESSAGE_HISTORY_LIMIT
@@ -198,7 +202,11 @@ class TrickOrTreatHandler:
             )
 
         chosen = random.choice(
-            [s for s in self.NEGATIVE_MESSAGES if s not in self.negative_message_history]
+            [
+                s
+                for s in self.NEGATIVE_MESSAGES
+                if s not in self.negative_message_history
+            ]
         )
         self._add_to_history(
             chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT
@@ -427,7 +435,9 @@ class TrickOrTreatHandler:
         )
         embed = self._build_embed(
             message
-            + self._get_balance_message(interaction.user.display_name, user_new_total or 0)
+            + self._get_balance_message(
+                interaction.user.display_name, user_new_total or 0
+            )
         )
         embed.set_thumbnail(
             url=(
@@ -466,7 +476,8 @@ class TrickOrTreatHandler:
                     ingot_icon=self.ingot_icon, amount=member.ingots
                 )
                 embed = self._build_embed(
-                    message + self._get_balance_message(interaction.user.display_name, 0)
+                    message
+                    + self._get_balance_message(interaction.user.display_name, 0)
                 )
             embed.set_thumbnail(
                 url=(
@@ -518,7 +529,9 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        await interaction.followup.send(embed=self._build_embed(random.choice(self.JOKES)))
+        await interaction.followup.send(
+            embed=self._build_embed(random.choice(self.JOKES))
+        )
 
     async def result_gif(self, interaction: discord.Interaction) -> None:
         """Send a random Halloween-themed GIF.
@@ -542,7 +555,6 @@ class TrickOrTreatHandler:
         """
         assert interaction.guild
 
-        # Generate a random amount to win first (somewhere between LOW and HIGH)
         quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
 
         # Award the ingots
