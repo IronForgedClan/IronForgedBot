@@ -143,6 +143,7 @@ class StealTargetView(discord.ui.View):
         self.user_id = user_id
         self.amount = amount
         self.has_interacted = False
+        self.message: Optional[discord.Message] = None
 
         for target in targets:
             button = discord.ui.Button(
@@ -228,8 +229,21 @@ class StealTargetView(discord.ui.View):
         self.stop()
 
     async def on_timeout(self):
-        """Handle the view timing out."""
-        pass
+        """Handle the view timing out after 30 seconds."""
+        if self.has_interacted or not self.message:
+            return
+
+        # Disable all buttons
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
+        # Update the message with timeout notification
+        embed = self.handler._build_embed(self.handler.STEAL_EXPIRED)
+        try:
+            await self.message.edit(embed=embed, view=self)
+        except discord.HTTPException:
+            pass  # Message may have been deleted
 
 
 class TrickOrTreatHandler:
@@ -267,6 +281,7 @@ class TrickOrTreatHandler:
         self.STEAL_SUCCESS: str
         self.STEAL_FAILURE: str
         self.STEAL_WALK_AWAY: str
+        self.STEAL_EXPIRED: str
         self.STEAL_NO_TARGETS: str
         self.STEAL_TARGET_NO_INGOTS: str
         self.STEAL_USER_NO_INGOTS: str
@@ -293,6 +308,7 @@ class TrickOrTreatHandler:
             self.STEAL_SUCCESS = data["STEAL"]["SUCCESS"]
             self.STEAL_FAILURE = data["STEAL"]["FAILURE"]
             self.STEAL_WALK_AWAY = data["STEAL"]["WALK_AWAY"]
+            self.STEAL_EXPIRED = data["STEAL"]["EXPIRED"]
             self.STEAL_NO_TARGETS = data["STEAL"]["NO_TARGETS"]
             self.STEAL_TARGET_NO_INGOTS = data["STEAL"]["TARGET_NO_INGOTS"]
             self.STEAL_USER_NO_INGOTS = data["STEAL"]["USER_NO_INGOTS"]
@@ -508,6 +524,7 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
+        return await self.result_steal(interaction)
         match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await self.result_jackpot(interaction)
@@ -836,7 +853,8 @@ class TrickOrTreatHandler:
 
         # Create and send the view with target buttons + walk away button
         view = StealTargetView(self, interaction.user.id, quantity, targets)
-        await interaction.followup.send(embed=embed, view=view)
+        message = await interaction.followup.send(embed=embed, view=view)
+        view.message = message
 
     async def _process_steal(
         self, interaction: discord.Interaction, amount: int, target: discord.Member

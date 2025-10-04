@@ -76,6 +76,7 @@
         "SUCCESS": "💰 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
         "FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
         "WALK_AWAY": "🚶 **You walked away.**\n\nSometimes the best heist is the one you don't attempt.",
+        "EXPIRED": "⏱️ **Time's up!**\n\nYou took too long to decide. The opportunity has passed.",
         "NO_TARGETS": "There are no targets available to steal from right now. Try again later!",
         "TARGET_NO_INGOTS": "{target_mention} has no ingots to steal. You get nothing, but you also avoid getting caught!",
         "USER_NO_INGOTS": "You don't have enough ingots to risk a failed steal attempt. You need at least **{ingot_icon}{penalty:,}** ingots."
