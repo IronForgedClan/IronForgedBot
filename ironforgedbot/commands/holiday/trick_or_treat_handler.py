@@ -38,12 +38,12 @@ class TrickOrTreat(Enum):
     """
 
     # fmt: off
-    GIF = 287                      # 28.7% (1/3.5)
-    DOUBLE_OR_NOTHING = 150        # 15.0% (1/6.7)
+    GIF = 337                      # 33.7% (1/3.0)
     REMOVE_INGOTS_LOW = 150        # 15.0% (1/6.7)
     ADD_INGOTS_LOW = 140           # 14.0% (1/7.1)
     REMOVE_INGOTS_HIGH = 130       # 13.0% (1/7.7)
     ADD_INGOTS_HIGH = 120          # 12.0% (1/8.3)
+    DOUBLE_OR_NOTHING = 100        # 10.0% (1/10.0)
     JOKE = 20                      #  2.0% (1/50.0)
     REMOVE_ALL_INGOTS_TRICK = 20   #  2.0% (1/50.0)
     JACKPOT_INGOTS = 3             #  0.3% (1/333.3)
@@ -97,11 +97,9 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
-        # Disable the button
         button.disabled = True
         await interaction.response.edit_message(view=self)
 
-        # Process the double-or-nothing result
         await self.handler._process_double_or_nothing(interaction, self.amount)
 
         # Remove from active offers
@@ -109,7 +107,6 @@ class DoubleOrNothingView(discord.ui.View):
         if user_id_str in STATE.state["double_or_nothing_offers"]:
             del STATE.state["double_or_nothing_offers"][user_id_str]
 
-        # Stop the view
         self.stop()
 
     async def on_timeout(self):
