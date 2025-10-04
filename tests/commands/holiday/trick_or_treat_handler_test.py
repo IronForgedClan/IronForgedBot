@@ -12,8 +12,6 @@ from ironforgedbot.commands.holiday.trick_or_treat_handler import (
     HIGH_INGOT_MIN,
     LOW_INGOT_MAX,
     LOW_INGOT_MIN,
-    REMOVE_HIGH_MAX,
-    REMOVE_HIGH_MIN,
     TrickOrTreat,
     TrickOrTreatHandler,
 )
@@ -279,8 +277,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         quantity = handler._handle_ingot_result.call_args[0][1]
         is_positive = handler._handle_ingot_result.call_args[1]["is_positive"]
 
-        self.assertLessEqual(quantity, -REMOVE_HIGH_MIN)
-        self.assertGreater(quantity, -REMOVE_HIGH_MAX)
+        self.assertLessEqual(quantity, -HIGH_INGOT_MIN)
+        self.assertGreater(quantity, -HIGH_INGOT_MAX)
         self.assertFalse(is_positive)
 
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")

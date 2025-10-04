@@ -15,20 +15,18 @@ from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
 
-# Constants for ingot ranges
-LOW_INGOT_MIN = 10
-LOW_INGOT_MAX = 1000
-HIGH_INGOT_MIN = 1500
-HIGH_INGOT_MAX = 2500
-REMOVE_HIGH_MIN = 1000
-REMOVE_HIGH_MAX = 2500
+# Ingot reward/deduction ranges
+LOW_INGOT_MIN = 500
+LOW_INGOT_MAX = 2_200
+HIGH_INGOT_MIN = 3_200
+HIGH_INGOT_MAX = 8_100
 JACKPOT_VALUE = 1_000_000
 
-# History limits for preventing repetition
-POSITIVE_MESSAGE_HISTORY_LIMIT = 5
-NEGATIVE_MESSAGE_HISTORY_LIMIT = 5
-THUMBNAIL_HISTORY_LIMIT = 8
-GIF_HISTORY_LIMIT = 100
+# History limits
+POSITIVE_MESSAGE_HISTORY_LIMIT = 10
+NEGATIVE_MESSAGE_HISTORY_LIMIT = 10
+THUMBNAIL_HISTORY_LIMIT = 15
+GIF_HISTORY_LIMIT = 125
 
 
 class TrickOrTreat(Enum):
@@ -516,16 +514,16 @@ class TrickOrTreatHandler:
             return await interaction.followup.send(embed=embed)
 
     async def result_remove_high(self, interaction: discord.Interaction) -> None:
-        """Remove a high amount of ingots (1000-2490) from the player.
+        """Remove a high amount of ingots from the player.
 
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = random.randrange(REMOVE_HIGH_MIN, REMOVE_HIGH_MAX, 1) * -1
+        quantity = random.randrange(HIGH_INGOT_MIN, HIGH_INGOT_MAX, 1) * -1
         await self._handle_ingot_result(interaction, quantity, is_positive=False)
 
     async def result_add_high(self, interaction: discord.Interaction) -> None:
-        """Add a high amount of ingots (1500-2490) to the player.
+        """Add a high amount of ingots to the player.
 
         Args:
             interaction: The Discord interaction context.
@@ -534,7 +532,7 @@ class TrickOrTreatHandler:
         await self._handle_ingot_result(interaction, quantity, is_positive=True)
 
     async def result_remove_low(self, interaction: discord.Interaction) -> None:
-        """Remove a low amount of ingots (10-990) from the player.
+        """Remove a low amount of ingots from the player.
 
         Args:
             interaction: The Discord interaction context.
@@ -543,7 +541,7 @@ class TrickOrTreatHandler:
         await self._handle_ingot_result(interaction, quantity, is_positive=False)
 
     async def result_add_low(self, interaction: discord.Interaction) -> None:
-        """Add a low amount of ingots (10-990) to the player.
+        """Add a low amount of ingots to the player.
 
         Args:
             interaction: The Discord interaction context.
