@@ -489,13 +489,15 @@ class TrickOrTreatHandler:
             else self._get_random_negative_message
         )
 
+        prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"
         formatted_quantity = f"-{abs(quantity):,}" if quantity < 0 else f"{quantity:,}"
         message = message_getter().format(
             ingots=f"{self.ingot_icon}{formatted_quantity}"
         )
 
         embed = self._build_embed(
-            message
+            prefix
+            + message
             + self._get_balance_message(interaction.user.display_name, ingot_total)
         )
         await interaction.followup.send(embed=embed)
