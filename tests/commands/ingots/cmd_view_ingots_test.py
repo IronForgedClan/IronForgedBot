@@ -348,7 +348,9 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         await cmd_view_ingots(self.interaction, "some input")
 
         # Assert that the DB service was called with the validated player name, not display name
-        mock_member_service.get_member_by_nickname.assert_called_once_with(validated_player_name)
+        mock_member_service.get_member_by_nickname.assert_called_once_with(
+            validated_player_name
+        )
 
         # Verify the display name is still used in the embed title
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]

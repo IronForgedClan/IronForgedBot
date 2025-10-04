@@ -262,7 +262,10 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_member_gains.player = mock_player
         mock_member_gains.data = mock_data
 
-        mock_wom_service.get_monthly_activity_data.return_value = (mock_group, [mock_member_gains])
+        mock_wom_service.get_monthly_activity_data.return_value = (
+            mock_group,
+            [mock_member_gains],
+        )
 
         mock_wom_member = Mock()
         mock_wom_member.role = GroupRole.Iron
@@ -302,7 +305,10 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_member_gains.player = mock_player
         mock_member_gains.data = mock_data
 
-        mock_wom_service.get_monthly_activity_data.return_value = (mock_group, [mock_member_gains])
+        mock_wom_service.get_monthly_activity_data.return_value = (
+            mock_group,
+            [mock_member_gains],
+        )
 
         mock_wom_member = Mock()
         mock_wom_member.role = GroupRole.Iron
@@ -337,7 +343,10 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         mock_member_gains.player = mock_player
         mock_member_gains.data = mock_data
 
-        mock_wom_service.get_monthly_activity_data.return_value = (mock_group, [mock_member_gains])
+        mock_wom_service.get_monthly_activity_data.return_value = (
+            mock_group,
+            [mock_member_gains],
+        )
 
         mock_wom_member = Mock()
         mock_wom_member.role = GroupRole.Dogsbody  # Should be skipped
@@ -384,7 +393,10 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                 mock_member_gains.player = mock_player
                 mock_member_gains.data = mock_data
 
-                mock_wom_service.get_monthly_activity_data.return_value = (mock_group, [mock_member_gains])
+                mock_wom_service.get_monthly_activity_data.return_value = (
+                    mock_group,
+                    [mock_member_gains],
+                )
 
                 mock_wom_member = Mock()
                 mock_wom_member.role = wom_role

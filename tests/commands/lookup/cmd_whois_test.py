@@ -32,7 +32,11 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.lookup.cmd_whois.get_wom_service")
     @patch("ironforgedbot.commands.lookup.cmd_whois.validate_playername")
     async def test_cmd_whois_success_with_name_changes(
-        self, mock_validate_playername, mock_get_wom_service, mock_render_time, mock_build_embed
+        self,
+        mock_validate_playername,
+        mock_get_wom_service,
+        mock_render_time,
+        mock_build_embed,
     ):
         mock_validate_playername.return_value = (self.mock_member, "TestPlayer")
         mock_wom_service = AsyncMock()
@@ -129,7 +133,11 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.lookup.cmd_whois.get_wom_service")
     @patch("ironforgedbot.commands.lookup.cmd_whois.validate_playername")
     async def test_cmd_whois_filters_non_approved_changes(
-        self, mock_validate_playername, mock_get_wom_service, mock_render_time, mock_build_embed
+        self,
+        mock_validate_playername,
+        mock_get_wom_service,
+        mock_render_time,
+        mock_build_embed,
     ):
         mock_validate_playername.return_value = (self.mock_member, "TestPlayer")
 
@@ -147,7 +155,10 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
         denied_change.resolved_at = "2023-01-01T00:00:00Z"
 
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_player_name_history.return_value = [approved_change, denied_change]
+        mock_wom_service.get_player_name_history.return_value = [
+            approved_change,
+            denied_change,
+        ]
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
         mock_render_time.return_value = "2 days ago"
 
@@ -172,13 +183,17 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
 
         mock_validate_playername.return_value = (self.mock_member, "TestPlayer")
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_player_name_history.side_effect = WomServiceError("API error")
+        mock_wom_service.get_player_name_history.side_effect = WomServiceError(
+            "API error"
+        )
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         await cmd_whois(self.mock_interaction, "TestPlayer")
 
         mock_send_error.assert_called_once_with(
-            self.mock_interaction, "Error getting name change history", report_to_channel=False
+            self.mock_interaction,
+            "Error getting name change history",
+            report_to_channel=False,
         )
 
     @patch("ironforgedbot.commands.lookup.cmd_whois.send_error_response")
@@ -191,7 +206,9 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
 
         mock_validate_playername.return_value = (self.mock_member, "TestPlayer")
         mock_wom_service = AsyncMock()
-        mock_wom_service.get_player_name_history.side_effect = WomRateLimitError("Rate limit")
+        mock_wom_service.get_player_name_history.side_effect = WomRateLimitError(
+            "Rate limit"
+        )
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         await cmd_whois(self.mock_interaction, "TestPlayer")
