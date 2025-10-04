@@ -16,13 +16,12 @@ from ironforgedbot.state import STATE
 logger = logging.getLogger(__name__)
 
 # Constants for ingot ranges
-INGOT_MULTIPLIER = 10
-LOW_INGOT_MIN = 1
-LOW_INGOT_MAX = 100
-HIGH_INGOT_MIN = 150
-HIGH_INGOT_MAX = 250
-REMOVE_HIGH_MIN = 100
-REMOVE_HIGH_MAX = 250
+LOW_INGOT_MIN = 10
+LOW_INGOT_MAX = 1000
+HIGH_INGOT_MIN = 1500
+HIGH_INGOT_MAX = 2500
+REMOVE_HIGH_MIN = 1000
+REMOVE_HIGH_MAX = 2500
 JACKPOT_VALUE = 1_000_000
 
 # History limits for preventing repetition
@@ -522,9 +521,7 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = (
-            random.randrange(REMOVE_HIGH_MIN, REMOVE_HIGH_MAX, 1) * INGOT_MULTIPLIER
-        ) * -1
+        quantity = random.randrange(REMOVE_HIGH_MIN, REMOVE_HIGH_MAX, 1) * -1
         await self._handle_ingot_result(interaction, quantity, is_positive=False)
 
     async def result_add_high(self, interaction: discord.Interaction) -> None:
@@ -533,9 +530,7 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = (
-            random.randrange(HIGH_INGOT_MIN, HIGH_INGOT_MAX, 1) * INGOT_MULTIPLIER
-        )
+        quantity = random.randrange(HIGH_INGOT_MIN, HIGH_INGOT_MAX, 1)
         await self._handle_ingot_result(interaction, quantity, is_positive=True)
 
     async def result_remove_low(self, interaction: discord.Interaction) -> None:
@@ -544,9 +539,7 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = (
-            random.randrange(LOW_INGOT_MIN, LOW_INGOT_MAX, 1) * INGOT_MULTIPLIER
-        ) * -1
+        quantity = random.randrange(LOW_INGOT_MIN, LOW_INGOT_MAX, 1) * -1
         await self._handle_ingot_result(interaction, quantity, is_positive=False)
 
     async def result_add_low(self, interaction: discord.Interaction) -> None:
@@ -555,7 +548,7 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = random.randrange(LOW_INGOT_MIN, LOW_INGOT_MAX, 1) * INGOT_MULTIPLIER
+        quantity = random.randrange(LOW_INGOT_MIN, LOW_INGOT_MAX, 1)
         await self._handle_ingot_result(interaction, quantity, is_positive=True)
 
     async def result_joke(self, interaction: discord.Interaction) -> None:
