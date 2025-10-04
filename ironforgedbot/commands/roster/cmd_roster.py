@@ -75,7 +75,7 @@ class Signups(object):
 
 @require_role(ROLE.LEADERSHIP)
 @log_command_execution(logger)
-@app_commands.describe(url="URL of the event or spreadsheet to generate roster from")
+@app_commands.describe(url="Direct link to the discord message")
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,

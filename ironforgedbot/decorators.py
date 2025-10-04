@@ -34,8 +34,6 @@ def require_role(role: ROLE, ephemeral=False):
                     f"Unable to access guild information ({func.__name__})"
                 )
 
-            # Command execution logging is now handled by log_command_execution decorator
-
             if STATE.state["is_shutting_down"]:
                 logger.warning("Bot has begun shut down. Ignoring command.")
                 return await interaction.response.send_message(

@@ -51,15 +51,6 @@ WOM_TO_DISCORD_RANK_MAPPING: Dict[GroupRole, RANK] = {
 }
 
 
-# Legacy: This should be removed as thresholds are now rank-based
-# DISCORD_ROLE_THRESHOLDS: Dict[ROLE, int] = {
-#     ROLE.PROSPECT: 0,           # Prospects are exempt from activity requirements
-#     ROLE.MEMBER: 150_000,       # Base member threshold - 150k XP/month
-#     ROLE.STAFF: 300_000,        # Staff have higher requirements - 300k XP/month
-#     ROLE.LEADERSHIP: 500_000,   # Leadership highest requirements - 500k XP/month
-# }
-
-
 def get_discord_rank_for_wom_role(wom_role: Optional[GroupRole]) -> Optional[RANK]:
     """
     Get the Discord achievement rank that corresponds to a WOM role.
