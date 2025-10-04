@@ -62,6 +62,10 @@
     "JACKPOT_SUCCESS_PREFIX": "**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day {mention}!\nYou have been blessed with the biggest payout I am authorized to give.\n\nA cool **{ingot_icon}{amount:,}** ingots wired directly into your bank account.\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n`wave2:rainbow:gzzzzzzzzzzzzzzzzzzzzzzzzzzzzz`",
     "JACKPOT_CLAIMED_MESSAGE": "**Treat!** Or, well, it would have been... but you have been deemed unworthy.\nI don't know what to tell you, I don't make the rules. 🤷‍♂️\n\nHave a consolation pumpkin emoji 🎃",
     "REMOVE_ALL_TRICK_MESSAGE": "You lost **{ingot_icon}-{amount:,}**...\nNow that's gotta sting.",
+    "DOUBLE_OR_NOTHING_OFFER": "🎲 **Double or Nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick below within 30 seconds to risk it all for a chance to **double your winnings**!",
+    "DOUBLE_OR_NOTHING_WIN": "🎉 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
+    "DOUBLE_OR_NOTHING_LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
+    "DOUBLE_OR_NOTHING_EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots.",
     "GIFS": [
         "https://giphy.com/embed/jbJYmyIdelAJh9LQPs",
         "https://giphy.com/embed/l3vRfhFD8hJCiP0uQ",

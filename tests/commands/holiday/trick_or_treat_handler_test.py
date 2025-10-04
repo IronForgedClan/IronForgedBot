@@ -36,7 +36,11 @@ MOCK_TRICK_OR_TREAT_DATA = json.dumps({
     "NO_INGOTS_MESSAGE": "No ingots test message",
     "JACKPOT_SUCCESS_PREFIX": "Jackpot {mention} {ingot_icon}{amount:,}",
     "JACKPOT_CLAIMED_MESSAGE": "Already claimed",
-    "REMOVE_ALL_TRICK_MESSAGE": "Removed {ingot_icon}-{amount:,}"
+    "REMOVE_ALL_TRICK_MESSAGE": "Removed {ingot_icon}-{amount:,}",
+    "DOUBLE_OR_NOTHING_OFFER": "Double or nothing {ingot_icon}{amount:,}",
+    "DOUBLE_OR_NOTHING_WIN": "You won {ingot_icon}{amount:,}",
+    "DOUBLE_OR_NOTHING_LOSE": "You lost {ingot_icon}{amount:,}",
+    "DOUBLE_OR_NOTHING_EXPIRED": "Expired {ingot_icon}{amount:,}"
 })
 
 
@@ -380,3 +384,117 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
             for url, result in zip(THUMBNAILS, results):
                 assert result == 200, f"{url} returned status code {result}"
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
+    async def test_result_double_or_nothing_creates_offer(
+        self, mock_state, mock_ingot_service_class, mock_db
+    ):
+        """Test that double-or-nothing creates an offer with a button."""
+        with patch(
+            "builtins.open",
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
+        ):
+            handler = TrickOrTreatHandler()
+
+        mock_state.state = {"double_or_nothing_offers": {}}
+        mock_db_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_db_session
+
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service_class.return_value = mock_ingot_service
+
+        mock_result = MagicMock()
+        mock_result.status = True
+        mock_result.new_total = 2000
+        mock_ingot_service.try_add_ingots = AsyncMock(return_value=mock_result)
+
+        await handler.result_double_or_nothing(self.interaction)
+
+        # Verify ingots were added
+        mock_ingot_service.try_add_ingots.assert_called_once()
+
+        # Verify a view was sent (has the button)
+        self.interaction.followup.send.assert_called_once()
+        call_kwargs = self.interaction.followup.send.call_args.kwargs
+        self.assertIn("view", call_kwargs)
+        self.assertIsNotNone(call_kwargs["view"])
+
+        # Verify offer was stored in state
+        user_id_str = str(self.test_user.id)
+        self.assertIn(user_id_str, mock_state.state["double_or_nothing_offers"])
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    async def test_process_double_or_nothing_win(
+        self, mock_ingot_service_class, mock_db
+    ):
+        """Test processing a winning double-or-nothing gamble."""
+        with patch(
+            "builtins.open",
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
+        ):
+            handler = TrickOrTreatHandler()
+
+        mock_db_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_db_session
+
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service_class.return_value = mock_ingot_service
+
+        mock_result = MagicMock()
+        mock_result.status = True
+        mock_result.new_total = 3000
+        mock_ingot_service.try_add_ingots = AsyncMock(return_value=mock_result)
+
+        # Mock random to always win
+        with patch("ironforgedbot.commands.holiday.trick_or_treat_handler.random.random", return_value=0.3):
+            await handler._process_double_or_nothing(self.interaction, 500)
+
+        # Should add the amount (winning)
+        mock_ingot_service.try_add_ingots.assert_called_once()
+        self.interaction.followup.send.assert_called_once()
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    async def test_process_double_or_nothing_lose(
+        self, mock_member_service_class, mock_ingot_service_class, mock_db
+    ):
+        """Test processing a losing double-or-nothing gamble."""
+        with patch(
+            "builtins.open",
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
+        ):
+            handler = TrickOrTreatHandler()
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+
+        test_member = create_test_db_member(
+            nickname="TestUser",
+            discord_id=self.test_user.id,
+            rank=RANK.IRON,
+            ingots=1000,
+        )
+        mock_member_service.get_member_by_discord_id = AsyncMock(
+            return_value=test_member
+        )
+
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service_class.return_value = mock_ingot_service
+
+        mock_result = MagicMock()
+        mock_result.status = True
+        mock_result.new_total = 500
+        mock_ingot_service.try_remove_ingots = AsyncMock(return_value=mock_result)
+
+        # Mock random to always lose
+        with patch("ironforgedbot.commands.holiday.trick_or_treat_handler.random.random", return_value=0.7):
+            await handler._process_double_or_nothing(self.interaction, 500)
+
+        # Should remove the amount (losing)
+        mock_ingot_service.try_remove_ingots.assert_called_once()
+        self.interaction.followup.send.assert_called_once()

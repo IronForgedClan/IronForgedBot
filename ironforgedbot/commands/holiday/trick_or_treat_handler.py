@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import time
 from enum import Enum
 from typing import Optional, List
 
@@ -37,15 +38,85 @@ class TrickOrTreat(Enum):
     """
 
     # fmt: off
-    GIF = 337                      # 33.7% (1/3.0)
+    GIF = 287                      # 28.7% (1/3.5)
+    DOUBLE_OR_NOTHING = 150        # 15.0% (1/6.7)
     REMOVE_INGOTS_LOW = 150        # 15.0% (1/6.7)
     ADD_INGOTS_LOW = 140           # 14.0% (1/7.1)
     REMOVE_INGOTS_HIGH = 130       # 13.0% (1/7.7)
     ADD_INGOTS_HIGH = 120          # 12.0% (1/8.3)
-    JOKE = 100                     # 10.0% (1/10.0)
+    JOKE = 20                      #  2.0% (1/50.0)
     REMOVE_ALL_INGOTS_TRICK = 20   #  2.0% (1/50.0)
     JACKPOT_INGOTS = 3             #  0.3% (1/333.3)
     # fmt: on
+
+
+class DoubleOrNothingView(discord.ui.View):
+    """Discord UI View for the double-or-nothing button interaction.
+
+    Displays a button that allows users to risk their winnings for a chance to double them.
+    The view times out after 30 seconds.
+    """
+
+    def __init__(self, handler: "TrickOrTreatHandler", user_id: int, amount: int):
+        """Initialize the double-or-nothing view.
+
+        Args:
+            handler: The TrickOrTreatHandler instance to use for processing the result.
+            user_id: The Discord user ID who can interact with this button.
+            amount: The amount of ingots at stake.
+        """
+        super().__init__(timeout=30.0)
+        self.handler = handler
+        self.user_id = user_id
+        self.amount = amount
+        self.has_interacted = False
+
+    @discord.ui.button(label="🎲 Double or Nothing!", style=discord.ButtonStyle.danger)
+    async def double_or_nothing_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        """Handle the double-or-nothing button click.
+
+        Args:
+            interaction: The Discord interaction from the button click.
+            button: The button that was clicked.
+        """
+        # Only allow the original user to click the button
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message(
+                "This isn't your game!", ephemeral=True
+            )
+            return
+
+        # Prevent multiple clicks
+        if self.has_interacted:
+            await interaction.response.send_message(
+                "You already made your choice!", ephemeral=True
+            )
+            return
+
+        self.has_interacted = True
+
+        # Disable the button
+        button.disabled = True
+        await interaction.response.edit_message(view=self)
+
+        # Process the double-or-nothing result
+        await self.handler._process_double_or_nothing(interaction, self.amount)
+
+        # Remove from active offers
+        user_id_str = str(self.user_id)
+        if user_id_str in STATE.state["double_or_nothing_offers"]:
+            del STATE.state["double_or_nothing_offers"][user_id_str]
+
+        # Stop the view
+        self.stop()
+
+    async def on_timeout(self):
+        """Handle the view timing out after 30 seconds."""
+        user_id_str = str(self.user_id)
+        if user_id_str in STATE.state["double_or_nothing_offers"]:
+            del STATE.state["double_or_nothing_offers"][user_id_str]
 
 
 class TrickOrTreatHandler:
@@ -75,6 +146,10 @@ class TrickOrTreatHandler:
         self.JACKPOT_SUCCESS_PREFIX: str
         self.JACKPOT_CLAIMED_MESSAGE: str
         self.REMOVE_ALL_TRICK_MESSAGE: str
+        self.DOUBLE_OR_NOTHING_OFFER: str
+        self.DOUBLE_OR_NOTHING_WIN: str
+        self.DOUBLE_OR_NOTHING_LOSE: str
+        self.DOUBLE_OR_NOTHING_EXPIRED: str
 
         with open("data/trick_or_treat.json") as f:
             logger.info("loading trick or treat data...")
@@ -90,6 +165,10 @@ class TrickOrTreatHandler:
             self.JACKPOT_SUCCESS_PREFIX = data["JACKPOT_SUCCESS_PREFIX"]
             self.JACKPOT_CLAIMED_MESSAGE = data["JACKPOT_CLAIMED_MESSAGE"]
             self.REMOVE_ALL_TRICK_MESSAGE = data["REMOVE_ALL_TRICK_MESSAGE"]
+            self.DOUBLE_OR_NOTHING_OFFER = data["DOUBLE_OR_NOTHING_OFFER"]
+            self.DOUBLE_OR_NOTHING_WIN = data["DOUBLE_OR_NOTHING_WIN"]
+            self.DOUBLE_OR_NOTHING_LOSE = data["DOUBLE_OR_NOTHING_LOSE"]
+            self.DOUBLE_OR_NOTHING_EXPIRED = data["DOUBLE_OR_NOTHING_EXPIRED"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -304,6 +383,8 @@ class TrickOrTreatHandler:
                 return await self.result_jackpot(interaction)
             case TrickOrTreat.REMOVE_ALL_INGOTS_TRICK:
                 return await self.result_remove_all_ingots_trick(interaction)
+            case TrickOrTreat.DOUBLE_OR_NOTHING:
+                return await self.result_double_or_nothing(interaction)
             case TrickOrTreat.REMOVE_INGOTS_HIGH:
                 return await self.result_remove_high(interaction)
             case TrickOrTreat.ADD_INGOTS_HIGH:
@@ -449,6 +530,120 @@ class TrickOrTreatHandler:
         self._add_to_history(chosen_gif, self.gif_history, GIF_HISTORY_LIMIT)
 
         return await interaction.followup.send(chosen_gif)
+
+    async def result_double_or_nothing(self, interaction: discord.Interaction) -> None:
+        """Offer the player a chance to double their winnings or lose them.
+
+        Awards a random amount of ingots between LOW and HIGH ranges, then presents
+        a button allowing the player to risk those ingots for a 50/50 chance to double them.
+
+        Args:
+            interaction: The Discord interaction context.
+        """
+        assert interaction.guild
+
+        # Generate a random amount to win first (somewhere between LOW and HIGH)
+        quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
+
+        # Award the ingots
+        ingot_total = await self._adjust_ingots(
+            interaction,
+            quantity,
+            interaction.guild.get_member(interaction.user.id),
+        )
+
+        if ingot_total is None:
+            await interaction.followup.send(
+                embed=self._build_no_ingots_error_response(
+                    interaction.user.display_name
+                )
+            )
+            return
+
+        # Create the offer message
+        offer_message = self.DOUBLE_OR_NOTHING_OFFER.format(
+            ingot_icon=self.ingot_icon, amount=quantity
+        )
+        offer_message += self._get_balance_message(
+            interaction.user.display_name, ingot_total
+        )
+
+        embed = self._build_embed(offer_message)
+
+        # Store the offer in state
+        user_id_str = str(interaction.user.id)
+        STATE.state["double_or_nothing_offers"][user_id_str] = {
+            "amount": quantity,
+            "expires_at": time.time() + 30,
+        }
+
+        # Create and send the view with the button
+        view = DoubleOrNothingView(self, interaction.user.id, quantity)
+        await interaction.followup.send(embed=embed, view=view)
+
+    async def _process_double_or_nothing(
+        self, interaction: discord.Interaction, amount: int
+    ) -> None:
+        """Process the result of a double-or-nothing gamble.
+
+        50% chance to win (double the amount) or lose (remove the amount).
+
+        Args:
+            interaction: The Discord interaction context.
+            amount: The amount of ingots at stake.
+        """
+        assert interaction.guild
+
+        # 50/50 chance
+        won = random.random() < 0.5
+
+        if won:
+            # Award additional ingots (they already have the original amount)
+            ingot_total = await self._adjust_ingots(
+                interaction,
+                amount,
+                interaction.guild.get_member(interaction.user.id),
+            )
+
+            if ingot_total is None:
+                await interaction.followup.send(
+                    embed=self._build_no_ingots_error_response(
+                        interaction.user.display_name
+                    )
+                )
+                return
+
+            message = self.DOUBLE_OR_NOTHING_WIN.format(
+                ingot_icon=self.ingot_icon, amount=amount
+            )
+            message += self._get_balance_message(
+                interaction.user.display_name, ingot_total
+            )
+        else:
+            # Remove the ingots they won
+            ingot_total = await self._adjust_ingots(
+                interaction,
+                -amount,
+                interaction.guild.get_member(interaction.user.id),
+            )
+
+            if ingot_total is None:
+                await interaction.followup.send(
+                    embed=self._build_no_ingots_error_response(
+                        interaction.user.display_name
+                    )
+                )
+                return
+
+            message = self.DOUBLE_OR_NOTHING_LOSE.format(
+                ingot_icon=self.ingot_icon, amount=amount
+            )
+            message += self._get_balance_message(
+                interaction.user.display_name, ingot_total
+            )
+
+        embed = self._build_embed(message)
+        await interaction.followup.send(embed=embed)
 
 
 # Module-level handler instance cache
