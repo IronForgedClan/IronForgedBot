@@ -66,6 +66,13 @@
     "DOUBLE_OR_NOTHING_WIN": "🎉 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
     "DOUBLE_OR_NOTHING_LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
     "DOUBLE_OR_NOTHING_EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots.",
+    "STEAL_OFFER": "🦹 **Steal?**\n\nYou have a chance to steal **{ingot_icon}{amount:,}** ingots from one of these people.\n\nChoose your target wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.",
+    "STEAL_SUCCESS": "🎉 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
+    "STEAL_FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
+    "STEAL_WALK_AWAY": "🚶 **You walked away.**\n\nSometimes the best heist is the one you don't attempt.",
+    "STEAL_NO_TARGETS": "There are no targets available to steal from right now. Try again later!",
+    "STEAL_TARGET_NO_INGOTS": "{target_mention} has no ingots to steal. You get nothing, but you also avoid getting caught!",
+    "STEAL_USER_NO_INGOTS": "You don't have enough ingots to risk a failed steal attempt. You need at least **{ingot_icon}{penalty:,}** ingots.",
     "GIFS": [
         "https://giphy.com/embed/jbJYmyIdelAJh9LQPs",
         "https://giphy.com/embed/l3vRfhFD8hJCiP0uQ",

@@ -9,6 +9,7 @@ import discord
 
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.database.database import db
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
@@ -38,12 +39,13 @@ class TrickOrTreat(Enum):
     """
 
     # fmt: off
-    GIF = 337                      # 33.7% (1/3.0)
+    GIF = 287                      # 28.7% (1/3.5)
     REMOVE_INGOTS_LOW = 150        # 15.0% (1/6.7)
     ADD_INGOTS_LOW = 140           # 14.0% (1/7.1)
     REMOVE_INGOTS_HIGH = 130       # 13.0% (1/7.7)
     ADD_INGOTS_HIGH = 120          # 12.0% (1/8.3)
     DOUBLE_OR_NOTHING = 100        # 10.0% (1/10.0)
+    STEAL = 50                     #  5.0% (1/20.0)
     JOKE = 20                      #  2.0% (1/50.0)
     REMOVE_ALL_INGOTS_TRICK = 20   #  2.0% (1/50.0)
     JACKPOT_INGOTS = 3             #  0.3% (1/333.3)
@@ -116,6 +118,136 @@ class DoubleOrNothingView(discord.ui.View):
             del STATE.state["double_or_nothing_offers"][user_id_str]
 
 
+class StealTargetView(discord.ui.View):
+    """Discord UI View for the steal target selection.
+
+    Displays buttons for each Leadership member that can be stolen from,
+    plus a "Walk Away" button to abort safely.
+    The view times out after 30 seconds.
+    """
+
+    def __init__(
+        self,
+        handler: "TrickOrTreatHandler",
+        user_id: int,
+        amount: int,
+        targets: List[discord.Member],
+    ):
+        """Initialize the steal target view.
+
+        Args:
+            handler: The TrickOrTreatHandler instance to use for processing the result.
+            user_id: The Discord user ID who can interact with this view.
+            amount: The amount of ingots at stake.
+            targets: List of Leadership members to display as targets (max 3).
+        """
+        super().__init__(timeout=30.0)
+        self.handler = handler
+        self.user_id = user_id
+        self.amount = amount
+        self.has_interacted = False
+
+        # Dynamically create buttons for each target (danger style)
+        for target in targets:
+            button = discord.ui.Button(
+                label=target.display_name,
+                style=discord.ButtonStyle.danger,
+                custom_id=f"steal_{target.id}",
+            )
+            button.callback = self._create_steal_callback(target)
+            self.add_item(button)
+
+        # Add "Walk Away" button (secondary/gray style)
+        walk_away_button = discord.ui.Button(
+            label="🚶 Walk Away",
+            style=discord.ButtonStyle.secondary,
+            custom_id="steal_walk_away",
+        )
+        walk_away_button.callback = self._walk_away_callback
+        self.add_item(walk_away_button)
+
+    def _create_steal_callback(self, target: discord.Member):
+        """Create a callback function for a specific target button.
+
+        Args:
+            target: The target member this button represents.
+
+        Returns:
+            An async callback function for the button.
+        """
+
+        async def callback(interaction: discord.Interaction):
+            # Only allow the original user to click
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message(
+                    "This isn't your heist!", ephemeral=True
+                )
+                return
+
+            # Prevent multiple clicks
+            if self.has_interacted:
+                await interaction.response.send_message(
+                    "You already made your choice!", ephemeral=True
+                )
+                return
+
+            self.has_interacted = True
+
+            # Disable all buttons
+            for item in self.children:
+                if isinstance(item, discord.ui.Button):
+                    item.disabled = True
+            await interaction.response.edit_message(view=self)
+
+            # Process the steal attempt
+            await self.handler._process_steal(interaction, self.amount, target)
+
+            # Stop the view
+            self.stop()
+
+        return callback
+
+    async def _walk_away_callback(self, interaction: discord.Interaction):
+        """Handle the walk away button click.
+
+        Args:
+            interaction: The Discord interaction from the button click.
+        """
+        # Only allow the original user to click
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message(
+                "This isn't your heist!", ephemeral=True
+            )
+            return
+
+        # Prevent multiple clicks
+        if self.has_interacted:
+            await interaction.response.send_message(
+                "You already made your choice!", ephemeral=True
+            )
+            return
+
+        self.has_interacted = True
+
+        # Disable all buttons
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+        await interaction.response.edit_message(view=self)
+
+        # Send walk away message
+        embed = self.handler._build_embed(self.handler.STEAL_WALK_AWAY)
+        await interaction.followup.send(embed=embed)
+
+        # Stop the view
+        self.stop()
+
+    async def on_timeout(self):
+        """Handle the view timing out after 30 seconds."""
+        # No special cleanup needed
+        pass
+
+
 class TrickOrTreatHandler:
     """Handler for the trick-or-treat Halloween event minigame.
 
@@ -147,6 +279,13 @@ class TrickOrTreatHandler:
         self.DOUBLE_OR_NOTHING_WIN: str
         self.DOUBLE_OR_NOTHING_LOSE: str
         self.DOUBLE_OR_NOTHING_EXPIRED: str
+        self.STEAL_OFFER: str
+        self.STEAL_SUCCESS: str
+        self.STEAL_FAILURE: str
+        self.STEAL_WALK_AWAY: str
+        self.STEAL_NO_TARGETS: str
+        self.STEAL_TARGET_NO_INGOTS: str
+        self.STEAL_USER_NO_INGOTS: str
 
         with open("data/trick_or_treat.json") as f:
             logger.info("loading trick or treat data...")
@@ -166,6 +305,13 @@ class TrickOrTreatHandler:
             self.DOUBLE_OR_NOTHING_WIN = data["DOUBLE_OR_NOTHING_WIN"]
             self.DOUBLE_OR_NOTHING_LOSE = data["DOUBLE_OR_NOTHING_LOSE"]
             self.DOUBLE_OR_NOTHING_EXPIRED = data["DOUBLE_OR_NOTHING_EXPIRED"]
+            self.STEAL_OFFER = data["STEAL_OFFER"]
+            self.STEAL_SUCCESS = data["STEAL_SUCCESS"]
+            self.STEAL_FAILURE = data["STEAL_FAILURE"]
+            self.STEAL_WALK_AWAY = data["STEAL_WALK_AWAY"]
+            self.STEAL_NO_TARGETS = data["STEAL_NO_TARGETS"]
+            self.STEAL_TARGET_NO_INGOTS = data["STEAL_TARGET_NO_INGOTS"]
+            self.STEAL_USER_NO_INGOTS = data["STEAL_USER_NO_INGOTS"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -390,6 +536,8 @@ class TrickOrTreatHandler:
                 return await self.result_remove_all_ingots_trick(interaction)
             case TrickOrTreat.DOUBLE_OR_NOTHING:
                 return await self.result_double_or_nothing(interaction)
+            case TrickOrTreat.STEAL:
+                return await self.result_steal(interaction)
             case TrickOrTreat.REMOVE_INGOTS_HIGH:
                 return await self.result_remove_high(interaction)
             case TrickOrTreat.ADD_INGOTS_HIGH:
@@ -649,6 +797,152 @@ class TrickOrTreatHandler:
             )
             message += self._get_balance_message(
                 interaction.user.display_name, ingot_total
+            )
+
+        embed = self._build_embed(message)
+        await interaction.followup.send(embed=embed)
+
+    async def result_steal(self, interaction: discord.Interaction) -> None:
+        """Offer the player a chance to steal ingots from Leadership members.
+
+        Presents up to 3 random Leadership members as targets, plus a walk away option.
+        35% chance to succeed and steal ingots. 65% chance to fail and lose half the
+        attempted amount. Walking away has no consequences.
+
+        Args:
+            interaction: The Discord interaction context.
+        """
+        assert interaction.guild
+
+        # Get all members with Leadership role, excluding the user
+        leadership_members = [
+            member
+            for member in interaction.guild.members
+            if any(role.name == ROLE.LEADERSHIP for role in member.roles)
+            and member.id != interaction.user.id
+        ]
+
+        # Check if any targets available
+        if not leadership_members:
+            embed = self._build_embed(self.STEAL_NO_TARGETS)
+            return await interaction.followup.send(embed=embed)
+
+        # Select up to 3 random targets
+        num_targets = min(3, len(leadership_members))
+        targets = random.sample(leadership_members, num_targets)
+
+        # Generate steal amount
+        quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
+        penalty = quantity // 2  # Half the amount if caught
+
+        # Check if user has enough ingots to risk the penalty
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(
+                interaction.user.id
+            )
+
+            if user_member and user_member.ingots < penalty:
+                message = self.STEAL_USER_NO_INGOTS.format(
+                    ingot_icon=self.ingot_icon, penalty=penalty
+                )
+                embed = self._build_embed(message)
+                return await interaction.followup.send(embed=embed)
+
+        # Create offer message
+        offer_message = self.STEAL_OFFER.format(
+            ingot_icon=self.ingot_icon, amount=quantity, penalty=penalty
+        )
+        embed = self._build_embed(offer_message)
+
+        # Create and send the view with target buttons + walk away button
+        view = StealTargetView(self, interaction.user.id, quantity, targets)
+        await interaction.followup.send(embed=embed, view=view)
+
+    async def _process_steal(
+        self, interaction: discord.Interaction, amount: int, target: discord.Member
+    ) -> None:
+        """Process the result of a steal attempt.
+
+        35% chance to succeed (steal from target).
+        65% chance to fail (lose half the amount as penalty).
+
+        Args:
+            interaction: The Discord interaction context.
+            amount: The amount of ingots to attempt to steal.
+            target: The target member to steal from.
+        """
+        assert interaction.guild
+
+        # Roll for success (35% chance)
+        success = random.random() < 0.35
+
+        if success:
+            # Check target's ingots
+            async with db.get_session() as session:
+                member_service = MemberService(session)
+                target_member = await member_service.get_member_by_discord_id(target.id)
+
+                if not target_member or target_member.ingots == 0:
+                    # Target has no ingots
+                    message = self.STEAL_TARGET_NO_INGOTS.format(
+                        target_mention=target.mention
+                    )
+                    embed = self._build_embed(message)
+                    return await interaction.followup.send(embed=embed)
+
+                # Cap amount at target's balance
+                actual_amount = min(amount, target_member.ingots)
+
+            # Remove from target
+            await self._adjust_ingots(interaction, -actual_amount, target)
+
+            # Add to user
+            user_new_total = await self._adjust_ingots(
+                interaction,
+                actual_amount,
+                interaction.guild.get_member(interaction.user.id),
+            )
+
+            if user_new_total is None:
+                # Error occurred, but target already lost ingots
+                logger.error("Error adding stolen ingots to user")
+                return
+
+            # Success message
+            message = self.STEAL_SUCCESS.format(
+                ingot_icon=self.ingot_icon,
+                amount=actual_amount,
+                target_mention=target.mention,
+            )
+            message += self._get_balance_message(
+                interaction.user.display_name, user_new_total
+            )
+
+        else:
+            # Failed - user loses penalty (half the amount)
+            penalty = amount // 2
+
+            user_new_total = await self._adjust_ingots(
+                interaction,
+                -penalty,
+                interaction.guild.get_member(interaction.user.id),
+            )
+
+            if user_new_total is None:
+                # User somehow lost their ingots between check and now
+                logger.error("Error removing penalty from user")
+                return
+
+            # Failure message
+            message = self.STEAL_FAILURE.format(
+                ingot_icon=self.ingot_icon,
+                amount=amount,
+                target_mention=target.mention,
+                penalty=penalty,
+            )
+            message += self._get_balance_message(
+                interaction.user.display_name, user_new_total
             )
 
         embed = self._build_embed(message)
