@@ -321,13 +321,6 @@ class TrickOrTreatHandler:
         Returns:
             A message template string with {ingots} placeholder.
         """
-        if random.random() >= 0.5:
-            return (
-                "Trick!\nUnlucky "
-                + random.choice(self.NEGATIVE_ANNOYANCES)
-                + " **{ingots}** ingots."
-            )
-
         chosen = random.choice(
             [
                 s
