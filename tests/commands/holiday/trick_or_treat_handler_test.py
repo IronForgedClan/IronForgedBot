@@ -7,12 +7,20 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import aiohttp
 import discord
 
-from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+from ironforgedbot.commands.holiday.outcomes import (
+    double_or_nothing,
+    ingot_changes,
+    jackpot,
+    steal,
+)
+from ironforgedbot.commands.holiday.trick_or_treat_constants import (
     HIGH_INGOT_MAX,
     HIGH_INGOT_MIN,
     LOW_INGOT_MAX,
     LOW_INGOT_MIN,
     TrickOrTreat,
+)
+from ironforgedbot.commands.holiday.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
 from ironforgedbot.common.ranks import RANK
@@ -289,7 +297,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         handler._handle_ingot_result = AsyncMock()
 
-        await handler.result_add_low(self.interaction)
+        await ingot_changes.result_add_low(handler, self.interaction)
 
         handler._handle_ingot_result.assert_called_once()
         quantity = handler._handle_ingot_result.call_args[0][1]
@@ -311,7 +319,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         handler._handle_ingot_result = AsyncMock()
 
-        await handler.result_remove_high(self.interaction)
+        await ingot_changes.result_remove_high(handler, self.interaction)
 
         handler._handle_ingot_result.assert_called_once()
         quantity = handler._handle_ingot_result.call_args[0][1]
@@ -321,7 +329,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(quantity, -HIGH_INGOT_MAX)
         self.assertFalse(is_positive)
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
+    @patch("ironforgedbot.commands.holiday.outcomes.jackpot.STATE")
     async def test_result_jackpot_already_claimed(self, mock_state):
         """Test that jackpot shows consolation message when already claimed."""
         with patch(
@@ -334,13 +342,13 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         mock_state.state = {"trick_or_treat_jackpot_claimed": True}
 
-        await handler.result_jackpot(self.interaction)
+        await jackpot.result_jackpot(handler, self.interaction)
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("already claimed", embed.description.lower())
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
+    @patch("ironforgedbot.commands.holiday.outcomes.jackpot.STATE")
     async def test_result_jackpot_success(self, mock_state):
         """Test successful jackpot claim."""
         with patch(
@@ -354,7 +362,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_state.state = {"trick_or_treat_jackpot_claimed": False}
         handler._adjust_ingots = AsyncMock(return_value=1_500_000)
 
-        await handler.result_jackpot(self.interaction)
+        await jackpot.result_jackpot(handler, self.interaction)
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
@@ -409,7 +417,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
+    @patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.STATE")
     async def test_result_double_or_nothing_creates_offer(
         self, mock_state, mock_ingot_service_class, mock_db
     ):
@@ -432,7 +440,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_result.new_total = 2000
         mock_ingot_service.try_add_ingots = AsyncMock(return_value=mock_result)
 
-        await handler.result_double_or_nothing(self.interaction)
+        await double_or_nothing.result_double_or_nothing(handler, self.interaction)
 
         # Verify ingots were added
         mock_ingot_service.try_add_ingots.assert_called_once()
@@ -471,8 +479,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_ingot_service.try_add_ingots = AsyncMock(return_value=mock_result)
 
         # Mock random to always win
-        with patch("ironforgedbot.commands.holiday.trick_or_treat_handler.random.random", return_value=0.3):
-            await handler._process_double_or_nothing(self.interaction, 500)
+        with patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.random.random", return_value=0.3):
+            await double_or_nothing.process_double_or_nothing(handler, self.interaction, 500)
 
         # Should add the amount (winning)
         mock_ingot_service.try_add_ingots.assert_called_once()
@@ -514,18 +522,17 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_ingot_service.try_remove_ingots = AsyncMock(return_value=mock_result)
 
         # Mock random to always lose
-        with patch("ironforgedbot.commands.holiday.trick_or_treat_handler.random.random", return_value=0.7):
-            await handler._process_double_or_nothing(self.interaction, 500)
+        with patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.random.random", return_value=0.7):
+            await double_or_nothing.process_double_or_nothing(handler, self.interaction, 500)
 
         # Should remove the amount (losing)
         mock_ingot_service.try_remove_ingots.assert_called_once()
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_result_steal_creates_view_with_buttons(
-        self, mock_member_service_class, mock_ingot_service_class, mock_db
+        self, mock_steal_member_service, mock_steal_db
     ):
         """Test that steal creates an offer with target buttons and walk away."""
         with patch(
@@ -538,8 +545,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         leadership_member = create_test_member("LeadershipUser", [ROLE.LEADERSHIP])
         self.interaction.guild.members = [self.test_user, leadership_member]
 
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
+        mock_steal_db_session, mock_steal_ms = setup_database_service_mocks(
+            mock_steal_db, mock_steal_member_service
         )
 
         test_member = create_test_db_member(
@@ -548,11 +555,11 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             rank=RANK.IRON,
             ingots=10000,
         )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
+        mock_steal_ms.get_member_by_discord_id = AsyncMock(
             return_value=test_member
         )
 
-        await handler.result_steal(self.interaction)
+        await steal.result_steal(handler, self.interaction)
 
         # Verify a view was sent (has buttons)
         self.interaction.followup.send.assert_called_once()
@@ -575,16 +582,16 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         # No Leadership members
         self.interaction.guild.members = [self.test_user]
 
-        await handler.result_steal(self.interaction)
+        await steal.result_steal(handler, self.interaction)
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("no targets", embed.description.lower())
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_result_steal_user_insufficient_ingots(
-        self, mock_member_service_class, mock_db
+        self, mock_steal_member_service, mock_steal_db
     ):
         """Test steal when user doesn't have enough ingots for penalty."""
         with patch(
@@ -596,8 +603,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         leadership_member = create_test_member("LeadershipUser", [ROLE.LEADERSHIP])
         self.interaction.guild.members = [self.test_user, leadership_member]
 
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
+        mock_steal_db_session, mock_steal_ms = setup_database_service_mocks(
+            mock_steal_db, mock_steal_member_service
         )
 
         # User has very few ingots
@@ -607,21 +614,23 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             rank=RANK.IRON,
             ingots=10,
         )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
+        mock_steal_ms.get_member_by_discord_id = AsyncMock(
             return_value=test_member
         )
 
-        await handler.result_steal(self.interaction)
+        await steal.result_steal(handler, self.interaction)
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("need", embed.description.lower())
 
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_process_steal_success(
-        self, mock_member_service_class, mock_ingot_service_class, mock_db
+        self, mock_steal_member_service, mock_handler_member_service, mock_ingot_service_class, mock_handler_db, mock_steal_db
     ):
         """Test successful steal (35% chance)."""
         with patch(
@@ -632,8 +641,14 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         target_member = create_test_member("TargetUser", [ROLE.LEADERSHIP])
 
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
+        # Setup mocks for steal module (to check target's ingots)
+        mock_steal_db_session, mock_steal_ms = setup_database_service_mocks(
+            mock_steal_db, mock_steal_member_service
+        )
+
+        # Setup mocks for handler module (for _adjust_ingots)
+        mock_handler_db_session, mock_handler_ms = setup_database_service_mocks(
+            mock_handler_db, mock_handler_member_service
         )
 
         target_db_member = create_test_db_member(
@@ -642,7 +657,10 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             rank=RANK.IRON,
             ingots=5000,
         )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
+        mock_steal_ms.get_member_by_discord_id = AsyncMock(
+            return_value=target_db_member
+        )
+        mock_handler_ms.get_member_by_discord_id = AsyncMock(
             return_value=target_db_member
         )
 
@@ -657,21 +675,23 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         # Mock random to always succeed
         with patch(
-            "ironforgedbot.commands.holiday.trick_or_treat_handler.random.random",
+            "ironforgedbot.commands.holiday.outcomes.steal.random.random",
             return_value=0.2,
         ):
-            await handler._process_steal(self.interaction, 1000, target_member)
+            await steal.process_steal(handler, self.interaction, 1000, target_member)
 
         # Should remove from target and add to user
         mock_ingot_service.try_remove_ingots.assert_called_once()
         mock_ingot_service.try_add_ingots.assert_called_once()
         self.interaction.followup.send.assert_called_once()
 
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_process_steal_failure(
-        self, mock_member_service_class, mock_ingot_service_class, mock_db
+        self, mock_steal_member_service, mock_handler_member_service, mock_ingot_service_class, mock_handler_db, mock_steal_db
     ):
         """Test failed steal (65% chance, user loses penalty)."""
         with patch(
@@ -682,8 +702,14 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         target_member = create_test_member("TargetUser", [ROLE.LEADERSHIP])
 
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
+        # Setup mocks for steal module (not used in failure case)
+        mock_steal_db_session, mock_steal_ms = setup_database_service_mocks(
+            mock_steal_db, mock_steal_member_service
+        )
+
+        # Setup mocks for handler module (for _adjust_ingots)
+        mock_handler_db_session, mock_handler_ms = setup_database_service_mocks(
+            mock_handler_db, mock_handler_member_service
         )
 
         # User member with enough ingots
@@ -693,7 +719,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             rank=RANK.IRON,
             ingots=1000,
         )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
+        mock_handler_ms.get_member_by_discord_id = AsyncMock(
             return_value=user_db_member
         )
 
@@ -707,10 +733,10 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         # Mock random to always fail
         with patch(
-            "ironforgedbot.commands.holiday.trick_or_treat_handler.random.random",
+            "ironforgedbot.commands.holiday.outcomes.steal.random.random",
             return_value=0.7,
         ):
-            await handler._process_steal(self.interaction, 1000, target_member)
+            await steal.process_steal(handler, self.interaction, 1000, target_member)
 
         # Should only remove penalty from user (half the amount)
         mock_ingot_service.try_remove_ingots.assert_called_once()
@@ -718,10 +744,10 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1], -500)  # Half of 1000
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_process_steal_target_has_zero_ingots(
-        self, mock_member_service_class, mock_db
+        self, mock_steal_member_service, mock_steal_db
     ):
         """Test steal when target has no ingots."""
         with patch(
@@ -732,8 +758,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         target_member = create_test_member("TargetUser", [ROLE.LEADERSHIP])
 
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
+        mock_steal_db_session, mock_steal_ms = setup_database_service_mocks(
+            mock_steal_db, mock_steal_member_service
         )
 
         target_db_member = create_test_db_member(
@@ -742,16 +768,16 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             rank=RANK.IRON,
             ingots=0,
         )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
+        mock_steal_ms.get_member_by_discord_id = AsyncMock(
             return_value=target_db_member
         )
 
         # Mock random to succeed
         with patch(
-            "ironforgedbot.commands.holiday.trick_or_treat_handler.random.random",
+            "ironforgedbot.commands.holiday.outcomes.steal.random.random",
             return_value=0.2,
         ):
-            await handler._process_steal(self.interaction, 1000, target_member)
+            await steal.process_steal(handler, self.interaction, 1000, target_member)
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
