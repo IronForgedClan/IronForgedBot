@@ -309,3 +309,47 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         balance_field = sent_embed.fields[1]
         self.assertEqual(balance_field.value, ":Ingot: 1,234,567")
+
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
+    async def test_cmd_view_ingots_uses_validated_player_not_display_name(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_member_service_class,
+        mock_db,
+    ):
+        """Test that the validated player name is used for DB lookup, not display name."""
+        # Create a discord member with a different display name than their validated player name
+        discord_member = create_test_member("Display Name With Spaces", [ROLE.MEMBER])
+        validated_player_name = "ValidatedName"
+
+        db_member = create_test_db_member(
+            nickname=validated_player_name,
+            discord_id=12345,
+            rank=RANK.IRON,
+            ingots=1000,
+        )
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        # validate_playername returns the validated player name, not the display name
+        mock_validate.return_value = (discord_member, validated_player_name)
+        mock_get_rank.return_value = RANK.IRON
+        mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
+
+        mock_member_service.get_member_by_nickname.return_value = db_member
+
+        await cmd_view_ingots(self.interaction, "some input")
+
+        # Assert that the DB service was called with the validated player name, not display name
+        mock_member_service.get_member_by_nickname.assert_called_once_with(validated_player_name)
+
+        # Verify the display name is still used in the embed title
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("Display Name With Spaces", sent_embed.title)

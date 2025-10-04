@@ -47,7 +47,7 @@ async def cmd_view_ingots(
 
     async with db.get_session() as session:
         service = MemberService(session)
-        member = await service.get_member_by_nickname(display_name)
+        member = await service.get_member_by_nickname(player)
 
         if not member:
             return await send_error_response(
