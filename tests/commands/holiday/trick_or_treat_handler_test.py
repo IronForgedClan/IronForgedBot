@@ -1,36 +1,45 @@
 import asyncio
 import json
-from typing import Counter
 import unittest
-import aiohttp
-from unittest.mock import AsyncMock, patch
+from typing import Counter
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from unittest.mock import Mock
+import aiohttp
+import discord
 
 from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+    INGOT_MULTIPLIER,
+    HIGH_INGOT_MAX,
+    HIGH_INGOT_MIN,
+    LOW_INGOT_MAX,
+    LOW_INGOT_MIN,
+    REMOVE_HIGH_MAX,
+    REMOVE_HIGH_MIN,
     TrickOrTreat,
     TrickOrTreatHandler,
 )
+from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-
-# from ironforgedbot.storage.types import Member  # Disabled for rewrite
 from tests.helpers import (
     create_mock_discord_interaction,
+    create_test_db_member,
     create_test_member,
     get_url_status_code,
+    setup_database_service_mocks,
 )
 
-# Mock Member class for temporary compatibility
-Member = Mock
 
-BOT_CHANGELOG_ENTRY = "[BOT] Trick or Treat"
-
-
-@unittest.skip("Skipping until trick or treat implementation rewrite")
 class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
+        self.interaction = create_mock_discord_interaction(user=self.test_user)
+        self.interaction.guild = MagicMock()
+        self.interaction.guild.get_member = MagicMock(return_value=self.test_user)
+
     async def test_init(self):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            handler = await TrickOrTreatHandler()
+        """Test that TrickOrTreatHandler initializes with correct weights and empty history."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}')):
+            handler = TrickOrTreatHandler()
             expected_weights = [1 / item.value for item in TrickOrTreat]
 
             self.assertEqual(handler.gif_history, [])
@@ -39,99 +48,227 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(handler.negative_message_history, [])
             self.assertEqual(handler.weights, expected_weights)
 
-    @patch(
-        "ironforgedbot.commands.holiday.trick_or_treat_handler.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_adjust_ingots_add(self, mock_storage):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", [ROLE.MEMBER])
-            interaction = create_mock_discord_interaction(user=caller)
-
-            mock_storage.read_member.return_value = Member(
-                id=caller.id, runescape_name=caller.display_name, ingots=5000
-            )
-
-            handler = await TrickOrTreatHandler()
-
-            await handler._adjust_ingots(interaction, 5, caller)
-
-            mock_storage.update_members.assert_called_once_with(
-                [Member(id=caller.id, runescape_name=caller.display_name, ingots=5005)],
-                caller.display_name,
-                note=BOT_CHANGELOG_ENTRY,
-            )
-
-    @patch(
-        "ironforgedbot.commands.holiday.trick_or_treat_handler.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_adjust_ingots_remove(self, mock_storage):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", [ROLE.MEMBER])
-            interaction = create_mock_discord_interaction(user=caller)
-
-            mock_storage.read_member.return_value = Member(
-                id=caller.id, runescape_name=caller.display_name, ingots=5000
-            )
-
-            handler = await TrickOrTreatHandler()
-
-            await handler._adjust_ingots(interaction, -5, caller)
-
-            mock_storage.update_members.assert_called_once_with(
-                [Member(id=caller.id, runescape_name=caller.display_name, ingots=4995)],
-                caller.display_name,
-                note=BOT_CHANGELOG_ENTRY,
-            )
-
-    @patch(
-        "ironforgedbot.commands.holiday.trick_or_treat_handler.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_adjust_ingots_member_has_none(self, mock_storage):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", [ROLE.MEMBER])
-            interaction = create_mock_discord_interaction(user=caller)
-
-            mock_storage.read_member.return_value = Member(
-                id=caller.id, runescape_name=caller.display_name, ingots=0
-            )
-
-            handler = await TrickOrTreatHandler()
-
-            result = await handler._adjust_ingots(interaction, -5, caller)
-
-            self.assertEqual(result, (None, None))
-            mock_storage.update_members.assert_not_called()
-
-    @patch(
-        "ironforgedbot.commands.holiday.trick_or_treat_handler.STORAGE",
-        new_callable=AsyncMock,
-    )
-    async def test_adjust_ingots_member_has_less_than_wanted_to_remove(
-        self, mock_storage
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    async def test_adjust_ingots_add_success(
+        self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
-            caller = create_test_member("bob", [ROLE.MEMBER])
-            interaction = create_mock_discord_interaction(user=caller)
+        """Test successfully adding ingots to a player."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}')):
+            handler = TrickOrTreatHandler()
 
-            mock_storage.read_member.return_value = Member(
-                id=caller.id, runescape_name=caller.display_name, ingots=1
-            )
+        mock_db_session, _ = setup_database_service_mocks(mock_db, mock_member_service_class)
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service_class.return_value = mock_ingot_service
 
-            handler = await TrickOrTreatHandler()
+        mock_result = MagicMock()
+        mock_result.status = True
+        mock_result.new_total = 1500
+        mock_ingot_service.try_add_ingots = AsyncMock(return_value=mock_result)
 
-            result = await handler._adjust_ingots(interaction, -5, caller)
+        result = await handler._adjust_ingots(self.interaction, 500, self.test_user)
 
-            self.assertEqual(result, (-1, 0))
-            mock_storage.update_members.assert_called_once_with(
-                [Member(id=caller.id, runescape_name=caller.display_name, ingots=0)],
-                caller.display_name,
-                note=BOT_CHANGELOG_ENTRY,
-            )
+        self.assertEqual(result, 1500)
+        mock_ingot_service.try_add_ingots.assert_called_once_with(
+            self.test_user.id, 500, None, "Trick or treat win"
+        )
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    async def test_adjust_ingots_remove_success(
+        self, mock_member_service_class, mock_ingot_service_class, mock_db
+    ):
+        """Test successfully removing ingots from a player."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}')):
+            handler = TrickOrTreatHandler()
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service_class.return_value = mock_ingot_service
+
+        test_member = create_test_db_member(
+            nickname="TestUser",
+            discord_id=self.test_user.id,
+            rank=RANK.IRON,
+            ingots=1000,
+        )
+        mock_member_service.get_member_by_discord_id = AsyncMock(return_value=test_member)
+
+        mock_result = MagicMock()
+        mock_result.status = True
+        mock_result.new_total = 500
+        mock_ingot_service.try_remove_ingots = AsyncMock(return_value=mock_result)
+
+        result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
+
+        self.assertEqual(result, 500)
+        mock_ingot_service.try_remove_ingots.assert_called_once()
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.send_error_response")
+    async def test_adjust_ingots_member_has_zero_ingots(
+        self, mock_send_error, mock_member_service_class, mock_ingot_service_class, mock_db
+    ):
+        """Test that removing ingots from a player with 0 ingots returns None."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}')):
+            handler = TrickOrTreatHandler()
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+
+        test_member = create_test_db_member(
+            nickname="TestUser",
+            discord_id=self.test_user.id,
+            rank=RANK.IRON,
+            ingots=0,
+        )
+        mock_member_service.get_member_by_discord_id = AsyncMock(return_value=test_member)
+
+        result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
+
+        self.assertIsNone(result)
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    async def test_adjust_ingots_caps_removal_at_balance(
+        self, mock_member_service_class, mock_ingot_service_class, mock_db
+    ):
+        """Test that trying to remove more ingots than balance only removes available amount."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}')):
+            handler = TrickOrTreatHandler()
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service_class.return_value = mock_ingot_service
+
+        test_member = create_test_db_member(
+            nickname="TestUser",
+            discord_id=self.test_user.id,
+            rank=RANK.IRON,
+            ingots=100,
+        )
+        mock_member_service.get_member_by_discord_id = AsyncMock(return_value=test_member)
+
+        mock_result = MagicMock()
+        mock_result.status = True
+        mock_result.new_total = 0
+        mock_ingot_service.try_remove_ingots = AsyncMock(return_value=mock_result)
+
+        result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
+
+        # Should cap the removal at the member's balance
+        mock_ingot_service.try_remove_ingots.assert_called_once_with(
+            self.test_user.id, -100, None, "Trick or treat loss"
+        )
+        self.assertEqual(result, 0)
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
+    async def test_handle_ingot_result_positive(
+        self, mock_ingot_service_class, mock_db
+    ):
+        """Test _handle_ingot_result with a positive outcome."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}')):
+            handler = TrickOrTreatHandler()
+
+        # Mock _adjust_ingots to return a successful balance
+        handler._adjust_ingots = AsyncMock(return_value=1500)
+
+        await handler._handle_ingot_result(self.interaction, 500, is_positive=True)
+
+        self.interaction.followup.send.assert_called_once()
+        call_args = self.interaction.followup.send.call_args
+        embed = call_args.kwargs["embed"]
+        self.assertIsNotNone(embed)
+
+    async def test_handle_ingot_result_no_ingots(self):
+        """Test _handle_ingot_result when player has no ingots."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}')):
+            handler = TrickOrTreatHandler()
+
+        # Mock _adjust_ingots to return None (no ingots)
+        handler._adjust_ingots = AsyncMock(return_value=None)
+
+        await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
+
+        self.interaction.followup.send.assert_called_once()
+
+    async def test_result_add_low(self):
+        """Test result_add_low generates correct ingot range."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}')):
+            handler = TrickOrTreatHandler()
+
+        handler._handle_ingot_result = AsyncMock()
+
+        await handler.result_add_low(self.interaction)
+
+        handler._handle_ingot_result.assert_called_once()
+        quantity = handler._handle_ingot_result.call_args[0][1]
+        is_positive = handler._handle_ingot_result.call_args[1]["is_positive"]
+
+        self.assertGreaterEqual(quantity, LOW_INGOT_MIN * INGOT_MULTIPLIER)
+        self.assertLess(quantity, LOW_INGOT_MAX * INGOT_MULTIPLIER)
+        self.assertTrue(is_positive)
+
+    async def test_result_remove_high(self):
+        """Test result_remove_high generates correct ingot range."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}')):
+            handler = TrickOrTreatHandler()
+
+        handler._handle_ingot_result = AsyncMock()
+
+        await handler.result_remove_high(self.interaction)
+
+        handler._handle_ingot_result.assert_called_once()
+        quantity = handler._handle_ingot_result.call_args[0][1]
+        is_positive = handler._handle_ingot_result.call_args[1]["is_positive"]
+
+        self.assertLessEqual(quantity, -(REMOVE_HIGH_MIN * INGOT_MULTIPLIER))
+        self.assertGreater(quantity, -(REMOVE_HIGH_MAX * INGOT_MULTIPLIER))
+        self.assertFalse(is_positive)
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
+    async def test_result_jackpot_already_claimed(self, mock_state):
+        """Test that jackpot shows consolation message when already claimed."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}')):
+            handler = TrickOrTreatHandler()
+
+        mock_state.state = {"trick_or_treat_jackpot_claimed": True}
+
+        await handler.result_jackpot(self.interaction)
+
+        self.interaction.followup.send.assert_called_once()
+        embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("unworthy", embed.description.lower())
+
+    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
+    async def test_result_jackpot_success(self, mock_state):
+        """Test successful jackpot claim."""
+        with patch("builtins.open", unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}')):
+            handler = TrickOrTreatHandler()
+
+        mock_state.state = {"trick_or_treat_jackpot_claimed": False}
+        handler._adjust_ingots = AsyncMock(return_value=1_500_000)
+
+        await handler.result_jackpot(self.interaction)
+
+        self.interaction.followup.send.assert_called_once()
+        embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("JACKPOT", embed.description)
+        self.assertTrue(mock_state.state["trick_or_treat_jackpot_claimed"])
 
     async def test_unique_gifs(self):
+        """Test that all GIFs in the data file are unique."""
         with open("data/trick_or_treat.json") as f:
             data = json.load(f)
             GIFS = data["GIFS"]
@@ -141,6 +278,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
     @unittest.skip("Network heavy, run only when necessary")
     async def test_gifs_return_200(self):
+        """Test that all GIF URLs are accessible (returns 200)."""
         with open("data/trick_or_treat.json") as f:
             data = json.load(f)
             GIFS = data["GIFS"]
@@ -153,6 +291,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
                 assert result == 200, f"{url} returned status code {result}"
 
     async def test_unique_thumbnails(self):
+        """Test that all thumbnails in the data file are unique."""
         with open("data/trick_or_treat.json") as f:
             data = json.load(f)
             THUMBNAILS = data["THUMBNAILS"]
@@ -162,6 +301,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
     @unittest.skip("Network heavy, run only when necessary")
     async def test_thumbnails_return_200(self):
+        """Test that all thumbnail URLs are accessible (returns 200)."""
         with open("data/trick_or_treat.json") as f:
             data = json.load(f)
             THUMBNAILS = data["THUMBNAILS"]
