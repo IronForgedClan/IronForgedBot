@@ -36,13 +36,13 @@ class TrickOrTreat(Enum):
     Total weight: 1000
     """
 
-    GIF = 381                      # 38.1% (1 in 2.6)
-    REMOVE_INGOTS_LOW = 159        # 15.9% (1 in 6.3)
-    ADD_INGOTS_LOW = 152           # 15.2% (1 in 6.6)
-    REMOVE_INGOTS_HIGH = 140       # 14.0% (1 in 7.1)
-    ADD_INGOTS_HIGH = 127          # 12.7% (1 in 7.9)
-    REMOVE_ALL_INGOTS_TRICK = 38   # 3.8% (1 in 26.3)
-    JACKPOT_INGOTS = 3             # 0.3% (1 in 333.3)
+    GIF = 381  # 38.1% (1 in 2.6)
+    REMOVE_INGOTS_LOW = 159  # 15.9% (1 in 6.3)
+    ADD_INGOTS_LOW = 152  # 15.2% (1 in 6.6)
+    REMOVE_INGOTS_HIGH = 140  # 14.0% (1 in 7.1)
+    ADD_INGOTS_HIGH = 127  # 12.7% (1 in 7.9)
+    REMOVE_ALL_INGOTS_TRICK = 38  # 3.8% (1 in 26.3)
+    JACKPOT_INGOTS = 3  # 0.3% (1 in 333.3)
 
 
 class TrickOrTreatHandler:
@@ -273,8 +273,8 @@ class TrickOrTreatHandler:
         """
         return self._build_embed(
             (
-                "You lost... _well_, you would have lost ingots if you had any!\n"
-                + "Attend some events, throw us a bond or _something_.\n"
+                "You lost... _well_, you would have lost ingots if you had any!\n\n"
+                + "Attend some events, throw us a bond or _something_. "
                 + "You're making me look bad. 💀"
                 + self._get_balance_message(username, 0)
             )
