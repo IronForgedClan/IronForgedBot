@@ -2,6 +2,7 @@
 
 import logging
 import random
+import time
 from typing import TYPE_CHECKING, List, Optional
 
 import discord
@@ -192,9 +193,7 @@ async def result_steal(
     # Check if user has enough ingots to risk the penalty
     async with db.get_session() as session:
         member_service = MemberService(session)
-        user_member = await member_service.get_member_by_discord_id(
-            interaction.user.id
-        )
+        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
 
         if user_member and user_member.ingots < penalty:
             message = handler.STEAL_USER_NO_INGOTS.format(
@@ -203,9 +202,15 @@ async def result_steal(
             embed = handler._build_embed(message)
             return await interaction.followup.send(embed=embed)
 
+    expire_timestamp = int(time.time() + 30)
+    expires_formatted = f"<t:{expire_timestamp}:R>"
+
     # Create offer message
     offer_message = handler.STEAL_OFFER.format(
-        ingot_icon=handler.ingot_icon, amount=quantity, penalty=penalty
+        ingot_icon=handler.ingot_icon,
+        amount=quantity,
+        penalty=penalty,
+        expires=expires_formatted,
     )
     embed = handler._build_embed(offer_message)
 
