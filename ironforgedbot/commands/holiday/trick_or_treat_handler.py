@@ -37,14 +37,14 @@ class TrickOrTreat(Enum):
     """
 
     # fmt: off
-    GIF = 343                      # 34.3% (1/2.9)
-    REMOVE_INGOTS_LOW = 143        # 14.3% (1/7.0)
-    ADD_INGOTS_LOW = 137           # 13.7% (1/7.3)
-    REMOVE_INGOTS_HIGH = 126       # 12.6% (1/7.9)
-    ADD_INGOTS_HIGH = 114          # 11.4% (1/8.8)
+    GIF = 337                      # 33.7% (1/3.0)
+    REMOVE_INGOTS_LOW = 150        # 15.0% (1/6.7)
+    ADD_INGOTS_LOW = 140           # 14.0% (1/7.1)
+    REMOVE_INGOTS_HIGH = 130       # 13.0% (1/7.7)
+    ADD_INGOTS_HIGH = 120          # 12.0% (1/8.3)
     JOKE = 100                     # 10.0% (1/10.0)
-    REMOVE_ALL_INGOTS_TRICK = 34   # 3.4% (1/29.4)
-    JACKPOT_INGOTS = 3             # 0.3% (1/333.3)
+    REMOVE_ALL_INGOTS_TRICK = 20   #  2.0% (1/50.0)
+    JACKPOT_INGOTS = 3             #  0.3% (1/333.3)
     # fmt: on
 
 
