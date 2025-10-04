@@ -32,16 +32,17 @@ GIF_HISTORY_LIMIT = 125
 class TrickOrTreat(Enum):
     """Enum representing different trick-or-treat outcomes with their probability weights.
 
-    Higher values = lower probability (weight = 1/value).
+    Values represent relative weights (higher value = higher probability).
+    Total weight: 1000
     """
 
-    GIF = 5
-    REMOVE_INGOTS_LOW = 11
-    ADD_INGOTS_LOW = 10
-    REMOVE_INGOTS_HIGH = 55
-    ADD_INGOTS_HIGH = 50
-    REMOVE_ALL_INGOTS_TRICK = 100
-    JACKPOT_INGOTS = 10_000
+    GIF = 381                      # 38.1% (1 in 2.6)
+    REMOVE_INGOTS_LOW = 159        # 15.9% (1 in 6.3)
+    ADD_INGOTS_LOW = 152           # 15.2% (1 in 6.6)
+    REMOVE_INGOTS_HIGH = 140       # 14.0% (1 in 7.1)
+    ADD_INGOTS_HIGH = 127          # 12.7% (1 in 7.9)
+    REMOVE_ALL_INGOTS_TRICK = 38   # 3.8% (1 in 26.3)
+    JACKPOT_INGOTS = 3             # 0.3% (1 in 333.3)
 
 
 class TrickOrTreatHandler:
@@ -53,7 +54,7 @@ class TrickOrTreatHandler:
 
     def __init__(self) -> None:
         """Initialize the TrickOrTreatHandler with weighted outcomes and message history."""
-        self.weights: List[float] = [1 / item.value for item in TrickOrTreat]
+        self.weights: List[float] = [item.value for item in TrickOrTreat]
         self.ingot_icon: str = find_emoji("Ingot")
         self.gif_history: List[str] = []
         self.thumbnail_history: List[str] = []

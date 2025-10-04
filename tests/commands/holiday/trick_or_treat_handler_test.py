@@ -40,7 +40,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}'),
         ):
             handler = TrickOrTreatHandler()
-            expected_weights = [1 / item.value for item in TrickOrTreat]
+            expected_weights = [item.value for item in TrickOrTreat]
 
             self.assertEqual(handler.gif_history, [])
             self.assertEqual(handler.thumbnail_history, [])
