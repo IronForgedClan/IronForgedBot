@@ -273,7 +273,7 @@ class TrickOrTreatHandler:
         """
         return self._build_embed(
             (
-                "You lost... _well_, you would have lost ingots if you had any!\n\n"
+                "You lost... well, you would have lost ingots if you had any!\n\n"
                 + "Attend some events, throw us a bond or _something_. "
                 + "You're making me look bad. 💀"
                 + self._get_balance_message(username, 0)
