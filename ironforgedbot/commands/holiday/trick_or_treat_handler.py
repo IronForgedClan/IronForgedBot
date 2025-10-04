@@ -36,13 +36,14 @@ class TrickOrTreat(Enum):
     Total weight: 1000
     """
 
-    GIF = 381  # 38.1% (1 in 2.6)
-    REMOVE_INGOTS_LOW = 159  # 15.9% (1 in 6.3)
-    ADD_INGOTS_LOW = 152  # 15.2% (1 in 6.6)
-    REMOVE_INGOTS_HIGH = 140  # 14.0% (1 in 7.1)
-    ADD_INGOTS_HIGH = 127  # 12.7% (1 in 7.9)
-    REMOVE_ALL_INGOTS_TRICK = 38  # 3.8% (1 in 26.3)
-    JACKPOT_INGOTS = 3  # 0.3% (1 in 333.3)
+    GIF = 343                      # 34.3% (1 in 2.9)
+    REMOVE_INGOTS_LOW = 143        # 14.3% (1 in 7.0)
+    ADD_INGOTS_LOW = 137           # 13.7% (1 in 7.3)
+    REMOVE_INGOTS_HIGH = 126       # 12.6% (1 in 7.9)
+    ADD_INGOTS_HIGH = 114          # 11.4% (1 in 8.8)
+    JOKE = 100                     # 10.0% (1 in 10.0)
+    REMOVE_ALL_INGOTS_TRICK = 34   # 3.4% (1 in 29.4)
+    JACKPOT_INGOTS = 3             # 0.3% (1 in 333.3)
 
 
 class TrickOrTreatHandler:
@@ -421,6 +422,8 @@ class TrickOrTreatHandler:
                 return await self.result_remove_low(interaction)
             case TrickOrTreat.ADD_INGOTS_LOW:
                 return await self.result_add_low(interaction)
+            case TrickOrTreat.JOKE:
+                return await self.result_joke(interaction)
             case TrickOrTreat.GIF:
                 return await self.result_gif(interaction)
 
