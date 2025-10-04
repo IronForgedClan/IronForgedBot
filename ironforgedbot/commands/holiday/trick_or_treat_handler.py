@@ -83,14 +83,12 @@ class DoubleOrNothingView(discord.ui.View):
             interaction: The Discord interaction from the button click.
             button: The button that was clicked.
         """
-        # Only allow the original user to click the button
         if interaction.user.id != self.user_id:
             await interaction.response.send_message(
                 "This isn't your game!", ephemeral=True
             )
             return
 
-        # Prevent multiple clicks
         if self.has_interacted:
             await interaction.response.send_message(
                 "You already made your choice!", ephemeral=True
@@ -104,7 +102,6 @@ class DoubleOrNothingView(discord.ui.View):
 
         await self.handler._process_double_or_nothing(interaction, self.amount)
 
-        # Remove from active offers
         user_id_str = str(self.user_id)
         if user_id_str in STATE.state["double_or_nothing_offers"]:
             del STATE.state["double_or_nothing_offers"][user_id_str]
@@ -147,7 +144,6 @@ class StealTargetView(discord.ui.View):
         self.amount = amount
         self.has_interacted = False
 
-        # Dynamically create buttons for each target (danger style)
         for target in targets:
             button = discord.ui.Button(
                 label=target.display_name,
@@ -157,7 +153,6 @@ class StealTargetView(discord.ui.View):
             button.callback = self._create_steal_callback(target)
             self.add_item(button)
 
-        # Add "Walk Away" button (secondary/gray style)
         walk_away_button = discord.ui.Button(
             label="🚶 Walk Away",
             style=discord.ButtonStyle.secondary,
@@ -177,14 +172,12 @@ class StealTargetView(discord.ui.View):
         """
 
         async def callback(interaction: discord.Interaction):
-            # Only allow the original user to click
             if interaction.user.id != self.user_id:
                 await interaction.response.send_message(
                     "This isn't your heist!", ephemeral=True
                 )
                 return
 
-            # Prevent multiple clicks
             if self.has_interacted:
                 await interaction.response.send_message(
                     "You already made your choice!", ephemeral=True
@@ -193,16 +186,13 @@ class StealTargetView(discord.ui.View):
 
             self.has_interacted = True
 
-            # Disable all buttons
             for item in self.children:
                 if isinstance(item, discord.ui.Button):
                     item.disabled = True
             await interaction.response.edit_message(view=self)
 
-            # Process the steal attempt
             await self.handler._process_steal(interaction, self.amount, target)
 
-            # Stop the view
             self.stop()
 
         return callback
@@ -213,14 +203,12 @@ class StealTargetView(discord.ui.View):
         Args:
             interaction: The Discord interaction from the button click.
         """
-        # Only allow the original user to click
         if interaction.user.id != self.user_id:
             await interaction.response.send_message(
                 "This isn't your heist!", ephemeral=True
             )
             return
 
-        # Prevent multiple clicks
         if self.has_interacted:
             await interaction.response.send_message(
                 "You already made your choice!", ephemeral=True
@@ -229,22 +217,18 @@ class StealTargetView(discord.ui.View):
 
         self.has_interacted = True
 
-        # Disable all buttons
         for item in self.children:
             if isinstance(item, discord.ui.Button):
                 item.disabled = True
         await interaction.response.edit_message(view=self)
 
-        # Send walk away message
         embed = self.handler._build_embed(self.handler.STEAL_WALK_AWAY)
         await interaction.followup.send(embed=embed)
 
-        # Stop the view
         self.stop()
 
     async def on_timeout(self):
         """Handle the view timing out after 30 seconds."""
-        # No special cleanup needed
         pass
 
 

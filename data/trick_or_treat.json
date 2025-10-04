@@ -67,13 +67,13 @@
     },
     "DOUBLE_OR_NOTHING": {
         "OFFER": "🎲 **Double or Nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick below within 30 seconds to risk it all for a chance to **double your winnings**!",
-        "WIN": "🎉 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
+        "WIN": "💰 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
         "LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
     },
     "STEAL": {
-        "OFFER": "🦹 **Steal?**\n\nYou have a chance to steal **{ingot_icon}{amount:,}** ingots from one of these people.\n\nChoose your target wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.",
-        "SUCCESS": "🎉 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
+        "OFFER": "**Steal?**\n\nYou have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following **staff** members.\n\nChoose your target wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing. You have **60 seconds** to decice.",
+        "SUCCESS": "💰 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
         "FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
         "WALK_AWAY": "🚶 **You walked away.**\n\nSometimes the best heist is the one you don't attempt.",
         "NO_TARGETS": "There are no targets available to steal from right now. Try again later!",
