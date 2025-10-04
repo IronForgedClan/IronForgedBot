@@ -480,7 +480,7 @@ class TrickOrTreatHandler:
     async def result_remove_all_ingots_trick(
         self, interaction: discord.Interaction
     ) -> None:
-        """Pretend to remove all ingots from the player.
+        """Pretend to remove all ingots from the player (doesn't actually remove them).
 
         Args:
             interaction: The Discord interaction context.
@@ -501,20 +501,11 @@ class TrickOrTreatHandler:
                     interaction.user.display_name
                 )
             else:
-                quantity_to_remove = member.ingots * -1
-                ingot_total = await self._adjust_ingots(
-                    interaction,
-                    quantity_to_remove,
-                    interaction.guild.get_member(interaction.user.id),
-                )
-
                 embed = self._build_embed(
                     (
-                        f"You lost **{self.ingot_icon}{member.ingots:,}**...\n"
+                        f"You lost **{self.ingot_icon}-{member.ingots:,}**...\n"
                         "Now that's gotta sting."
-                        + self._get_balance_message(
-                            interaction.user.display_name, ingot_total or 0
-                        )
+                        + self._get_balance_message(interaction.user.display_name, 0)
                     )
                 )
             embed.set_thumbnail(
