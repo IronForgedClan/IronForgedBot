@@ -63,8 +63,18 @@ class TrickOrTreatHandler:
         self.thumbnail_history: List[str] = []
         self.positive_message_history: List[str] = []
         self.negative_message_history: List[str] = []
+
+        # Data loaded from JSON
         self.GIFS: List[str]
         self.THUMBNAILS: List[str]
+        self.POSITIVE_MESSAGES: List[str]
+        self.NEGATIVE_MESSAGES: List[str]
+        self.NEGATIVE_ANNOYANCES: List[str]
+        self.JOKES: List[str]
+        self.NO_INGOTS_MESSAGE: str
+        self.JACKPOT_SUCCESS_PREFIX: str
+        self.JACKPOT_CLAIMED_MESSAGE: str
+        self.REMOVE_ALL_TRICK_MESSAGE: str
 
         with open("data/trick_or_treat.json") as f:
             logger.info("loading trick or treat data...")
@@ -72,6 +82,14 @@ class TrickOrTreatHandler:
 
             self.GIFS = data["GIFS"]
             self.THUMBNAILS = data["THUMBNAILS"]
+            self.POSITIVE_MESSAGES = data["POSITIVE_MESSAGES"]
+            self.NEGATIVE_MESSAGES = data["NEGATIVE_MESSAGES"]
+            self.NEGATIVE_ANNOYANCES = data["NEGATIVE_ANNOYANCES"]
+            self.JOKES = data["JOKES"]
+            self.NO_INGOTS_MESSAGE = data["NO_INGOTS_MESSAGE"]
+            self.JACKPOT_SUCCESS_PREFIX = data["JACKPOT_SUCCESS_PREFIX"]
+            self.JACKPOT_CLAIMED_MESSAGE = data["JACKPOT_CLAIMED_MESSAGE"]
+            self.REMOVE_ALL_TRICK_MESSAGE = data["REMOVE_ALL_TRICK_MESSAGE"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -79,79 +97,12 @@ class TrickOrTreatHandler:
         Returns:
             A message template string with {ingots} placeholder.
         """
-        if random.random() >= 0.5:
-            return ":tada: Treat! **{ingots}**!\ngzzzzzzzzzzzzz :jack_o_lantern:"
-
-        options = [
-            (
-                "Oh fine.\n**{ingots}** is a small price to pay to get "
-                "out of this interaction."
-            ),
-            (
-                "Congratulations on your life changing payout of... "
-                "_*drumroll*_\n**{ingots}**!"
-            ),
-            (
-                "I'm feeling generous.\nTake **{ingots}** ingots and "
-                "get yourself something nice."
-            ),
-            "**{ingots}** to trim my armour?\nYou got yourself a deal. :handshake:",
-            (
-                "...and with the recipt of **{ingots}** ingots, the contract is "
-                "official.\nI hope you read the fine print."
-            ),
-            (
-                "I'm printing **{ingots}** out of thin air just for you.\n"
-                "This devalues all ingots a little bit, I hope you're happy."
-            ),
-            (
-                "If I dropped **{ingots}** north of the Edgeville ditch...\n"
-                "would you pick them up? Asking for a friend."
-            ),
-            (
-                "When Kodiak's back was turned, I stole **{ingots}** from his "
-                "account.\nNow they are yours, and you're as guilty as I am."
-            ),
-            "You have been credited **{ingots}**.\nThank you for playing, human.",
-            (
-                "On behalf of everyone at Iron Forged I just want to say ~~fuc~~... "
-                "**congratulations**!!\nWe are all so happy for you. **{ingots}**."
-            ),
-            "_Sigh_\nJust take **{ingots}** ingots and get out of my sight.",
-            "**JACKPOT!!!!!!!**\nOh no, it's only **{ingots}**. False alarm.",
-            "**{ingots}**\ngz.",
-            "Gzzzzzzzzzzz!!\nWinnings: **{ingots}**.",
-            (
-                "The RNG Gods smile upon you this day, adventurer.\n"
-                "You won **{ingots}** ingots."
-            ),
-            (
-                "You are now thinking about blinking..\n"
-                "...and ingots **{ingots}**.\n_blingots_."
-            ),
-            (
-                "You've been working hard lately. I've noticed.\n"
-                "Have **{ingots}** ingots."
-            ),
-            "**{ingots}**\n**gzzzzzzz**\ngzzzzzzz\n-# gzzzzzzz",
-            "You're rich now!\n**{ingots}** ingot payday.",
-            "Good job bud!\n**{ingots}**.",
-            "Hey bud!\n**{ingots}** you deserve this.",
-            (
-                "Good day adventurer. I come to you with gifts.\n"
-                "**{ingots}** fresh from the mine."
-            ),
-            "**{ingots}** just for you,\nbud.",
-            "**{ingots}** from my bud **test run btw**\ndirectly to you!",
-        ]
-
         chosen = random.choice(
-            [s for s in options if s not in self.positive_message_history]
+            [s for s in self.POSITIVE_MESSAGES if s not in self.positive_message_history]
         )
         self._add_to_history(
             chosen, self.positive_message_history, POSITIVE_MESSAGE_HISTORY_LIMIT
         )
-
         return chosen
 
     def _get_random_negative_message(self) -> str:
@@ -161,76 +112,18 @@ class TrickOrTreatHandler:
             A message template string with {ingots} placeholder.
         """
         if random.random() >= 0.5:
-            annoyance = [
-                "bud",
-                "buddy",
-                "pal",
-                "champ",
-                "boss",
-                "chief",
-                "friend",
-                "mate",
-                "kid",
-                "kiddo",
-            ]
             return (
-                "Trick!\nUnlucky " + random.choice(annoyance) + " **{ingots}** ingots."
+                "Trick!\nUnlucky "
+                + random.choice(self.NEGATIVE_ANNOYANCES)
+                + " **{ingots}** ingots."
             )
 
-        options = [
-            (
-                "You gambled against the house and lost **{ingots}**...\n"
-                "It's me. I am the house."
-            ),
-            (
-                "Your profile has been found guilty of botting.\nThe fine is "
-                "**{ingots}**.\nPayment is mandatory.\nYour guilt is undeniable."
-            ),
-            (
-                "The odds of losing exactly **{ingots}** is truly astronomical.\n"
-                "Really, you should be proud."
-            ),
-            "...aaaaaaand it's gone.\n**{ingots}** :wave:",
-            "Quick, look behind you! _*yoink*_ **{ingots}**\n:eyes:",
-            "**JACKPOT!!!!!!!**\nOh no... it's an anti-jackpot **{ingots}**. Unlucky.",
-            "You chose...\n\n...poorly **{ingots}**.",
-            "Sorry champ..\n**{ingots}** :frowning:",
-            "Ah damn, I was rooting for you too **{ingots}**.\n-# not",
-            (
-                "If you stop reading now, you can pretend you actually won.\n"
-                "**{ingots}** :hear_no_evil:"
-            ),
-            "**{ingots}**...\nSorry.",
-            "**WRONG {ingots}**, try again.\n:person_gesturing_no:",
-            "Ha!\n**{ingots}** :person_shrugging:",
-            (
-                "The RNG Gods are laughing at you, adventurer...\n"
-                "You lost **{ingots}** ingots."
-            ),
-            "**{ingots}** ouch bud.\n:grimacing:",
-            "Unluck pal, **{ingots}**.\n:badger:",
-            "You are a loser.\n\nAlso, you lost **{ingots}** ingots.",
-            "I took no pleasure in deducting **{ingots}** from you.\n... :joy:",
-            (
-                "The worst part about losing **{ingots}**, isn't the ingot loss.\n"
-                "It's the public humiliation. :clown:"
-            ),
-            "It's nothing personal.\nI'm just following my programming **{ingots}**.",
-            "Sorry bud...\n**{ingots}**",
-            "Sorry buddy...\n**{ingots}**",
-            "Unlucky bud...\n**{ingots}**",
-            "Sucks to be you, champ.\n**{ingots}**",
-            "My electricity bill is due...\nIt's your turn **{ingots}**.",
-            "I see dead ingots.\n**{ingots}** :ghost:",
-        ]
-
         chosen = random.choice(
-            [s for s in options if s not in self.negative_message_history]
+            [s for s in self.NEGATIVE_MESSAGES if s not in self.negative_message_history]
         )
         self._add_to_history(
             chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT
         )
-
         return chosen
 
     def _get_balance_message(self, username: str, balance: int) -> str:
@@ -275,12 +168,7 @@ class TrickOrTreatHandler:
             A Discord embed with a humorous error message.
         """
         return self._build_embed(
-            (
-                "You lost... well, you would have lost ingots if you had any!\n\n"
-                + "Attend some events, throw us a bond or _something_. "
-                + "You're making me look bad. 💀"
-                + self._get_balance_message(username, 0)
-            )
+            self.NO_INGOTS_MESSAGE + self._get_balance_message(username, 0)
         )
 
     def _add_to_history(
@@ -440,14 +328,7 @@ class TrickOrTreatHandler:
         """
         assert interaction.guild
         if STATE.state["trick_or_treat_jackpot_claimed"]:
-            embed = self._build_embed(
-                (
-                    "**Treat!** Or, well, it would have been... but you have been "
-                    "deemed unworthy.\nI don't know what to tell you, I don't "
-                    "make the rules. 🤷‍♂️"
-                    "\n\nHave a consolation pumpkin emoji 🎃"
-                )
-            )
+            embed = self._build_embed(self.JACKPOT_CLAIMED_MESSAGE)
             return await interaction.followup.send(embed=embed)
 
         user_new_total = await self._adjust_ingots(
@@ -458,18 +339,14 @@ class TrickOrTreatHandler:
 
         STATE.state["trick_or_treat_jackpot_claimed"] = True
 
+        message = self.JACKPOT_SUCCESS_PREFIX.format(
+            mention=interaction.user.mention,
+            ingot_icon=self.ingot_icon,
+            amount=JACKPOT_VALUE,
+        )
         embed = self._build_embed(
-            (
-                f"**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day "
-                f"{interaction.user.mention}!\nYou have been blessed with the "
-                "biggest payout I am authorized to give.\n\n"
-                f"A cool **{self.ingot_icon}{JACKPOT_VALUE:,}** ingots wired directly "
-                "into your bank account.\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n"
-                "`wave2:rainbow:gzzzzzzzzzzzzzzzzzzzzzzzzzzzzz`"
-                + self._get_balance_message(
-                    interaction.user.display_name, user_new_total or 0
-                )
-            )
+            message
+            + self._get_balance_message(interaction.user.display_name, user_new_total or 0)
         )
         embed.set_thumbnail(
             url=(
@@ -504,12 +381,11 @@ class TrickOrTreatHandler:
                     interaction.user.display_name
                 )
             else:
+                message = self.REMOVE_ALL_TRICK_MESSAGE.format(
+                    ingot_icon=self.ingot_icon, amount=member.ingots
+                )
                 embed = self._build_embed(
-                    (
-                        f"You lost **{self.ingot_icon}-{member.ingots:,}**...\n"
-                        "Now that's gotta sting."
-                        + self._get_balance_message(interaction.user.display_name, 0)
-                    )
+                    message + self._get_balance_message(interaction.user.display_name, 0)
                 )
             embed.set_thumbnail(
                 url=(
@@ -556,17 +432,12 @@ class TrickOrTreatHandler:
         await self._handle_ingot_result(interaction, quantity, is_positive=True)
 
     async def result_joke(self, interaction: discord.Interaction) -> None:
-        """Send a random Halloween-themed joke (currently unused).
+        """Send a random Halloween-themed joke.
 
         Args:
             interaction: The Discord interaction context.
         """
-        jokes = [
-            "**Why did the skeleton go to the party alone?**\n"
-            "He had no body to go with! 🩻"
-        ]
-
-        await interaction.followup.send(embed=self._build_embed(random.choice(jokes)))
+        await interaction.followup.send(embed=self._build_embed(random.choice(self.JOKES)))
 
     async def result_gif(self, interaction: discord.Interaction) -> None:
         """Send a random Halloween-themed GIF.

@@ -25,6 +25,20 @@ from tests.helpers import (
     setup_database_service_mocks,
 )
 
+# Mock data for tests
+MOCK_TRICK_OR_TREAT_DATA = json.dumps({
+    "GIFS": [],
+    "THUMBNAILS": ["http://test.com/img.png"],
+    "POSITIVE_MESSAGES": ["Test positive {ingots}"],
+    "NEGATIVE_MESSAGES": ["Test negative {ingots}"],
+    "NEGATIVE_ANNOYANCES": ["bud"],
+    "JOKES": ["Test joke"],
+    "NO_INGOTS_MESSAGE": "No ingots test message",
+    "JACKPOT_SUCCESS_PREFIX": "Jackpot {mention} {ingot_icon}{amount:,}",
+    "JACKPOT_CLAIMED_MESSAGE": "Already claimed",
+    "REMOVE_ALL_TRICK_MESSAGE": "Removed {ingot_icon}-{amount:,}"
+})
+
 
 class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -37,7 +51,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test that TrickOrTreatHandler initializes with correct weights and empty history."""
         with patch(
             "builtins.open",
-            unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}'),
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
         ):
             handler = TrickOrTreatHandler()
             expected_weights = [item.value for item in TrickOrTreat]
@@ -57,7 +71,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test successfully adding ingots to a player."""
         with patch(
             "builtins.open",
-            unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}'),
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
         ):
             handler = TrickOrTreatHandler()
 
@@ -88,7 +102,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test successfully removing ingots from a player."""
         with patch(
             "builtins.open",
-            unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}'),
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
         ):
             handler = TrickOrTreatHandler()
 
@@ -132,7 +146,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test that removing ingots from a player with 0 ingots returns None."""
         with patch(
             "builtins.open",
-            unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}'),
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
         ):
             handler = TrickOrTreatHandler()
 
@@ -163,7 +177,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test that trying to remove more ingots than balance only removes available amount."""
         with patch(
             "builtins.open",
-            unittest.mock.mock_open(read_data='{"GIFS": [], "THUMBNAILS": []}'),
+            unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA),
         ):
             handler = TrickOrTreatHandler()
 
@@ -205,7 +219,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with patch(
             "builtins.open",
             unittest.mock.mock_open(
-                read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}'
+                read_data=MOCK_TRICK_OR_TREAT_DATA
             ),
         ):
             handler = TrickOrTreatHandler()
@@ -225,7 +239,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with patch(
             "builtins.open",
             unittest.mock.mock_open(
-                read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}'
+                read_data=MOCK_TRICK_OR_TREAT_DATA
             ),
         ):
             handler = TrickOrTreatHandler()
@@ -242,7 +256,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with patch(
             "builtins.open",
             unittest.mock.mock_open(
-                read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}'
+                read_data=MOCK_TRICK_OR_TREAT_DATA
             ),
         ):
             handler = TrickOrTreatHandler()
@@ -264,7 +278,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with patch(
             "builtins.open",
             unittest.mock.mock_open(
-                read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}'
+                read_data=MOCK_TRICK_OR_TREAT_DATA
             ),
         ):
             handler = TrickOrTreatHandler()
@@ -287,7 +301,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with patch(
             "builtins.open",
             unittest.mock.mock_open(
-                read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}'
+                read_data=MOCK_TRICK_OR_TREAT_DATA
             ),
         ):
             handler = TrickOrTreatHandler()
@@ -298,7 +312,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("unworthy", embed.description.lower())
+        self.assertIn("already claimed", embed.description.lower())
 
     @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.STATE")
     async def test_result_jackpot_success(self, mock_state):
@@ -306,7 +320,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with patch(
             "builtins.open",
             unittest.mock.mock_open(
-                read_data='{"GIFS": [], "THUMBNAILS": ["http://test.com/img.png"]}'
+                read_data=MOCK_TRICK_OR_TREAT_DATA
             ),
         ):
             handler = TrickOrTreatHandler()
@@ -318,7 +332,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("JACKPOT", embed.description)
+        self.assertIn("jackpot", embed.description.lower())
         self.assertTrue(mock_state.state["trick_or_treat_jackpot_claimed"])
 
     async def test_unique_gifs(self):
