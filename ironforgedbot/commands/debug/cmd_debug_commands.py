@@ -1,3 +1,5 @@
+import logging
+
 import discord
 from discord.ui import Button, View
 
@@ -9,9 +11,13 @@ from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_i
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.roles import ROLE
 
+logger = logging.getLogger(__name__)
 
+
+@log_command_execution(logger)
 async def cmd_debug_commands(original_interaction: discord.Interaction):
     commands = {
         "score": {"callback": lambda interaction: cmd_score(interaction)},

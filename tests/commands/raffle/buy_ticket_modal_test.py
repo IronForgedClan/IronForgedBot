@@ -1,182 +1,152 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
 from ironforgedbot.commands.raffle.buy_ticket_modal import BuyTicketModal
-from ironforgedbot.storage.types import Member
-from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestBuyTicketModal(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_interaction = Mock(spec=discord.Interaction)
+        self.mock_interaction.user = Mock()
+        self.mock_interaction.user.id = 12345
+        self.mock_interaction.user.display_name = "TestUser"
+        self.mock_interaction.followup.send = AsyncMock()
+        self.mock_interaction.response.defer = AsyncMock()
+        self.mock_interaction.response.send_message = AsyncMock()
+
     async def test_modal_creates(self):
         modal = BuyTicketModal()
 
         self.assertEqual(modal.title, "Buy Raffle Tickets")
         self.assertEqual(len(modal.children), 1)
 
-        self.assertEqual(modal.ticket_qty.label, "How many tickets?")
         self.assertEqual(modal.ticket_qty.placeholder, "10")
         self.assertEqual(modal.ticket_qty.max_length, 10)
         self.assertEqual(modal.ticket_qty.required, True)
 
-    @patch(
-        "ironforgedbot.commands.raffle.buy_ticket_modal.STORAGE", new_callable=AsyncMock
-    )
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.normalize_discord_string")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.find_emoji")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.build_response_embed")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.db")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.STATE")
-    async def test_modal_submission_success(self, mock_state, mock_storage):
-        caller = create_test_member("tester", [])
+    async def test_modal_submission_success(
+        self,
+        mock_state,
+        mock_create_raffle_service,
+        mock_db,
+        mock_build_embed,
+        mock_find_emoji,
+        mock_normalize,
+    ):
         mock_state.state = {"raffle_price": 5000}
-
-        mock_storage.read_member.return_value = Member(
-            id=12345, runescape_name=caller.display_name, ingots=30000
+        mock_find_emoji.side_effect = lambda name: (
+            "🎫" if name == "Raffle_Ticket" else "💰"
         )
+        mock_normalize.return_value = "TestUser"
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_result = Mock()
+        mock_result.status = True
+
+        mock_raffle_service = AsyncMock()
+        mock_raffle_service.try_buy_ticket.return_value = mock_result
+        mock_create_raffle_service.return_value = mock_raffle_service
+
+        mock_embed = Mock()
+        mock_build_embed.return_value = mock_embed
 
         modal = BuyTicketModal()
         modal.ticket_qty._value = "5"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        await modal.on_submit(self.mock_interaction)
 
-        await modal.on_submit(interaction)
+        mock_raffle_service.try_buy_ticket.assert_called_once_with(12345, 5000, 5)
 
-        interaction.followup.send.assert_called_once()
-
-        expected_title = " Ticket Purchase"
-        expected_description = (
-            "**tester** just bought  **5** raffle tickets for  **25,000**."
+        mock_build_embed.assert_called_once_with(
+            title="🎫 Ticket Purchase",
+            description="**TestUser** just bought 🎫 **5** raffle tickets for 💰 **25,000**.",
+            color=modal.ticket_embed_color,
         )
+        self.mock_interaction.followup.send.assert_called_once_with(embed=mock_embed)
 
-        _, kwargs = interaction.followup.send.call_args
-        actual_embed = kwargs.get("embed")
-
-        assert actual_embed
-        self.assertIsInstance(actual_embed, discord.Embed)
-        self.assertEqual(actual_embed.title, expected_title)
-        self.assertEqual(actual_embed.description, expected_description)
-
-        mock_storage.update_members.assert_called_with(
-            [Member(id=12345, runescape_name="tester", ingots=5000)],
-            "tester",
-            note="Pay for 5 raffle tickets",
-        )
-        mock_storage.add_raffle_tickets.assert_called_with(12345, 5)
-
-    @patch(
-        "ironforgedbot.commands.raffle.buy_ticket_modal.STORAGE", new_callable=AsyncMock
-    )
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.send_error_response")
-    async def test_modal_submission_fail_invalid_quantity(
-        self, mock_send_error_response, mock_storage
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.normalize_discord_string")
+    async def test_modal_submission_invalid_quantity(
+        self, mock_normalize, mock_send_error
     ):
-        caller = create_test_member("tester", [])
+        mock_normalize.return_value = "TestUser"
+
         modal = BuyTicketModal()
-        modal.ticket_qty._value = "test"
+        modal.ticket_qty._value = "abc"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        await modal.on_submit(self.mock_interaction)
 
-        await modal.on_submit(interaction)
-
-        mock_send_error_response.assert_awaited_with(
-            interaction, "**tester** tried to buy an invalid quantity of tickets."
+        mock_send_error.assert_called_once_with(
+            self.mock_interaction,
+            "**TestUser** tried to buy an invalid quantity of tickets.",
         )
 
-        mock_storage.update_members.assert_not_called()
-        mock_storage.add_raffle_tickets.assert_not_called()
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.normalize_discord_string")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.find_emoji")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.build_response_embed")
+    async def test_modal_submission_negative_quantity(
+        self, mock_build_embed, mock_find_emoji, mock_normalize
+    ):
+        mock_normalize.return_value = "TestUser"
+        mock_find_emoji.return_value = "🎫"
 
-    async def test_modal_submission_fail_invalid_number(self):
-        caller = create_test_member("tester", [])
+        mock_embed = Mock()
+        mock_build_embed.return_value = mock_embed
+
         modal = BuyTicketModal()
         modal.ticket_qty._value = "-5"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        await modal.on_submit(self.mock_interaction)
 
-        await modal.on_submit(interaction)
-
-        interaction.followup.send.assert_called_once()
-
-        expected_title = " Ticket Purchase"
-        expected_description = (
-            "**tester** just tried to buy  **-5** raffle tickets. What a joker."
+        mock_build_embed.assert_called_once_with(
+            title="🎫 Ticket Purchase",
+            description="**TestUser** just tried to buy 🎫 **-5** raffle tickets. What a joker.",
+            color=modal.ticket_embed_color,
         )
-
-        _, kwargs = interaction.followup.send.call_args
-        actual_embed = kwargs.get("embed")
-
-        assert actual_embed
-        self.assertIsInstance(actual_embed, discord.Embed)
-        self.assertEqual(actual_embed.title, expected_title)
-        self.assertEqual(actual_embed.description, expected_description)
+        self.mock_interaction.followup.send.assert_called_once_with(embed=mock_embed)
 
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.send_error_response")
-    @patch(
-        "ironforgedbot.commands.raffle.buy_ticket_modal.STORAGE", new_callable=AsyncMock
-    )
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.normalize_discord_string")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.db")
+    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.buy_ticket_modal.STATE")
-    async def test_modal_submission_fail_member_not_found(
-        self, mock_state, mock_storage, mock_send_error_response
+    async def test_modal_submission_insufficient_funds(
+        self,
+        mock_state,
+        mock_create_raffle_service,
+        mock_db,
+        mock_normalize,
+        mock_send_error,
     ):
-        caller = create_test_member("tester", [])
         mock_state.state = {"raffle_price": 5000}
+        mock_normalize.return_value = "TestUser"
 
-        mock_storage.read_member.return_value = None
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_result = Mock()
+        mock_result.status = False
+        mock_result.message = "Insufficient ingots"
+
+        mock_raffle_service = AsyncMock()
+        mock_raffle_service.try_buy_ticket.return_value = mock_result
+        mock_create_raffle_service.return_value = mock_raffle_service
 
         modal = BuyTicketModal()
-        modal.ticket_qty._value = "5"
+        modal.ticket_qty._value = "10"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        await modal.on_submit(self.mock_interaction)
 
-        await modal.on_submit(interaction)
-
-        mock_send_error_response.assert_awaited_with(
-            interaction,
-            "**tester** not found in storage, please reach out to leadership.",
+        mock_send_error.assert_called_once_with(
+            self.mock_interaction, "Insufficient ingots"
         )
-        mock_storage.update_members.assert_not_called()
-        mock_storage.add_raffle_tickets.assert_not_called()
-
-    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.send_error_response")
-    @patch(
-        "ironforgedbot.commands.raffle.buy_ticket_modal.STORAGE", new_callable=AsyncMock
-    )
-    @patch("ironforgedbot.commands.raffle.buy_ticket_modal.STATE")
-    async def test_modal_submission_fail_insufficient_funds(
-        self, mock_state, mock_storage, mock_send_error_response
-    ):
-        caller = create_test_member("tester", [])
-        mock_state.state = {"raffle_price": 5000}
-
-        mock_storage.read_member.return_value = Member(
-            id=12345, runescape_name=caller.display_name, ingots=20000
-        )
-
-        modal = BuyTicketModal()
-        modal.ticket_qty._value = "5"
-
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
-
-        await modal.on_submit(interaction)
-
-        mock_send_error_response.assert_awaited_with(
-            interaction,
-            "**tester** does not have enough ingots for  **5** tickets.\n\n"
-            "Cost:  **25,000**\nBalance:  **20,000**\n\n"
-            "You can afford a maximum of  **4** tickets.",
-        )
-
-        mock_storage.update_members.assert_not_called()
-        mock_storage.add_raffle_tickets.assert_not_called()

@@ -2,8 +2,10 @@ import logging
 from typing import Optional
 
 import discord
+from discord import app_commands
 
 from ironforgedbot.common.constants import EMPTY_SPACE
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.helpers import (
     find_emoji,
     render_percentage,
@@ -30,12 +32,16 @@ from ironforgedbot.decorators import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
 from ironforgedbot.models.score import ScoreBreakdown
-from ironforgedbot.services.score_service import ScoreService
+from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER)
+@log_command_execution(logger)
+@app_commands.describe(
+    player="Player name to display score for (defaults to your nickname)"
+)
 async def cmd_score(interaction: discord.Interaction, player: Optional[str] = None):
     """Compute clan score for a Runescape player name.
 
@@ -53,12 +59,13 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
             interaction.guild, player, must_be_member=False
         )
     except Exception as e:
-        return await send_error_response(interaction, str(e))
+        return await send_error_response(interaction, str(e), report_to_channel=False)
 
     display_name = member.display_name if member is not None else player
 
     try:
-        data = await ScoreService(HTTP).get_player_score(player)
+        service = get_score_service(HTTP)
+        data = await service.get_player_score(player)
     except (HiscoresError, HttpException):
         return await send_error_response(
             interaction,

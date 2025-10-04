@@ -8,6 +8,7 @@ from ironforgedbot.commands.raffle.buy_ticket_modal import BuyTicketModal
 from ironforgedbot.commands.raffle.end_raffle_view import EndRaffleView
 from ironforgedbot.commands.raffle.start_raffle_modal import StartRaffleModal
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.logging_utils import log_method_execution
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -69,18 +70,21 @@ class RaffleMenuView(View):
 
         return await super().on_timeout()
 
+    @log_method_execution(logger)
     async def handle_buy_tickets(self, interaction: discord.Interaction):
         await interaction.response.send_modal(BuyTicketModal())
 
         if self.message:
             self.message = await self.message.delete()
 
+    @log_method_execution(logger)
     async def handle_start_raffle(self, interaction: discord.Interaction):
         await interaction.response.send_modal(StartRaffleModal())
 
         if self.message:
             self.message = await self.message.delete()
 
+    @log_method_execution(logger)
     async def handle_end_raffle(self, interaction: discord.Interaction):
         ticket_icon = find_emoji("Raffle_Ticket")
         await interaction.response.send_message(

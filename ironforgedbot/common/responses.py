@@ -1,24 +1,186 @@
 from datetime import datetime, timedelta, timezone
+import io
 import logging
+import os
+from unicodedata import name
 import discord
 
-from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.helpers import find_emoji, get_text_channel
 from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_sub
-from ironforgedbot.services.member_service import MemberService
+from ironforgedbot.config import CONFIG
+from ironforgedbot.logging_config import LOG_DIR
+from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
 from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
 
-async def send_error_response(interaction: discord.Interaction, message: str):
+async def send_error_response(
+    interaction: discord.Interaction, message: str, report_to_channel: bool = True
+):
     embed = discord.Embed(
         title=":exclamation: Error", description=message, color=discord.Colour.red()
     )
 
     await interaction.followup.send(embed=embed)
+
+    # Report error to admin channel if enabled
+    if report_to_channel:
+        await _send_error_report(interaction, message)
+
+
+async def _send_error_report(interaction: discord.Interaction, error_message: str):
+    """Send error report to admin channel with debug information."""
+    try:
+        report_channel = get_text_channel(
+            interaction.guild, CONFIG.AUTOMATION_CHANNEL_ID
+        )
+        if not report_channel:
+            logger.warning("Unable to find report channel for error reporting")
+            return
+
+        command_name = (
+            interaction.command.name if interaction.command else "Unknown Command"
+        )
+        channel_mention = (
+            interaction.channel.mention if interaction.channel else "Unknown Channel"
+        )
+
+        message_link = f"https://discord.com/channels/{interaction.guild_id}/{interaction.channel_id}"
+
+        try:
+            guild_member = interaction.guild.get_member(interaction.user.id)
+            if guild_member and check_member_has_role(guild_member, ROLE.LEADERSHIP):
+                user_role = "Leadership"
+            elif guild_member and check_member_has_role(guild_member, ROLE.MEMBER):
+                user_role = "Member"
+            else:
+                user_role = "Guest/Other"
+        except Exception:
+            user_role = "Unknown"
+
+        error_embed = build_response_embed(
+            title="🚨 Command Error Report",
+            description=f"An error occurred while processing a command.",
+            color=discord.Colour.red(),
+        )
+
+        error_embed.add_field(
+            name="User",
+            value=f"{interaction.user.mention} `{interaction.user.id}`",
+            inline=True,
+        )
+
+        error_embed.add_field(name="Role", value=user_role, inline=True)
+
+        error_embed.add_field(
+            name="Command",
+            value=f"`/{command_name}` in {channel_mention} [[GO]]({message_link})",
+            inline=False,
+        )
+
+        try:
+            parameters = []
+            if interaction.data and "options" in interaction.data:
+                for option in interaction.data["options"]:
+                    param_name = option.get("name", "unknown")
+                    param_value = option.get("value", "N/A")
+                    parameters.append(f"• `{param_name}`: {param_value}")
+
+            if parameters:
+                param_text = "\n".join(parameters)
+                if len(param_text) > 800:  # Truncate if too long
+                    param_text = param_text[:800] + "..."
+            else:
+                param_text = "No parameters"
+        except Exception:
+            param_text = "Unable to extract parameters"
+
+        error_embed.add_field(
+            name="Parameters",
+            value=param_text,
+            inline=False,
+        )
+
+        utc_timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        error_embed.add_field(
+            name="Timestamp",
+            value=f"`{utc_timestamp}`",
+            inline=False,
+        )
+
+        error_embed.add_field(
+            name="Error Message",
+            value=f"```{error_message[:1000]}{'...' if len(error_message) > 1000 else ''}```",
+            inline=False,
+        )
+
+        log_file = _get_latest_log_lines_file()
+        if log_file:
+            await report_channel.send(embed=error_embed, file=log_file)
+        else:
+            await report_channel.send(embed=error_embed)
+
+    except Exception as e:
+        # Don't let error reporting failure break the main functionality
+        logger.error(f"Failed to send error report: {e}")
+
+
+def _get_latest_log_lines_file(line_count: int = 50) -> discord.File | None:
+    """Extract the latest N lines from the log file and return as Discord file.
+
+    Args:
+        line_count: Number of lines to extract from the end of the log file
+
+    Returns:
+        Discord File object with log lines, or None if unavailable
+    """
+    try:
+        # Find all log files in the log directory
+        files = [os.path.join(str(LOG_DIR), f) for f in os.listdir(str(LOG_DIR))]
+        files = [f for f in files if os.path.isfile(f) and f.endswith(".log")]
+
+        if not files:
+            logger.warning("No log files found for error report attachment")
+            return None
+
+        # Get the most recent log file
+        latest_file = max(files, key=os.path.getmtime)
+
+        # Read the last N lines efficiently
+        lines = []
+        with open(latest_file, "r", encoding="utf-8") as file:
+            # Read all lines and get the last N
+            all_lines = file.readlines()
+            lines = all_lines[-line_count:]
+
+        if not lines:
+            logger.warning("No log lines found in latest log file")
+            return None
+
+        # Create file content preserving original formatting
+        log_content = "".join(lines)
+
+        # Create filename with timestamp
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"error_log_context_{timestamp}.txt"
+
+        # Create Discord file from string content
+        file_data = io.StringIO(log_content)
+        return discord.File(file_data, filename=filename)
+
+    except FileNotFoundError:
+        logger.warning("Log directory not found for error report attachment")
+        return None
+    except PermissionError:
+        logger.warning("Permission denied accessing log files for error report")
+        return None
+    except Exception as e:
+        logger.warning(f"Unexpected error creating log attachment: {e}")
+        return None
 
 
 def build_error_message_string(message: str) -> str:
@@ -46,7 +208,7 @@ async def send_prospect_response(
     prospect_icon = find_emoji("Prospect")
 
     async with db.get_session() as session:
-        member_service = MemberService(session)
+        member_service = create_member_service(session)
 
         db_member = await member_service.get_member_by_discord_id(member.id)
 

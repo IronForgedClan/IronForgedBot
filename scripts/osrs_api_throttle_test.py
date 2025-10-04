@@ -8,10 +8,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import asyncio
 import time
 
-from ironforgedbot.commands.hiscore.calculator import (
-    HiscoresNotFound,
-    get_player_points_total,
-)
+from ironforgedbot.exceptions.score_exceptions import HiscoresNotFound
+from ironforgedbot.services.score_service import get_score_service
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.http import HTTP, HttpException
 
@@ -225,11 +223,15 @@ osrs_player_names = [
 
 async def main():
     start_time = time.time()
+    service = get_score_service(HTTP)
+
     for player in osrs_player_names:
         points = 0
 
         try:
-            points = await get_player_points_total(normalize_discord_string(player))
+            points = await service.get_player_points_total(
+                normalize_discord_string(player)
+            )
         except HttpException as e:
             points = "HttpException"
             print(e)
@@ -239,8 +241,6 @@ async def main():
             print(e)
 
         print(f"{player}: {points}")
-
-    await HTTP.cleanup()
     end_time = time.time()
 
     print(

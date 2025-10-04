@@ -46,7 +46,7 @@ class BotState:
                 self.state["is_shutting_down"] = False
                 await file.write(json.dumps(self.state))
 
-            logger.info(f"State saved to {self._file_path}")
+            logger.debug(f"State saved to {self._file_path}")
         except Exception as e:
             logger.critical(f"Error saving state: {e}")
 
@@ -66,9 +66,8 @@ class BotState:
             except Exception as e:
                 logger.critical(f"Error loading state: {e}")
         else:
-            logger.info(
-                f"No previous state file found at {self._file_path}. "
-                "Starting with a default state."
+            logger.debug(
+                f"No previous state file found at {self._file_path}, using defaults"
             )
 
 

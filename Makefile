@@ -1,4 +1,4 @@
-.PHONY: up down test shell migrate revision downgrade
+.PHONY: up down test format shell migrate revision downgrade update-deps clean
 
 up:
 	docker compose up
@@ -8,6 +8,9 @@ down:
 
 test:
 	docker compose run --rm bot python run_tests.py
+
+format:
+	docker compose run --rm bot python -m black .
 
 shell:
 	docker compose run --rm bot /bin/bash
@@ -20,4 +23,19 @@ revision:
 
 downgrade:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic downgrade -1
+
+update-deps:
+	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
+	docker compose build bot
+
+clean:
+	@echo "Stopping containers..."
+	docker compose down
+	@echo "Removing project containers..."
+	docker compose rm -f
+	@echo "Removing project images..."
+	docker images -q ironforgedbot* | xargs -r docker rmi -f
+	@echo "Pruning unused Docker resources..."
+	docker system prune -f --volumes
+	@echo "Cleanup complete!"
 

@@ -85,3 +85,27 @@ def is_member_banned(member: discord.Member | None) -> bool:
         raise Exception()
 
     return check_member_has_role(member, ROLE.BANNED)
+
+
+# Roles that are exempt from activity checks
+ACTIVITY_EXEMPT_ROLES = {
+    ROLE.STAFF,  # Staff exempt from activity requirements
+    ROLE.EVENTS_TEAM,  # Event team exempt
+    ROLE.RECRUITMENT_TEAM,  # Recruitment team exempt
+    ROLE.DISCORD_TEAM,  # Discord team exempt
+    ROLE.BOT_TEAM,  # Bot team exempt
+    ROLE.LEADERSHIP,  # Leadership exempt
+}
+
+
+def is_exempt_from_activity_check(role: ROLE) -> bool:
+    """
+    Check if a role is exempt from activity requirements.
+
+    Args:
+        role: Discord role to check
+
+    Returns:
+        True if the role is exempt from activity checks
+    """
+    return role in ACTIVITY_EXEMPT_ROLES

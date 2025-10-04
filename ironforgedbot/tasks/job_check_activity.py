@@ -2,171 +2,279 @@ import io
 import logging
 from datetime import datetime
 import time
+from typing import Any, Dict, List, Optional
 
 import discord
-import wom
 from tabulate import tabulate
-from wom import GroupRole, Metric, Period
+from wom import GroupRole
 from wom.models import GroupDetail, GroupMembership
 
 from ironforgedbot.common.helpers import (
     format_duration,
     render_relative_time,
 )
+from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.database.database import db
-from ironforgedbot.services.absent_service import AbsentMemberService
+from ironforgedbot.services.service_factory import (
+    create_absent_service,
+)
+from ironforgedbot.services.wom_service import (
+    get_wom_service,
+    WomServiceError,
+    WomRateLimitError,
+    WomTimeoutError,
+)
+from ironforgedbot.common.wom_role_mapping import (
+    get_threshold_for_wom_role,
+    get_display_name_for_wom_role,
+    get_discord_role_for_wom_role,
+)
+from ironforgedbot.common.roles import is_exempt_from_activity_check
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_WOM_LIMIT = 50
-IRON_EXP_THRESHOLD = 150_000
-MITHRIL_EXP_THRESHOLD = 300_000
-RUNE_EXP_THRESHOLD = 500_000
 
 
+@log_task_execution(logger)
 async def job_check_activity(
     report_channel: discord.TextChannel,
-    wom_api_key: str,
-    wom_group_id: int,
-):
+    wom_limit: int = DEFAULT_WOM_LIMIT,
+) -> None:
+    """
+    Check member activity against rank-based thresholds and report inactive members.
+    Uses role-based exemptions to exclude certain roles from activity checks.
+
+    Args:
+        report_channel: Discord channel to send reports to
+        wom_limit: Number of records to fetch per API call
+    """
+    execution_id = f"activity_check_{int(time.time())}"
+    logger.info(f"Starting activity check execution: {execution_id}")
+
     start_time = time.perf_counter()
-    async with db.get_session() as session:
-        absent_service = AbsentMemberService(session)
-        absentee_list = await absent_service.process_absent_members()
+    logger.info(f"Activity check {execution_id} - Starting with limit {wom_limit}")
 
-        known_absentees = []
-        for absentee in absentee_list:
-            known_absentees.append(absentee.nickname.lower())
+    try:
+        async with db.get_session() as session:
+            absent_service = create_absent_service(session)
 
-        results = await _find_inactive_users(
-            wom_api_key, wom_group_id, report_channel, known_absentees
-        )
+            await report_channel.send("🧗 **Activity Check:** starting...")
 
-        if not results:
-            logger.error("Activity check empty")
-            return
+            absentee_list = await absent_service.process_absent_members()
+            known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
 
-        sorted_results = sorted(results, key=lambda row: int(row[2].replace(",", "")))
-        result_table = tabulate(
-            sorted_results,
-            headers=["Member", "Role", "Gained", "Last Updated"],
-            tablefmt="github",
-            colalign=("left", "left", "right", "right"),
-        )
+            logger.debug(known_absentees)
 
-        discord_file = discord.File(
-            fp=io.BytesIO(result_table.encode("utf-8")),
-            filename=f"activity_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-        )
+            results = await _find_inactive_users(
+                report_channel,
+                known_absentees,
+                wom_limit,
+            )
 
-        end_time = time.perf_counter()
+            logger.debug(results)
+
+            if not results:
+                logger.warning(f"Activity check {execution_id} returned no results")
+                await report_channel.send(
+                    "ℹ️ No inactive members found meeting the criteria."
+                )
+                return
+
+            sorted_results = _sort_results_safely(results)
+            result_table = tabulate(
+                sorted_results,
+                headers=["Member", "Role", "Gained", "Last Updated"],
+                tablefmt="github",
+                colalign=("left", "left", "right", "right"),
+            )
+
+            discord_file = discord.File(
+                fp=io.BytesIO(result_table.encode("utf-8")),
+                filename=f"activity_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            )
+
+            end_time = time.perf_counter()
+            logger.info(
+                f"Activity check {execution_id} completed successfully - found {len(results)} inactive members"
+            )
+            await report_channel.send(
+                "## 🧗 Activity check\n"
+                f"Ignoring **{len(known_absentees)}** absent members.\n"
+                f"Found **{len(results)}** members that do not meet requirements.\n"
+                f"Processed in **{format_duration(start_time, end_time)}**.",
+                file=discord_file,
+            )
+    except Exception as e:
+        logger.error(f"Activity check {execution_id} failed: {type(e).__name__}: {e}")
         await report_channel.send(
-            "## 🧗 Activity check\n"
-            f"Ignoring **{len(known_absentees)}** absent members.\n"
-            f"Found **{len(results)}** members that do not meet requirements.\n"
-            f"Processed in **{format_duration(start_time, end_time)}**.",
-            file=discord_file,
+            f"⚠️ Activity check failed (ID: {execution_id}): {type(e).__name__}: {e}"
         )
+        raise
+
+
+def _sort_results_safely(results: List[List[str]]) -> List[List[str]]:
+    """
+    Safely sort results by XP gained, handling malformed data.
+
+    Args:
+        results: List of result rows with format [username, role, gained_xp, last_updated]
+
+    Returns:
+        Sorted results list
+    """
+
+    def safe_int_extract(row: List[str]) -> int:
+        try:
+            return int(row[2].replace(",", ""))
+        except (ValueError, IndexError):
+            logger.warning(f"Malformed XP data in row: {row}")
+            return 0
+
+    return sorted(results, key=safe_int_extract)
+
+
+def _get_role_display_name(role: Optional[GroupRole]) -> str:
+    """
+    Get display name for a WOM group role.
+
+    Args:
+        role: WOM GroupRole enum value
+
+    Returns:
+        Clan relevant role name
+    """
+    return get_display_name_for_wom_role(role)
+
+
+def _get_threshold_for_role(role: Optional[GroupRole]) -> int:
+    """
+    Get XP threshold for a given role using the new rank-based system.
+
+    Args:
+        role: WOM GroupRole enum value
+
+    Returns:
+        XP threshold for the role based on Discord rank mapping
+    """
+    return get_threshold_for_wom_role(role)
 
 
 async def _find_inactive_users(
-    wom_api_key: str,
-    wom_group_id: int,
     report_channel: discord.TextChannel,
-    absentees: list[str],
-) -> list[list] | None:
-    wom_client = wom.Client(api_key=wom_api_key, user_agent="IronForged")
-    await wom_client.start()
+    absentees: List[str],
+    wom_limit: int,
+) -> Optional[List[List[str]]]:
+    """
+    Find inactive users based on WOM data and rank-based thresholds.
+    Uses role-based exemptions to exclude certain roles from checks.
 
-    is_done = False
-    offset = 0
-    results = []
-    wom_grop_result = await wom_client.groups.get_details(wom_group_id)
+    Args:
+        report_channel: Discord channel for error reporting
+        absentees: List of known absent member usernames (lowercase)
+        wom_limit: Number of records to fetch per API call
 
-    if wom_grop_result.is_ok:
-        wom_group = wom_grop_result.unwrap()
-    else:
-        message = f"Got error, fetching WOM group: {wom_grop_result.unwrap_err()}"
-        logger.error(message)
-        await report_channel.send(content=message)
-        return None
+    Returns:
+        List of inactive user data or None if error occurred
+    """
+    try:
+        async with get_wom_service() as wom_service:
+            try:
+                logger.debug("Getting monthly activity data...")
+                wom_group, all_member_gains = (
+                    await wom_service.get_monthly_activity_data()
+                )
 
-    while not is_done:
-        result = await wom_client.groups.get_gains(
-            wom_group_id,
-            metric=Metric.Overall,
-            period=Period.Month,
-            limit=DEFAULT_WOM_LIMIT,
-            offset=offset,
-        )
-        if result.is_ok:
-            offset += DEFAULT_WOM_LIMIT
-            details = result.unwrap()
-            for member_gains in details:
-                wom_member = _find_wom_member(wom_group, member_gains.player.id)
+            except WomRateLimitError:
+                await report_channel.send(
+                    "❌ WOM API rate limit exceeded. Please wait a few minutes before trying again."
+                )
+                return None
+            except WomTimeoutError:
+                await report_channel.send(
+                    "❌ WOM API connection timed out. Please check internet connectivity and try again."
+                )
+                return None
+            except WomServiceError:
+                await report_channel.send(
+                    "❌ WOM API is currently unavailable. Please try again later."
+                )
+                return None
 
-                if wom_member is None:
-                    continue
-                if wom_member.player.username.lower() in absentees:
-                    continue
-
-                if wom_member.role == GroupRole.Dogsbody:
-                    continue
-
-                match wom_member.role:
-                    case GroupRole.Iron:
-                        xp_threshold = IRON_EXP_THRESHOLD
-                    case GroupRole.Mithril | GroupRole.Adamant:
-                        xp_threshold = MITHRIL_EXP_THRESHOLD
-                    case _:
-                        xp_threshold = RUNE_EXP_THRESHOLD
-
-                if member_gains.data.gained < xp_threshold:
-                    if not wom_member.role:
-                        role = "Unknown"
-                    elif wom_member.role == GroupRole.Helper:
-                        role = "Alt"
-                    elif wom_member.role == GroupRole.Collector:
-                        role = "Moderator"
-                    elif wom_member.role == GroupRole.Administrator:
-                        role = "Admin"
-                    elif wom_member.role in [
-                        GroupRole.Colonel,
-                        GroupRole.Brigadier,
-                        GroupRole.Admiral,
-                        GroupRole.Marshal,
-                    ]:
-                        role = "Staff"
-                    elif wom_member.role in [GroupRole.Deputy_owner, GroupRole.Owner]:
-                        role = "Owner"
-                    else:
-                        role = str(wom_member.role).title()
-
-                    days_since_progression = "unknown"
-                    if wom_member.player.last_changed_at:
-                        days_since_progression = render_relative_time(
-                            wom_member.player.last_changed_at
-                        )
-
-                    results.append(
-                        [
-                            member_gains.player.username,
-                            role,
-                            f"{int(member_gains.data.gained):,}",
-                            days_since_progression,
-                        ]
+            results = []
+            for member_gains in all_member_gains:
+                try:
+                    inactive_member_data = _process_member_gains(
+                        member_gains, wom_group, absentees
+                    )
+                    if inactive_member_data:
+                        results.append(inactive_member_data)
+                except Exception as process_error:
+                    logger.warning(
+                        f"Error processing member gains for {getattr(member_gains.player, 'username', 'unknown')}: {process_error}"
                     )
 
-            if len(details) < DEFAULT_WOM_LIMIT:
-                is_done = True
-        else:
-            message = f"Got error, fetching gains from WOM: {result.unwrap_err()}"
-            logger.error(message)
-            await report_channel.send(content=message)
-            return None
+            return results
 
-    await wom_client.close()
-    return results
+    except Exception as e:
+        logger.error(f"Unexpected error in _find_inactive_users: {e}")
+        await report_channel.send(
+            "❌ Unexpected error processing WOM data. Please try again later."
+        )
+        return None
+
+
+def _process_member_gains(
+    member_gains,
+    wom_group: GroupDetail,
+    absentees: List[str],
+) -> Optional[List[str]]:
+    """
+    Process individual member gains data to determine if they're inactive.
+    Uses rank-based thresholds and role-based exemptions.
+
+    Args:
+        member_gains: WOM member gains data
+        wom_group: WOM group details
+        absentees: List of known absent member usernames (lowercase)
+
+    Returns:
+        List of member data if inactive, None otherwise
+    """
+    wom_member = _find_wom_member(wom_group, member_gains.player.id)
+
+    if wom_member is None:
+        return None
+
+    if wom_member.player.username.lower() in absentees:
+        return None
+
+    # Check if member's Discord role is exempt from activity checks
+    discord_role = get_discord_role_for_wom_role(wom_member.role)
+    if discord_role and is_exempt_from_activity_check(discord_role):
+        return None
+
+    # Skip prospects
+    if wom_member.role == GroupRole.Dogsbody:
+        return None
+
+    xp_threshold = _get_threshold_for_role(wom_member.role)
+
+    if member_gains.data.gained >= xp_threshold:
+        return None
+
+    role_display = _get_role_display_name(wom_member.role)
+
+    days_since_progression = "unknown"
+    if wom_member.player.last_changed_at:
+        days_since_progression = render_relative_time(wom_member.player.last_changed_at)
+
+    return [
+        member_gains.player.username,
+        role_display,
+        f"{int(member_gains.data.gained):,}",
+        days_since_progression,
+    ]
 
 
 def _find_wom_member(group: GroupDetail, player_id: int) -> GroupMembership | None:

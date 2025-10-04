@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 async def add_prospect_role(
     report_channel: discord.TextChannel, member: discord.Member
 ):
-    logger.info(f"{member.display_name} has been given the Prospect role...")
+    logger.debug(f"Processing Prospect role addition for {member.display_name}")
 
     report_content = (
         f"{find_emoji(ROLE.PROSPECT)} {member.mention} has been "

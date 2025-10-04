@@ -39,7 +39,7 @@ class ScoreCache:
                 k for k, (_, expires) in self.cache.items() if now >= expires
             ]
             if len(expired_entries) > 0:
-                logging.info(
+                logger.debug(
                     f"Clearing {len(expired_entries)} expired item(s) from cache"
                 )
                 initial_size = deep_getsizeof(self.cache)
@@ -60,4 +60,4 @@ class ScoreCache:
             return None
 
 
-SCORE_CACHE = ScoreCache(10)
+SCORE_CACHE = ScoreCache(600)

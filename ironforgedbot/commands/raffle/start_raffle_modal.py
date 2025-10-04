@@ -4,6 +4,7 @@ import discord
 from discord.ui import Modal, TextInput
 
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.logging_utils import log_method_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.state import STATE
@@ -24,6 +25,7 @@ class StartRaffleModal(Modal):
 
         self.add_item(self.ticket_price)
 
+    @log_method_execution(logger)
     async def on_submit(self, interaction: discord.Interaction):
         ticket_icon = find_emoji("Raffle_Ticket")
         ingot_icon = find_emoji("Ingot")
@@ -37,6 +39,7 @@ class StartRaffleModal(Modal):
                 interaction,
                 f"{ingot_icon} {text_bold(self.ticket_price.value)} is an "
                 f"invalid {ticket_icon} ticket price.",
+                report_to_channel=False,
             )
 
         if price < 1:
@@ -45,9 +48,9 @@ class StartRaffleModal(Modal):
                 interaction,
                 f"{ingot_icon} {text_bold(self.ticket_price.value)} is an "
                 f"invalid {ticket_icon} ticket price.",
+                report_to_channel=False,
             )
 
-        logger.info(f"Raffle started. Ticket price: {price:,}")
         STATE.state["raffle_on"] = True
         STATE.state["raffle_price"] = price
 

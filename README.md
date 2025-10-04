@@ -194,6 +194,12 @@ view its source command and try running that instead.
 - `make test`\
   Runs the test suite.
 
+- `make format`\
+  Formats the codebase using Black formatter.
+
+- `make shell`\
+  Opens an interactive bash shell inside the bot container.
+
 - `make migrate`\
   Runs the database migrations.
 
@@ -203,6 +209,12 @@ view its source command and try running that instead.
 
 - `make downgrade`\
   Reverts the most recent database migration.
+
+- `make update-deps`\
+  Updates all project dependencies to their latest versions and rebuilds the container.
+
+- `make clean`\
+  Stops containers, removes project containers and images, and prunes unused Docker resources to free up disk space.
 
 ## Tooling
 

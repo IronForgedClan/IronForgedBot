@@ -8,11 +8,13 @@ from tabulate import tabulate
 
 from ironforgedbot.commands.admin.sync_members import sync_members
 from ironforgedbot.common.helpers import datetime_to_discord_relative, format_duration
+from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.common.text_formatters import text_h2
 
 logger = logging.getLogger(__name__)
 
 
+@log_task_execution(logger)
 async def job_sync_members(
     guild: discord.Guild,
     report_channel: discord.TextChannel,
@@ -23,9 +25,9 @@ async def job_sync_members(
     try:
         changes = await sync_members(guild)
     except Exception as e:
-        logger.error(e)
+        logger.error(f"Member sync failed: {e}", exc_info=True)
         await report_channel.send(
-            "🚨 An unhandled error occurrend during member sync. Please check the logs."
+            "🚨 An unhandled error occurred during member sync. Please check the logs."
         )
         return
 

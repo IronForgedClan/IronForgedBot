@@ -12,6 +12,7 @@ from ironforgedbot.common.helpers import (
     find_emoji,
     format_duration,
 )
+from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
     RANK,
@@ -21,18 +22,21 @@ from ironforgedbot.common.ranks import (
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
 from ironforgedbot.models.score_history import ScoreHistory
-from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.services.score_history_service import ScoreHistoryService
+from ironforgedbot.services.service_factory import (
+    create_member_service,
+    create_score_history_service,
+)
 from ironforgedbot.services.score_service import (
     HiscoresNotFound,
-    ScoreService,
+    get_score_service,
 )
 
-logger: logging.Logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(__name__)
 
 PROBATION_DAYS = 28
 
 
+@log_task_execution(logger)
 async def job_refresh_ranks(
     guild: discord.Guild, report_channel: discord.TextChannel
 ) -> None:
@@ -48,8 +52,8 @@ async def job_refresh_ranks(
     progress_message = await report_channel.send(primary_message_str)
 
     async with db.get_session() as session:
-        member_service = MemberService(session)
-        history = ScoreHistoryService(session)
+        member_service = create_member_service(session)
+        history = create_score_history_service(session)
         members = await member_service.get_all_active_members()
 
         for index, member in enumerate(members):
@@ -81,7 +85,7 @@ async def job_refresh_ranks(
 
             current_rank = get_rank_from_member(discord_member)
 
-            score_service = ScoreService(HTTP)
+            score_service = get_score_service(HTTP)
             current_points = 0
             try:
                 current_points = await score_service.get_player_points_total(

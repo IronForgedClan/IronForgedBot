@@ -14,10 +14,23 @@ from ironforgedbot.common.helpers import (
     validate_playername,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
-from tests.helpers import create_mock_discord_interaction, create_test_member
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    create_mock_discord_guild,
+    setup_time_mocks,
+)
 
 
 class TestHelpers(unittest.TestCase):
+    def create_guild_with_member(self, member_name, nickname=None, roles=None):
+        """Helper to create a guild with a single member for testing."""
+        if roles is None:
+            roles = [ROLE.MEMBER]
+        member = create_test_member(member_name, roles, nickname)
+        guild = create_mock_discord_guild([member])
+        return guild, member
+
     def test_normalize_discord_string(self):
         """ "Test to make sure normalization strips non ascii characters"""
         self.assertEqual(normalize_discord_string(""), "")
@@ -108,21 +121,16 @@ class TestHelpers(unittest.TestCase):
 
     def test_find_member_by_nickname(self):
         """Test find member by nickname happy path"""
-        guild = Mock(discord.Guild)
-        member = Mock(discord.Member)
-        member.name = "tester"
-        member.display_name = member.name
-        member.nick = member.name
-        guild.members = [member]
+        member = create_test_member("tester", [ROLE.MEMBER], "tester")
+        guild = create_mock_discord_guild([member])
 
-        result = find_member_by_nickname(guild, member.name)
+        result = find_member_by_nickname(guild, member.display_name)
 
         self.assertEqual(result, member)
 
     def test_find_member_by_nickname_fails_no_guild_members(self):
         """Test find member by nickname fails when no guild members"""
-        guild = Mock(discord.Guild)
-        guild.members = []
+        guild = create_mock_discord_guild([])  # No members
 
         with self.assertRaises(ReferenceError) as context:
             find_member_by_nickname(guild, "tester")
@@ -131,12 +139,9 @@ class TestHelpers(unittest.TestCase):
 
     def test_find_member_by_nickname_fails_no_nickname(self):
         """Test find member by nickname fails when member has no nickname set"""
-        guild = Mock(discord.Guild)
-        member = Mock(discord.Member)
-        member.name = "tester"
-        member.display_name = member.name
-        member.nick = ""
-        guild.members = [member]
+        member = create_test_member("tester", [ROLE.MEMBER])  # No nickname set
+        member.nick = ""  # Explicitly clear nickname
+        guild = create_mock_discord_guild([member])
 
         with self.assertRaises(ValueError) as context:
             find_member_by_nickname(guild, member.name)
@@ -149,12 +154,8 @@ class TestHelpers(unittest.TestCase):
     def test_find_member_by_nickname_fails_not_found(self):
         """Test find member by nickname fails when member is not found"""
         target = "abc"
-        guild = Mock(discord.Guild)
-        member = Mock(discord.Member)
-        member.name = "tester"
-        member.display_name = member.name
-        member.nick = member.name
-        guild.members = [member]
+        member = create_test_member("tester", [ROLE.MEMBER], "tester")
+        guild = create_mock_discord_guild([member])
 
         with self.assertRaises(ValueError) as context:
             find_member_by_nickname(guild, target)
@@ -186,7 +187,11 @@ class TestHelpers(unittest.TestCase):
     @patch("ironforgedbot.common.helpers.datetime")
     def test_render_relative_time(self, mock_datetime):
         """Test rendering of relative time is correct"""
-        mock_datetime.now.return_value = datetime(2024, 9, 8, 10, 27, 20).astimezone()
+        fixed_now = setup_time_mocks(
+            mock_datetime,
+            None,
+            fixed_datetime=datetime(2024, 9, 8, 10, 27, 20).astimezone(),
+        )
 
         self.assertEqual(
             render_relative_time(datetime(2024, 9, 8, 10, 27, 19).astimezone()),
@@ -271,3 +276,52 @@ class TestHelpers(unittest.TestCase):
             ),
             "<t:1737405061:d>",
         )
+
+    def test_normalize_discord_string_edge_cases(self):
+        """Test normalize_discord_string with additional edge cases"""
+        self.assertEqual(normalize_discord_string("abc def"), "abc def")
+        self.assertEqual(
+            normalize_discord_string("  spaces  "), "spaces"
+        )  # Strips leading/trailing spaces
+        self.assertEqual(
+            normalize_discord_string("multiple   spaces"), "multiple spaces"
+        )  # Normalizes multiple spaces
+        self.assertEqual(normalize_discord_string("123numbers"), "123numbers")
+        self.assertEqual(normalize_discord_string("special!@#$%"), "special!@#$%")
+
+    def test_calculate_percentage_edge_cases(self):
+        """Test calculate_percentage with additional edge cases"""
+        # Test with floating point precision
+        self.assertEqual(calculate_percentage(1, 3), 33.333333333333336)
+        self.assertEqual(calculate_percentage(2, 3), 66.66666666666667)
+
+        # Test with very small numbers
+        self.assertEqual(calculate_percentage(0.1, 1000), 0.01)
+        self.assertEqual(calculate_percentage(1, 10000), 0.01)
+
+    def test_render_percentage_edge_cases(self):
+        """Test render_percentage with additional edge cases"""
+        # Test boundary conditions around <1% and >99%
+        self.assertEqual(render_percentage(0.1, 100), "<1%")
+        self.assertEqual(render_percentage(0.9, 100), "<1%")
+        self.assertEqual(render_percentage(1.0, 100), "1%")
+        self.assertEqual(render_percentage(99.0, 100), "99%")
+        self.assertEqual(render_percentage(99.5, 100), ">99%")
+        self.assertEqual(render_percentage(100, 100), ">99%")
+
+    def test_validate_playername_case_sensitivity(self):
+        """Test validate_playername handles case sensitivity correctly"""
+        guild, member = self.create_guild_with_member("TestUser", "testuser")
+
+        # Should find member regardless of case
+        result_member, result_playername = validate_playername(guild, "TestUser")
+        self.assertEqual(result_member, member)
+        self.assertEqual(result_playername, "TestUser")
+
+    def test_find_member_by_nickname_case_variations(self):
+        """Test find_member_by_nickname with different case variations"""
+        guild, member = self.create_guild_with_member("TestUser", "testuser")
+
+        # Should find member by exact nickname match
+        result = find_member_by_nickname(guild, "testuser")
+        self.assertEqual(result, member)

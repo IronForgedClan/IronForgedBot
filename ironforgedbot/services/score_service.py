@@ -2,13 +2,17 @@ import logging
 
 from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.logging_utils import log_api_call
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import AsyncHttpClient, HttpResponse
 from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
-logger: logging.Logger = logging.getLogger(name=__name__)
+logger = logging.getLogger(__name__)
+
+# Global service instances to avoid recreation
+_score_service_instance = None
 
 
 class ScoreService:
@@ -23,20 +27,18 @@ class ScoreService:
     async def get_player_score(
         self, player_name: str, bypass_cache: bool | None = False
     ) -> ScoreBreakdown:
-        player_name: str = normalize_discord_string(input=player_name)
-        breakdown: ScoreBreakdown | None = await SCORE_CACHE.get(player_name)
+        normalized_name: str = normalize_discord_string(input=player_name)
+        breakdown: ScoreBreakdown | None = await SCORE_CACHE.get(normalized_name)
 
         if not breakdown or bypass_cache:
-            logger.info("fetching live hiscores data")
             data: HttpResponse = await self.http.get(
-                self.hiscores_url.format(rsn=player_name)
+                self.hiscores_url.format(rsn=normalized_name)
             )
 
             if data["status"] == 404:
                 raise HiscoresNotFound()
 
             if data["status"] != 200:
-                logger.error(data)
                 raise HiscoresError(
                     message=f"Unexpected response code {data['status']}"
                 )
@@ -44,9 +46,10 @@ class ScoreService:
             skills: list[SkillScore] = self._process_skills(data["body"])
             clues, raids, bosses = self._process_activities(data["body"])
 
-            breakdown: ScoreBreakdown = ScoreBreakdown(skills, clues, raids, bosses)
-            await SCORE_CACHE.set(player_name, breakdown)
+            breakdown = ScoreBreakdown(skills, clues, raids, bosses)
+            await SCORE_CACHE.set(normalized_name, breakdown)
 
+        assert breakdown is not None
         return breakdown
 
     def _process_skills(self, score_data) -> list[SkillScore]:
@@ -66,7 +69,6 @@ class ScoreService:
             )
 
             if skill is None:
-                logger.info(f"Skill name '{skill_name}' not found")
                 continue
 
             skill_level = (
@@ -170,15 +172,15 @@ class ScoreService:
                 bosses.append(data)
                 continue
 
-            logger.debug(f"Activity '{activity_name}' not handled")
-
         return clues, raids, bosses
 
     async def get_player_points_total(
         self, player_name: str, bypass_cache: bool | None = False
     ) -> int:
-        player_name: str = normalize_discord_string(input=player_name)
-        data: ScoreBreakdown = await self.get_player_score(player_name, bypass_cache)
+        normalized_name: str = normalize_discord_string(input=player_name)
+        data: ScoreBreakdown = await self.get_player_score(
+            normalized_name, bypass_cache
+        )
 
         activities: list[ActivityScore] = data.clues + data.raids + data.bosses
 
@@ -198,3 +200,18 @@ class ScoreService:
             raise e
 
         return RANK(value=get_rank_from_points(points=total_points))
+
+
+def get_score_service(http: AsyncHttpClient = None) -> ScoreService:
+    """Get a singleton ScoreService instance to avoid unnecessary recreation."""
+    global _score_service_instance
+
+    if _score_service_instance is None and http is not None:
+        _score_service_instance = ScoreService(http)
+
+    if _score_service_instance is None:
+        raise RuntimeError(
+            "ScoreService not initialized. Call with http parameter first."
+        )
+
+    return _score_service_instance

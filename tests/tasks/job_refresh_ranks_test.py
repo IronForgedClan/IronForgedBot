@@ -1,304 +1,410 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import unittest
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.commands.hiscore.calculator import HiscoresNotFound
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.storage.types import Member
+from ironforgedbot.services.score_service import HiscoresNotFound
 from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
-from tests.helpers import create_mock_discord_guild, create_test_member
+from tests.helpers import (
+    create_mock_discord_guild,
+    create_test_member,
+    create_test_db_member,
+    setup_database_service_mocks,
+    setup_time_mocks,
+)
 
 
-class RefreshRanksTest(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks(self, mock_sleep, mock_get_points):
-        """Happy path with no additional reports"""
-        mock_guild = create_mock_discord_guild(
-            [create_test_member("foo", [ROLE.MEMBER, RANK.IRON], "bar")]
+class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_guild = Mock(spec=discord.Guild)
+        self.mock_report_channel = Mock(spec=discord.TextChannel)
+        self.mock_report_channel.send = AsyncMock()
+
+        self.mock_member = Mock(spec=discord.Member)
+        self.mock_member.id = 12345
+        self.mock_member.mention = "<@12345>"
+
+        self.mock_db_member = create_test_db_member(
+            nickname="TestPlayer",
+            discord_id=12345,
+            joined_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
         )
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.return_value = 100
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call("Finished rank check: [1/1]"),
-        ]
-
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_ignore_specific_roles(self, mock_sleep):
-        """Should ignore specific roles"""
-        mock_guild = create_mock_discord_guild(
-            [
-                create_test_member("foo", [ROLE.APPLICANT], "applicant"),
-                create_test_member("foo", [ROLE.GUEST], "guest"),
-            ]
-        )
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/2]"),
-            call("Finished rank check: [2/2]"),
-        ]
-
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_notifies_no_nickname(self, mock_sleep):
-        """Reporting of members without nicknames set"""
-        member = create_test_member("foo", [ROLE.MEMBER], "")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(f"{member.mention} has no nickname set, ignoring..."),
-            call("Finished rank check: [1/1]"),
-        ]
-
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_ignore_god_alignment_roles(self, mock_sleep):
-        """Should ignore God ranks with alignment set"""
-        member = create_test_member(
-            "foo", [ROLE.MEMBER, RANK.GOD, GOD_ALIGNMENT.GUTHIX], "bar"
-        )
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call("Finished rank check: [1/1]"),
-        ]
-
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_report_god_role_no_alignment(self, mock_sleep):
-        """Should report users with God role but no alignment"""
-        member = create_test_member("foo", [ROLE.MEMBER, RANK.GOD], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-
-        mock_sleep.return_value = None
-
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(f"{member.mention} has  God rank but no alignment."),
-            call("Finished rank check: [1/1]"),
-        ]
-
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_report_no_valid_role(
-        self, mock_sleep, mock_get_points
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    async def test_job_refresh_ranks_success(
+        self,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
     ):
-        """Should report users with no valid role set"""
-        member = create_test_member("foo", [], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.return_value = 705
+        setup_time_mocks(None, mock_time, duration_seconds=5.0)
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
+        mock_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_create_member_service
+        )
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
 
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(
-                f"{member.mention} detected without any rank. Should have  **Mithril**."
-            ),
-            call("Finished rank check: [1/1]"),
-        ]
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
 
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.return_value = 150
+        mock_get_score_service.return_value = mock_score_service
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_lookup_failure_results_in_iron_rank(
-        self, mock_sleep, mock_get_points, mock_storage
+        mock_discord_member = create_test_member("TestUser", [RANK.IRON])
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        mock_member_service.get_all_active_members.assert_called_once()
+        mock_history_service.track_score.assert_called_once_with(12345, 150)
+        mock_member_service.close.assert_called_once()
+
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    async def test_job_refresh_ranks_member_not_found(
+        self,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
     ):
-        """When unable to look up members score, assume score of 0"""
-        member = create_test_member("foo", [ROLE.PROSPECT, ROLE.MEMBER], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.side_effect = HiscoresNotFound()
-        mock_storage.read_member.return_value = Member(
-            id=member.id,
-            runescape_name=member.display_name,
-            joined_date=datetime.fromisoformat("2020-01-01T10:10:10.000000+00:00"),
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        self.mock_guild.get_member.return_value = None
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        expected_message = f"Active member {self.mock_db_member.nickname} ({self.mock_db_member.id}) could not be found in this guild."
+        self.mock_report_channel.send.assert_any_call(expected_message)
+
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    async def test_job_refresh_ranks_banned_member_skipped(
+        self,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
+    ):
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        mock_discord_member = create_test_member("TestUser", [ROLE.MEMBER])
+        mock_is_banned.return_value = True
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        mock_history_service.track_score.assert_not_called()
+
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
+    async def test_job_refresh_ranks_god_alignment_skipped(
+        self,
+        mock_get_rank,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
+    ):
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.return_value = 150
+        mock_get_score_service.return_value = mock_score_service
+
+        mock_discord_member = Mock(spec=discord.Member)
+        mock_is_banned.return_value = False
+        mock_get_rank.return_value = GOD_ALIGNMENT.GUTHIX
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        mock_history_service.track_score.assert_called_once_with(12345, 150)
+
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.find_emoji")
+    async def test_job_refresh_ranks_god_no_alignment_reported(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
+    ):
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+        mock_find_emoji.return_value = "👑"
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.return_value = 150
+        mock_get_score_service.return_value = mock_score_service
+
+        mock_discord_member = Mock(spec=discord.Member)
+        mock_discord_member.mention = "<@12345>"
+        mock_discord_member.roles = []
+        mock_is_banned.return_value = False
+        mock_get_rank.return_value = RANK.GOD
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        self.mock_report_channel.send.assert_any_call(
+            "<@12345> has 👑 God rank but no alignment."
         )
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(
-                f"{member.mention} has completed their **14 day** probation period "
-                "and is now eligible for  **Iron** rank."
-            ),
-            call("Finished rank check: [1/1]"),
-        ]
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch("ironforgedbot.tasks.job_refresh_ranks.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_report_change_rsn_or_ban(
-        self, mock_sleep, mock_get_points, mock_storage
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_points")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.find_emoji")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.text_bold")
+    async def test_job_refresh_ranks_no_rank_reported(
+        self,
+        mock_text_bold,
+        mock_find_emoji,
+        mock_get_rank_from_points,
+        mock_get_rank,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
     ):
-        """Reports suspected rsn change or ban"""
-        member = create_test_member("foo", [RANK.DRAGON, ROLE.MEMBER], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.side_effect = HiscoresNotFound()
-        mock_storage.read_member.return_value = Member(
-            id=member.id,
-            runescape_name=member.display_name,
-            joined_date=datetime.fromisoformat("2020-01-01T10:10:10.000000+00:00"),
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+        mock_find_emoji.return_value = "🥉"
+        mock_text_bold.side_effect = lambda x: f"**{x}**"
+        mock_get_rank_from_points.return_value = RANK.MITHRIL
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.return_value = 705
+        mock_get_score_service.return_value = mock_score_service
+
+        mock_discord_member = Mock(spec=discord.Member)
+        mock_discord_member.mention = "<@12345>"
+        mock_discord_member.roles = []
+        mock_is_banned.return_value = False
+        mock_get_rank.return_value = None
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        self.mock_report_channel.send.assert_any_call(
+            "<@12345> detected without any rank. Should have 🥉 **Mithril**."
         )
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(
-                f"{member.mention} has no presence on the hiscores. This member has either "
-                "changed their rsn, or been banned."
-            ),
-            call("Finished rank check: [1/1]"),
-        ]
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_member_need_upgrading(
-        self, mock_sleep, mock_get_points
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
+    async def test_job_refresh_ranks_hiscores_not_found_reported(
+        self,
+        mock_check_role,
+        mock_get_rank,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
     ):
-        """Reports when member needs upgrading a rank"""
-        actual_points = 705
-        member = create_test_member("foo", [ROLE.MEMBER, RANK.IRON], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.return_value = actual_points
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(
-                f"{member.mention} needs upgrading  "
-                f"→  ({text_bold(f"{actual_points:,}")} points)"
-            ),
-            call("Finished rank check: [1/1]"),
-        ]
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
 
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_report_completed_prospects(
-        self, mock_sleep, mock_get_points, mock_storage
-    ):
-        """Reports when member has completed their probation period"""
-        actual_points = 705
-        member = create_test_member("foo", [ROLE.PROSPECT], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.return_value = actual_points
-        mock_storage.read_member.return_value = Member(
-            id=member.id,
-            runescape_name=member.display_name,
-            joined_date=datetime.fromisoformat("2020-01-01T10:10:10.000000+00:00"),
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.side_effect = HiscoresNotFound()
+        mock_get_score_service.return_value = mock_score_service
+
+        mock_discord_member = Mock(spec=discord.Member)
+        mock_discord_member.mention = "<@12345>"
+        mock_discord_member.roles = []
+        mock_is_banned.return_value = False
+        mock_get_rank.return_value = RANK.DRAGON
+        mock_check_role.return_value = False
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        self.mock_report_channel.send.assert_any_call(
+            "<@12345> has no presence on the hiscores. This member has either changed their rsn, or been banned."
         )
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
-
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call(
-                f"{member.mention} has completed their **14 day** probation period and "
-                f"is now eligible for  **Mithril** rank."
-            ),
-            call("Finished rank check: [1/1]"),
-        ]
-
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
-
-    @patch("ironforgedbot.tasks.job_refresh_ranks.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.tasks.job_refresh_ranks.get_player_points_total")
-    @patch(
-        "ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep", new_callable=AsyncMock
-    )
-    async def test_job_refresh_ranks_ignore_prospect_during_probation(
-        self, mock_sleep, mock_get_points, mock_storage
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_points")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.find_emoji")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.text_bold")
+    async def test_job_refresh_ranks_member_needs_upgrading(
+        self,
+        mock_text_bold,
+        mock_find_emoji,
+        mock_check_role,
+        mock_get_rank_from_points,
+        mock_get_rank,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
     ):
-        """Ignores when member has not yet completed their probation period"""
-        actual_points = 705
-        member = create_test_member("foo", [ROLE.PROSPECT], "bar")
-        mock_guild = create_mock_discord_guild([member])
-        mock_report_channel = Mock(discord.TextChannel)
-        mock_sleep.return_value = None
-        mock_get_points.return_value = actual_points
-        mock_storage.read_member.return_value = Member(
-            id=member.id,
-            runescape_name=member.display_name,
-            joined_date=datetime.fromisoformat("2120-01-01T10:10:10.000000+00:00"),
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+        mock_find_emoji.side_effect = lambda target: (
+            "⚪" if target == RANK.IRON else "🥉"
         )
+        mock_text_bold.side_effect = lambda x: f"**{x}**"
+        mock_get_rank_from_points.return_value = RANK.MITHRIL
 
-        await job_refresh_ranks(mock_guild, mock_report_channel)
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
-        expected_messages = [
-            call("Rank check progress: [0/1]"),
-            call("Finished rank check: [1/1]"),
-        ]
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
 
-        self.assertEqual(mock_report_channel.send.call_args_list, expected_messages)
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.return_value = 705
+        mock_get_score_service.return_value = mock_score_service
+
+        mock_discord_member = Mock(spec=discord.Member)
+        mock_discord_member.mention = "<@12345>"
+        mock_discord_member.roles = []
+        mock_is_banned.return_value = False
+        mock_get_rank.return_value = RANK.IRON
+        mock_check_role.return_value = False
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        self.mock_report_channel.send.assert_any_call(
+            "<@12345> needs upgrading ⚪ → 🥉 (**705** points)"
+        )

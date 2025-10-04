@@ -2,9 +2,11 @@ import logging
 from typing import Optional
 
 import discord
+from discord import app_commands
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.ranks import get_rank_from_member
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import (
     build_ingot_response_embed,
     send_error_response,
@@ -18,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.MEMBER)
+@log_command_execution(logger)
+@app_commands.describe(
+    player="Player name to view ingots for (defaults to your nickname)"
+)
 async def cmd_view_ingots(
     interaction: discord.Interaction, player: Optional[str] = None
 ):
@@ -41,7 +47,7 @@ async def cmd_view_ingots(
 
     async with db.get_session() as session:
         service = MemberService(session)
-        member = await service.get_member_by_nickname(display_name)
+        member = await service.get_member_by_nickname(player)
 
         if not member:
             return await send_error_response(

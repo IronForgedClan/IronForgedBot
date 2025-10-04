@@ -1,37 +1,28 @@
-from datetime import datetime
-import io
 import logging
-import time
 from typing import Optional
 
 import discord
 from discord.ui import View
-from tabulate import tabulate
 
-from ironforgedbot.commands.admin.internal_state import get_internal_state
-from ironforgedbot.commands.admin.latest_log import get_latest_log_file
-from ironforgedbot.common.helpers import (
-    format_duration,
-    get_text_channel,
-)
+from ironforgedbot.commands.admin.check_activity import cmd_check_activity
+from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepancies
+from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
+from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
+from ironforgedbot.commands.admin.sync_members import cmd_sync_members
+from ironforgedbot.commands.admin.view_logs import cmd_view_logs
+from ironforgedbot.commands.admin.view_state import cmd_view_state
+from ironforgedbot.common.helpers import get_text_channel
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_h2
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators import require_role
-from ironforgedbot.services.absent_service import AbsentMemberService
-from ironforgedbot.tasks.job_check_activity import job_check_activity
-from ironforgedbot.tasks.job_membership_discrepancies import (
-    job_check_membership_discrepancies,
-)
-from ironforgedbot.tasks.job_refresh_ranks import job_refresh_ranks
-from ironforgedbot.tasks.job_sync_members import job_sync_members
-from ironforgedbot.database.database import db
 
 logger = logging.getLogger(__name__)
 
 
 @require_role(ROLE.LEADERSHIP, ephemeral=True)
+@log_command_execution(logger)
 async def cmd_admin(interaction: discord.Interaction):
     """Allows access to various administrative commands.
 
@@ -40,7 +31,7 @@ async def cmd_admin(interaction: discord.Interaction):
     """
     report_channel = get_text_channel(interaction.guild, CONFIG.AUTOMATION_CHANNEL_ID)
     if not report_channel:
-        logger.error("Error finding report channel for cmd_activity_check")
+        logger.error("Error finding report channel for cmd_admin")
         return await send_error_response(interaction, "Error accessing report channel.")
 
     menu = AdminMenuView(report_channel=report_channel)
@@ -60,7 +51,6 @@ class AdminMenuView(View):
 
     async def on_timeout(self) -> None:
         await self.clear_parent()
-
         return await super().on_timeout()
 
     async def clear_parent(self):
@@ -77,17 +67,8 @@ class AdminMenuView(View):
     async def member_sync_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        assert interaction.guild
-        await interaction.response.send_message(
-            "## Manually initiating member sync job...\n"
-            f"View <#{self.report_channel.id}> for output.",
-            ephemeral=True,
-        )
-
         await self.clear_parent()
-        logger.info("Manually initiating sync member job")
-
-        await job_sync_members(interaction.guild, self.report_channel)
+        await cmd_sync_members(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Member Discrepancy Check",
@@ -99,22 +80,8 @@ class AdminMenuView(View):
     async def member_discrepancy_check_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        assert interaction.guild
-        await interaction.response.send_message(
-            "## Manually initiating member discrepancy job...\n"
-            f"View <#{self.report_channel.id}> for output.",
-            ephemeral=True,
-        )
-
         await self.clear_parent()
-        logger.info("Manually initiating member discrepancy job")
-
-        await job_check_membership_discrepancies(
-            interaction.guild,
-            self.report_channel,
-            CONFIG.WOM_API_KEY,
-            CONFIG.WOM_GROUP_ID,
-        )
+        await cmd_check_discrepancies(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Member Activity Check",
@@ -126,18 +93,8 @@ class AdminMenuView(View):
     async def member_activity_check_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        await interaction.response.send_message(
-            "## Manually initiating activity check job...\n"
-            f"View <#{self.report_channel.id}> for output.",
-            ephemeral=True,
-        )
-
         await self.clear_parent()
-        logger.info("Manually initiating activity check job")
-
-        await job_check_activity(
-            self.report_channel, CONFIG.WOM_API_KEY, CONFIG.WOM_GROUP_ID
-        )
+        await cmd_check_activity(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Member Rank Check",
@@ -149,17 +106,8 @@ class AdminMenuView(View):
     async def member_rank_check_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        assert interaction.guild
-        await interaction.response.send_message(
-            "## Manually initiating rank check job...\n"
-            f"View <#{self.report_channel.id}> for output.",
-            ephemeral=True,
-        )
-
         await self.clear_parent()
-        logger.info("Manually initiating refresh ranks job")
-
-        await job_refresh_ranks(interaction.guild, self.report_channel)
+        await cmd_refresh_ranks(interaction, self.report_channel)
 
     @discord.ui.button(
         label="View Latest Log",
@@ -171,17 +119,8 @@ class AdminMenuView(View):
     async def view_logs_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        """Sends the latest log file."""
-        logger.info("Sending latest log file to user...")
         await self.clear_parent()
-        await interaction.response.defer(thinking=True, ephemeral=True)
-
-        file = get_latest_log_file()
-
-        if not file:
-            return await send_error_response(interaction, "Error processing log file.")
-
-        return await interaction.followup.send(content="## Latest Log File", file=file)
+        await cmd_view_logs(interaction)
 
     @discord.ui.button(
         label="View Internal State",
@@ -193,16 +132,8 @@ class AdminMenuView(View):
     async def view_state_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        """Sends internal bot state."""
-        logger.info("Sending internal state to user...")
         await self.clear_parent()
-        await interaction.response.defer(thinking=True, ephemeral=True)
-
-        file = get_internal_state()
-
-        return await interaction.followup.send(
-            content="## Current Internal State", file=file
-        )
+        await cmd_view_state(interaction)
 
     @discord.ui.button(
         label="Process Absentee List",
@@ -214,40 +145,5 @@ class AdminMenuView(View):
     async def process_absentee_list_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        """Processes and returns absentee list."""
         await self.clear_parent()
-        await interaction.response.defer(thinking=True, ephemeral=False)
-        start_time = time.perf_counter()
-
-        async with db.get_session() as session:
-            absent_service = AbsentMemberService(session)
-            absentee_list = await absent_service.process_absent_members()
-
-            data = []
-            for member in absentee_list:
-                data.append(
-                    [
-                        member.nickname,
-                        member.date,
-                        member.information,
-                        member.comment,
-                    ]
-                )
-
-            result_table = tabulate(
-                data,
-                headers=["Member", "Date", "Info", "Comment"],
-                tablefmt="github",
-            )
-            discord_file = discord.File(
-                fp=io.BytesIO(result_table.encode("utf-8")),
-                filename=f"absentee_list_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-            )
-            end_time = time.perf_counter()
-
-            return await interaction.followup.send(
-                f"{text_h2('🚿 Absentee List')}\nThe following **{len(absentee_list)}**"
-                " members will be ignored during an activity check. Processed in "
-                f"**{format_duration(start_time, end_time)}**.",
-                file=discord_file,
-            )
+        await cmd_process_absentees(interaction)

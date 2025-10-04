@@ -7,6 +7,7 @@ from sqlalchemy import Sequence, delete, func, select, update, values
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import session
 
+from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 from ironforgedbot.models.raffle_ticket import RaffleTicket
@@ -64,13 +65,16 @@ class RaffleService:
         return list(result.scalars().all())
 
     async def _get_raffle_ticket(self, id: str) -> RaffleTicket | None:
-        result = await self.db.execute(select(RaffleTicket).where(Member.id == id))
+        result = await self.db.execute(
+            select(RaffleTicket).where(RaffleTicket.member_id == id)
+        )
         return result.scalars().first()
 
     async def delete_all_tickets(self):
         await self.db.execute((delete(RaffleTicket)))
         await self.db.commit()
 
+    @log_database_operation(logger)
     async def try_buy_ticket(
         self, discord_id: int, ticket_price: int, quantity: int
     ) -> RaffleServiceResponse:
@@ -90,10 +94,6 @@ class RaffleService:
         if not member:
             return RaffleServiceResponse(False, "Member could not be found", -1)
 
-        logger.info(
-            f"Attempting to buy {quantity} raffle tickets for {member.nickname}"
-        )
-
         current_raffle_ticket = await self._get_raffle_ticket(member.id)
 
         total_cost = ticket_price * quantity
@@ -103,7 +103,9 @@ class RaffleService:
 
         if ingot_response.status is False:
             return RaffleServiceResponse(
-                False, ingot_response.message, current_raffle_ticket or 0
+                False,
+                ingot_response.message,
+                current_raffle_ticket.quantity if current_raffle_ticket else 0,
             )
 
         if current_raffle_ticket:

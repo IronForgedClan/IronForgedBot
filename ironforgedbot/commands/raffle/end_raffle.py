@@ -7,17 +7,21 @@ from sqlalchemy import text
 
 from ironforgedbot.commands.raffle.build_winner_image import build_winner_image_file
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.database.database import db
-from ironforgedbot.services.ingot_service import IngotService
-from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.services.raffle_service import RaffleService
+from ironforgedbot.services.service_factory import (
+    create_ingot_service,
+    create_member_service,
+    create_raffle_service,
+)
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
 
 
+@log_command_execution(logger, interaction_position=1)
 async def handle_end_raffle_error(
     parent_message: Optional[discord.Message], interaction: discord.Interaction, message
 ):
@@ -27,6 +31,7 @@ async def handle_end_raffle_error(
     return await send_error_response(interaction, message)
 
 
+@log_command_execution(logger, interaction_position=1)
 async def handle_end_raffle(
     parent_message: Optional[discord.Message], interaction: discord.Interaction
 ):
@@ -43,12 +48,11 @@ async def handle_end_raffle(
     ticket_icon = find_emoji("Raffle_Ticket")
 
     async with db.get_session() as session:
-        raffle_service = RaffleService(session)
+        raffle_service = create_raffle_service(session)
         total_tickets = await raffle_service.get_raffle_ticket_total()
         valid_tickets = await raffle_service.get_all_valid_raffle_tickets()
 
         if total_tickets < 1:
-            logger.info("Raffle ended with no tickets sold.")
             STATE.state["raffle_on"] = False
             STATE.state["raffle_price"] = 0
 
@@ -63,7 +67,6 @@ async def handle_end_raffle(
             )
 
         if len(valid_tickets) < 1:
-            logger.info("Raffle ended with no valid tickets to select from.")
             return await handle_end_raffle_error(
                 parent_message,
                 interaction,
@@ -80,7 +83,7 @@ async def handle_end_raffle(
         )[0]
         winner_qty = entries[winner_id]
 
-        member_service = MemberService(session)
+        member_service = create_member_service(session)
         winning_member = await member_service.get_member_by_id(winner_id)
 
         if not winning_member:
@@ -90,11 +93,8 @@ async def handle_end_raffle(
                 f"Error finding winner's details.\n{winner_id}",
             )
 
-        logger.info(f"Raffle entries: {entries}")
-        logger.info(f"Raffle winner: {winning_member.nickname}")
-
         # Award winnings
-        ingot_service = IngotService(session)
+        ingot_service = create_ingot_service(session)
         winnings = int(total_tickets * int(STATE.state["raffle_price"] / 2))
 
         result = await ingot_service.try_add_ingots(
@@ -157,5 +157,3 @@ async def handle_end_raffle(
 
         if parent_message:
             parent_message = await parent_message.delete()
-
-        logger.info("Raffle ended.")

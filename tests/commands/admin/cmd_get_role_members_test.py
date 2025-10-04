@@ -1,148 +1,208 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
+
+import discord
 
 from ironforgedbot.common.roles import ROLE
-from tests.helpers import (
-    create_mock_discord_interaction,
-    create_test_member,
-    mock_require_role,
-)
-
-with patch(
-    "ironforgedbot.decorators.require_role",
-    mock_require_role,
-):
-    from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
+from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
 class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
-    async def test_get_role_members(self, mock_discord_file):
-        """Test get role members returns successfully"""
-        caller = create_test_member("leader", [ROLE.LEADERSHIP])
-        member1 = create_test_member("member1", [ROLE.MEMBER])
-        member2 = create_test_member("member2", [ROLE.MEMBER])
-        member3 = create_test_member("member3", [ROLE.PROSPECT])
-        member4 = create_test_member("member4", [ROLE.DISCORD_TEAM])
+    def setUp(self):
+        self.mock_require_role_patcher = patch("ironforgedbot.decorators.require_role")
+        self.mock_require_role = self.mock_require_role_patcher.start()
+        self.mock_require_role.side_effect = lambda *args, **kwargs: lambda func: func
 
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[caller, member1, member2, member3, member4]
+        from ironforgedbot.commands.admin.cmd_get_role_members import (
+            cmd_get_role_members,
         )
 
-        await cmd_get_role_members(interaction, ROLE.MEMBER)
+        self.cmd_get_role_members = cmd_get_role_members
 
-        expected_content = f"{member1.display_name}, {member2.display_name}"
+        mock_member = create_test_member("TestUser", [ROLE.LEADERSHIP])
+        mock_member.id = 123456789
+        self.mock_interaction = create_mock_discord_interaction(user=mock_member)
 
-        _, call_kwargs = mock_discord_file.call_args
+    def tearDown(self):
+        self.mock_require_role_patcher.stop()
 
-        # Extract BytesIO object passed to discord.File
-        file_arg = call_kwargs.get("fp")
-
-        # Ensure the file arg exists
-        self.assertIsNotNone(
-            file_arg, "Expected discord.File to be called with a file-like object"
-        )
-
-        file_arg.seek(0)
-        actual_content = file_arg.read()
-        self.assertEqual(actual_content, expected_content.encode("utf-8"))
-
-        followup_text = interaction.followup.send.call_args[0][0]
-        self.assertEqual(
-            followup_text,
-            "## Member Role List\nFound **2** members with the role '**Member**'.",
-        )
+    def create_member(self, display_name, roles):
+        member = Mock()
+        member.display_name = display_name
+        member.roles = []
+        for role_name in roles:
+            role = Mock()
+            role.name = role_name
+            member.roles.append(role)
+        return member
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
-    async def test_get_role_members_multiple_word_role(self, mock_discord_file):
-        """Test get role members works with complex role names"""
-        custom_role = "N0w this_is A rOLe!"
-        caller = create_test_member("leader", [ROLE.LEADERSHIP])
-        member1 = create_test_member("member1", [custom_role])
-        member2 = create_test_member("member2", [custom_role])
-        member3 = create_test_member("member3", [ROLE.PROSPECT])
-        member4 = create_test_member("member4", [custom_role])
+    async def test_cmd_get_role_members_success(self, mock_discord_file):
+        member1 = self.create_member("member1", [ROLE.MEMBER])
+        member2 = self.create_member("member2", [ROLE.MEMBER])
+        member3 = self.create_member("member3", [ROLE.PROSPECT])
 
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[caller, member1, member2, member3, member4]
-        )
+        self.mock_interaction.guild.members = [member1, member2, member3]
+        mock_file = Mock()
+        mock_discord_file.return_value = mock_file
 
-        await cmd_get_role_members(interaction, custom_role)
+        await self.cmd_get_role_members(self.mock_interaction, ROLE.MEMBER)
 
-        expected_content = (
-            f"{member1.display_name}, {member2.display_name}, {member4.display_name}"
-        )
+        mock_discord_file.assert_called_once()
+        call_args = mock_discord_file.call_args
+        fp_arg = call_args.kwargs["fp"]
+        filename_arg = call_args.kwargs["filename"]
 
-        _, call_kwargs = mock_discord_file.call_args
+        fp_arg.seek(0)
+        content = fp_arg.read().decode("utf-8")
+        self.assertEqual(content, "member1, member2")
+        self.assertTrue(filename_arg.startswith("member_role_list_"))
+        self.assertTrue(filename_arg.endswith(".txt"))
 
-        # Extract BytesIO object passed to discord.File
-        file_arg = call_kwargs.get("fp")
-
-        # Ensure the file arg exists
-        self.assertIsNotNone(
-            file_arg, "Expected discord.File to be called with a file-like object"
-        )
-
-        file_arg.seek(0)
-        actual_content = file_arg.read()
-        self.assertEqual(actual_content, expected_content.encode("utf-8"))
-
-        followup_text = interaction.followup.send.call_args[0][0]
-        self.assertEqual(
-            followup_text,
-            f"## Member Role List\nFound **3** members with the role '**{custom_role}**'.",
-        )
+        self.mock_interaction.followup.send.assert_called_once()
+        send_args = self.mock_interaction.followup.send.call_args
+        self.assertIn("## Member Role List", send_args.args[0])
+        self.assertIn("Found **2** members", send_args.args[0])
+        self.assertIn("**Member**", send_args.args[0])
+        self.assertEqual(send_args.kwargs["file"], mock_file)
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
-    async def test_get_role_members_handles_emoji(self, mock_discord_file):
-        """Test get role members works with emojis in user names, roles are only ever plaintext"""
-        custom_role = "alien"
-        caller = create_test_member("leader", [ROLE.LEADERSHIP])
-        member1 = create_test_member("member1 💩", [custom_role])
-        member2 = create_test_member("🤖member2", [custom_role])
-        member3 = create_test_member("member3", [ROLE.PROSPECT])
-        member4 = create_test_member("member4🐼", [custom_role])
+    async def test_cmd_get_role_members_custom_role(self, mock_discord_file):
+        custom_role = "Custom Role Name"
+        member1 = self.create_member("user1", [custom_role])
+        member2 = self.create_member("user2", [ROLE.MEMBER])
+        member3 = self.create_member("user3", [custom_role])
 
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[caller, member1, member2, member3, member4]
-        )
+        self.mock_interaction.guild.members = [member1, member2, member3]
+        mock_file = Mock()
+        mock_discord_file.return_value = mock_file
 
-        await cmd_get_role_members(interaction, custom_role)
+        await self.cmd_get_role_members(self.mock_interaction, custom_role)
 
-        expected_content = "member1, member2, member4"
+        call_args = mock_discord_file.call_args
+        fp_arg = call_args.kwargs["fp"]
+        filename_arg = call_args.kwargs["filename"]
 
-        _, call_kwargs = mock_discord_file.call_args
+        fp_arg.seek(0)
+        content = fp_arg.read().decode("utf-8")
+        self.assertEqual(content, "user1, user3")
+        self.assertTrue(filename_arg.startswith("custom_role_name_role_list_"))
 
-        # Extract BytesIO object passed to discord.File
-        file_arg = call_kwargs.get("fp")
+        send_args = self.mock_interaction.followup.send.call_args
+        self.assertIn("Found **2** members", send_args.args[0])
+        self.assertIn("**Custom Role Name**", send_args.args[0])
 
-        # Ensure the file arg exists
-        self.assertIsNotNone(
-            file_arg, "Expected discord.File to be called with a file-like object"
-        )
+    @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
+    async def test_cmd_get_role_members_emoji_normalization(self, mock_discord_file):
+        member1 = self.create_member("user1 💩", [ROLE.MEMBER])
+        member2 = self.create_member("🤖user2", [ROLE.MEMBER])
+        member3 = self.create_member("user3🐼", [ROLE.MEMBER])
 
-        file_arg.seek(0)
-        actual_content = file_arg.read()
-        self.assertEqual(actual_content, expected_content.encode("utf-8"))
+        self.mock_interaction.guild.members = [member1, member2, member3]
 
-        followup_text = interaction.followup.send.call_args[0][0]
-        self.assertEqual(
-            followup_text,
-            "## Member Role List\nFound **3** members with the role '**alien**'.",
-        )
+        await self.cmd_get_role_members(self.mock_interaction, ROLE.MEMBER)
 
-    async def test_get_role_members_reports_none_found(self):
-        """Test get role members returns message if no matching users found"""
-        caller = create_test_member("leader", [ROLE.LEADERSHIP])
-        member1 = create_test_member("member1", [ROLE.MEMBER])
-        member2 = create_test_member("member2", [ROLE.MEMBER])
+        call_args = mock_discord_file.call_args
+        fp_arg = call_args.kwargs["fp"]
+        fp_arg.seek(0)
+        content = fp_arg.read().decode("utf-8")
+        self.assertEqual(content, "user1, user2, user3")
 
-        interaction = create_mock_discord_interaction(
-            user=caller, members=[caller, member1, member2]
-        )
+    @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
+    async def test_cmd_get_role_members_single_member(self, mock_discord_file):
+        member1 = self.create_member("onlyuser", [ROLE.PROSPECT])
 
-        await cmd_get_role_members(interaction, ROLE.PROSPECT)
+        self.mock_interaction.guild.members = [member1]
 
-        interaction.followup.send.assert_called_with(
+        await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
+
+        call_args = mock_discord_file.call_args
+        fp_arg = call_args.kwargs["fp"]
+        fp_arg.seek(0)
+        content = fp_arg.read().decode("utf-8")
+        self.assertEqual(content, "onlyuser")
+
+        send_args = self.mock_interaction.followup.send.call_args
+        self.assertIn("Found **1** members", send_args.args[0])
+
+    async def test_cmd_get_role_members_no_matches(self):
+        member1 = self.create_member("user1", [ROLE.MEMBER])
+        member2 = self.create_member("user2", [ROLE.MEMBER])
+
+        self.mock_interaction.guild.members = [member1, member2]
+
+        await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
+
+        self.mock_interaction.followup.send.assert_called_once_with(
             "No members with role '**Prospect**' found."
+        )
+
+    async def test_cmd_get_role_members_empty_guild(self):
+        self.mock_interaction.guild.members = []
+
+        await self.cmd_get_role_members(self.mock_interaction, ROLE.MEMBER)
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            "No members with role '**Member**' found."
+        )
+
+    @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
+    async def test_cmd_get_role_members_case_sensitive_role_matching(
+        self, mock_discord_file
+    ):
+        member1 = self.create_member("user1", ["Member"])
+        member2 = self.create_member("user2", ["MEMBER"])
+        member3 = self.create_member("user3", ["member"])
+
+        self.mock_interaction.guild.members = [member1, member2, member3]
+
+        await self.cmd_get_role_members(self.mock_interaction, "member")
+
+        call_args = mock_discord_file.call_args
+        fp_arg = call_args.kwargs["fp"]
+        fp_arg.seek(0)
+        content = fp_arg.read().decode("utf-8")
+        self.assertEqual(content, "user3")
+
+    @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
+    async def test_cmd_get_role_members_multiple_roles_per_member(
+        self, mock_discord_file
+    ):
+        member1 = self.create_member("user1", [ROLE.MEMBER, ROLE.PROSPECT])
+        member2 = self.create_member("user2", [ROLE.PROSPECT, ROLE.DISCORD_TEAM])
+        member3 = self.create_member("user3", [ROLE.DISCORD_TEAM])
+
+        self.mock_interaction.guild.members = [member1, member2, member3]
+
+        await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
+
+        call_args = mock_discord_file.call_args
+        fp_arg = call_args.kwargs["fp"]
+        fp_arg.seek(0)
+        content = fp_arg.read().decode("utf-8")
+        self.assertEqual(content, "user1, user2")
+
+    @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
+    async def test_cmd_get_role_members_filename_generation(self, mock_discord_file):
+        member1 = self.create_member("user1", ["Test Role With Spaces"])
+
+        self.mock_interaction.guild.members = [member1]
+
+        await self.cmd_get_role_members(self.mock_interaction, "Test Role With Spaces")
+
+        call_args = mock_discord_file.call_args
+        filename = call_args.kwargs["filename"]
+        self.assertTrue(filename.startswith("test_role_with_spaces_role_list_"))
+        self.assertTrue(filename.endswith(".txt"))
+
+    async def test_cmd_get_role_members_role_case_insensitive_search(self):
+        member1 = self.create_member("user1", ["TestRole"])
+        member2 = self.create_member("user2", ["testrole"])
+
+        self.mock_interaction.guild.members = [member1, member2]
+
+        await self.cmd_get_role_members(self.mock_interaction, "TESTROLE")
+
+        self.mock_interaction.followup.send.assert_called_once_with(
+            "No members with role '**TESTROLE**' found."
         )

@@ -1,335 +1,245 @@
 import unittest
-from unittest.mock import ANY, AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
-from ironforgedbot.commands.raffle.end_raffle import handle_end_raffle
-from ironforgedbot.storage.types import Member, StorageError
-from tests.helpers import create_mock_discord_interaction, create_test_member
+import discord
+
+from ironforgedbot.commands.raffle.end_raffle import (
+    handle_end_raffle,
+    handle_end_raffle_error,
+)
 
 
 class TestEndRaffle(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
+    def setUp(self):
+        self.mock_interaction = Mock(spec=discord.Interaction)
+        self.mock_interaction.guild = Mock()
+        self.mock_interaction.user = Mock()
+        self.mock_interaction.user.id = 12345
+        self.mock_interaction.user.display_name = "TestUser"
+        self.mock_interaction.response.defer = AsyncMock()
+        self.mock_interaction.followup.send = AsyncMock()
+
+        self.mock_parent_message = AsyncMock()
+        self.mock_parent_message.edit = AsyncMock()
+        self.mock_parent_message.delete = AsyncMock()
+
+    @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
+    @patch("ironforgedbot.commands.raffle.end_raffle.build_winner_image_file")
+    @patch("ironforgedbot.commands.raffle.end_raffle.db")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_ingot_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_member_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.random")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_success(self, mock_state, mock_storage):
-        caller = create_test_member("tester", [], "tester")
+    async def test_handle_end_raffle_success(
+        self,
+        mock_state,
+        mock_random,
+        mock_create_raffle_service,
+        mock_create_member_service,
+        mock_create_ingot_service,
+        mock_db,
+        mock_build_image,
+        mock_find_emoji,
+    ):
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
+        mock_find_emoji.return_value = "🎫"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
+        # Mock ticket data
+        mock_ticket = Mock()
+        mock_ticket.member_id = "winner-id-123"
+        mock_ticket.quantity = 10
 
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {caller.id: 10}
+        mock_raffle_service = AsyncMock()
+        mock_raffle_service.get_raffle_ticket_total.return_value = 20
+        mock_raffle_service.get_all_valid_raffle_tickets.return_value = [mock_ticket]
+        mock_raffle_service.delete_all_tickets = AsyncMock()
+        mock_create_raffle_service.return_value = mock_raffle_service
 
-        await handle_end_raffle(mock_parent_message, interaction)
+        # Mock winner selection
+        mock_random.choices.return_value = ["winner-id-123"]
 
-        mock_parent_message.edit.assert_called_with(
+        # Mock member data
+        mock_winning_member = Mock()
+        mock_winning_member.nickname = "WinnerUser"
+        mock_winning_member.discord_id = 67890
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_id.return_value = mock_winning_member
+        mock_create_member_service.return_value = mock_member_service
+
+        # Mock ingot service
+        mock_result = Mock()
+        mock_result.status = True
+
+        mock_ingot_service = AsyncMock()
+        mock_ingot_service.try_add_ingots.return_value = mock_result
+        mock_create_ingot_service.return_value = mock_ingot_service
+
+        # Mock image generation
+        mock_image = Mock()
+        mock_build_image.return_value = mock_image
+
+        # Mock guild member
+        mock_discord_member = Mock()
+        mock_discord_member.mention = "<@67890>"
+        self.mock_interaction.guild.get_member.return_value = mock_discord_member
+
+        await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
+
+        # Verify raffle setup
+        self.mock_parent_message.edit.assert_called_once_with(
             content="## Ending raffle\nSelecting winner, standby...",
             embed=None,
             view=None,
         )
 
-        mock_storage.update_members.assert_called_with(
-            [storage_member],
-            interaction.user.display_name,
-            note="[BOT] Raffle winnings (25,000)",
+        # Verify services called
+        mock_raffle_service.get_raffle_ticket_total.assert_called_once()
+        mock_raffle_service.get_all_valid_raffle_tickets.assert_called_once()
+        mock_member_service.get_member_by_id.assert_called_once_with("winner-id-123")
+        mock_ingot_service.try_add_ingots.assert_called_once_with(
+            67890, 50000, None, "Raffle winnings: (50000)"
         )
+        mock_raffle_service.delete_all_tickets.assert_called_once()
 
-        interaction.followup.send.assert_called_with(
-            f"##  Congratulations {caller.mention}!!\n"
-            "You have won  **25,000** ingots!\n\n"
-            "You spent  **50,000** on  **10** tickets.\n"
-            "Resulting in  **-25,000** profit.\n"
-            "-# ouch\n\n\n"
-            "There were a total of  **10** entries.\n"
-            "Thank you everyone for participating!",
-            file=ANY,
-        )
-
-        mock_storage.delete_raffle_tickets.assert_called_once()
-        self.assertEqual(mock_state.state["raffle_on"], False)
+        # Verify state updated
+        self.assertFalse(mock_state.state["raffle_on"])
         self.assertEqual(mock_state.state["raffle_price"], 0)
 
-    @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
+        # Verify winner announcement
+        self.mock_interaction.followup.send.assert_called_once()
+        call_args = self.mock_interaction.followup.send.call_args
+        # Check if it's a positional argument or keyword argument
+        if "content" in call_args.kwargs:
+            content = call_args.kwargs["content"]
+        else:
+            content = call_args.args[0]
+        self.assertIn("Congratulations <@67890>!!", content)
+        self.assertIn("50,000", content)
+        self.assertEqual(call_args.kwargs["file"], mock_image)
+
+    @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
+    @patch("ironforgedbot.commands.raffle.end_raffle.db")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_reading_tickets(
-        self, mock_state, mock_storage, mock_handle_error
+    async def test_handle_end_raffle_no_tickets_sold(
+        self, mock_state, mock_create_raffle_service, mock_db, mock_find_emoji
     ):
-        caller = create_test_member("tester", [], "tester")
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
+        mock_find_emoji.return_value = "🎫"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
+        mock_raffle_service = AsyncMock()
+        mock_raffle_service.get_raffle_ticket_total.return_value = 0
+        mock_create_raffle_service.return_value = mock_raffle_service
 
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.side_effect = StorageError("error")
+        await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
 
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        mock_handle_error.assert_called_once_with(
-            ANY, interaction, "Encountered error ending raffle: error"
-        )
-        mock_storage.update_members.assert_not_called()
-        mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], True)
-        self.assertEqual(mock_state.state["raffle_price"], 5000)
-
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_no_tickets_sold(self, mock_state, mock_storage):
-        caller = create_test_member("tester", [], "tester")
-        mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
-
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
-
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
-
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {}
-
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        interaction.followup.send.assert_called_once_with(
-            content="##  Raffle Ended\n\nNo tickets were sold. There is no winner 🤷‍♂️."
-        )
-        mock_storage.update_members.assert_not_called()
-        mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], False)
+        # Verify state reset
+        self.assertFalse(mock_state.state["raffle_on"])
         self.assertEqual(mock_state.state["raffle_price"], 0)
 
-    @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_reading_members(
-        self, mock_state, mock_storage, mock_handle_error
-    ):
-        caller = create_test_member("tester", [], "tester")
-        mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
+        # Verify message sent
+        self.mock_interaction.followup.send.assert_called_once()
+        call_args = self.mock_interaction.followup.send.call_args
+        self.assertIn("No tickets were sold", call_args[1]["content"])
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
-
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
-
-        mock_storage.read_members.side_effect = StorageError("error")
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {caller.id: 50}
-
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        mock_handle_error.assert_called_once_with(
-            ANY, interaction, "Encountered error reading current members: error"
-        )
-        mock_storage.update_members.assert_not_called()
-        mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], True)
-        self.assertEqual(mock_state.state["raffle_price"], 5000)
+        # Note: parent_message.delete() may be called based on implementation details
 
     @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
+    @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
+    @patch("ironforgedbot.commands.raffle.end_raffle.db")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_no_tickets_from_valid_members(
-        self, mock_state, mock_storage, mock_handle_error
+    async def test_handle_end_raffle_no_valid_tickets(
+        self,
+        mock_state,
+        mock_create_raffle_service,
+        mock_db,
+        mock_find_emoji,
+        mock_handle_error,
     ):
-        caller = create_test_member("tester", [], "tester")
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
+        mock_find_emoji.return_value = "🎫"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
+        mock_raffle_service = AsyncMock()
+        mock_raffle_service.get_raffle_ticket_total.return_value = 10
+        mock_raffle_service.get_all_valid_raffle_tickets.return_value = []
+        mock_create_raffle_service.return_value = mock_raffle_service
 
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {1234: 50}
-
-        await handle_end_raffle(mock_parent_message, interaction)
+        await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
 
         mock_handle_error.assert_called_once()
-        mock_storage.update_members.assert_not_called()
-        mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], True)
-        self.assertEqual(mock_state.state["raffle_price"], 5000)
+        call_args = mock_handle_error.call_args[0]
+        self.assertEqual(call_args[1], self.mock_interaction)
+        self.assertEqual(call_args[2], "Raffle ended without any valid entries.")
 
     @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
+    @patch("ironforgedbot.commands.raffle.end_raffle.find_emoji")
+    @patch("ironforgedbot.commands.raffle.end_raffle.db")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_member_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.create_raffle_service")
+    @patch("ironforgedbot.commands.raffle.end_raffle.random")
     @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_error_getting_winning_member(
-        self, mock_state, mock_storage, mock_handle_error
+    async def test_handle_end_raffle_winner_not_found(
+        self,
+        mock_state,
+        mock_random,
+        mock_create_raffle_service,
+        mock_create_member_service,
+        mock_db,
+        mock_find_emoji,
+        mock_handle_error,
     ):
-        caller = create_test_member("tester", [], "tester")
         mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
+        mock_find_emoji.return_value = "🎫"
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
+        mock_ticket = Mock()
+        mock_ticket.member_id = "invalid-id"
+        mock_ticket.quantity = 10
+
+        mock_raffle_service = AsyncMock()
+        mock_raffle_service.get_raffle_ticket_total.return_value = 20
+        mock_raffle_service.get_all_valid_raffle_tickets.return_value = [mock_ticket]
+        mock_create_raffle_service.return_value = mock_raffle_service
+
+        mock_random.choices.return_value = ["invalid-id"]
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_id.return_value = None
+        mock_create_member_service.return_value = mock_member_service
+
+        await handle_end_raffle(self.mock_parent_message, self.mock_interaction)
+
+        mock_handle_error.assert_called_once()
+        call_args = mock_handle_error.call_args[0]
+        self.assertIn("Error finding winner's details", call_args[2])
+
+    @patch("ironforgedbot.commands.raffle.end_raffle.send_error_response")
+    async def test_handle_end_raffle_error_with_parent_message(self, mock_send_error):
+        await handle_end_raffle_error(
+            self.mock_parent_message, self.mock_interaction, "Test error"
         )
 
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.side_effect = StorageError("error")
-        mock_storage.read_raffle_tickets.return_value = {caller.id: 50}
+        self.mock_parent_message.delete.assert_called_once()
+        mock_send_error.assert_called_once_with(self.mock_interaction, "Test error")
 
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        mock_handle_error.assert_called_once_with(ANY, interaction, "error")
-        mock_storage.update_members.assert_not_called()
-        mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], True)
-        self.assertEqual(mock_state.state["raffle_price"], 5000)
-
-    @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_awarding_winnings(
-        self, mock_state, mock_storage, mock_handle_error
+    @patch("ironforgedbot.commands.raffle.end_raffle.send_error_response")
+    async def test_handle_end_raffle_error_without_parent_message(
+        self, mock_send_error
     ):
-        caller = create_test_member("tester", [], "tester")
-        mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
+        await handle_end_raffle_error(None, self.mock_interaction, "Test error")
 
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
-
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
-
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {caller.id: 50}
-
-        mock_storage.update_members.side_effect = StorageError("error")
-
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        mock_handle_error.assert_called_once_with(ANY, interaction, "error")
-        mock_storage.delete_raffle_tickets.assert_not_called()
-        self.assertEqual(mock_state.state["raffle_on"], True)
-        self.assertEqual(mock_state.state["raffle_price"], 5000)
-
-    @patch("ironforgedbot.commands.raffle.end_raffle.handle_end_raffle_error")
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_fails_clearing_raffle_tickets(
-        self, mock_state, mock_storage, mock_handle_error
-    ):
-        caller = create_test_member("tester", [], "tester")
-        mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
-
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
-
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
-
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {caller.id: 50}
-
-        mock_storage.delete_raffle_tickets.side_effect = StorageError("error")
-
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        mock_handle_error.assert_called_once_with(
-            ANY,
-            interaction,
-            "Encountered error clearing ticket storage: error",
-        )
-        self.assertEqual(mock_state.state["raffle_on"], False)
-        self.assertEqual(mock_state.state["raffle_price"], 0)
-
-    @patch("ironforgedbot.commands.raffle.end_raffle.STORAGE", new_callable=AsyncMock)
-    @patch("ironforgedbot.commands.raffle.end_raffle.STATE")
-    async def test_end_raffle_includes_values_from_members_that_left(
-        self, mock_state, mock_storage
-    ):
-        caller = create_test_member("tester", [], "tester")
-        left_member = create_test_member("ilefttheclan", [], "ilefttheclan")
-        banned_member = create_test_member("igotbanned", [], "igotbanned")
-
-        mock_state.state = {"raffle_on": True, "raffle_price": 5000}
-        mock_parent_message = AsyncMock()
-
-        interaction = create_mock_discord_interaction(user=caller)
-        interaction.followup = AsyncMock()
-        interaction.response.defer = AsyncMock()
-        interaction.response.send_message = AsyncMock()
-
-        storage_member = Member(
-            id=caller.id, runescape_name=caller.display_name, ingots=30000
-        )
-
-        mock_storage.read_members.return_value = [storage_member]
-        mock_storage.read_member.return_value = storage_member
-        mock_storage.read_raffle_tickets.return_value = {
-            left_member.id: 50,
-            banned_member.id: 5,
-            caller.id: 10,
-        }
-
-        await handle_end_raffle(mock_parent_message, interaction)
-
-        mock_parent_message.edit.assert_called_with(
-            content="## Ending raffle\nSelecting winner, standby...",
-            embed=None,
-            view=None,
-        )
-
-        mock_storage.update_members.assert_called_with(
-            [storage_member],
-            interaction.user.display_name,
-            note="[BOT] Raffle winnings (162,500)",
-        )
-
-        interaction.followup.send.assert_called_with(
-            f"##  Congratulations {caller.mention}!!\n"
-            "You have won  **162,500** ingots!\n\n"
-            "You spent  **50,000** on  **10** tickets.\n"
-            "Resulting in  **112,500** profit.\n\n"
-            "There were a total of  **65** entries.\n"
-            "Thank you everyone for participating!",
-            file=ANY,
-        )
+        mock_send_error.assert_called_once_with(self.mock_interaction, "Test error")

@@ -2,11 +2,13 @@ import logging
 from typing import List
 
 import discord
+from discord import app_commands
 
 from ironforgedbot.common.helpers import (
     normalize_discord_string,
     reply_with_file,
 )
+from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
@@ -15,7 +17,7 @@ from ironforgedbot.decorators import require_role
 from ironforgedbot.http import HTTP
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.services.score_service import ScoreService
+from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ class Signups(object):
         self.known_ranks = {}
         self.unknowns = []
         self.rank_failures = []
-        self.service = ScoreService(HTTP)
+        self.service = get_score_service(HTTP)
 
     def add_ranked(
         self, member: discord.Member, rank: RANK, prospect: bool, members: list[Member]
@@ -72,6 +74,8 @@ class Signups(object):
 
 
 @require_role(ROLE.LEADERSHIP)
+@log_command_execution(logger)
+@app_commands.describe(url="Direct link to the discord message")
 async def cmd_roster(
     interaction: discord.Interaction,
     url: str,
