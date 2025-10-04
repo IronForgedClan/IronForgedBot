@@ -37,6 +37,7 @@ class TrickOrTreat(Enum):
 
     Higher values = lower probability (weight = 1/value).
     """
+
     GIF = 5
     REMOVE_INGOTS_LOW = 11
     ADD_INGOTS_LOW = 10
@@ -146,7 +147,9 @@ class TrickOrTreatHandler:
         chosen = random.choice(
             [s for s in options if s not in self.positive_message_history]
         )
-        self._add_to_history(chosen, self.positive_message_history, POSITIVE_MESSAGE_HISTORY_LIMIT)
+        self._add_to_history(
+            chosen, self.positive_message_history, POSITIVE_MESSAGE_HISTORY_LIMIT
+        )
 
         return chosen
 
@@ -223,7 +226,9 @@ class TrickOrTreatHandler:
         chosen = random.choice(
             [s for s in options if s not in self.negative_message_history]
         )
-        self._add_to_history(chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT)
+        self._add_to_history(
+            chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT
+        )
 
         return chosen
 
@@ -251,7 +256,9 @@ class TrickOrTreatHandler:
         chosen_thumbnail = random.choice(
             [s for s in self.THUMBNAILS if s not in self.thumbnail_history]
         )
-        self._add_to_history(chosen_thumbnail, self.thumbnail_history, THUMBNAIL_HISTORY_LIMIT)
+        self._add_to_history(
+            chosen_thumbnail, self.thumbnail_history, THUMBNAIL_HISTORY_LIMIT
+        )
 
         embed = build_response_embed("", content, discord.Color.orange())
         embed.set_thumbnail(url=chosen_thumbnail)
@@ -275,7 +282,9 @@ class TrickOrTreatHandler:
             )
         )
 
-    def _add_to_history(self, item: str, history_list: List[str], limit: int = 5) -> None:
+    def _add_to_history(
+        self, item: str, history_list: List[str], limit: int = 5
+    ) -> None:
         """Add an item to a history list, removing oldest if limit exceeded.
 
         Args:
@@ -379,17 +388,19 @@ class TrickOrTreatHandler:
             return
 
         message_getter = (
-            self._get_random_positive_message if is_positive
+            self._get_random_positive_message
+            if is_positive
             else self._get_random_negative_message
         )
+
+        formatted_quantity = f"-{abs(quantity):,}" if quantity < 0 else f"{quantity:,}"
         message = message_getter().format(
-            ingots=f"{self.ingot_icon}{abs(quantity):,}"
+            ingots=f"{self.ingot_icon}{formatted_quantity}"
         )
 
         embed = self._build_embed(
-            message + self._get_balance_message(
-                interaction.user.display_name, ingot_total
-            )
+            message
+            + self._get_balance_message(interaction.user.display_name, ingot_total)
         )
         await interaction.followup.send(embed=embed)
 
@@ -466,8 +477,10 @@ class TrickOrTreatHandler:
         )
         return await interaction.followup.send(embed=embed)
 
-    async def result_remove_all_ingots_trick(self, interaction: discord.Interaction) -> None:
-        """Remove all ingots from the player (the ultimate trick!).
+    async def result_remove_all_ingots_trick(
+        self, interaction: discord.Interaction
+    ) -> None:
+        """Pretend to remove all ingots from the player.
 
         Args:
             interaction: The Discord interaction context.
@@ -488,7 +501,6 @@ class TrickOrTreatHandler:
                     interaction.user.display_name
                 )
             else:
-                # Actually remove all ingots
                 quantity_to_remove = member.ingots * -1
                 ingot_total = await self._adjust_ingots(
                     interaction,
@@ -500,7 +512,9 @@ class TrickOrTreatHandler:
                     (
                         f"You lost **{self.ingot_icon}{member.ingots:,}**...\n"
                         "Now that's gotta sting."
-                        + self._get_balance_message(interaction.user.display_name, ingot_total or 0)
+                        + self._get_balance_message(
+                            interaction.user.display_name, ingot_total or 0
+                        )
                     )
                 )
             embed.set_thumbnail(
@@ -517,7 +531,9 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = (random.randrange(REMOVE_HIGH_MIN, REMOVE_HIGH_MAX, 1) * INGOT_MULTIPLIER) * -1
+        quantity = (
+            random.randrange(REMOVE_HIGH_MIN, REMOVE_HIGH_MAX, 1) * INGOT_MULTIPLIER
+        ) * -1
         await self._handle_ingot_result(interaction, quantity, is_positive=False)
 
     async def result_add_high(self, interaction: discord.Interaction) -> None:
@@ -526,7 +542,9 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = random.randrange(HIGH_INGOT_MIN, HIGH_INGOT_MAX, 1) * INGOT_MULTIPLIER
+        quantity = (
+            random.randrange(HIGH_INGOT_MIN, HIGH_INGOT_MAX, 1) * INGOT_MULTIPLIER
+        )
         await self._handle_ingot_result(interaction, quantity, is_positive=True)
 
     async def result_remove_low(self, interaction: discord.Interaction) -> None:
@@ -535,7 +553,9 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        quantity = (random.randrange(LOW_INGOT_MIN, LOW_INGOT_MAX, 1) * INGOT_MULTIPLIER) * -1
+        quantity = (
+            random.randrange(LOW_INGOT_MIN, LOW_INGOT_MAX, 1) * INGOT_MULTIPLIER
+        ) * -1
         await self._handle_ingot_result(interaction, quantity, is_positive=False)
 
     async def result_add_low(self, interaction: discord.Interaction) -> None:
