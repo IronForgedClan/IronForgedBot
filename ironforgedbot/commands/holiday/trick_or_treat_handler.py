@@ -72,6 +72,7 @@ class DoubleOrNothingView(discord.ui.View):
         self.user_id = user_id
         self.amount = amount
         self.has_interacted = False
+        self.message: Optional[discord.Message] = None
 
     @discord.ui.button(label="🎲 Double or nothing!", style=discord.ButtonStyle.danger)
     async def double_or_nothing_button(
@@ -113,6 +114,24 @@ class DoubleOrNothingView(discord.ui.View):
         user_id_str = str(self.user_id)
         if user_id_str in STATE.state["double_or_nothing_offers"]:
             del STATE.state["double_or_nothing_offers"][user_id_str]
+
+        if self.has_interacted or not self.message:
+            return
+
+        # Disable the button
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
+        # Update the message with timeout notification
+        message = self.handler.DOUBLE_OR_NOTHING_EXPIRED.format(
+            ingot_icon=self.handler.ingot_icon, amount=self.amount
+        )
+        embed = self.handler._build_embed(message)
+        try:
+            await self.message.edit(embed=embed, view=self)
+        except discord.HTTPException:
+            pass  # Message may have been deleted
 
 
 class StealTargetView(discord.ui.View):
@@ -524,7 +543,7 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        return await self.result_steal(interaction)
+        return await self.result_double_or_nothing(interaction)
         match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await self.result_jackpot(interaction)
@@ -732,7 +751,8 @@ class TrickOrTreatHandler:
 
         # Create and send the view with the button
         view = DoubleOrNothingView(self, interaction.user.id, quantity)
-        await interaction.followup.send(embed=embed, view=view)
+        message = await interaction.followup.send(embed=embed, view=view)
+        view.message = message
 
     async def _process_double_or_nothing(
         self, interaction: discord.Interaction, amount: int
