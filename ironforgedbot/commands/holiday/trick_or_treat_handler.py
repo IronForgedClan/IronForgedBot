@@ -73,7 +73,7 @@ class DoubleOrNothingView(discord.ui.View):
         self.amount = amount
         self.has_interacted = False
 
-    @discord.ui.button(label="🎲 Double or Nothing!", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="🎲 Double or nothing!", style=discord.ButtonStyle.danger)
     async def double_or_nothing_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -228,7 +228,7 @@ class StealTargetView(discord.ui.View):
         self.stop()
 
     async def on_timeout(self):
-        """Handle the view timing out after 30 seconds."""
+        """Handle the view timing out."""
         pass
 
 
@@ -272,7 +272,7 @@ class TrickOrTreatHandler:
         self.STEAL_USER_NO_INGOTS: str
 
         with open("data/trick_or_treat.json") as f:
-            logger.info("loading trick or treat data...")
+            logger.debug("Loading trick or treat data...")
             data = json.load(f)
 
             self.GIFS = data["MEDIA"]["GIFS"]
