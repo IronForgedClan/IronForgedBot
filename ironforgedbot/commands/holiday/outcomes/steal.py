@@ -64,7 +64,7 @@ def _get_steal_success_rate(target_ingots: int) -> float:
 class StealTargetView(discord.ui.View):
     """Discord UI View for the steal target selection.
 
-    Displays buttons for each Leadership member that can be stolen from,
+    Displays buttons for each member that can be stolen from,
     plus a "Walk Away" button to abort safely.
     The view times out after 30 seconds.
     """
@@ -82,7 +82,7 @@ class StealTargetView(discord.ui.View):
             handler: The TrickOrTreatHandler instance to use for processing the result.
             user_id: The Discord user ID who can interact with this view.
             amount: The amount of ingots at stake.
-            targets: List of Leadership members to display as targets (max 3).
+            targets: List of members to display as targets (max 4).
         """
         super().__init__(timeout=30.0)
         self.handler = handler
@@ -94,16 +94,18 @@ class StealTargetView(discord.ui.View):
         for target in targets:
             button = discord.ui.Button(
                 label=target.display_name,
-                style=discord.ButtonStyle.danger,
+                style=discord.ButtonStyle.secondary,
                 custom_id=f"steal_{target.id}",
+                row=0,
             )
             button.callback = self._create_steal_callback(target)
             self.add_item(button)
 
         walk_away_button = discord.ui.Button(
             label="🚶 Walk Away",
-            style=discord.ButtonStyle.secondary,
+            style=discord.ButtonStyle.danger,
             custom_id="steal_walk_away",
+            row=1,
         )
         walk_away_button.callback = self._walk_away_callback
         self.add_item(walk_away_button)
@@ -195,7 +197,7 @@ async def result_steal(
 ) -> None:
     """Offer the player a chance to steal ingots from guild members.
 
-    Presents up to 3 random members as targets, plus a walk away option.
+    Presents up to 4 random members as targets, plus a walk away option.
     Success rate scales based on target's ingot balance (0%-45% chance). On failure,
     lose 3/4 of the attempted amount (rounded up to nearest 100). Walking away has no consequences.
 
@@ -216,7 +218,7 @@ async def result_steal(
         embed = handler._build_embed(handler.STEAL_NO_TARGETS)
         return await interaction.followup.send(embed=embed)
 
-    num_targets = min(3, len(member_targets))
+    num_targets = min(4, len(member_targets))
     targets = random.sample(member_targets, num_targets)
 
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
