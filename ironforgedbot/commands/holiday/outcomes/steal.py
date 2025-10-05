@@ -23,6 +23,31 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _get_steal_success_rate(target_ingots: int) -> float:
+    """Calculate steal success rate based on target's ingot balance.
+
+    Args:
+        target_ingots: The number of ingots the target has.
+
+    Returns:
+        The probability of success (0.0-1.0).
+    """
+    if target_ingots < 25_000:
+        return 0
+    elif target_ingots < 50_000:
+        return 0.05
+    elif target_ingots < 100_000:
+        return 0.25
+    elif target_ingots < 250_000:
+        return 0.30
+    elif target_ingots < 500_000:
+        return 0.35
+    elif target_ingots < 2_000_000:
+        return 0.40
+    else:
+        return 0.45
+
+
 class StealTargetView(discord.ui.View):
     """Discord UI View for the steal target selection.
 
@@ -141,17 +166,15 @@ class StealTargetView(discord.ui.View):
         if self.has_interacted or not self.message:
             return
 
-        # Disable all buttons
         for item in self.children:
             if isinstance(item, discord.ui.Button):
                 item.disabled = True
 
-        # Update the message with timeout notification
         embed = self.handler._build_embed(self.handler.STEAL_EXPIRED)
         try:
             await self.message.edit(embed=embed, view=self)
         except discord.HTTPException:
-            pass  # Message may have been deleted
+            pass
 
 
 async def result_steal(
@@ -169,7 +192,6 @@ async def result_steal(
     """
     assert interaction.guild
 
-    # Get all members with Leadership role, excluding the user
     leadership_members = [
         member
         for member in interaction.guild.members
@@ -177,20 +199,16 @@ async def result_steal(
         and member.id != interaction.user.id
     ]
 
-    # Check if any targets available
     if not leadership_members:
         embed = handler._build_embed(handler.STEAL_NO_TARGETS)
         return await interaction.followup.send(embed=embed)
 
-    # Select up to 3 random targets
     num_targets = min(3, len(leadership_members))
     targets = random.sample(leadership_members, num_targets)
 
-    # Generate steal amount
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
-    penalty = quantity // 2  # Half the amount if caught
+    penalty = quantity // 2
 
-    # Check if user has enough ingots to risk the penalty
     async with db.get_session() as session:
         member_service = MemberService(session)
         user_member = await member_service.get_member_by_discord_id(interaction.user.id)
@@ -205,7 +223,6 @@ async def result_steal(
     expire_timestamp = int(time.time() + 30)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    # Create offer message
     offer_message = handler.STEAL_OFFER.format(
         ingot_icon=handler.ingot_icon,
         amount=quantity,
@@ -214,7 +231,6 @@ async def result_steal(
     )
     embed = handler._build_embed(offer_message)
 
-    # Create and send the view with target buttons + walk away button
     view = StealTargetView(handler, interaction.user.id, quantity, targets)
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message
@@ -228,8 +244,7 @@ async def process_steal(
 ) -> None:
     """Process the result of a steal attempt.
 
-    35% chance to succeed (steal from target).
-    65% chance to fail (lose half the amount as penalty).
+    On failure, lose half the amount as penalty.
 
     Args:
         handler: The TrickOrTreatHandler instance.
@@ -239,30 +254,27 @@ async def process_steal(
     """
     assert interaction.guild
 
-    # Roll for success (35% chance)
-    success = random.random() < 0.35
+    async with db.get_session() as session:
+        member_service = MemberService(session)
+        target_member = await member_service.get_member_by_discord_id(target.id)
+
+        if not target_member or target_member.ingots == 0:
+            message = handler.STEAL_TARGET_NO_INGOTS.format(
+                target_mention=target.mention
+            )
+            embed = handler._build_embed(message)
+            return await interaction.followup.send(embed=embed)
+
+        success_rate = _get_steal_success_rate(target_member.ingots)
+
+        # Cap amount at target's balance
+        actual_amount = min(amount, target_member.ingots)
+
+    success = random.random() < success_rate
 
     if success:
-        # Check target's ingots
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            target_member = await member_service.get_member_by_discord_id(target.id)
-
-            if not target_member or target_member.ingots == 0:
-                # Target has no ingots
-                message = handler.STEAL_TARGET_NO_INGOTS.format(
-                    target_mention=target.mention
-                )
-                embed = handler._build_embed(message)
-                return await interaction.followup.send(embed=embed)
-
-            # Cap amount at target's balance
-            actual_amount = min(amount, target_member.ingots)
-
-        # Remove from target
         await handler._adjust_ingots(interaction, -actual_amount, target)
 
-        # Add to user
         user_new_total = await handler._adjust_ingots(
             interaction,
             actual_amount,
@@ -270,11 +282,9 @@ async def process_steal(
         )
 
         if user_new_total is None:
-            # Error occurred, but target already lost ingots
             logger.error("Error adding stolen ingots to user")
             return
 
-        # Success message
         message = handler.STEAL_SUCCESS.format(
             ingot_icon=handler.ingot_icon,
             amount=actual_amount,
@@ -285,7 +295,6 @@ async def process_steal(
         )
 
     else:
-        # Failed - user loses penalty (half the amount)
         penalty = amount // 2
 
         user_new_total = await handler._adjust_ingots(
@@ -299,7 +308,6 @@ async def process_steal(
             logger.error("Error removing penalty from user")
             return
 
-        # Failure message
         message = handler.STEAL_FAILURE.format(
             ingot_icon=handler.ingot_icon,
             amount=amount,
