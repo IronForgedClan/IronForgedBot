@@ -69,8 +69,8 @@
         "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick the button below to risk it all for a chance to **double your winnings**!\n\n⏳ This offer expires {expires}.",
         "WIN": "💰 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
         "LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
-        "KEEP": "🐔 **You kept your winnings!**\n\nYou safely kept your **{ingot_icon}{amount:,}** ingot win. That was either smart or cowardly, I can't tell.",
-        "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
+        "KEEP": "😴 **You did nothing.**\n\nYou safely kept your original **{ingot_icon}{amount:,}** ingot win.\n\nThat was either smart or cowardly, I can't tell.",
+        "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your original **{ingot_icon}{amount:,}** ingot win."
     },
     "STEAL": {
         "OFFER": "🔪 **Steal or no steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nYou notice that the members with the **most ingots** are particularly distracted...\n\nChoose your victim wisely, getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
