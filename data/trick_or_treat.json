@@ -72,7 +72,7 @@
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
     },
     "STEAL": {
-        "OFFER": "🔪 **Steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nChoose your victim wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
+        "OFFER": "🔪 **Steal or no steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nYou notice that the members with the **most ingots** are particularly distracted...\n\nChoose your victim wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
         "SUCCESS": "💰 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
         "FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
         "WALK_AWAY": "🚶 **You walked away.**\n\nYou're already 99 theiving, what's the point?",
