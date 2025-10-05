@@ -135,7 +135,12 @@
             "💸 **Already empty!**\n\nThe entity shakes you down for loot... finding absolutely nothing.\n\nDisgusted, it tosses you aside and leaves. Being poor saved your life!"
         ],
         "OPENING_DOOR": "🚪 **Entering the {door}...**\n\n_The fluorescent lights hum overhead as you step inside..._",
-        "EXPIRED": "⏱️ **The walls shift!**\n\nYou took too long to decide. The backrooms consume your hesitation.\n\nThe corridors rearrange and your chance is lost."
+        "EXPIRED": "⏱️ **The walls shift!**\n\nYou took too long to decide. The backrooms consume your hesitation.\n\nThe corridors rearrange and your chance is lost.",
+        "THUMBNAILS": [
+            "https://upload.wikimedia.org/wikipedia/commons/b/bb/HobbyTown_USA_Oshkosh_interior_under_construction_2002_%28The_Backrooms%29.jpg",
+            "https://upload.wikimedia.org/wikipedia/commons/f/f9/Lorain_High_School_hallway.jpg",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTUya25qZGtsMTNmbnR0cTdrMHRnaXlteHpnaGs2ajZ0ZGo0YjZkNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/UyYcK4GZKyBHA44JXW/giphy.gif"
+        ]
     },
     "JOKE": {
         "MESSAGES": [

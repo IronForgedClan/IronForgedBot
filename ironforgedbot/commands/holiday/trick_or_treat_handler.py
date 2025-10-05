@@ -70,6 +70,7 @@ class TrickOrTreatHandler:
         self.BACKROOMS_LUCKY_ESCAPE_MESSAGES: list[str]
         self.BACKROOMS_OPENING_DOOR: str
         self.BACKROOMS_EXPIRED_MESSAGE: str
+        self.BACKROOMS_THUMBNAILS: list[str]
 
         with open("data/trick_or_treat.json") as f:
             logger.debug("Loading trick or treat data...")
@@ -108,6 +109,7 @@ class TrickOrTreatHandler:
             ]
             self.BACKROOMS_OPENING_DOOR = data["BACKROOMS"]["OPENING_DOOR"]
             self.BACKROOMS_EXPIRED_MESSAGE = data["BACKROOMS"]["EXPIRED"]
+            self.BACKROOMS_THUMBNAILS = data["BACKROOMS"]["THUMBNAILS"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -157,18 +159,31 @@ class TrickOrTreatHandler:
         """
         return f"\n\n**{username}** now has **{self.ingot_icon}{balance:,}** ingots."
 
-    def _build_embed(self, content: str) -> discord.Embed:
+    def _build_embed(
+        self, content: str, thumbnail_list: Optional[List[str]] = None
+    ) -> discord.Embed:
         """Build a Discord embed with Halloween-themed styling.
 
         Args:
             content: The message content to display in the embed.
+            thumbnail_list: Optional list of thumbnails to choose from.
+                           If None, uses default THUMBNAILS.
 
         Returns:
             A Discord embed with orange color and random thumbnail.
         """
-        chosen_thumbnail = random.choice(
-            [s for s in self.THUMBNAILS if s not in self.thumbnail_history]
-        )
+        thumbnails = thumbnail_list if thumbnail_list is not None else self.THUMBNAILS
+        available = [s for s in thumbnails if s not in self.thumbnail_history]
+
+        # If all thumbnails have been used recently, reset history for this thumbnail list
+        if not available:
+            # Clear only items from the current thumbnail list from history
+            self.thumbnail_history = [
+                h for h in self.thumbnail_history if h not in thumbnails
+            ]
+            available = thumbnails
+
+        chosen_thumbnail = random.choice(available)
         self._add_to_history(
             chosen_thumbnail, self.thumbnail_history, THUMBNAIL_HISTORY_LIMIT
         )

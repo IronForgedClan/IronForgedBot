@@ -502,7 +502,8 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "ESCAPE_MESSAGES": ["Test escape"],
         "LUCKY_ESCAPE_MESSAGES": ["Test lucky escape"],
         "OPENING_DOOR": "Opening {door}",
-        "EXPIRED": "Test expired"
+        "EXPIRED": "Test expired",
+        "THUMBNAILS": ["http://test.com/backrooms.png"]
     },
     "JOKE": {
         "MESSAGES": ["Test joke"]

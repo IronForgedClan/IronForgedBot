@@ -111,7 +111,9 @@ class BackroomsView(discord.ui.View):
             suspense_message = self.handler.BACKROOMS_OPENING_DOOR.format(
                 door=door_label
             )
-            suspense_embed = self.handler._build_embed(suspense_message)
+            suspense_embed = self.handler._build_embed(
+                suspense_message, self.handler.BACKROOMS_THUMBNAILS
+            )
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
 
@@ -144,7 +146,8 @@ class BackroomsView(discord.ui.View):
         if self.message:
             try:
                 embed = self.handler._build_embed(
-                    self.handler.BACKROOMS_EXPIRED_MESSAGE
+                    self.handler.BACKROOMS_EXPIRED_MESSAGE,
+                    self.handler.BACKROOMS_THUMBNAILS,
                 )
                 await self.message.edit(embed=embed, view=None)
             except discord.HTTPException:
@@ -198,7 +201,9 @@ async def process_door_choice(
                 formatted_message += handler._get_balance_message(
                     user_nickname, ingot_total
                 )
-                embed = handler._build_embed(formatted_message)
+                embed = handler._build_embed(
+                    formatted_message, handler.BACKROOMS_THUMBNAILS
+                )
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.MONSTER:
@@ -219,7 +224,9 @@ async def process_door_choice(
                 # User has no ingots to lose - lucky escape!
                 lucky_message = random.choice(handler.BACKROOMS_LUCKY_ESCAPE_MESSAGES)
                 lucky_message += handler._get_balance_message(user_nickname, 0)
-                embed = handler._build_embed(lucky_message)
+                embed = handler._build_embed(
+                    lucky_message, handler.BACKROOMS_THUMBNAILS
+                )
                 await interaction.followup.send(embed=embed)
             else:
                 formatted_message = message.format(
@@ -228,13 +235,15 @@ async def process_door_choice(
                 formatted_message += handler._get_balance_message(
                     user_nickname, ingot_total
                 )
-                embed = handler._build_embed(formatted_message)
+                embed = handler._build_embed(
+                    formatted_message, handler.BACKROOMS_THUMBNAILS
+                )
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.ESCAPE:
             # No ingot change
             message = random.choice(handler.BACKROOMS_ESCAPE_MESSAGES)
-            embed = handler._build_embed(message)
+            embed = handler._build_embed(message, handler.BACKROOMS_THUMBNAILS)
             await interaction.followup.send(embed=embed)
 
 
@@ -263,7 +272,7 @@ async def result_backrooms(
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
     intro_message = handler.BACKROOMS_INTRO.format(expires=expires_timestamp)
 
-    embed = handler._build_embed(intro_message)
+    embed = handler._build_embed(intro_message, handler.BACKROOMS_THUMBNAILS)
 
     view = BackroomsView(handler, interaction.user.id, outcomes, selected_labels)
     message = await interaction.followup.send(embed=embed, view=view)
