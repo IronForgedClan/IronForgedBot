@@ -59,8 +59,8 @@
         "NO_INGOTS_MESSAGE": "You lost... well, you would have lost ingots if you had any!\n\nAttend some events, throw us a bond or _something_. You're making me look bad. 💀"
     },
     "JACKPOT": {
-        "SUCCESS_PREFIX": "**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day {mention}!\nYou have been blessed with the biggest payout I am authorized to give.\n\nA cool **{ingot_icon}{amount:,}** ingots wired directly into your bank account.\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n`wave2:rainbow:gzzzzzzzzzzzzzzzzzzzzzzzzzzzzz`",
-        "CLAIMED_MESSAGE": "**Treat!** Or, well, it would have been... but you have been deemed unworthy.\nI don't know what to tell you, I don't make the rules. 🤷‍♂️\n\nHave a consolation pumpkin emoji 🎃"
+        "SUCCESS_PREFIX": "**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day {mention}!\nYou have been blessed with the biggest payout I am authorized to give.\n\nA cool **{ingot_icon}{amount:,}** ingots wired directly into your bank account.\n\nCongratulations!!",
+        "CLAIMED_MESSAGE": "**JACKPOT!!** Or, well, it would have been... but you were just too slow.\nI don't know what to tell you, I don't make the rules. 🤷‍♂️\n\nEnjoy this consolation pumpkin emoji 🎃"
     },
     "REMOVE_ALL_TRICK": {
         "MESSAGE": "You lost **{ingot_icon}-{amount:,}**...\nNow that's gotta sting."
@@ -72,10 +72,10 @@
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
     },
     "STEAL": {
-        "OFFER": "**Steal?**\n\nYou have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following **staff** members.\n\nChoose your target wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
+        "OFFER": "🧛 **Steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nChoose your victim wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
         "SUCCESS": "💰 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
         "FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
-        "WALK_AWAY": "🚶 **You walked away.**\n\nSometimes the best heist is the one you don't attempt.",
+        "WALK_AWAY": "🚶 **You walked away.**\n\nYou're already 99 theiving, where is the challenge.",
         "EXPIRED": "⏱️ **Time's up!**\n\nYou took too long to decide. The opportunity has passed.",
         "NO_TARGETS": "There are no targets available to steal from right now. Try again later!",
         "TARGET_NO_INGOTS": "{target_mention} has no ingots to steal. You get nothing, but you also avoid getting caught!",
