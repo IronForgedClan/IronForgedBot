@@ -11,14 +11,12 @@ from ironforgedbot.commands.holiday.outcomes.steal import (
 )
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from tests.commands.holiday.test_helpers import (
-    MOCK_TRICK_OR_TREAT_DATA,
-    create_test_handler,
-    create_test_interaction,
-)
 from tests.helpers import (
+    MOCK_TRICK_OR_TREAT_DATA,
+    create_mock_discord_interaction,
     create_test_db_member,
     create_test_member,
+    create_test_trick_or_treat_handler,
     setup_database_service_mocks,
 )
 
@@ -29,7 +27,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
-        self.interaction = create_test_interaction(user=self.test_user)
+        self.interaction = create_mock_discord_interaction(user=self.test_user)
 
     @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
     @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
@@ -37,7 +35,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_steal_member_service, mock_steal_db
     ):
         """Test that steal creates an offer with target buttons and walk away."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Create mock Member role members
         member = create_test_member("MemberUser", [ROLE.MEMBER])
@@ -71,7 +69,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_db
     ):
         """Test steal when no members with Member role available."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # No members with Member role (only the user)
         self.interaction.guild.members = [self.test_user]
@@ -88,7 +86,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_steal_member_service, mock_steal_db
     ):
         """Test steal when user doesn't have enough ingots for penalty."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         member = create_test_member("MemberUser", [ROLE.MEMBER])
         self.interaction.guild.members = [self.test_user, member]
@@ -118,7 +116,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_process_steal_success(self, mock_member_service_class, mock_db):
         """Test successful steal (25% chance)."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         target_member = create_test_member("TargetUser", [ROLE.MEMBER])
 
@@ -170,7 +168,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
     async def test_process_steal_failure(self, mock_member_service_class, mock_db):
         """Test failed steal (75% chance, user loses penalty)."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         target_member = create_test_member("TargetUser", [ROLE.MEMBER])
 
@@ -226,7 +224,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_steal_member_service, mock_steal_db
     ):
         """Test steal when target has no ingots."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         target_member = create_test_member("TargetUser", [ROLE.MEMBER])
 
@@ -312,7 +310,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
     # View Timeout Tests
     async def test_steal_view_timeout(self):
         """Test that steal view times out correctly after 45 seconds."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         targets = [create_test_member("Target1", [ROLE.MEMBER])]
         view = StealTargetView(handler, self.test_user.id, 1000, targets)
@@ -330,7 +328,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
     # Walk Away Tests
     async def test_steal_walk_away(self):
         """Test that walk away button works correctly."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         targets = [create_test_member("Target1", [ROLE.MEMBER])]
         view = StealTargetView(handler, self.test_user.id, 1000, targets)

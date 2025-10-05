@@ -14,14 +14,12 @@ from ironforgedbot.commands.holiday.trick_or_treat_handler import (
 )
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from tests.commands.holiday.test_helpers import (
-    MOCK_TRICK_OR_TREAT_DATA,
-    create_test_handler,
-    create_test_interaction,
-)
 from tests.helpers import (
+    MOCK_TRICK_OR_TREAT_DATA,
+    create_mock_discord_interaction,
     create_test_db_member,
     create_test_member,
+    create_test_trick_or_treat_handler,
     get_url_status_code,
     setup_database_service_mocks,
 )
@@ -33,11 +31,11 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
-        self.interaction = create_test_interaction(user=self.test_user)
+        self.interaction = create_mock_discord_interaction(user=self.test_user)
 
     async def test_init(self):
         """Test that TrickOrTreatHandler initializes with correct weights and empty history."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
         expected_weights = [item.value for item in TrickOrTreat]
 
         self.assertEqual(handler.gif_history, [])
@@ -53,7 +51,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
         """Test successfully adding ingots to a player."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         mock_db_session, _ = setup_database_service_mocks(
             mock_db, mock_member_service_class
@@ -80,7 +78,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
         """Test successfully removing ingots from a player."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
@@ -120,7 +118,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_db,
     ):
         """Test that removing ingots from a player with 0 ingots returns None."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
@@ -147,7 +145,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
         """Test that trying to remove more ingots than balance only removes available amount."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
@@ -185,7 +183,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
         """Test _handle_ingot_result with a positive outcome."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
@@ -218,7 +216,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_db
     ):
         """Test _handle_ingot_result when player has no ingots."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(

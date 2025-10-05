@@ -10,14 +10,12 @@ from ironforgedbot.commands.holiday.outcomes.double_or_nothing import (
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.state import STATE
-from tests.commands.holiday.test_helpers import (
-    MOCK_TRICK_OR_TREAT_DATA,
-    create_test_handler,
-    create_test_interaction,
-)
 from tests.helpers import (
+    MOCK_TRICK_OR_TREAT_DATA,
+    create_mock_discord_interaction,
     create_test_db_member,
     create_test_member,
+    create_test_trick_or_treat_handler,
     setup_database_service_mocks,
 )
 
@@ -28,7 +26,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
-        self.interaction = create_test_interaction(user=self.test_user)
+        self.interaction = create_mock_discord_interaction(user=self.test_user)
 
     @patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.STATE")
     @patch("ironforgedbot.database.database.db")
@@ -41,7 +39,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
             "double_or_nothing_offers": {},
         }
 
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
@@ -82,7 +80,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_db
     ):
         """Test processing a winning double-or-nothing gamble."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
@@ -116,7 +114,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_db
     ):
         """Test processing a losing double-or-nothing gamble."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
@@ -150,7 +148,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_db
     ):
         """Test that keep winnings button works correctly."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
@@ -188,7 +186,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self, mock_member_service_class, mock_db
     ):
         """Test that double-or-nothing view times out correctly."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(

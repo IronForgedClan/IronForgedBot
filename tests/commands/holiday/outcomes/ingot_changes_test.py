@@ -11,11 +11,11 @@ from ironforgedbot.commands.holiday.trick_or_treat_constants import (
     LOW_INGOT_MIN,
 )
 from ironforgedbot.common.roles import ROLE
-from tests.commands.holiday.test_helpers import (
-    create_test_handler,
-    create_test_interaction,
+from tests.helpers import (
+    create_mock_discord_interaction,
+    create_test_member,
+    create_test_trick_or_treat_handler,
 )
-from tests.helpers import create_test_member
 
 
 class TestIngotChangesOutcome(unittest.IsolatedAsyncioTestCase):
@@ -24,11 +24,11 @@ class TestIngotChangesOutcome(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
-        self.interaction = create_test_interaction(user=self.test_user)
+        self.interaction = create_mock_discord_interaction(user=self.test_user)
 
     async def test_result_add_low(self):
         """Test result_add_low generates correct ingot range."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         handler._handle_ingot_result = AsyncMock()
 
@@ -44,7 +44,7 @@ class TestIngotChangesOutcome(unittest.IsolatedAsyncioTestCase):
 
     async def test_result_remove_high(self):
         """Test result_remove_high generates correct ingot range."""
-        handler = create_test_handler()
+        handler = create_test_trick_or_treat_handler()
 
         handler._handle_ingot_result = AsyncMock()
 
