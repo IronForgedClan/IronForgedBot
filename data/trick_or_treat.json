@@ -99,24 +99,42 @@
         "TREASURE_MESSAGES": [
             "💰 **You found the treasure!**\n\nBehind the door lies a chest overflowing with **{ingots}** ingots!\n\nYour bravery has been rewarded.",
             "🎉 **Jackpot room!**\n\nThe door opens to reveal a vault filled with **{ingots}** ingots!\n\nToday is your lucky day.",
-            "✨ **Golden chamber!**\n\nYou step into a room glittering with gold. You collect **{ingots}** ingots!\n\nThe spirits smile upon you."
+            "✨ **Golden chamber!**\n\nYou step into a room glittering with gold. You collect **{ingots}** ingots!\n\nThe spirits smile upon you.",
+            "🏆 **Hidden fortune!**\n\nYou discover a secret cache of **{ingots}** ingots tucked behind the door!\n\nSomeone must have hidden these here long ago.",
+            "💎 **Treasure trove!**\n\nThe room sparkles with riches! You grab **{ingots}** ingots from the pile!\n\nFortune favors the bold.",
+            "🎁 **Lucky find!**\n\nA mysterious benefactor left **{ingots}** ingots behind this door!\n\nWhat were the odds?",
+            "⚱️ **Ancient hoard!**\n\nYou stumble upon an old treasure chest containing **{ingots}** ingots!\n\nIt practically fell into your lap.",
+            "🌟 **Blessed room!**\n\nA ghostly figure appears and gifts you **{ingots}** ingots before vanishing!\n\nEven the dead can be generous."
         ],
         "MONSTER_MESSAGES": [
             "👹 **A monster attacks!**\n\nA hideous creature lunges at you! In your panic to escape, you drop **{ingots}** ingots!\n\nMaybe next time check for eyes in the darkness...",
             "🧟 **Zombie horde!**\n\nThe room is filled with the undead! You barely escape but lose **{ingots}** ingots in the chaos.\n\nAt least you kept your brains.",
-            "👻 **Ghosts!**\n\nPoltergeists swarm you, stealing **{ingots}** ingots before you can flee!\n\nYou should have seen that coming."
+            "👻 **Ghosts!**\n\nPoltergeists swarm you, stealing **{ingots}** ingots before you can flee!\n\nYou should have seen that coming.",
+            "🕷️ **Giant spider!**\n\nA massive spider drops from the ceiling! You run for your life, leaving behind **{ingots}** ingots!\n\nYou can still feel the webbing on your face...",
+            "🦇 **Vampire bats!**\n\nA swarm of bats attacks! In the confusion, you lose **{ingots}** ingots!\n\nAt least they didn't drain your blood too.",
+            "🐺 **Werewolf ambush!**\n\nA snarling werewolf leaps from the shadows! You escape but drop **{ingots}** ingots in terror!\n\nFull moon was a bad time to visit.",
+            "💀 **Skeleton warriors!**\n\nThe bones come to life and attack! You flee, abandoning **{ingots}** ingots in your haste!\n\nThey're still rattling behind you...",
+            "🧛 **Vampire lord!**\n\nA vampire emerges from the darkness and snatches **{ingots}** ingots from you!\n\nConsider it a toll for trespassing in his domain."
         ],
         "ESCAPE_MESSAGES": [
             "🏃 **Empty room, quick escape!**\n\nThe room is eerily empty. You spot a window and escape safely.\n\nNo ingots gained or lost, but at least you're alive!",
             "😰 **You sneak out!**\n\nYou hear something moving in the darkness. Better not stick around to find out what it is.\n\nYou escape with your ingots intact.",
-            "🔦 **False alarm!**\n\nJust cobwebs and dust. You sneak back out the way you came.\n\nNothing ventured, nothing gained."
+            "🔦 **False alarm!**\n\nJust cobwebs and dust. You sneak back out the way you came.\n\nNothing ventured, nothing gained.",
+            "🚪 **Safe passage!**\n\nThe room leads to another exit. You quietly slip through.\n\nSometimes the best choice is the boring one.",
+            "🕯️ **Abandoned study!**\n\nYou find an old library, long forgotten. Nothing of value here.\n\nYou leave the way you came, unscathed.",
+            "🪟 **Quick exit!**\n\nYou spot a broken window and climb through before anything notices you.\n\nLive to explore another day!",
+            "👀 **Close call!**\n\nYou see glowing eyes in the corner but back out slowly before they notice.\n\nDiscretion is the better part of valor.",
+            "🌫️ **Misty corridor!**\n\nThe room is filled with thick fog. You decide not to risk it and retreat.\n\nYour ingots remain safe."
         ],
         "LUCKY_ESCAPE_MESSAGES": [
             "🍀 **Lucky escape!**\n\nA monster lunges at you, but your pockets are already empty!\n\nThe monster looks disappointed and lets you go. Can't take what you don't have!",
             "😅 **Too poor to rob!**\n\nThe ghosts search your pockets for ingots... and find nothing.\n\nThey vanish in frustration. Being broke saved you this time!",
-            "🎭 **Dramatic escape!**\n\nThe monster demands your ingots, but you have none to give!\n\nIt storms off in anger. Sometimes poverty is protection."
+            "🎭 **Dramatic escape!**\n\nThe monster demands your ingots, but you have none to give!\n\nIt storms off in anger. Sometimes poverty is protection.",
+            "🤷 **Nothing to lose!**\n\nThe creature reaches for your ingots... but you're completely broke!\n\nIt gives you a pitying look and walks away. Rock bottom has its perks!",
+            "😂 **Joke's on them!**\n\nThe vampire tries to steal your wealth, but your pockets are empty!\n\nIt laughs at your poverty and disappears. Thanks...?",
+            "💸 **Already broke!**\n\nThe monster shakes you down for ingots... finding absolutely nothing.\n\nDisgusted, it throws you aside. Being poor saved your life!"
         ],
-        "OPENING_DOOR": "🚪 **Opening door...**\n\n_The hinges creak ominously as the door slowly swings open..._",
+        "OPENING_DOOR": "🚪 **Opening the {door}...**\n\n_The hinges creak ominously as the door slowly swings open..._",
         "REVEAL_SUFFIX": "\n\n---\n**🔮 What was behind each door:**\n{door1_emoji} **{door1_label}**: {door1_outcome}\n{door2_emoji} **{door2_label}**: {door2_outcome}\n{door3_emoji} **{door3_label}**: {door3_outcome}",
         "EXPIRED": "⏱️ **The doors slam shut!**\n\nYou took too long to decide. The haunted house vanishes into mist.\n\nMaybe next time be a bit more decisive?"
     },

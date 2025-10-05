@@ -30,20 +30,6 @@ class DoorOutcome(Enum):
     MONSTER = "monster"
     ESCAPE = "escape"
 
-    def get_reveal_text(self) -> str:
-        """Get the reveal text for this outcome.
-
-        Returns:
-            A string describing what was behind the door.
-        """
-        match self:
-            case DoorOutcome.TREASURE:
-                return "💰 Treasure"
-            case DoorOutcome.MONSTER:
-                return "👹 Monster"
-            case DoorOutcome.ESCAPE:
-                return "🏃 Empty Room"
-
 
 # Weighted probabilities for door outcomes
 OUTCOME_WEIGHTS = {
@@ -120,10 +106,12 @@ class HauntedHouseView(discord.ui.View):
 
             await interaction.response.defer()
 
-            # Show suspense message
-            suspense_embed = self.handler._build_embed(
-                self.handler.HAUNTED_HOUSE_OPENING_DOOR
+            # Show suspense message with specific door being opened
+            door_label = self.door_labels[door_index]
+            suspense_message = self.handler.HAUNTED_HOUSE_OPENING_DOOR.format(
+                door=door_label
             )
+            suspense_embed = self.handler._build_embed(suspense_message)
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
 
@@ -161,44 +149,6 @@ class HauntedHouseView(discord.ui.View):
                 await self.message.edit(embed=embed, view=None)
             except discord.HTTPException:
                 pass
-
-
-def _build_reveal_suffix(
-    handler: "TrickOrTreatHandler",
-    chosen_index: int,
-    door_outcomes: list[DoorOutcome],
-    door_labels: list[str],
-) -> str:
-    """Build the reveal suffix showing what was behind all doors.
-
-    Args:
-        handler: The TrickOrTreatHandler instance.
-        chosen_index: The index of the door the user chose.
-        door_outcomes: List of outcomes for each door.
-        door_labels: List of door labels.
-
-    Returns:
-        Formatted reveal suffix string.
-    """
-    # Extract emoji from door labels
-    door_emojis = [label.split()[0] for label in door_labels]
-
-    # Mark the chosen door
-    door1_label = door_labels[0] if chosen_index != 0 else f"~~{door_labels[0]}~~ ✅"
-    door2_label = door_labels[1] if chosen_index != 1 else f"~~{door_labels[1]}~~ ✅"
-    door3_label = door_labels[2] if chosen_index != 2 else f"~~{door_labels[2]}~~ ✅"
-
-    return handler.HAUNTED_HOUSE_REVEAL_SUFFIX.format(
-        door1_emoji=door_emojis[0],
-        door1_label=door1_label,
-        door1_outcome=door_outcomes[0].get_reveal_text(),
-        door2_emoji=door_emojis[1],
-        door2_label=door2_label,
-        door2_outcome=door_outcomes[1].get_reveal_text(),
-        door3_emoji=door_emojis[2],
-        door3_label=door3_label,
-        door3_outcome=door_outcomes[2].get_reveal_text(),
-    )
 
 
 async def process_door_choice(
