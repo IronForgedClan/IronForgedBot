@@ -191,6 +191,7 @@ class TrickOrTreatHandler:
         interaction: discord.Interaction,
         quantity: int,
         discord_member: Optional[discord.Member],
+        reason: Optional[str] = None,
     ) -> Optional[int]:
         """Add or remove ingots from a player's account.
 
@@ -198,6 +199,7 @@ class TrickOrTreatHandler:
             interaction: The Discord interaction context.
             quantity: Number of ingots to add (positive) or remove (negative).
             discord_member: The Discord member to adjust ingots for.
+            reason: Optional changelog reason. Defaults to "Trick or treat win/loss".
 
         Returns:
             The new ingot total if successful, or None if an error occurred
@@ -211,8 +213,9 @@ class TrickOrTreatHandler:
             member_service = MemberService(session)
 
             if quantity > 0:
+                changelog_reason = reason or "Trick or treat: win"
                 result = await ingot_service.try_add_ingots(
-                    discord_member.id, quantity, None, "Trick or treat win"
+                    discord_member.id, quantity, None, changelog_reason
                 )
             else:
                 member = await member_service.get_member_by_discord_id(
@@ -232,8 +235,9 @@ class TrickOrTreatHandler:
                 if member.ingots + quantity < 0:
                     quantity = -member.ingots
 
+                changelog_reason = reason or "Trick or treat: loss"
                 result = await ingot_service.try_remove_ingots(
-                    discord_member.id, quantity, None, "Trick or treat loss"
+                    discord_member.id, quantity, None, changelog_reason
                 )
 
             if not result:
@@ -263,10 +267,17 @@ class TrickOrTreatHandler:
         """
         assert interaction.guild
 
+        # Determine reason based on outcome type
+        if is_positive:
+            reason = "Trick or treat: win"
+        else:
+            reason = "Trick or treat: loss"
+
         ingot_total = await self._adjust_ingots(
             interaction,
             quantity,
             interaction.guild.get_member(interaction.user.id),
+            reason=reason,
         )
 
         # Get member nickname from database

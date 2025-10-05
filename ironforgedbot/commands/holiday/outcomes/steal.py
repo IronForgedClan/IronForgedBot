@@ -294,12 +294,24 @@ async def process_steal(
     success = random.random() < success_rate
 
     if success:
-        await handler._adjust_ingots(interaction, -actual_amount, target)
+        # Get thief's nickname for target's changelog
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            thief_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            thief_nickname = thief_member.nickname if thief_member else "User"
+
+        await handler._adjust_ingots(
+            interaction,
+            -actual_amount,
+            target,
+            reason=f"Trick or treat: stolen by {thief_nickname}",
+        )
 
         user_new_total = await handler._adjust_ingots(
             interaction,
             actual_amount,
             interaction.guild.get_member(interaction.user.id),
+            reason="Trick or treat: steal success",
         )
 
         if user_new_total is None:
@@ -326,6 +338,7 @@ async def process_steal(
             interaction,
             -penalty,
             interaction.guild.get_member(interaction.user.id),
+            reason="Trick or treat: steal failure penalty",
         )
 
         if user_new_total is None:

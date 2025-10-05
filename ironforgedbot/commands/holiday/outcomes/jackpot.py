@@ -34,6 +34,7 @@ async def result_jackpot(
         interaction,
         JACKPOT_VALUE,
         interaction.guild.get_member(interaction.user.id),
+        reason="Trick or treat: jackpot",
     )
 
     STATE.state["trick_or_treat_jackpot_claimed"] = True

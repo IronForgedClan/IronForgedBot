@@ -205,6 +205,7 @@ async def result_double_or_nothing(
         interaction,
         quantity,
         interaction.guild.get_member(interaction.user.id),
+        reason="Trick or treat: double or nothing initial win",
     )
 
     if ingot_total is None:
@@ -279,6 +280,7 @@ async def process_double_or_nothing(
             interaction,
             amount,
             interaction.guild.get_member(interaction.user.id),
+            reason="Trick or treat: double or nothing win",
         )
 
         if ingot_total is None:
@@ -299,6 +301,7 @@ async def process_double_or_nothing(
             interaction,
             -amount,
             interaction.guild.get_member(interaction.user.id),
+            reason="Trick or treat: double or nothing loss",
         )
 
         if ingot_total is None:
