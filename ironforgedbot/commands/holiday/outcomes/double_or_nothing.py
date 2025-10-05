@@ -64,8 +64,10 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
-        button.disabled = True
-        await interaction.response.edit_message(view=self)
+        # Delete the original message
+        await interaction.response.defer()
+        if self.message:
+            await self.message.delete()
 
         await process_double_or_nothing(self.handler, interaction, self.amount)
 
@@ -84,15 +86,30 @@ class DoubleOrNothingView(discord.ui.View):
         if self.has_interacted or not self.message:
             return
 
-        # Disable the button
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
+        # Remove all buttons
+        self.clear_items()
+
+        # Get current ingot total and nickname from database
+        from ironforgedbot.database.database import db
+        from ironforgedbot.services.member_service import MemberService
+
+        ingot_total = None
+        user_nickname = "User"
+
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(self.user_id)
+            if user_member:
+                ingot_total = user_member.ingots
+                user_nickname = user_member.nickname
 
         # Update the message with timeout notification
         message = self.handler.DOUBLE_OR_NOTHING_EXPIRED.format(
             ingot_icon=self.handler.ingot_icon, amount=self.amount
         )
+        if ingot_total is not None:
+            message += self.handler._get_balance_message(user_nickname, ingot_total)
+
         embed = self.handler._build_embed(message)
         try:
             await self.message.edit(embed=embed, view=self)
@@ -129,6 +146,15 @@ async def result_double_or_nothing(
         )
         return
 
+    # Get member nickname from database
+    from ironforgedbot.database.database import db
+    from ironforgedbot.services.member_service import MemberService
+
+    async with db.get_session() as session:
+        member_service = MemberService(session)
+        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+        user_nickname = user_member.nickname if user_member else "User"
+
     # Calculate expiration timestamp and format as Discord countdown
     expire_timestamp = int(time.time() + 30)
     expires_formatted = f"<t:{expire_timestamp}:R>"
@@ -137,9 +163,7 @@ async def result_double_or_nothing(
     offer_message = handler.DOUBLE_OR_NOTHING_OFFER.format(
         ingot_icon=handler.ingot_icon, amount=quantity, expires=expires_formatted
     )
-    offer_message += handler._get_balance_message(
-        interaction.user.display_name, ingot_total
-    )
+    offer_message += handler._get_balance_message(user_nickname, ingot_total)
 
     embed = handler._build_embed(offer_message)
 
@@ -173,6 +197,15 @@ async def process_double_or_nothing(
     # 50/50 chance
     won = random.random() < 0.5
 
+    # Get member nickname from database
+    from ironforgedbot.database.database import db
+    from ironforgedbot.services.member_service import MemberService
+
+    async with db.get_session() as session:
+        member_service = MemberService(session)
+        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+        user_nickname = user_member.nickname if user_member else "User"
+
     if won:
         # Award additional ingots (they already have the original amount)
         ingot_total = await handler._adjust_ingots(
@@ -192,9 +225,7 @@ async def process_double_or_nothing(
         message = handler.DOUBLE_OR_NOTHING_WIN.format(
             ingot_icon=handler.ingot_icon, amount=amount
         )
-        message += handler._get_balance_message(
-            interaction.user.display_name, ingot_total
-        )
+        message += handler._get_balance_message(user_nickname, ingot_total)
     else:
         # Remove the ingots they won
         ingot_total = await handler._adjust_ingots(
@@ -214,9 +245,7 @@ async def process_double_or_nothing(
         message = handler.DOUBLE_OR_NOTHING_LOSE.format(
             ingot_icon=handler.ingot_icon, amount=amount
         )
-        message += handler._get_balance_message(
-            interaction.user.display_name, ingot_total
-        )
+        message += handler._get_balance_message(user_nickname, ingot_total)
 
     embed = handler._build_embed(message)
     await interaction.followup.send(embed=embed)
