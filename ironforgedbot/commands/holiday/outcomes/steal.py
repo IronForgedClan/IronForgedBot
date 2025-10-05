@@ -135,10 +135,9 @@ class StealTargetView(discord.ui.View):
 
             self.has_interacted = True
 
-            for item in self.children:
-                if isinstance(item, discord.ui.Button):
-                    item.disabled = True
-            await interaction.response.edit_message(view=self)
+            await interaction.response.defer()
+            if self.message:
+                await self.message.delete()
 
             await process_steal(self.handler, interaction, self.amount, target)
 
@@ -166,10 +165,9 @@ class StealTargetView(discord.ui.View):
 
         self.has_interacted = True
 
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-        await interaction.response.edit_message(view=self)
+        await interaction.response.defer()
+        if self.message:
+            await self.message.delete()
 
         embed = self.handler._build_embed(self.handler.STEAL_WALK_AWAY)
         await interaction.followup.send(embed=embed)
