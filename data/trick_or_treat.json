@@ -66,7 +66,7 @@
         "MESSAGE": "You lost **{ingot_icon}-{amount:,}**...\nNow that's gotta sting."
     },
     "DOUBLE_OR_NOTHING": {
-        "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick below within ⏳ **30 seconds** to risk it all for a chance to __double__ your winnings!",
+        "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick the button below to risk it all for a chance to **double your winnings**!\n\n⏳ This offer expires {expires}.",
         "WIN": "💰 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
         "LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."

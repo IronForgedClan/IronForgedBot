@@ -131,9 +131,13 @@ async def result_double_or_nothing(
         )
         return
 
+    # Calculate expiration timestamp and format as Discord countdown
+    expire_timestamp = int(time.time() + 30)
+    expires_formatted = f"<t:{expire_timestamp}:R>"
+
     # Create the offer message
     offer_message = handler.DOUBLE_OR_NOTHING_OFFER.format(
-        ingot_icon=handler.ingot_icon, amount=quantity
+        ingot_icon=handler.ingot_icon, amount=quantity, expires=expires_formatted
     )
     offer_message += handler._get_balance_message(
         interaction.user.display_name, ingot_total
