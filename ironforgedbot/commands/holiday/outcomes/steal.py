@@ -179,9 +179,8 @@ class StealTargetView(discord.ui.View):
         if self.has_interacted or not self.message:
             return
 
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
+        # Remove all buttons
+        self.clear_items()
 
         embed = self.handler._build_embed(self.handler.STEAL_EXPIRED)
         try:
