@@ -66,7 +66,7 @@ class StealTargetView(discord.ui.View):
 
     Displays buttons for each member that can be stolen from,
     plus a "Walk Away" button to abort safely.
-    The view times out after 30 seconds.
+    The view times out after 45 seconds.
     """
 
     def __init__(
@@ -84,7 +84,7 @@ class StealTargetView(discord.ui.View):
             amount: The amount of ingots at stake.
             targets: List of members to display as targets (max 4).
         """
-        super().__init__(timeout=30.0)
+        super().__init__(timeout=45.0)
         self.handler = handler
         self.user_id = user_id
         self.amount = amount
@@ -175,7 +175,7 @@ class StealTargetView(discord.ui.View):
         self.stop()
 
     async def on_timeout(self):
-        """Handle the view timing out after 30 seconds."""
+        """Handle the view timing out after 45 seconds."""
         if self.has_interacted or not self.message:
             return
 
@@ -232,7 +232,7 @@ async def result_steal(
             embed = handler._build_embed(message)
             return await interaction.followup.send(embed=embed)
 
-    expire_timestamp = int(time.time() + 30)
+    expire_timestamp = int(time.time() + 45)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
     offer_message = handler.STEAL_OFFER.format(
