@@ -50,11 +50,16 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         """Test that HauntedHouseView creates exactly 3 door buttons."""
         handler = create_test_trick_or_treat_handler()
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
+        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        view = HauntedHouseView(handler, self.test_user.id, outcomes)
+        view = HauntedHouseView(handler, self.test_user.id, outcomes, labels)
 
         # Should have 3 buttons (one for each door)
         self.assertEqual(len(view.children), 3)
+
+        # All buttons should be on row 0
+        for button in view.children:
+            self.assertEqual(button.row, 0)
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
@@ -223,8 +228,9 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         """Test that view timeout sends expired message."""
         handler = create_test_trick_or_treat_handler()
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
+        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        view = HauntedHouseView(handler, self.test_user.id, outcomes)
+        view = HauntedHouseView(handler, self.test_user.id, outcomes, labels)
         view.message = MagicMock()
         view.message.edit = AsyncMock()
 

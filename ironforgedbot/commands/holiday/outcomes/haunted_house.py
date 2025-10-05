@@ -42,6 +42,7 @@ class HauntedHouseView(discord.ui.View):
         handler: "TrickOrTreatHandler",
         user_id: int,
         door_outcomes: list[DoorOutcome],
+        door_labels: list[str],
     ):
         """Initialize the haunted house view.
 
@@ -49,6 +50,7 @@ class HauntedHouseView(discord.ui.View):
             handler: The TrickOrTreatHandler instance to use for processing the result.
             user_id: The Discord user ID who can interact with this view.
             door_outcomes: List of outcomes for each door (in order).
+            door_labels: List of selected door labels to display.
         """
         super().__init__(timeout=45.0)
         self.handler = handler
@@ -57,14 +59,12 @@ class HauntedHouseView(discord.ui.View):
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
-        door_labels = handler.HAUNTED_HOUSE_DOOR_LABELS
-
         for i in range(HAUNTED_HOUSE_DOOR_COUNT):
             button = discord.ui.Button(
                 label=door_labels[i],
                 style=discord.ButtonStyle.secondary,
                 custom_id=f"haunted_house_door_{i}",
-                row=i,
+                row=0,
             )
             button.callback = self._create_door_callback(i)
             self.add_item(button)
@@ -213,12 +213,17 @@ async def result_haunted_house(
     outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
     random.shuffle(outcomes)
 
+    # Randomly select 3 door labels from available options
+    selected_labels = random.sample(
+        handler.HAUNTED_HOUSE_DOOR_LABELS, HAUNTED_HOUSE_DOOR_COUNT
+    )
+
     # Build the intro message with expiry timestamp
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
     intro_message = handler.HAUNTED_HOUSE_INTRO.format(expires=expires_timestamp)
 
     embed = handler._build_embed(intro_message)
 
-    view = HauntedHouseView(handler, interaction.user.id, outcomes)
+    view = HauntedHouseView(handler, interaction.user.id, outcomes, selected_labels)
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message

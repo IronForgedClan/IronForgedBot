@@ -87,7 +87,14 @@
         "DOOR_LABELS": [
             "🚪 Creaking Door",
             "🕸️ Cobweb Door",
-            "💀 Skull Door"
+            "💀 Skull Door",
+            "🪦 Tomb Door",
+            "🕷️ Spider Door",
+            "🦇 Bat Door",
+            "👻 Ghost Door",
+            "🎃 Pumpkin Door",
+            "⚰️ Coffin Door",
+            "🧟 Zombie Door"
         ],
         "TREASURE_MESSAGES": [
             "💰 **You found the treasure!**\n\nBehind the door lies a chest overflowing with **{ingots}** ingots!\n\nYour bravery has been rewarded.",
