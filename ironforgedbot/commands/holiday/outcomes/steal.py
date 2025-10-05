@@ -23,6 +23,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _calculate_steal_penalty(amount: int) -> int:
+    """Calculate the penalty for a failed steal attempt.
+
+    Args:
+        amount: The amount of ingots attempted to steal.
+
+    Returns:
+        The penalty amount (3/4 of amount, rounded up to nearest 100).
+    """
+    penalty_raw = (amount * 3 + 3) // 4  # 3/4 rounded up
+    return ((penalty_raw + 99) // 100) * 100  # Round up to nearest 100
+
+
 def _get_steal_success_rate(target_ingots: int) -> float:
     """Calculate steal success rate based on target's ingot balance.
 
@@ -183,8 +196,8 @@ async def result_steal(
     """Offer the player a chance to steal ingots from Leadership members.
 
     Presents up to 3 random Leadership members as targets, plus a walk away option.
-    35% chance to succeed and steal ingots. 65% chance to fail and lose half the
-    attempted amount. Walking away has no consequences.
+    Success rate scales based on target's ingot balance (0%-45% chance). On failure,
+    lose 3/4 of the attempted amount (rounded up to nearest 100). Walking away has no consequences.
 
     Args:
         handler: The TrickOrTreatHandler instance.
@@ -207,7 +220,7 @@ async def result_steal(
     targets = random.sample(leadership_members, num_targets)
 
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
-    penalty = quantity // 2
+    penalty = _calculate_steal_penalty(quantity)
 
     async with db.get_session() as session:
         member_service = MemberService(session)
@@ -244,7 +257,16 @@ async def process_steal(
 ) -> None:
     """Process the result of a steal attempt.
 
-    On failure, lose half the amount as penalty.
+    Success rate scales based on target's ingot balance:
+    - Under 25k ingots: 0% chance
+    - Under 50k ingots: 5% chance
+    - Under 100k ingots: 25% chance
+    - Under 250k ingots: 30% chance
+    - Under 500k ingots: 35% chance
+    - Under 2M ingots: 40% chance
+    - 2M+ ingots: 45% chance
+
+    On failure, lose 3/4 of the amount (rounded up to nearest 100) as penalty.
 
     Args:
         handler: The TrickOrTreatHandler instance.
@@ -295,7 +317,7 @@ async def process_steal(
         )
 
     else:
-        penalty = amount // 2
+        penalty = _calculate_steal_penalty(amount)
 
         user_new_total = await handler._adjust_ingots(
             interaction,
