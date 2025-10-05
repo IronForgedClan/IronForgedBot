@@ -21,7 +21,8 @@ if TYPE_CHECKING:
 class DoubleOrNothingView(discord.ui.View):
     """Discord UI View for the double-or-nothing button interaction.
 
-    Displays a button that allows users to risk their winnings for a chance to double them.
+    Displays buttons that allow users to risk their winnings for a chance to double them,
+    or keep their winnings safely.
     The view times out after 30 seconds.
     """
 
@@ -40,15 +41,29 @@ class DoubleOrNothingView(discord.ui.View):
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
-    @discord.ui.button(label="🎲 Double it!!", style=discord.ButtonStyle.green)
-    async def double_or_nothing_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+        double_button = discord.ui.Button(
+            label="🎲 Double",
+            style=discord.ButtonStyle.green,
+            custom_id="double_or_nothing_double",
+            row=0,
+        )
+        double_button.callback = self._double_callback
+        self.add_item(double_button)
+
+        keep_button = discord.ui.Button(
+            label="🐔 Nothing",
+            style=discord.ButtonStyle.secondary,
+            custom_id="double_or_nothing_keep",
+            row=0,
+        )
+        keep_button.callback = self._keep_callback
+        self.add_item(keep_button)
+
+    async def _double_callback(self, interaction: discord.Interaction):
         """Handle the double-or-nothing button click.
 
         Args:
             interaction: The Discord interaction from the button click.
-            button: The button that was clicked.
         """
         if interaction.user.id != self.user_id:
             await interaction.response.send_message(
@@ -70,6 +85,58 @@ class DoubleOrNothingView(discord.ui.View):
             await self.message.delete()
 
         await process_double_or_nothing(self.handler, interaction, self.amount)
+
+        user_id_str = str(self.user_id)
+        if user_id_str in STATE.state["double_or_nothing_offers"]:
+            del STATE.state["double_or_nothing_offers"][user_id_str]
+
+        self.stop()
+
+    async def _keep_callback(self, interaction: discord.Interaction):
+        """Handle the keep winnings button click.
+
+        Args:
+            interaction: The Discord interaction from the button click.
+        """
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message(
+                "This isn't your game!", ephemeral=True
+            )
+            return
+
+        if self.has_interacted:
+            await interaction.response.send_message(
+                "You already made your choice!", ephemeral=True
+            )
+            return
+
+        self.has_interacted = True
+
+        # Delete the original message
+        await interaction.response.defer()
+        if self.message:
+            await self.message.delete()
+
+        # Get member nickname from database
+        from ironforgedbot.database.database import db
+        from ironforgedbot.services.member_service import MemberService
+
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(
+                interaction.user.id
+            )
+            user_nickname = user_member.nickname if user_member else "User"
+            ingot_total = user_member.ingots if user_member else 0
+
+        # Send keep winnings message
+        message = self.handler.DOUBLE_OR_NOTHING_KEEP.format(
+            ingot_icon=self.handler.ingot_icon, amount=self.amount
+        )
+        message += self.handler._get_balance_message(user_nickname, ingot_total)
+
+        embed = self.handler._build_embed(message)
+        await interaction.followup.send(embed=embed)
 
         user_id_str = str(self.user_id)
         if user_id_str in STATE.state["double_or_nothing_offers"]:

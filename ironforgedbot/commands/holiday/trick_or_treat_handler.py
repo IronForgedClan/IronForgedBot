@@ -52,6 +52,7 @@ class TrickOrTreatHandler:
         self.DOUBLE_OR_NOTHING_OFFER: str
         self.DOUBLE_OR_NOTHING_WIN: str
         self.DOUBLE_OR_NOTHING_LOSE: str
+        self.DOUBLE_OR_NOTHING_KEEP: str
         self.DOUBLE_OR_NOTHING_EXPIRED: str
         self.STEAL_OFFER: str
         self.STEAL_SUCCESS: str
@@ -79,6 +80,7 @@ class TrickOrTreatHandler:
             self.DOUBLE_OR_NOTHING_OFFER = data["DOUBLE_OR_NOTHING"]["OFFER"]
             self.DOUBLE_OR_NOTHING_WIN = data["DOUBLE_OR_NOTHING"]["WIN"]
             self.DOUBLE_OR_NOTHING_LOSE = data["DOUBLE_OR_NOTHING"]["LOSE"]
+            self.DOUBLE_OR_NOTHING_KEEP = data["DOUBLE_OR_NOTHING"]["KEEP"]
             self.DOUBLE_OR_NOTHING_EXPIRED = data["DOUBLE_OR_NOTHING"]["EXPIRED"]
             self.STEAL_OFFER = data["STEAL"]["OFFER"]
             self.STEAL_SUCCESS = data["STEAL"]["SUCCESS"]

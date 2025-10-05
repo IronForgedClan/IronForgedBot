@@ -69,6 +69,7 @@
         "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick the button below to risk it all for a chance to **double your winnings**!\n\n⏳ This offer expires {expires}.",
         "WIN": "💰 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
         "LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
+        "KEEP": "🐔 **You kept your winnings!**\n\nYou safely kept your **{ingot_icon}{amount:,}** ingot win. That was either smart or cowardly, I can't tell.",
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
     },
     "STEAL": {
