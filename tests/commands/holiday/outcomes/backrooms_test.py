@@ -46,7 +46,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         # Verify embed was sent
         self.assertIn("embed", call_kwargs)
 
-    def test_backrooms_view_has_three_doors(self):
+    async def test_backrooms_view_has_three_doors(self):
         """Test that BackroomsView creates exactly 3 corridor buttons."""
         handler = create_test_trick_or_treat_handler()
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -61,8 +61,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         for button in view.children:
             self.assertEqual(button.row, 0)
 
-    @patch("ironforgedbot.database.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.MemberService")
     @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.randint")
     async def test_process_door_choice_treasure(
         self, mock_randint, mock_member_service_class, mock_db
@@ -108,8 +108,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.database.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.MemberService")
     @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.randint")
     async def test_process_door_choice_monster(
         self, mock_randint, mock_member_service_class, mock_db
@@ -155,8 +155,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.database.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.MemberService")
     async def test_process_door_choice_escape(
         self, mock_member_service_class, mock_db
     ):
@@ -194,8 +194,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.database.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.db")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.MemberService")
     @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.randint")
     @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.choice")
     async def test_process_door_choice_monster_no_ingots(

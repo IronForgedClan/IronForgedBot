@@ -58,6 +58,11 @@ def create_mock_discord_interaction(
         interaction.channel = Mock()
         interaction.channel.id = interaction.channel_id
 
+    # Mock created_at with timestamp method for backrooms tests
+    created_at_mock = Mock()
+    created_at_mock.timestamp = Mock(return_value=1600000000.0)
+    interaction.created_at = created_at_mock
+
     return interaction
 
 
