@@ -1,12 +1,12 @@
-"""Tests for the haunted house outcome in trick-or-treat."""
+"""Tests for the backrooms outcome in trick-or-treat."""
 
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.commands.holiday.outcomes import haunted_house
-from ironforgedbot.commands.holiday.outcomes.haunted_house import (
+from ironforgedbot.commands.holiday.outcomes import backrooms
+from ironforgedbot.commands.holiday.outcomes.backrooms import (
+    BackroomsView,
     DoorOutcome,
-    HauntedHouseView,
 )
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
@@ -19,42 +19,42 @@ from tests.helpers import (
 )
 
 
-class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
-    """Test cases for haunted house outcome functionality."""
+class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
+    """Test cases for backrooms outcome functionality."""
 
     def setUp(self):
         """Set up test fixtures."""
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-    async def test_result_haunted_house_creates_view(self):
-        """Test that haunted house creates a view with door buttons."""
+    async def test_result_backrooms_creates_view(self):
+        """Test that backrooms creates a view with corridor buttons."""
         handler = create_test_trick_or_treat_handler()
 
-        await haunted_house.result_haunted_house(handler, self.interaction)
+        await backrooms.result_backrooms(handler, self.interaction)
 
-        # Verify a view was sent (has the door buttons)
+        # Verify a view was sent (has the corridor buttons)
         self.interaction.followup.send.assert_called_once()
         call_kwargs = self.interaction.followup.send.call_args.kwargs
         self.assertIn("view", call_kwargs)
         self.assertIsNotNone(call_kwargs["view"])
 
-        # Verify it's a HauntedHouseView
+        # Verify it's a BackroomsView
         view = call_kwargs["view"]
-        self.assertIsInstance(view, HauntedHouseView)
+        self.assertIsInstance(view, BackroomsView)
 
         # Verify embed was sent
         self.assertIn("embed", call_kwargs)
 
-    def test_haunted_house_view_has_three_doors(self):
-        """Test that HauntedHouseView creates exactly 3 door buttons."""
+    def test_backrooms_view_has_three_doors(self):
+        """Test that BackroomsView creates exactly 3 corridor buttons."""
         handler = create_test_trick_or_treat_handler()
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
-        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
+        labels = ["🟨 Yellow Hallway", "💡 Buzzing Lights", "🚪 Empty Room"]
 
-        view = HauntedHouseView(handler, self.test_user.id, outcomes, labels)
+        view = BackroomsView(handler, self.test_user.id, outcomes, labels)
 
-        # Should have 3 buttons (one for each door)
+        # Should have 3 buttons (one for each corridor)
         self.assertEqual(len(view.children), 3)
 
         # All buttons should be on row 0
@@ -63,7 +63,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
-    @patch("ironforgedbot.commands.holiday.outcomes.haunted_house.random.randint")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.randint")
     async def test_process_door_choice_treasure(
         self, mock_randint, mock_member_service_class, mock_db
     ):
@@ -93,7 +93,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await haunted_house.process_door_choice(
+        await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.TREASURE, 0, outcomes, labels
         )
 
@@ -102,7 +102,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         call_args = handler._adjust_ingots.call_args
         self.assertEqual(call_args[0][1], 3000)  # Amount added
         self.assertEqual(
-            call_args.kwargs["reason"], "Trick or treat: haunted house treasure"
+            call_args.kwargs["reason"], "Trick or treat: backrooms treasure"
         )
 
         # Verify followup message was sent
@@ -110,7 +110,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
-    @patch("ironforgedbot.commands.holiday.outcomes.haunted_house.random.randint")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.randint")
     async def test_process_door_choice_monster(
         self, mock_randint, mock_member_service_class, mock_db
     ):
@@ -140,7 +140,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await haunted_house.process_door_choice(
+        await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
@@ -149,7 +149,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         call_args = handler._adjust_ingots.call_args
         self.assertEqual(call_args[0][1], -2000)  # Amount removed
         self.assertEqual(
-            call_args.kwargs["reason"], "Trick or treat: haunted house monster"
+            call_args.kwargs["reason"], "Trick or treat: backrooms entity"
         )
 
         # Verify followup message was sent
@@ -184,7 +184,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await haunted_house.process_door_choice(
+        await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.ESCAPE, 2, outcomes, labels
         )
 
@@ -196,8 +196,8 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
-    @patch("ironforgedbot.commands.holiday.outcomes.haunted_house.random.randint")
-    @patch("ironforgedbot.commands.holiday.outcomes.haunted_house.random.choice")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.randint")
+    @patch("ironforgedbot.commands.holiday.outcomes.backrooms.random.choice")
     async def test_process_door_choice_monster_no_ingots(
         self, mock_choice, mock_randint, mock_member_service_class, mock_db
     ):
@@ -228,7 +228,7 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await haunted_house.process_door_choice(
+        await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
@@ -241,13 +241,13 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
-    async def test_haunted_house_view_timeout(self):
+    async def test_backrooms_view_timeout(self):
         """Test that view timeout sends expired message."""
         handler = create_test_trick_or_treat_handler()
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
-        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
+        labels = ["🟨 Yellow Hallway", "💡 Buzzing Lights", "🚪 Empty Room"]
 
-        view = HauntedHouseView(handler, self.test_user.id, outcomes, labels)
+        view = BackroomsView(handler, self.test_user.id, outcomes, labels)
         view.message = MagicMock()
         view.message.edit = AsyncMock()
 

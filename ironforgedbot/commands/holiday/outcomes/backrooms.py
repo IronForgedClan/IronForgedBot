@@ -1,4 +1,4 @@
-"""Haunted house outcome for trick-or-treat."""
+"""Backrooms outcome for trick-or-treat."""
 
 import asyncio
 import random
@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Optional
 import discord
 
 from ironforgedbot.commands.holiday.trick_or_treat_constants import (
-    HAUNTED_HOUSE_DOOR_COUNT,
-    HAUNTED_HOUSE_MONSTER_MAX,
-    HAUNTED_HOUSE_MONSTER_MIN,
-    HAUNTED_HOUSE_TREASURE_MAX,
-    HAUNTED_HOUSE_TREASURE_MIN,
+    BACKROOMS_DOOR_COUNT,
+    BACKROOMS_MONSTER_MAX,
+    BACKROOMS_MONSTER_MIN,
+    BACKROOMS_TREASURE_MAX,
+    BACKROOMS_TREASURE_MIN,
 )
 from ironforgedbot.database.database import db
 from ironforgedbot.services.member_service import MemberService
@@ -39,10 +39,10 @@ OUTCOME_WEIGHTS = {
 }
 
 
-class HauntedHouseView(discord.ui.View):
-    """Discord UI View for the haunted house door selection.
+class BackroomsView(discord.ui.View):
+    """Discord UI View for the backrooms corridor selection.
 
-    Displays buttons for each door the user can choose from.
+    Displays buttons for each corridor the user can choose from.
     The view times out after 45 seconds.
     """
 
@@ -53,13 +53,13 @@ class HauntedHouseView(discord.ui.View):
         door_outcomes: list[DoorOutcome],
         door_labels: list[str],
     ):
-        """Initialize the haunted house view.
+        """Initialize the backrooms view.
 
         Args:
             handler: The TrickOrTreatHandler instance to use for processing the result.
             user_id: The Discord user ID who can interact with this view.
-            door_outcomes: List of outcomes for each door (in order).
-            door_labels: List of selected door labels to display.
+            door_outcomes: List of outcomes for each corridor (in order).
+            door_labels: List of selected corridor labels to display.
         """
         super().__init__(timeout=45.0)
         self.handler = handler
@@ -69,11 +69,11 @@ class HauntedHouseView(discord.ui.View):
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
-        for i in range(HAUNTED_HOUSE_DOOR_COUNT):
+        for i in range(BACKROOMS_DOOR_COUNT):
             button = discord.ui.Button(
                 label=door_labels[i],
                 style=discord.ButtonStyle.secondary,
-                custom_id=f"haunted_house_door_{i}",
+                custom_id=f"backrooms_door_{i}",
                 row=0,
             )
             button.callback = self._create_door_callback(i)
@@ -92,13 +92,13 @@ class HauntedHouseView(discord.ui.View):
         async def callback(interaction: discord.Interaction):
             if interaction.user.id != self.user_id:
                 await interaction.response.send_message(
-                    "This isn't your haunted house!", ephemeral=True
+                    "These aren't your backrooms!", ephemeral=True
                 )
                 return
 
             if self.has_interacted:
                 await interaction.response.send_message(
-                    "You already chose a door!", ephemeral=True
+                    "You already chose a corridor!", ephemeral=True
                 )
                 return
 
@@ -106,9 +106,9 @@ class HauntedHouseView(discord.ui.View):
 
             await interaction.response.defer()
 
-            # Show suspense message with specific door being opened
+            # Show suspense message with specific corridor being entered
             door_label = self.door_labels[door_index]
-            suspense_message = self.handler.HAUNTED_HOUSE_OPENING_DOOR.format(
+            suspense_message = self.handler.BACKROOMS_OPENING_DOOR.format(
                 door=door_label
             )
             suspense_embed = self.handler._build_embed(suspense_message)
@@ -144,7 +144,7 @@ class HauntedHouseView(discord.ui.View):
         if self.message:
             try:
                 embed = self.handler._build_embed(
-                    self.handler.HAUNTED_HOUSE_EXPIRED_MESSAGE
+                    self.handler.BACKROOMS_EXPIRED_MESSAGE
                 )
                 await self.message.edit(embed=embed, view=None)
             except discord.HTTPException:
@@ -180,15 +180,15 @@ async def process_door_choice(
         case DoorOutcome.TREASURE:
             # Win ingots
             amount = random.randint(
-                HAUNTED_HOUSE_TREASURE_MIN, HAUNTED_HOUSE_TREASURE_MAX
+                BACKROOMS_TREASURE_MIN, BACKROOMS_TREASURE_MAX
             )
-            message = random.choice(handler.HAUNTED_HOUSE_TREASURE_MESSAGES)
+            message = random.choice(handler.BACKROOMS_TREASURE_MESSAGES)
 
             ingot_total = await handler._adjust_ingots(
                 interaction,
                 amount,
                 interaction.guild.get_member(interaction.user.id),
-                reason="Trick or treat: haunted house treasure",
+                reason="Trick or treat: backrooms treasure",
             )
 
             if ingot_total is not None:
@@ -204,20 +204,20 @@ async def process_door_choice(
         case DoorOutcome.MONSTER:
             # Lose ingots
             amount = random.randint(
-                HAUNTED_HOUSE_MONSTER_MIN, HAUNTED_HOUSE_MONSTER_MAX
+                BACKROOMS_MONSTER_MIN, BACKROOMS_MONSTER_MAX
             )
-            message = random.choice(handler.HAUNTED_HOUSE_MONSTER_MESSAGES)
+            message = random.choice(handler.BACKROOMS_MONSTER_MESSAGES)
 
             ingot_total = await handler._adjust_ingots(
                 interaction,
                 -amount,
                 interaction.guild.get_member(interaction.user.id),
-                reason="Trick or treat: haunted house monster",
+                reason="Trick or treat: backrooms entity",
             )
 
             if ingot_total is None:
                 # User has no ingots to lose - lucky escape!
-                lucky_message = random.choice(handler.HAUNTED_HOUSE_LUCKY_ESCAPE_MESSAGES)
+                lucky_message = random.choice(handler.BACKROOMS_LUCKY_ESCAPE_MESSAGES)
                 lucky_message += handler._get_balance_message(user_nickname, 0)
                 embed = handler._build_embed(lucky_message)
                 await interaction.followup.send(embed=embed)
@@ -233,38 +233,38 @@ async def process_door_choice(
 
         case DoorOutcome.ESCAPE:
             # No ingot change
-            message = random.choice(handler.HAUNTED_HOUSE_ESCAPE_MESSAGES)
+            message = random.choice(handler.BACKROOMS_ESCAPE_MESSAGES)
             embed = handler._build_embed(message)
             await interaction.followup.send(embed=embed)
 
 
-async def result_haunted_house(
+async def result_backrooms(
     handler: "TrickOrTreatHandler", interaction: discord.Interaction
 ) -> None:
-    """Handle the haunted house outcome.
+    """Handle the backrooms outcome.
 
     Args:
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction.
     """
-    # Randomly assign weighted outcomes to doors
+    # Randomly assign weighted outcomes to corridors
     outcome_choices = list(OUTCOME_WEIGHTS.keys())
     outcome_probabilities = list(OUTCOME_WEIGHTS.values())
     outcomes = random.choices(
-        outcome_choices, weights=outcome_probabilities, k=HAUNTED_HOUSE_DOOR_COUNT
+        outcome_choices, weights=outcome_probabilities, k=BACKROOMS_DOOR_COUNT
     )
 
-    # Randomly select 3 door labels from available options
+    # Randomly select 3 corridor labels from available options
     selected_labels = random.sample(
-        handler.HAUNTED_HOUSE_DOOR_LABELS, HAUNTED_HOUSE_DOOR_COUNT
+        handler.BACKROOMS_DOOR_LABELS, BACKROOMS_DOOR_COUNT
     )
 
     # Build the intro message with expiry timestamp
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
-    intro_message = handler.HAUNTED_HOUSE_INTRO.format(expires=expires_timestamp)
+    intro_message = handler.BACKROOMS_INTRO.format(expires=expires_timestamp)
 
     embed = handler._build_embed(intro_message)
 
-    view = HauntedHouseView(handler, interaction.user.id, outcomes, selected_labels)
+    view = BackroomsView(handler, interaction.user.id, outcomes, selected_labels)
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message

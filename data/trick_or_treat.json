@@ -82,61 +82,60 @@
         "TARGET_NO_INGOTS": "{target_mention} has no ingots to steal. You get nothing, but you also avoid getting caught!",
         "USER_NO_INGOTS": "You don't have enough ingots to risk a failed steal attempt. You need at least **{ingot_icon}{penalty:,}** ingots."
     },
-    "HAUNTED_HOUSE": {
-        "INTRO": "🏚️ **You stumble upon a haunted house...**\n\nThree doors stand before you, each more ominous than the last.\nBehind one lies treasure, behind another lurks a monster, and behind the third... an escape route.\n\nChoose wisely, adventurer.\n\n⏳ You must decide {expires}.",
+    "BACKROOMS": {
+        "INTRO": "⚠️ **You clip through reality and fall into the backrooms...**\n\nEndless yellow hallways stretch before you. Fluorescent lights hum overhead.\nThree corridors beckon - one holds forgotten treasure, another hides a lurking entity, and the third... might lead you out.\n\nChoose your path carefully.\n\n⏳ You must decide {expires}.",
         "DOOR_LABELS": [
-            "🚪 Creaking Door",
-            "🕸️ Cobweb Door",
-            "💀 Skull Door",
-            "🪦 Tomb Door",
-            "🕷️ Spider Door",
-            "🦇 Bat Door",
-            "👻 Ghost Door",
-            "🎃 Pumpkin Door",
-            "⚰️ Coffin Door",
-            "🧟 Zombie Door"
+            "🟨 Yellow Hallway",
+            "💡 Buzzing Lights",
+            "🚪 Empty Room",
+            "📦 Storage Level",
+            "🔦 Dark Corridor",
+            "🚧 Maintenance Door",
+            "🏢 Office Space",
+            "🔑 Locked Door",
+            "🛗 Elevator Door",
+            "📻 Static Room"
         ],
         "TREASURE_MESSAGES": [
-            "💰 **You found the treasure!**\n\nBehind the door lies a chest overflowing with **{ingots}** ingots!\n\nYour bravery has been rewarded.",
-            "🎉 **Jackpot room!**\n\nThe door opens to reveal a vault filled with **{ingots}** ingots!\n\nToday is your lucky day.",
-            "✨ **Golden chamber!**\n\nYou step into a room glittering with gold. You collect **{ingots}** ingots!\n\nThe spirits smile upon you.",
-            "🏆 **Hidden fortune!**\n\nYou discover a secret cache of **{ingots}** ingots tucked behind the door!\n\nSomeone must have hidden these here long ago.",
-            "💎 **Treasure trove!**\n\nThe room sparkles with riches! You grab **{ingots}** ingots from the pile!\n\nFortune favors the bold.",
-            "🎁 **Lucky find!**\n\nA mysterious benefactor left **{ingots}** ingots behind this door!\n\nWhat were the odds?",
-            "⚱️ **Ancient hoard!**\n\nYou stumble upon an old treasure chest containing **{ingots}** ingots!\n\nIt practically fell into your lap.",
-            "🌟 **Blessed room!**\n\nA ghostly figure appears and gifts you **{ingots}** ingots before vanishing!\n\nEven the dead can be generous."
+            "💰 **Supply cache discovered!**\n\nYou find an abandoned backpack stuffed with **{ingots}** ingots!\n\nSomeone else's loss is your gain.",
+            "🎉 **Emergency stash!**\n\nBehind a loose wall panel, you discover a survival cache containing **{ingots}** ingots!\n\nPrevious wanderers weren't so lucky.",
+            "✨ **Lost valuables!**\n\nScattered across the floor are **{ingots}** ingots, dropped by someone who fled in panic.\n\nYou pocket them quickly.",
+            "🏆 **Hidden supplies!**\n\nYou stumble upon a forgotten storage room with **{ingots}** ingots!\n\nIt's been here for who knows how long...",
+            "💎 **Reality glitch!**\n\nThe backrooms flicker and **{ingots}** ingots materialize from thin air!\n\nThe laws of physics don't apply here.",
+            "🎁 **Lucky corridor!**\n\nThis hallway leads to an office desk with **{ingots}** ingots in the drawer!\n\nAt least someone was organized.",
+            "⚱️ **Abandoned loot!**\n\nYou find evidence of another explorer's camp... and their **{ingots}** ingots!\n\nThey won't be needing these anymore.",
+            "🌟 **Exit gift!**\n\nA mysterious figure appears, hands you **{ingots}** ingots, and vanishes into the walls.\n\nWas that real?"
         ],
         "MONSTER_MESSAGES": [
-            "👹 **A monster attacks!**\n\nA hideous creature lunges at you! In your panic to escape, you drop **{ingots}** ingots!\n\nMaybe next time check for eyes in the darkness...",
-            "🧟 **Zombie horde!**\n\nThe room is filled with the undead! You barely escape but lose **{ingots}** ingots in the chaos.\n\nAt least you kept your brains.",
-            "👻 **Ghosts!**\n\nPoltergeists swarm you, stealing **{ingots}** ingots before you can flee!\n\nYou should have seen that coming.",
-            "🕷️ **Giant spider!**\n\nA massive spider drops from the ceiling! You run for your life, leaving behind **{ingots}** ingots!\n\nYou can still feel the webbing on your face...",
-            "🦇 **Vampire bats!**\n\nA swarm of bats attacks! In the confusion, you lose **{ingots}** ingots!\n\nAt least they didn't drain your blood too.",
-            "🐺 **Werewolf ambush!**\n\nA snarling werewolf leaps from the shadows! You escape but drop **{ingots}** ingots in terror!\n\nFull moon was a bad time to visit.",
-            "💀 **Skeleton warriors!**\n\nThe bones come to life and attack! You flee, abandoning **{ingots}** ingots in your haste!\n\nThey're still rattling behind you...",
-            "🧛 **Vampire lord!**\n\nA vampire emerges from the darkness and snatches **{ingots}** ingots from you!\n\nConsider it a toll for trespassing in his domain."
+            "👁️ **The Smiler found you!**\n\nA grinning entity emerges from the shadows! You run, dropping **{ingots}** ingots in terror!\n\nThose eyes... those teeth... never look back.",
+            "🐕 **Hound attack!**\n\nA deformed creature on all fours chases you down the corridor! You lose **{ingots}** ingots in the panic!\n\nYou can still hear it howling in the distance...",
+            "👤 **Skin-stealer!**\n\nSomething wearing a human face lunges at you! You flee, abandoning **{ingots}** ingots!\n\nIt almost looked like someone you knew...",
+            "⚡ **Reality shift!**\n\nThe walls suddenly close in! In your desperate escape, you drop **{ingots}** ingots!\n\nThe backrooms don't follow the rules of physics.",
+            "🌀 **Lost in the maze!**\n\nYou run through infinite identical hallways until **{ingots}** ingots fall from your pockets!\n\nEvery turn looks the same... are you going in circles?",
+            "👥 **Faceling swarm!**\n\nHumanoid figures with blank faces surround you! You break through, losing **{ingots}** ingots!\n\nThey moved so unnaturally...",
+            "💀 **The Entity!**\n\nSomething ancient and wrong manifests before you! You sprint away, dropping **{ingots}** ingots!\n\nYou're not supposed to be here.",
+            "🔊 **Sound trap!**\n\nDeafening static fills the air! Disoriented, you stumble and lose **{ingots}** ingots!\n\nThe fluorescent lights buzz louder and louder..."
         ],
         "ESCAPE_MESSAGES": [
-            "🏃 **Empty room, quick escape!**\n\nThe room is eerily empty. You spot a window and escape safely.\n\nNo ingots gained or lost, but at least you're alive!",
-            "😰 **You sneak out!**\n\nYou hear something moving in the darkness. Better not stick around to find out what it is.\n\nYou escape with your ingots intact.",
-            "🔦 **False alarm!**\n\nJust cobwebs and dust. You sneak back out the way you came.\n\nNothing ventured, nothing gained.",
-            "🚪 **Safe passage!**\n\nThe room leads to another exit. You quietly slip through.\n\nSometimes the best choice is the boring one.",
-            "🕯️ **Abandoned study!**\n\nYou find an old library, long forgotten. Nothing of value here.\n\nYou leave the way you came, unscathed.",
-            "🪟 **Quick exit!**\n\nYou spot a broken window and climb through before anything notices you.\n\nLive to explore another day!",
-            "👀 **Close call!**\n\nYou see glowing eyes in the corner but back out slowly before they notice.\n\nDiscretion is the better part of valor.",
-            "🌫️ **Misty corridor!**\n\nThe room is filled with thick fog. You decide not to risk it and retreat.\n\nYour ingots remain safe."
+            "🚪 **Found the exit!**\n\nThe corridor leads to a glowing portal back to reality! You noclip through.\n\nNo ingots gained or lost, but you made it out alive!",
+            "😰 **Safe passage!**\n\nYou hear buzzing in the next room and decide to turn back. Smart choice.\n\nYour ingots remain intact.",
+            "🔦 **Empty level!**\n\nJust an abandoned office space. No entities, no loot. You backtrack carefully.\n\nNothing ventured, nothing gained.",
+            "🛗 **Elevator escape!**\n\nYou find a working elevator that takes you back up! You're free!\n\nSometimes the boring choice is the safe one.",
+            "🏢 **Safe room discovered!**\n\nThis room is marked with survivor graffiti: \"SAFE\". You rest and retreat.\n\nYou leave the way you came, unscathed.",
+            "🚧 **Maintenance exit!**\n\nA service ladder leads back to your world! You climb out quickly.\n\nLive to explore another day!",
+            "👀 **Close call!**\n\nYou sense something watching from the shadows. You back away slowly.\n\nDiscretion kept you safe.",
+            "🌫️ **Liminal space!**\n\nThe hallway stretches infinitely with no end. You decide not to risk getting lost.\n\nYour ingots remain safe."
         ],
         "LUCKY_ESCAPE_MESSAGES": [
-            "🍀 **Lucky escape!**\n\nA monster lunges at you, but your pockets are already empty!\n\nThe monster looks disappointed and lets you go. Can't take what you don't have!",
-            "😅 **Too poor to rob!**\n\nThe ghosts search your pockets for ingots... and find nothing.\n\nThey vanish in frustration. Being broke saved you this time!",
-            "🎭 **Dramatic escape!**\n\nThe monster demands your ingots, but you have none to give!\n\nIt storms off in anger. Sometimes poverty is protection.",
-            "🤷 **Nothing to lose!**\n\nThe creature reaches for your ingots... but you're completely broke!\n\nIt gives you a pitying look and walks away. Rock bottom has its perks!",
-            "😂 **Joke's on them!**\n\nThe vampire tries to steal your wealth, but your pockets are empty!\n\nIt laughs at your poverty and disappears. Thanks...?",
-            "💸 **Already broke!**\n\nThe monster shakes you down for ingots... finding absolutely nothing.\n\nDisgusted, it throws you aside. Being poor saved your life!"
+            "🍀 **Entity ignored you!**\n\nThe Smiler reaches for your pockets... but they're empty!\n\nIt loses interest and disappears into the walls. Being broke saved you!",
+            "😅 **Too poor to hunt!**\n\nThe entity searches you for valuables... and finds nothing.\n\nIt leaves in disappointment. Poverty is protection in the backrooms!",
+            "🎭 **Not worth the effort!**\n\nThe creature demands your belongings, but you have nothing!\n\nIt scoffs and phases through the floor. Rock bottom has its perks!",
+            "🤷 **Nothing to take!**\n\nThe Hound corners you and searches your pockets... completely empty!\n\nIt gives you a pitying growl and wanders off.",
+            "😂 **Joke's on them!**\n\nThe Faceling tries to steal from you, but you're already broke!\n\nIt tilts its blank face in confusion and vanishes.",
+            "💸 **Already empty!**\n\nThe entity shakes you down for loot... finding absolutely nothing.\n\nDisgusted, it tosses you aside and leaves. Being poor saved your life!"
         ],
-        "OPENING_DOOR": "🚪 **Opening the {door}...**\n\n_The hinges creak ominously as the door slowly swings open..._",
-        "REVEAL_SUFFIX": "\n\n---\n**🔮 What was behind each door:**\n{door1_emoji} **{door1_label}**: {door1_outcome}\n{door2_emoji} **{door2_label}**: {door2_outcome}\n{door3_emoji} **{door3_label}**: {door3_outcome}",
-        "EXPIRED": "⏱️ **The doors slam shut!**\n\nYou took too long to decide. The haunted house vanishes into mist.\n\nMaybe next time be a bit more decisive?"
+        "OPENING_DOOR": "🚪 **Entering the {door}...**\n\n_The fluorescent lights hum overhead as you step inside..._",
+        "EXPIRED": "⏱️ **The walls shift!**\n\nYou took too long to decide. The backrooms consume your hesitation.\n\nThe corridors rearrange and your chance is lost."
     },
     "JOKE": {
         "MESSAGES": [

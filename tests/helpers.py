@@ -494,6 +494,16 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "TARGET_NO_INGOTS": "{target_mention} has no ingots",
         "USER_NO_INGOTS": "Need {ingot_icon}{penalty:,}"
     },
+    "BACKROOMS": {
+        "INTRO": "Backrooms test intro {expires}",
+        "DOOR_LABELS": ["Test Door 1", "Test Door 2", "Test Door 3"],
+        "TREASURE_MESSAGES": ["Test treasure {ingots}"],
+        "MONSTER_MESSAGES": ["Test monster {ingots}"],
+        "ESCAPE_MESSAGES": ["Test escape"],
+        "LUCKY_ESCAPE_MESSAGES": ["Test lucky escape"],
+        "OPENING_DOOR": "Opening {door}",
+        "EXPIRED": "Test expired"
+    },
     "JOKE": {
         "MESSAGES": ["Test joke"]
     },

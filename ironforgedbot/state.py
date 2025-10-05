@@ -16,7 +16,7 @@ class BotStateDict(TypedDict):
     rate_limit: dict
     trick_or_treat_jackpot_claimed: bool
     double_or_nothing_offers: dict
-    haunted_house_offers: dict
+    backrooms_offers: dict
     raffle_on: bool
     raffle_price: int
 
@@ -36,7 +36,7 @@ class BotState:
             "rate_limit": dict(),
             "trick_or_treat_jackpot_claimed": False,
             "double_or_nothing_offers": dict(),
-            "haunted_house_offers": dict(),
+            "backrooms_offers": dict(),
             "raffle_on": False,
             "raffle_price": 5_000,
         }

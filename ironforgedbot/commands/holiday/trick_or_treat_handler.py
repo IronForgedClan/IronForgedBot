@@ -62,14 +62,14 @@ class TrickOrTreatHandler:
         self.STEAL_NO_TARGETS: str
         self.STEAL_TARGET_NO_INGOTS: str
         self.STEAL_USER_NO_INGOTS: str
-        self.HAUNTED_HOUSE_INTRO: str
-        self.HAUNTED_HOUSE_DOOR_LABELS: list[str]
-        self.HAUNTED_HOUSE_TREASURE_MESSAGES: list[str]
-        self.HAUNTED_HOUSE_MONSTER_MESSAGES: list[str]
-        self.HAUNTED_HOUSE_ESCAPE_MESSAGES: list[str]
-        self.HAUNTED_HOUSE_LUCKY_ESCAPE_MESSAGES: list[str]
-        self.HAUNTED_HOUSE_OPENING_DOOR: str
-        self.HAUNTED_HOUSE_EXPIRED_MESSAGE: str
+        self.BACKROOMS_INTRO: str
+        self.BACKROOMS_DOOR_LABELS: list[str]
+        self.BACKROOMS_TREASURE_MESSAGES: list[str]
+        self.BACKROOMS_MONSTER_MESSAGES: list[str]
+        self.BACKROOMS_ESCAPE_MESSAGES: list[str]
+        self.BACKROOMS_LUCKY_ESCAPE_MESSAGES: list[str]
+        self.BACKROOMS_OPENING_DOOR: str
+        self.BACKROOMS_EXPIRED_MESSAGE: str
 
         with open("data/trick_or_treat.json") as f:
             logger.debug("Loading trick or treat data...")
@@ -98,22 +98,16 @@ class TrickOrTreatHandler:
             self.STEAL_NO_TARGETS = data["STEAL"]["NO_TARGETS"]
             self.STEAL_TARGET_NO_INGOTS = data["STEAL"]["TARGET_NO_INGOTS"]
             self.STEAL_USER_NO_INGOTS = data["STEAL"]["USER_NO_INGOTS"]
-            self.HAUNTED_HOUSE_INTRO = data["HAUNTED_HOUSE"]["INTRO"]
-            self.HAUNTED_HOUSE_DOOR_LABELS = data["HAUNTED_HOUSE"]["DOOR_LABELS"]
-            self.HAUNTED_HOUSE_TREASURE_MESSAGES = data["HAUNTED_HOUSE"][
-                "TREASURE_MESSAGES"
-            ]
-            self.HAUNTED_HOUSE_MONSTER_MESSAGES = data["HAUNTED_HOUSE"][
-                "MONSTER_MESSAGES"
-            ]
-            self.HAUNTED_HOUSE_ESCAPE_MESSAGES = data["HAUNTED_HOUSE"][
-                "ESCAPE_MESSAGES"
-            ]
-            self.HAUNTED_HOUSE_LUCKY_ESCAPE_MESSAGES = data["HAUNTED_HOUSE"][
+            self.BACKROOMS_INTRO = data["BACKROOMS"]["INTRO"]
+            self.BACKROOMS_DOOR_LABELS = data["BACKROOMS"]["DOOR_LABELS"]
+            self.BACKROOMS_TREASURE_MESSAGES = data["BACKROOMS"]["TREASURE_MESSAGES"]
+            self.BACKROOMS_MONSTER_MESSAGES = data["BACKROOMS"]["MONSTER_MESSAGES"]
+            self.BACKROOMS_ESCAPE_MESSAGES = data["BACKROOMS"]["ESCAPE_MESSAGES"]
+            self.BACKROOMS_LUCKY_ESCAPE_MESSAGES = data["BACKROOMS"][
                 "LUCKY_ESCAPE_MESSAGES"
             ]
-            self.HAUNTED_HOUSE_OPENING_DOOR = data["HAUNTED_HOUSE"]["OPENING_DOOR"]
-            self.HAUNTED_HOUSE_EXPIRED_MESSAGE = data["HAUNTED_HOUSE"]["EXPIRED"]
+            self.BACKROOMS_OPENING_DOOR = data["BACKROOMS"]["OPENING_DOOR"]
+            self.BACKROOMS_EXPIRED_MESSAGE = data["BACKROOMS"]["EXPIRED"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -343,9 +337,9 @@ class TrickOrTreatHandler:
         """
         # Import outcome modules here to avoid circular imports
         from ironforgedbot.commands.holiday.outcomes import (
+            backrooms,
             double_or_nothing,
             gif,
-            haunted_house,
             ingot_changes,
             jackpot,
             joke,
@@ -353,6 +347,7 @@ class TrickOrTreatHandler:
             trick,
         )
 
+        return await backrooms.result_backrooms(self, interaction)
         match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await jackpot.result_jackpot(self, interaction)
@@ -364,8 +359,8 @@ class TrickOrTreatHandler:
                 )
             case TrickOrTreat.STEAL:
                 return await steal.result_steal(self, interaction)
-            case TrickOrTreat.HAUNTED_HOUSE:
-                return await haunted_house.result_haunted_house(self, interaction)
+            case TrickOrTreat.BACKROOMS:
+                return await backrooms.result_backrooms(self, interaction)
             case TrickOrTreat.REMOVE_INGOTS_HIGH:
                 return await ingot_changes.result_remove_high(self, interaction)
             case TrickOrTreat.ADD_INGOTS_HIGH:
