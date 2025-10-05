@@ -306,14 +306,18 @@ async def process_steal(
             logger.error("Error adding stolen ingots to user")
             return
 
+        # Get member nickname from database
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            user_nickname = user_member.nickname if user_member else "User"
+
         message = handler.STEAL_SUCCESS.format(
             ingot_icon=handler.ingot_icon,
             amount=actual_amount,
             target_mention=target.mention,
         )
-        message += handler._get_balance_message(
-            interaction.user.display_name, user_new_total
-        )
+        message += handler._get_balance_message(user_nickname, user_new_total)
 
     else:
         penalty = _calculate_steal_penalty(amount)
@@ -329,15 +333,19 @@ async def process_steal(
             logger.error("Error removing penalty from user")
             return
 
+        # Get member nickname from database
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            user_nickname = user_member.nickname if user_member else "User"
+
         message = handler.STEAL_FAILURE.format(
             ingot_icon=handler.ingot_icon,
             amount=amount,
             target_mention=target.mention,
             penalty=penalty,
         )
-        message += handler._get_balance_message(
-            interaction.user.display_name, user_new_total
-        )
+        message += handler._get_balance_message(user_nickname, user_new_total)
 
     embed = handler._build_embed(message)
     await interaction.followup.send(embed=embed)

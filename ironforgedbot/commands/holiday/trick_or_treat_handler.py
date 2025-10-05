@@ -267,11 +267,15 @@ class TrickOrTreatHandler:
             interaction.guild.get_member(interaction.user.id),
         )
 
+        # Get member nickname from database
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            user_nickname = user_member.nickname if user_member else "User"
+
         if ingot_total is None:
             await interaction.followup.send(
-                embed=self._build_no_ingots_error_response(
-                    interaction.user.display_name
-                )
+                embed=self._build_no_ingots_error_response(user_nickname)
             )
             return
 
@@ -288,9 +292,7 @@ class TrickOrTreatHandler:
         )
 
         embed = self._build_embed(
-            prefix
-            + message
-            + self._get_balance_message(interaction.user.display_name, ingot_total)
+            prefix + message + self._get_balance_message(user_nickname, ingot_total)
         )
         await interaction.followup.send(embed=embed)
 

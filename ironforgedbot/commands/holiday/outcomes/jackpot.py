@@ -38,16 +38,22 @@ async def result_jackpot(
 
     STATE.state["trick_or_treat_jackpot_claimed"] = True
 
+    # Get member nickname from database
+    from ironforgedbot.database.database import db
+    from ironforgedbot.services.member_service import MemberService
+
+    async with db.get_session() as session:
+        member_service = MemberService(session)
+        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+        user_nickname = user_member.nickname if user_member else "User"
+
     message = handler.JACKPOT_SUCCESS_PREFIX.format(
         mention=interaction.user.mention,
         ingot_icon=handler.ingot_icon,
         amount=JACKPOT_VALUE,
     )
     embed = handler._build_embed(
-        message
-        + handler._get_balance_message(
-            interaction.user.display_name, user_new_total or 0
-        )
+        message + handler._get_balance_message(user_nickname, user_new_total or 0)
     )
     embed.set_thumbnail(
         url=(
