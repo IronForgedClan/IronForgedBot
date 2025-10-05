@@ -72,11 +72,11 @@
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your **{ingot_icon}{amount:,}** ingots."
     },
     "STEAL": {
-        "OFFER": "🔪 **Steal or no steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nYou notice that the members with the **most ingots** are particularly distracted...\n\nChoose your victim wisely... getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
-        "SUCCESS": "💰 **Success!**\n\nYou successfully stole **{ingot_icon}{amount:,}** ingots from {target_mention}!",
-        "FAILURE": "💀 **Busted!**\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention} but got caught!\n\nYou lost **{ingot_icon}{penalty:,}** ingots as punishment.",
-        "WALK_AWAY": "🚶 **You walked away.**\n\nYou're already 99 theiving, what's the point?",
-        "EXPIRED": "⏱️ **Time's up!**\n\nYou took too long to decide. The opportunity has passed.",
+        "OFFER": "🔪 **Steal or no steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nYou notice that the members with the **most ingots** are particularly distracted...\n\nChoose your victim wisely, getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
+        "SUCCESS": "💰 **Success!**\n\nYou stealthily slide your hand into {target_mention}'s pocket, grabbing **{ingot_icon}{amount:,}** ingots!\n\nHopefully they'll never notice. It's a good job nobody pinged them or anything 👀",
+        "FAILURE": "💀 **Busted!**\n\nStop right there criminal scum!\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention}, but got caught red handed.\n\nYou are fined **{ingot_icon}{penalty:,}** ingots as punishment. At least you avoid jail... this time.",
+        "WALK_AWAY": "🚶 **You walked away.**\n\nYou're already 99 theiving anyway, what's the point?",
+        "EXPIRED": "⏱️ **Time's up!**\n\nYou took too long to decide. Now everyone is staring at you... run!",
         "NO_TARGETS": "There are no targets available to steal from right now. Try again later!",
         "TARGET_NO_INGOTS": "{target_mention} has no ingots to steal. You get nothing, but you also avoid getting caught!",
         "USER_NO_INGOTS": "You don't have enough ingots to risk a failed steal attempt. You need at least **{ingot_icon}{penalty:,}** ingots."
