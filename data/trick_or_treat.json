@@ -66,9 +66,9 @@
         "MESSAGE": "You lost **{ingot_icon}-{amount:,}**...\nNow that's gotta sting."
     },
     "DOUBLE_OR_NOTHING": {
-        "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nClick the button below to risk it all for a chance to **double your winnings**!\n\n⏳ This offer expires {expires}.",
-        "WIN": "💰 **You doubled it!**\n\nYou won an additional **{ingot_icon}{amount:,}** ingots!",
-        "LOSE": "💀 **You lost it all!**\n\nRemoved **{ingot_icon}{amount:,}** ingots from your account.",
+        "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nFeeling lucky? Decide below to risk it all for a chance to **double your winnings**, or to play it safe and keep what you've already won.\n\n⏳ This offer expires {expires}.",
+        "WIN": "💰 **You doubled it!**\n\nYou have won a total of **{ingot_icon}{total_amount:,}** ingots!",
+        "LOSE": "💀 **You lost it all!**\n\nYou lost your original **{ingot_icon}{amount:,}** ingot win. Sometimes the risk isn't worth the reward.",
         "KEEP": "😴 **You did nothing.**\n\nYou safely kept your original **{ingot_icon}{amount:,}** ingot win.\n\nThat was either smart or cowardly, I can't tell.",
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your original **{ingot_icon}{amount:,}** ingot win."
     },

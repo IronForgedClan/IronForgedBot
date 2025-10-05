@@ -290,7 +290,7 @@ async def process_double_or_nothing(
             return
 
         message = handler.DOUBLE_OR_NOTHING_WIN.format(
-            ingot_icon=handler.ingot_icon, amount=amount
+            ingot_icon=handler.ingot_icon, total_amount=amount * 2
         )
         message += handler._get_balance_message(user_nickname, ingot_total)
     else:
