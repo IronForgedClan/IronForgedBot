@@ -32,7 +32,7 @@ def _calculate_steal_penalty(amount: int) -> int:
     Returns:
         The penalty amount (3/4 of amount, rounded up to nearest 100).
     """
-    penalty_raw = (amount * 3 + 3) // 4  # 3/4 rounded up
+    penalty_raw = (amount * 3 + 3) // 4
     return ((penalty_raw + 99) // 100) * 100  # Round up to nearest 100
 
 
@@ -297,7 +297,9 @@ async def process_steal(
         # Get thief's nickname for target's changelog
         async with db.get_session() as session:
             member_service = MemberService(session)
-            thief_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            thief_member = await member_service.get_member_by_discord_id(
+                interaction.user.id
+            )
             thief_nickname = thief_member.nickname if thief_member else "User"
 
         await handler._adjust_ingots(
@@ -321,7 +323,9 @@ async def process_steal(
         # Get member nickname from database
         async with db.get_session() as session:
             member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            user_member = await member_service.get_member_by_discord_id(
+                interaction.user.id
+            )
             user_nickname = user_member.nickname if user_member else "User"
 
         message = handler.STEAL_SUCCESS.format(
@@ -349,7 +353,9 @@ async def process_steal(
         # Get member nickname from database
         async with db.get_session() as session:
             member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            user_member = await member_service.get_member_by_discord_id(
+                interaction.user.id
+            )
             user_nickname = user_member.nickname if user_member else "User"
 
         message = handler.STEAL_FAILURE.format(
