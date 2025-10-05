@@ -82,6 +82,30 @@
         "TARGET_NO_INGOTS": "{target_mention} has no ingots to steal. You get nothing, but you also avoid getting caught!",
         "USER_NO_INGOTS": "You don't have enough ingots to risk a failed steal attempt. You need at least **{ingot_icon}{penalty:,}** ingots."
     },
+    "HAUNTED_HOUSE": {
+        "INTRO": "🏚️ **You stumble upon a haunted house...**\n\nThree doors stand before you, each more ominous than the last.\nBehind one lies treasure, behind another lurks a monster, and behind the third... an escape route.\n\nChoose wisely, adventurer.\n\n⏳ You must decide {expires}.",
+        "DOOR_LABELS": [
+            "🚪 Creaking Door",
+            "🕸️ Cobweb Door",
+            "💀 Skull Door"
+        ],
+        "TREASURE_MESSAGES": [
+            "💰 **You found the treasure!**\n\nBehind the door lies a chest overflowing with **{ingots}** ingots!\n\nYour bravery has been rewarded.",
+            "🎉 **Jackpot room!**\n\nThe door opens to reveal a vault filled with **{ingots}** ingots!\n\nToday is your lucky day.",
+            "✨ **Golden chamber!**\n\nYou step into a room glittering with gold. You collect **{ingots}** ingots!\n\nThe spirits smile upon you."
+        ],
+        "MONSTER_MESSAGES": [
+            "👹 **A monster attacks!**\n\nA hideous creature lunges at you! In your panic to escape, you drop **{ingots}** ingots!\n\nMaybe next time check for eyes in the darkness...",
+            "🧟 **Zombie horde!**\n\nThe room is filled with the undead! You barely escape but lose **{ingots}** ingots in the chaos.\n\nAt least you kept your brains.",
+            "👻 **Ghosts!**\n\nPoltergeists swarm you, stealing **{ingots}** ingots before you can flee!\n\nYou should have seen that coming."
+        ],
+        "ESCAPE_MESSAGES": [
+            "🏃 **Empty room, quick escape!**\n\nThe room is eerily empty. You spot a window and escape safely.\n\nNo ingots gained or lost, but at least you're alive!",
+            "😰 **You sneak out!**\n\nYou hear something moving in the darkness. Better not stick around to find out what it is.\n\nYou escape with your ingots intact.",
+            "🔦 **False alarm!**\n\nJust cobwebs and dust. You sneak back out the way you came.\n\nNothing ventured, nothing gained."
+        ],
+        "EXPIRED": "⏱️ **The doors slam shut!**\n\nYou took too long to decide. The haunted house vanishes into mist.\n\nMaybe next time be a bit more decisive?"
+    },
     "JOKE": {
         "MESSAGES": [
             "**Why did the skeleton go to the party alone?**\nHe had no body to go with! 🩻"

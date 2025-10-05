@@ -9,6 +9,13 @@ HIGH_INGOT_MIN = 2_200
 HIGH_INGOT_MAX = 6_100
 JACKPOT_VALUE = 1_000_000
 
+# Haunted house configuration
+HAUNTED_HOUSE_DOOR_COUNT = 3
+HAUNTED_HOUSE_TREASURE_MIN = HIGH_INGOT_MIN
+HAUNTED_HOUSE_TREASURE_MAX = HIGH_INGOT_MAX
+HAUNTED_HOUSE_MONSTER_MIN = 1_000
+HAUNTED_HOUSE_MONSTER_MAX = 3_500
+
 # History limits
 POSITIVE_MESSAGE_HISTORY_LIMIT = 15
 NEGATIVE_MESSAGE_HISTORY_LIMIT = 15
@@ -24,13 +31,14 @@ class TrickOrTreat(Enum):
     """
 
     # fmt: off
-    GIF = 330                      # 33.0% (1/3.0)
+    GIF = 305                      # 30.5% (1/3.3)
     REMOVE_INGOTS_LOW = 137        # 13.7% (1/7.3)
     ADD_INGOTS_LOW = 128           # 12.8% (1/7.8)
     REMOVE_INGOTS_HIGH = 119       # 11.9% (1/8.4)
     ADD_INGOTS_HIGH = 110          # 11.0% (1/9.1)
     DOUBLE_OR_NOTHING = 91         #  9.1% (1/11.0)
     STEAL = 46                     #  4.6% (1/21.7)
+    HAUNTED_HOUSE = 25             #  2.5% (1/40.0)
     JOKE = 18                      #  1.8% (1/55.6)
     REMOVE_ALL_INGOTS_TRICK = 18   #  1.8% (1/55.6)
     JACKPOT_INGOTS = 3             #  0.3% (1/333.3)

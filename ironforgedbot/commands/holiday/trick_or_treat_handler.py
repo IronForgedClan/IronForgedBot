@@ -62,6 +62,12 @@ class TrickOrTreatHandler:
         self.STEAL_NO_TARGETS: str
         self.STEAL_TARGET_NO_INGOTS: str
         self.STEAL_USER_NO_INGOTS: str
+        self.HAUNTED_HOUSE_INTRO: str
+        self.HAUNTED_HOUSE_DOOR_LABELS: list[str]
+        self.HAUNTED_HOUSE_TREASURE_MESSAGES: list[str]
+        self.HAUNTED_HOUSE_MONSTER_MESSAGES: list[str]
+        self.HAUNTED_HOUSE_ESCAPE_MESSAGES: list[str]
+        self.HAUNTED_HOUSE_EXPIRED_MESSAGE: str
 
         with open("data/trick_or_treat.json") as f:
             logger.debug("Loading trick or treat data...")
@@ -90,6 +96,18 @@ class TrickOrTreatHandler:
             self.STEAL_NO_TARGETS = data["STEAL"]["NO_TARGETS"]
             self.STEAL_TARGET_NO_INGOTS = data["STEAL"]["TARGET_NO_INGOTS"]
             self.STEAL_USER_NO_INGOTS = data["STEAL"]["USER_NO_INGOTS"]
+            self.HAUNTED_HOUSE_INTRO = data["HAUNTED_HOUSE"]["INTRO"]
+            self.HAUNTED_HOUSE_DOOR_LABELS = data["HAUNTED_HOUSE"]["DOOR_LABELS"]
+            self.HAUNTED_HOUSE_TREASURE_MESSAGES = data["HAUNTED_HOUSE"][
+                "TREASURE_MESSAGES"
+            ]
+            self.HAUNTED_HOUSE_MONSTER_MESSAGES = data["HAUNTED_HOUSE"][
+                "MONSTER_MESSAGES"
+            ]
+            self.HAUNTED_HOUSE_ESCAPE_MESSAGES = data["HAUNTED_HOUSE"][
+                "ESCAPE_MESSAGES"
+            ]
+            self.HAUNTED_HOUSE_EXPIRED_MESSAGE = data["HAUNTED_HOUSE"]["EXPIRED"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -283,7 +301,9 @@ class TrickOrTreatHandler:
         # Get member nickname from database
         async with db.get_session() as session:
             member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(interaction.user.id)
+            user_member = await member_service.get_member_by_discord_id(
+                interaction.user.id
+            )
             user_nickname = user_member.nickname if user_member else "User"
 
         if ingot_total is None:
@@ -319,6 +339,7 @@ class TrickOrTreatHandler:
         from ironforgedbot.commands.holiday.outcomes import (
             double_or_nothing,
             gif,
+            haunted_house,
             ingot_changes,
             jackpot,
             joke,
@@ -337,6 +358,8 @@ class TrickOrTreatHandler:
                 )
             case TrickOrTreat.STEAL:
                 return await steal.result_steal(self, interaction)
+            case TrickOrTreat.HAUNTED_HOUSE:
+                return await haunted_house.result_haunted_house(self, interaction)
             case TrickOrTreat.REMOVE_INGOTS_HIGH:
                 return await ingot_changes.result_remove_high(self, interaction)
             case TrickOrTreat.ADD_INGOTS_HIGH:
