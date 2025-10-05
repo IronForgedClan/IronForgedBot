@@ -67,6 +67,9 @@ class TrickOrTreatHandler:
         self.HAUNTED_HOUSE_TREASURE_MESSAGES: list[str]
         self.HAUNTED_HOUSE_MONSTER_MESSAGES: list[str]
         self.HAUNTED_HOUSE_ESCAPE_MESSAGES: list[str]
+        self.HAUNTED_HOUSE_LUCKY_ESCAPE_MESSAGES: list[str]
+        self.HAUNTED_HOUSE_OPENING_DOOR: str
+        self.HAUNTED_HOUSE_REVEAL_SUFFIX: str
         self.HAUNTED_HOUSE_EXPIRED_MESSAGE: str
 
         with open("data/trick_or_treat.json") as f:
@@ -107,6 +110,11 @@ class TrickOrTreatHandler:
             self.HAUNTED_HOUSE_ESCAPE_MESSAGES = data["HAUNTED_HOUSE"][
                 "ESCAPE_MESSAGES"
             ]
+            self.HAUNTED_HOUSE_LUCKY_ESCAPE_MESSAGES = data["HAUNTED_HOUSE"][
+                "LUCKY_ESCAPE_MESSAGES"
+            ]
+            self.HAUNTED_HOUSE_OPENING_DOOR = data["HAUNTED_HOUSE"]["OPENING_DOOR"]
+            self.HAUNTED_HOUSE_REVEAL_SUFFIX = data["HAUNTED_HOUSE"]["REVEAL_SUFFIX"]
             self.HAUNTED_HOUSE_EXPIRED_MESSAGE = data["HAUNTED_HOUSE"]["EXPIRED"]
 
     def _get_random_positive_message(self) -> str:

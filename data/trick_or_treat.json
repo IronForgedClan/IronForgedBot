@@ -111,6 +111,13 @@
             "😰 **You sneak out!**\n\nYou hear something moving in the darkness. Better not stick around to find out what it is.\n\nYou escape with your ingots intact.",
             "🔦 **False alarm!**\n\nJust cobwebs and dust. You sneak back out the way you came.\n\nNothing ventured, nothing gained."
         ],
+        "LUCKY_ESCAPE_MESSAGES": [
+            "🍀 **Lucky escape!**\n\nA monster lunges at you, but your pockets are already empty!\n\nThe monster looks disappointed and lets you go. Can't take what you don't have!",
+            "😅 **Too poor to rob!**\n\nThe ghosts search your pockets for ingots... and find nothing.\n\nThey vanish in frustration. Being broke saved you this time!",
+            "🎭 **Dramatic escape!**\n\nThe monster demands your ingots, but you have none to give!\n\nIt storms off in anger. Sometimes poverty is protection."
+        ],
+        "OPENING_DOOR": "🚪 **Opening door...**\n\n_The hinges creak ominously as the door slowly swings open..._",
+        "REVEAL_SUFFIX": "\n\n---\n**🔮 What was behind each door:**\n{door1_emoji} **{door1_label}**: {door1_outcome}\n{door2_emoji} **{door2_label}**: {door2_outcome}\n{door3_emoji} **{door3_label}**: {door3_outcome}",
         "EXPIRED": "⏱️ **The doors slam shut!**\n\nYou took too long to decide. The haunted house vanishes into mist.\n\nMaybe next time be a bit more decisive?"
     },
     "JOKE": {

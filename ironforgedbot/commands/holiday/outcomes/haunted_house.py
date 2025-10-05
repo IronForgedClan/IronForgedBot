@@ -1,5 +1,6 @@
 """Haunted house outcome for trick-or-treat."""
 
+import asyncio
 import random
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
@@ -29,6 +30,28 @@ class DoorOutcome(Enum):
     MONSTER = "monster"
     ESCAPE = "escape"
 
+    def get_reveal_text(self) -> str:
+        """Get the reveal text for this outcome.
+
+        Returns:
+            A string describing what was behind the door.
+        """
+        match self:
+            case DoorOutcome.TREASURE:
+                return "💰 Treasure"
+            case DoorOutcome.MONSTER:
+                return "👹 Monster"
+            case DoorOutcome.ESCAPE:
+                return "🏃 Empty Room"
+
+
+# Weighted probabilities for door outcomes
+OUTCOME_WEIGHTS = {
+    DoorOutcome.TREASURE: 0.30,  # 30%
+    DoorOutcome.MONSTER: 0.40,  # 40%
+    DoorOutcome.ESCAPE: 0.30,  # 30%
+}
+
 
 class HauntedHouseView(discord.ui.View):
     """Discord UI View for the haunted house door selection.
@@ -56,6 +79,7 @@ class HauntedHouseView(discord.ui.View):
         self.handler = handler
         self.user_id = user_id
         self.door_outcomes = door_outcomes
+        self.door_labels = door_labels
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
@@ -95,11 +119,30 @@ class HauntedHouseView(discord.ui.View):
             self.has_interacted = True
 
             await interaction.response.defer()
+
+            # Show suspense message
+            suspense_embed = self.handler._build_embed(
+                self.handler.HAUNTED_HOUSE_OPENING_DOOR
+            )
+            if self.message:
+                await self.message.edit(embed=suspense_embed, view=None)
+
+            # Wait for suspense
+            await asyncio.sleep(2)
+
+            # Delete the suspense message
             if self.message:
                 await self.message.delete()
 
             outcome = self.door_outcomes[door_index]
-            await process_door_choice(self.handler, interaction, outcome)
+            await process_door_choice(
+                self.handler,
+                interaction,
+                outcome,
+                door_index,
+                self.door_outcomes,
+                self.door_labels,
+            )
 
             self.stop()
 
@@ -120,10 +163,51 @@ class HauntedHouseView(discord.ui.View):
                 pass
 
 
+def _build_reveal_suffix(
+    handler: "TrickOrTreatHandler",
+    chosen_index: int,
+    door_outcomes: list[DoorOutcome],
+    door_labels: list[str],
+) -> str:
+    """Build the reveal suffix showing what was behind all doors.
+
+    Args:
+        handler: The TrickOrTreatHandler instance.
+        chosen_index: The index of the door the user chose.
+        door_outcomes: List of outcomes for each door.
+        door_labels: List of door labels.
+
+    Returns:
+        Formatted reveal suffix string.
+    """
+    # Extract emoji from door labels
+    door_emojis = [label.split()[0] for label in door_labels]
+
+    # Mark the chosen door
+    door1_label = door_labels[0] if chosen_index != 0 else f"~~{door_labels[0]}~~ ✅"
+    door2_label = door_labels[1] if chosen_index != 1 else f"~~{door_labels[1]}~~ ✅"
+    door3_label = door_labels[2] if chosen_index != 2 else f"~~{door_labels[2]}~~ ✅"
+
+    return handler.HAUNTED_HOUSE_REVEAL_SUFFIX.format(
+        door1_emoji=door_emojis[0],
+        door1_label=door1_label,
+        door1_outcome=door_outcomes[0].get_reveal_text(),
+        door2_emoji=door_emojis[1],
+        door2_label=door2_label,
+        door2_outcome=door_outcomes[1].get_reveal_text(),
+        door3_emoji=door_emojis[2],
+        door3_label=door3_label,
+        door3_outcome=door_outcomes[2].get_reveal_text(),
+    )
+
+
 async def process_door_choice(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
     outcome: DoorOutcome,
+    chosen_index: int,
+    door_outcomes: list[DoorOutcome],
+    door_labels: list[str],
 ) -> None:
     """Process the user's door choice and apply the outcome.
 
@@ -131,6 +215,9 @@ async def process_door_choice(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction.
         outcome: The outcome behind the chosen door.
+        chosen_index: The index of the door chosen.
+        door_outcomes: List of all door outcomes.
+        door_labels: List of all door labels.
     """
     assert interaction.guild
 
@@ -179,10 +266,11 @@ async def process_door_choice(
             )
 
             if ingot_total is None:
-                # User has no ingots to lose
-                await interaction.followup.send(
-                    embed=handler._build_no_ingots_error_response(user_nickname)
-                )
+                # User has no ingots to lose - lucky escape!
+                lucky_message = random.choice(handler.HAUNTED_HOUSE_LUCKY_ESCAPE_MESSAGES)
+                lucky_message += handler._get_balance_message(user_nickname, 0)
+                embed = handler._build_embed(lucky_message)
+                await interaction.followup.send(embed=embed)
             else:
                 formatted_message = message.format(
                     ingots=f"{handler.ingot_icon}{amount:,}"
@@ -209,9 +297,12 @@ async def result_haunted_house(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction.
     """
-    # Randomly assign outcomes to doors
-    outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
-    random.shuffle(outcomes)
+    # Randomly assign weighted outcomes to doors
+    outcome_choices = list(OUTCOME_WEIGHTS.keys())
+    outcome_probabilities = list(OUTCOME_WEIGHTS.values())
+    outcomes = random.choices(
+        outcome_choices, weights=outcome_probabilities, k=HAUNTED_HOUSE_DOOR_COUNT
+    )
 
     # Randomly select 3 door labels from available options
     selected_labels = random.sample(

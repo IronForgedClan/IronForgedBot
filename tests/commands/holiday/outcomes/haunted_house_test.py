@@ -90,8 +90,11 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock _adjust_ingots to return new total
         handler._adjust_ingots = AsyncMock(return_value=4500)
 
+        outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
+        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
+
         await haunted_house.process_door_choice(
-            handler, self.interaction, DoorOutcome.TREASURE
+            handler, self.interaction, DoorOutcome.TREASURE, 0, outcomes, labels
         )
 
         # Verify ingots were added
@@ -134,8 +137,11 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock _adjust_ingots to return new total
         handler._adjust_ingots = AsyncMock(return_value=3000)
 
+        outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
+        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
+
         await haunted_house.process_door_choice(
-            handler, self.interaction, DoorOutcome.MONSTER
+            handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
         # Verify ingots were removed (negative amount)
@@ -175,8 +181,11 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock _adjust_ingots (should not be called for escape)
         handler._adjust_ingots = AsyncMock()
 
+        outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
+        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
+
         await haunted_house.process_door_choice(
-            handler, self.interaction, DoorOutcome.ESCAPE
+            handler, self.interaction, DoorOutcome.ESCAPE, 2, outcomes, labels
         )
 
         # Verify ingots were NOT adjusted
@@ -188,11 +197,13 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     @patch("ironforgedbot.commands.holiday.outcomes.haunted_house.random.randint")
+    @patch("ironforgedbot.commands.holiday.outcomes.haunted_house.random.choice")
     async def test_process_door_choice_monster_no_ingots(
-        self, mock_randint, mock_member_service_class, mock_db
+        self, mock_choice, mock_randint, mock_member_service_class, mock_db
     ):
-        """Test monster door when user has no ingots."""
+        """Test monster door when user has no ingots - should get lucky escape message."""
         mock_randint.return_value = 2000
+        mock_choice.return_value = "Lucky escape message"
 
         handler = create_test_trick_or_treat_handler()
 
@@ -214,12 +225,18 @@ class TestHauntedHouseOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock _adjust_ingots to return None (user has no ingots)
         handler._adjust_ingots = AsyncMock(return_value=None)
 
+        outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
+        labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
+
         await haunted_house.process_door_choice(
-            handler, self.interaction, DoorOutcome.MONSTER
+            handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
         # Verify ingots adjustment was attempted
         handler._adjust_ingots.assert_called_once()
+
+        # Verify lucky escape message was chosen
+        mock_choice.assert_called()
 
         # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
