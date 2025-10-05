@@ -40,7 +40,7 @@ class DoubleOrNothingView(discord.ui.View):
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
-    @discord.ui.button(label="🎲 Double or nothing!", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="🎲 Double it!!", style=discord.ButtonStyle.green)
     async def double_or_nothing_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -125,9 +125,7 @@ async def result_double_or_nothing(
 
     if ingot_total is None:
         await interaction.followup.send(
-            embed=handler._build_no_ingots_error_response(
-                interaction.user.display_name
-            )
+            embed=handler._build_no_ingots_error_response(interaction.user.display_name)
         )
         return
 
