@@ -193,9 +193,9 @@ class StealTargetView(discord.ui.View):
 async def result_steal(
     handler: "TrickOrTreatHandler", interaction: discord.Interaction
 ) -> None:
-    """Offer the player a chance to steal ingots from Leadership members.
+    """Offer the player a chance to steal ingots from guild members.
 
-    Presents up to 3 random Leadership members as targets, plus a walk away option.
+    Presents up to 3 random members as targets, plus a walk away option.
     Success rate scales based on target's ingot balance (0%-45% chance). On failure,
     lose 3/4 of the attempted amount (rounded up to nearest 100). Walking away has no consequences.
 
@@ -205,19 +205,19 @@ async def result_steal(
     """
     assert interaction.guild
 
-    leadership_members = [
+    member_targets = [
         member
         for member in interaction.guild.members
-        if any(role.name == ROLE.LEADERSHIP for role in member.roles)
+        if any(role.name == ROLE.MEMBER for role in member.roles)
         and member.id != interaction.user.id
     ]
 
-    if not leadership_members:
+    if not member_targets:
         embed = handler._build_embed(handler.STEAL_NO_TARGETS)
         return await interaction.followup.send(embed=embed)
 
-    num_targets = min(3, len(leadership_members))
-    targets = random.sample(leadership_members, num_targets)
+    num_targets = min(3, len(member_targets))
+    targets = random.sample(member_targets, num_targets)
 
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
     penalty = _calculate_steal_penalty(quantity)
