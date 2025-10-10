@@ -16,6 +16,13 @@ BACKROOMS_TREASURE_MAX = HIGH_INGOT_MAX
 BACKROOMS_MONSTER_MIN = HIGH_INGOT_MIN
 BACKROOMS_MONSTER_MAX = HIGH_INGOT_MAX
 
+# Quiz Master configuration
+QUIZ_CORRECT_MIN = 3_000
+QUIZ_CORRECT_MAX = 7_000
+QUIZ_WRONG_PENALTY_MIN = 200
+QUIZ_WRONG_PENALTY_MAX = 800
+QUIZ_PENALTY_CHANCE = 0.5
+
 # History limits
 POSITIVE_MESSAGE_HISTORY_LIMIT = 15
 NEGATIVE_MESSAGE_HISTORY_LIMIT = 15
@@ -27,19 +34,20 @@ class TrickOrTreat(Enum):
     """Enum representing different trick-or-treat outcomes with their probability weights.
 
     Values represent relative weights (higher value = higher probability).
-    Total weight: 1000
+    Total weight: 1035
     """
 
     # fmt: off
-    GIF = 305                      # 30.5% (1/3.3)
-    REMOVE_INGOTS_LOW = 137        # 13.7% (1/7.3)
-    ADD_INGOTS_LOW = 128           # 12.8% (1/7.8)
-    REMOVE_INGOTS_HIGH = 119       # 11.9% (1/8.4)
-    ADD_INGOTS_HIGH = 110          # 11.0% (1/9.1)
-    DOUBLE_OR_NOTHING = 91         #  9.1% (1/11.0)
-    STEAL = 46                     #  4.6% (1/21.7)
-    BACKROOMS = 25                 #  2.5% (1/40.0)
-    JOKE = 18                      #  1.8% (1/55.6)
-    REMOVE_ALL_INGOTS_TRICK = 18   #  1.8% (1/55.6)
-    JACKPOT_INGOTS = 3             #  0.3% (1/333.3)
+    GIF = 305                      # 29.5% (1/3.4)
+    REMOVE_INGOTS_LOW = 137        # 13.2% (1/7.6)
+    ADD_INGOTS_LOW = 128           # 12.4% (1/8.1)
+    REMOVE_INGOTS_HIGH = 119       # 11.5% (1/8.7)
+    ADD_INGOTS_HIGH = 110          # 10.6% (1/9.4)
+    DOUBLE_OR_NOTHING = 91         #  8.8% (1/11.4)
+    STEAL = 46                     #  4.4% (1/22.5)
+    QUIZ_MASTER = 35               #  3.4% (1/29.6)
+    BACKROOMS = 25                 #  2.4% (1/41.4)
+    JOKE = 18                      #  1.7% (1/57.5)
+    REMOVE_ALL_INGOTS_TRICK = 18   #  1.7% (1/57.5)
+    JACKPOT_INGOTS = 3             #  0.3% (1/345.0)
     # fmt: on

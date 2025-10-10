@@ -513,6 +513,20 @@ MOCK_TRICK_OR_TREAT_DATA = """
     "JOKE": {
         "MESSAGES": ["Test joke"]
     },
+    "QUIZ_MASTER": {
+        "INTRO": "Quiz Master test intro {expires}",
+        "QUESTIONS": [
+            {
+                "question": "Test question?",
+                "options": ["A", "B", "C", "D"],
+                "correct_index": 2
+            }
+        ],
+        "CORRECT_MESSAGE": "Correct {ingot_icon}{amount:,}",
+        "WRONG_LUCKY_MESSAGE": "Wrong but lucky {correct_answer}",
+        "WRONG_PENALTY_MESSAGE": "Wrong penalty {correct_answer} {ingot_icon}{penalty:,}",
+        "EXPIRED_MESSAGE": "Expired {correct_answer}"
+    },
     "MEDIA": {
         "GIFS": [],
         "THUMBNAILS": ["http://test.com/img.png"]

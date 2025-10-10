@@ -71,6 +71,12 @@ class TrickOrTreatHandler:
         self.BACKROOMS_OPENING_DOOR: str
         self.BACKROOMS_EXPIRED_MESSAGE: str
         self.BACKROOMS_THUMBNAILS: list[str]
+        self.QUIZ_INTRO: str
+        self.QUIZ_QUESTIONS: list[dict]
+        self.QUIZ_CORRECT_MESSAGE: str
+        self.QUIZ_WRONG_LUCKY_MESSAGE: str
+        self.QUIZ_WRONG_PENALTY_MESSAGE: str
+        self.QUIZ_EXPIRED_MESSAGE: str
 
         with open("data/trick_or_treat.json") as f:
             logger.debug("Loading trick or treat data...")
@@ -110,6 +116,14 @@ class TrickOrTreatHandler:
             self.BACKROOMS_OPENING_DOOR = data["BACKROOMS"]["OPENING_DOOR"]
             self.BACKROOMS_EXPIRED_MESSAGE = data["BACKROOMS"]["EXPIRED"]
             self.BACKROOMS_THUMBNAILS = data["BACKROOMS"]["THUMBNAILS"]
+            self.QUIZ_INTRO = data["QUIZ_MASTER"]["INTRO"]
+            self.QUIZ_QUESTIONS = data["QUIZ_MASTER"]["QUESTIONS"]
+            self.QUIZ_CORRECT_MESSAGE = data["QUIZ_MASTER"]["CORRECT_MESSAGE"]
+            self.QUIZ_WRONG_LUCKY_MESSAGE = data["QUIZ_MASTER"]["WRONG_LUCKY_MESSAGE"]
+            self.QUIZ_WRONG_PENALTY_MESSAGE = data["QUIZ_MASTER"][
+                "WRONG_PENALTY_MESSAGE"
+            ]
+            self.QUIZ_EXPIRED_MESSAGE = data["QUIZ_MASTER"]["EXPIRED_MESSAGE"]
 
     def _get_random_positive_message(self) -> str:
         """Get a random positive message for when player wins ingots.
@@ -358,11 +372,12 @@ class TrickOrTreatHandler:
             ingot_changes,
             jackpot,
             joke,
+            quiz_master,
             steal,
             trick,
         )
 
-        return await backrooms.result_backrooms(self, interaction)
+        return await quiz_master.result_quiz_master(self, interaction)
         match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await jackpot.result_jackpot(self, interaction)
@@ -374,6 +389,8 @@ class TrickOrTreatHandler:
                 )
             case TrickOrTreat.STEAL:
                 return await steal.result_steal(self, interaction)
+            case TrickOrTreat.QUIZ_MASTER:
+                return await quiz_master.result_quiz_master(self, interaction)
             case TrickOrTreat.BACKROOMS:
                 return await backrooms.result_backrooms(self, interaction)
             case TrickOrTreat.REMOVE_INGOTS_HIGH:
