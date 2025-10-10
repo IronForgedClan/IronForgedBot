@@ -178,17 +178,6 @@ def get_logger_instance() -> IronForgedLogger:
     return _logger_instance
 
 
-class _LazyLogDir:
-    def __str__(self) -> str:
-        return get_logger_instance().log_dir
-
-    def __repr__(self) -> str:
-        return get_logger_instance().log_dir
-
-
-LOG_DIR = _LazyLogDir()
-
-
 def get_logger(name: str) -> logging.Logger:
     """Get a configured logger instance.
 

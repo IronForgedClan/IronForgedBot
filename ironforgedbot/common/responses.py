@@ -10,7 +10,7 @@ from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.config import CONFIG
-from ironforgedbot.logging_config import LOG_DIR
+from ironforgedbot.logging_config import get_logger_instance
 from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
 from ironforgedbot.database.database import db
@@ -140,7 +140,8 @@ def _get_latest_log_lines_file(line_count: int = 50) -> discord.File | None:
     """
     try:
         # Find all log files in the log directory
-        files = [os.path.join(str(LOG_DIR), f) for f in os.listdir(str(LOG_DIR))]
+        log_dir = get_logger_instance().log_dir
+        files = [os.path.join(log_dir, f) for f in os.listdir(log_dir)]
         files = [f for f in files if os.path.isfile(f) and f.endswith(".log")]
 
         if not files:
