@@ -52,7 +52,6 @@ class QuizMasterView(discord.ui.View):
         handler: "TrickOrTreatHandler",
         user_id: int,
         question: Dict,
-        formatted_options: list[str],
     ):
         """Initialize the quiz master view.
 
@@ -60,31 +59,34 @@ class QuizMasterView(discord.ui.View):
             handler: The TrickOrTreatHandler instance to use for processing the result.
             user_id: The Discord user ID who can interact with this button.
             question: The question dictionary containing question, options, and correct_index.
-            formatted_options: The formatted option strings with emojis replaced.
         """
         super().__init__(timeout=30.0)
         self.handler = handler
         self.user_id = user_id
         self.question = question
-        self.formatted_options = formatted_options
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
         # Create 4 buttons for the answer options
-        button_styles = [
-            discord.ButtonStyle.primary,
-            discord.ButtonStyle.primary,
-            discord.ButtonStyle.primary,
-            discord.ButtonStyle.primary,
-        ]
         button_labels = ["A", "B", "C", "D"]
 
         for i in range(4):
+            option = question["options"][i]
+            # Handle both dict format {"text": "...", "emoji": "..."} and legacy string format
+            if isinstance(option, dict):
+                text = option["text"]
+                emoji_name = option.get("emoji")
+                emoji = find_emoji(emoji_name) if emoji_name else None
+            else:
+                text = option
+                emoji = None
+
             button = discord.ui.Button(
-                label=f"{button_labels[i]}: {formatted_options[i]}"[:80],  # Discord limit
-                style=button_styles[i],
+                label=f"{button_labels[i]}: {text}"[:80],  # Discord limit
+                style=discord.ButtonStyle.primary,
                 custom_id=f"quiz_master_option_{i}",
-                row=i,
+                emoji=emoji,
+                row=0,  # All buttons on one row
             )
             button.callback = self._create_answer_callback(i)
             self.add_item(button)
@@ -119,12 +121,20 @@ class QuizMasterView(discord.ui.View):
             if self.message:
                 await self.message.delete()
 
+            # Get correct answer text
+            correct_option = self.question["options"][self.question["correct_index"]]
+            correct_answer = (
+                correct_option["text"]
+                if isinstance(correct_option, dict)
+                else correct_option
+            )
+
             await process_quiz_answer(
                 self.handler,
                 interaction,
                 option_index,
                 self.question["correct_index"],
-                self.formatted_options[self.question["correct_index"]],
+                correct_answer,
             )
 
             self.stop()
@@ -154,7 +164,10 @@ class QuizMasterView(discord.ui.View):
                 user_nickname = user_member.nickname
 
         # Format the expired message
-        correct_answer = self.formatted_options[self.question["correct_index"]]
+        correct_option = self.question["options"][self.question["correct_index"]]
+        correct_answer = (
+            correct_option["text"] if isinstance(correct_option, dict) else correct_option
+        )
         message = self.handler.QUIZ_EXPIRED_MESSAGE.format(
             correct_answer=correct_answer
         )
@@ -185,9 +198,8 @@ async def result_quiz_master(
     # Select a random question
     question = random.choice(handler.QUIZ_QUESTIONS)
 
-    # Format question and options with emojis
+    # Format question with emojis
     formatted_question = _format_with_emojis(question["question"])
-    formatted_options = [_format_with_emojis(opt) for opt in question["options"]]
 
     # Calculate expiration timestamp and format as Discord countdown
     expire_timestamp = int(time.time() + 30)
@@ -200,7 +212,7 @@ async def result_quiz_master(
     embed = handler._build_embed(intro_message)
 
     # Create and send the view with the buttons
-    view = QuizMasterView(handler, interaction.user.id, question, formatted_options)
+    view = QuizMasterView(handler, interaction.user.id, question)
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message
 

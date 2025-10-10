@@ -46,7 +46,12 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock a simple question
         test_question = {
             "question": "Test question?",
-            "options": ["A", "B", "C", "D"],
+            "options": [
+                {"text": "A"},
+                {"text": "B"},
+                {"text": "C", "emoji": "Ingot"},
+                {"text": "D"},
+            ],
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
@@ -84,7 +89,12 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock a simple question
         test_question = {
             "question": "Test question?",
-            "options": ["A", "B", "C", "D"],
+            "options": [
+                {"text": "A"},
+                {"text": "B"},
+                {"text": "C", "emoji": "Ingot"},
+                {"text": "D"},
+            ],
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
@@ -130,7 +140,12 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         # Mock a simple question
         test_question = {
             "question": "Test question?",
-            "options": ["A", "B", "C", "D"],
+            "options": [
+                {"text": "A"},
+                {"text": "B"},
+                {"text": "C", "emoji": "Ingot"},
+                {"text": "D"},
+            ],
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
@@ -175,7 +190,12 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         handler = create_test_trick_or_treat_handler()
         test_question = {
             "question": "Test?",
-            "options": ["A", "B", "C", "D"],
+            "options": [
+                {"text": "A", "emoji": "Ingot"},
+                {"text": "B"},
+                {"text": "C"},
+                {"text": "D"},
+            ],
             "correct_index": 0,
         }
 
@@ -191,7 +211,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_discord_id = AsyncMock(return_value=mock_member)
 
         view = quiz_master.QuizMasterView(
-            handler, self.test_user.id, test_question, ["A", "B", "C", "D"]
+            handler, self.test_user.id, test_question
         )
 
         # Mock message
@@ -210,12 +230,17 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         handler = create_test_trick_or_treat_handler()
         test_question = {
             "question": "Test?",
-            "options": ["A", "B", "C", "D"],
+            "options": [
+                {"text": "A", "emoji": "Ingot"},
+                {"text": "B"},
+                {"text": "C"},
+                {"text": "D"},
+            ],
             "correct_index": 0,
         }
 
         view = quiz_master.QuizMasterView(
-            handler, self.test_user.id, test_question, ["A", "B", "C", "D"]
+            handler, self.test_user.id, test_question
         )
 
         # Create a different user trying to answer

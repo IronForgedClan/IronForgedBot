@@ -518,7 +518,12 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "QUESTIONS": [
             {
                 "question": "Test question?",
-                "options": ["A", "B", "C", "D"],
+                "options": [
+                    {"text": "A", "emoji": "Ingot"},
+                    {"text": "B"},
+                    {"text": "C", "emoji": "Attack"},
+                    {"text": "D"}
+                ],
                 "correct_index": 2
             }
         ],
