@@ -11,7 +11,12 @@ class TestLatestLog(unittest.TestCase):
     @patch("os.path.getmtime")
     @patch("discord.File")
     def test_get_latest_log_file_success(
-        self, mock_discord_file, mock_getmtime, mock_isfile, mock_listdir, mock_get_logger
+        self,
+        mock_discord_file,
+        mock_getmtime,
+        mock_isfile,
+        mock_listdir,
+        mock_get_logger,
     ):
         mock_get_logger.return_value.log_dir = "./logs"
         mock_listdir.return_value = ["log1.txt", "log2.txt", "log3.txt"]
@@ -35,7 +40,12 @@ class TestLatestLog(unittest.TestCase):
     @patch("os.path.getmtime")
     @patch("discord.File")
     def test_get_latest_log_file_mixed_files_and_directories(
-        self, mock_discord_file, mock_getmtime, mock_isfile, mock_listdir, mock_get_logger
+        self,
+        mock_discord_file,
+        mock_getmtime,
+        mock_isfile,
+        mock_listdir,
+        mock_get_logger,
     ):
         mock_get_logger.return_value.log_dir = "./logs"
         mock_listdir.return_value = ["log1.txt", "subdirectory", "log2.txt", "log3.txt"]
@@ -63,7 +73,12 @@ class TestLatestLog(unittest.TestCase):
     @patch("os.path.getmtime")
     @patch("discord.File")
     def test_get_latest_log_file_single_file(
-        self, mock_discord_file, mock_getmtime, mock_isfile, mock_listdir, mock_get_logger
+        self,
+        mock_discord_file,
+        mock_getmtime,
+        mock_isfile,
+        mock_listdir,
+        mock_get_logger,
     ):
         mock_get_logger.return_value.log_dir = "./logs"
         mock_listdir.return_value = ["single_log.txt"]
@@ -152,7 +167,12 @@ class TestLatestLog(unittest.TestCase):
     @patch("os.path.getmtime")
     @patch("discord.File")
     def test_get_latest_log_file_path_construction(
-        self, mock_discord_file, mock_getmtime, mock_isfile, mock_listdir, mock_get_logger
+        self,
+        mock_discord_file,
+        mock_getmtime,
+        mock_isfile,
+        mock_listdir,
+        mock_get_logger,
     ):
         mock_get_logger.return_value.log_dir = "./logs"
         mock_listdir.return_value = ["test.log"]
