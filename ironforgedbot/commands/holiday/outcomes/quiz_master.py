@@ -1,7 +1,7 @@
 import random
 import re
 import time
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Callable, Dict, Optional
 
 import discord
 
@@ -19,6 +19,31 @@ if TYPE_CHECKING:
         TrickOrTreatHandler,
     )
 
+# Constants
+QUIZ_TIMEOUT_SECONDS = 30
+DEFAULT_USER_NICKNAME = "User"
+DISCORD_BUTTON_LABEL_MAX_LENGTH = 80
+
+
+async def _get_user_info(user_id: int) -> tuple[str, int]:
+    """Get user nickname and ingot total from database.
+
+    Args:
+        user_id: Discord user ID.
+
+    Returns:
+        Tuple of (nickname, ingot_total). Uses defaults if user not found.
+    """
+    from ironforgedbot.database.database import db
+    from ironforgedbot.services.member_service import MemberService
+
+    async with db.get_session() as session:
+        member_service = MemberService(session)
+        user_member = await member_service.get_member_by_discord_id(user_id)
+        if user_member:
+            return user_member.nickname, user_member.ingots
+        return DEFAULT_USER_NICKNAME, 0
+
 
 def _format_with_emojis(text: str) -> str:
     """Replace emoji placeholders like {Ingot} with actual Discord emojis.
@@ -30,12 +55,25 @@ def _format_with_emojis(text: str) -> str:
         Text with emoji placeholders replaced with actual emojis.
     """
 
-    def replace_emoji(match):
+    def replace_emoji(match: re.Match) -> str:
         emoji_name = match.group(1)
         emoji = find_emoji(emoji_name)
         return emoji if emoji else match.group(0)
 
     return re.sub(r"\{(\w+)\}", replace_emoji, text)
+
+
+def _get_correct_answer_text(question: Dict) -> str:
+    """Extract correct answer text from question dictionary.
+
+    Args:
+        question: Question dict with 'options' and 'correct_index'.
+
+    Returns:
+        The text of the correct answer.
+    """
+    correct_option = question["options"][question["correct_index"]]
+    return correct_option["text"]
 
 
 class QuizMasterView(discord.ui.View):
@@ -58,7 +96,7 @@ class QuizMasterView(discord.ui.View):
             user_id: The Discord user ID who can interact with this button.
             question: The question dictionary containing question, options, and correct_index.
         """
-        super().__init__(timeout=30.0)
+        super().__init__(timeout=float(QUIZ_TIMEOUT_SECONDS))
         self.handler = handler
         self.user_id = user_id
         self.question = question
@@ -74,7 +112,7 @@ class QuizMasterView(discord.ui.View):
             emoji = find_emoji(emoji_name) if emoji_name else None
 
             button = discord.ui.Button(
-                label=f"{button_labels[i]}: {text}"[:80],  # Discord limit
+                label=f"{button_labels[i]}: {text}"[:DISCORD_BUTTON_LABEL_MAX_LENGTH],
                 style=discord.ButtonStyle.primary,
                 custom_id=f"quiz_master_option_{i}",
                 emoji=emoji,
@@ -83,7 +121,9 @@ class QuizMasterView(discord.ui.View):
             button.callback = self._create_answer_callback(i)
             self.add_item(button)
 
-    def _create_answer_callback(self, option_index: int):
+    def _create_answer_callback(
+        self, option_index: int
+    ) -> Callable[[discord.Interaction], None]:
         """Create a callback function for the given option index.
 
         Args:
@@ -93,7 +133,7 @@ class QuizMasterView(discord.ui.View):
             An async callback function for the button.
         """
 
-        async def callback(interaction: discord.Interaction):
+        async def callback(interaction: discord.Interaction) -> None:
             if interaction.user.id != self.user_id:
                 await interaction.response.send_message(
                     "This isn't your quiz!", ephemeral=True
@@ -112,8 +152,7 @@ class QuizMasterView(discord.ui.View):
             if self.message:
                 await self.message.delete()
 
-            correct_option = self.question["options"][self.question["correct_index"]]
-            correct_answer = correct_option["text"]
+            correct_answer = _get_correct_answer_text(self.question)
 
             await process_quiz_answer(
                 self.handler,
@@ -134,21 +173,9 @@ class QuizMasterView(discord.ui.View):
 
         self.clear_items()
 
-        from ironforgedbot.database.database import db
-        from ironforgedbot.services.member_service import MemberService
+        user_nickname, ingot_total = await _get_user_info(self.user_id)
+        correct_answer = _get_correct_answer_text(self.question)
 
-        ingot_total = None
-        user_nickname = "User"
-
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(self.user_id)
-            if user_member:
-                ingot_total = user_member.ingots
-                user_nickname = user_member.nickname
-
-        correct_option = self.question["options"][self.question["correct_index"]]
-        correct_answer = correct_option["text"]
         message = self.handler.QUIZ_EXPIRED_MESSAGE.format(
             correct_answer=correct_answer
         )
@@ -158,8 +185,8 @@ class QuizMasterView(discord.ui.View):
         embed = self.handler._build_embed(message)
         try:
             await self.message.edit(embed=embed, view=self)
-        except discord.HTTPException:
-            pass  # Message may have been deleted
+        except discord.NotFound:
+            pass  # Message was deleted before timeout could edit it
 
 
 async def result_quiz_master(
@@ -193,17 +220,107 @@ async def result_quiz_master(
 
     formatted_question = _format_with_emojis(question["question"])
 
-    expire_timestamp = int(time.time() + 30)
+    expire_timestamp = int(time.time() + QUIZ_TIMEOUT_SECONDS)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
     intro_message = handler.QUIZ_INTRO.format(expires=expires_formatted)
     intro_message += f"\n\n**{formatted_question}**"
 
-    embed = handler._build_embed(intro_message)
+    embed = handler._build_embed(
+        intro_message,
+        ["https://oldschool.runescape.wiki/w/Quiz_Master#/media/File:Quiz_Master.png"],
+    )
 
     view = QuizMasterView(handler, interaction.user.id, question)
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message
+
+
+async def _handle_correct_answer(
+    handler: "TrickOrTreatHandler",
+    interaction: discord.Interaction,
+    user_nickname: str,
+) -> Optional[str]:
+    """Handle a correct quiz answer by awarding ingots.
+
+    Args:
+        handler: The TrickOrTreatHandler instance.
+        interaction: The Discord interaction context.
+        user_nickname: The user's nickname for the response message.
+
+    Returns:
+        The formatted success message, or None if the user has no ingots.
+    """
+    assert interaction.guild
+
+    amount = random.randrange(QUIZ_CORRECT_MIN, QUIZ_CORRECT_MAX, 1)
+    ingot_total = await handler._adjust_ingots(
+        interaction,
+        amount,
+        interaction.guild.get_member(interaction.user.id),
+        reason="Trick or treat: quiz master correct answer",
+    )
+
+    if ingot_total is None:
+        await interaction.followup.send(
+            embed=handler._build_no_ingots_error_response(interaction.user.display_name)
+        )
+        return None
+
+    message = handler.QUIZ_CORRECT_MESSAGE.format(
+        ingot_icon=handler.ingot_icon, amount=amount
+    )
+    return message + handler._get_balance_message(user_nickname, ingot_total)
+
+
+async def _handle_wrong_answer(
+    handler: "TrickOrTreatHandler",
+    interaction: discord.Interaction,
+    correct_answer: str,
+) -> str:
+    """Handle a wrong quiz answer with potential penalty.
+
+    Args:
+        handler: The TrickOrTreatHandler instance.
+        interaction: The Discord interaction context.
+        correct_answer: The text of the correct answer.
+
+    Returns:
+        The formatted response message.
+    """
+    assert interaction.guild
+
+    take_penalty = random.random() < QUIZ_PENALTY_CHANCE
+
+    if take_penalty:
+        penalty = random.randrange(QUIZ_WRONG_PENALTY_MIN, QUIZ_WRONG_PENALTY_MAX, 1)
+        ingot_total = await handler._adjust_ingots(
+            interaction,
+            -penalty,
+            interaction.guild.get_member(interaction.user.id),
+            reason="Trick or treat: quiz master wrong answer penalty",
+        )
+
+        if ingot_total is None:
+            # User has no ingots - lucky escape from penalty
+            user_nickname, ingot_total = await _get_user_info(interaction.user.id)
+            message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(
+                correct_answer=correct_answer
+            )
+            return message + handler._get_balance_message(user_nickname, ingot_total)
+
+        user_nickname, _ = await _get_user_info(interaction.user.id)
+        message = handler.QUIZ_WRONG_PENALTY_MESSAGE.format(
+            correct_answer=correct_answer,
+            ingot_icon=handler.ingot_icon,
+            penalty=penalty,
+        )
+        return message + handler._get_balance_message(user_nickname, ingot_total)
+
+    # No penalty - just show correct answer
+    user_nickname, ingot_total = await _get_user_info(interaction.user.id)
+    message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(correct_answer=correct_answer)
+    return message + handler._get_balance_message(user_nickname, ingot_total)
 
 
 async def process_quiz_answer(
@@ -223,86 +340,18 @@ async def process_quiz_answer(
         interaction: The Discord interaction context.
         chosen_index: The index of the answer the user chose.
         correct_index: The index of the correct answer.
-        correct_answer: The text of the correct answer (already formatted).
+        correct_answer: The text of the correct answer.
     """
     assert interaction.guild
 
-    from ironforgedbot.database.database import db
-    from ironforgedbot.services.member_service import MemberService
-
-    async with db.get_session() as session:
-        member_service = MemberService(session)
-        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
-        user_nickname = user_member.nickname if user_member else "User"
+    user_nickname, _ = await _get_user_info(interaction.user.id)
 
     if chosen_index == correct_index:
-        amount = random.randrange(QUIZ_CORRECT_MIN, QUIZ_CORRECT_MAX, 1)
-        ingot_total = await handler._adjust_ingots(
-            interaction,
-            amount,
-            interaction.guild.get_member(interaction.user.id),
-            reason="Trick or treat: quiz master correct answer",
-        )
-
-        if ingot_total is None:
-            await interaction.followup.send(
-                embed=handler._build_no_ingots_error_response(
-                    interaction.user.display_name
-                )
-            )
-            return
-
-        message = handler.QUIZ_CORRECT_MESSAGE.format(
-            ingot_icon=handler.ingot_icon, amount=amount
-        )
-        message += handler._get_balance_message(user_nickname, ingot_total)
+        message = await _handle_correct_answer(handler, interaction, user_nickname)
+        if message is None:
+            return  # Error response already sent
     else:
-        take_penalty = random.random() < QUIZ_PENALTY_CHANCE
-
-        if take_penalty:
-            penalty = random.randrange(
-                QUIZ_WRONG_PENALTY_MIN, QUIZ_WRONG_PENALTY_MAX, 1
-            )
-            ingot_total = await handler._adjust_ingots(
-                interaction,
-                -penalty,
-                interaction.guild.get_member(interaction.user.id),
-                reason="Trick or treat: quiz master wrong answer penalty",
-            )
-
-            if ingot_total is None:
-                async with db.get_session() as session:
-                    member_service = MemberService(session)
-                    user_member = await member_service.get_member_by_discord_id(
-                        interaction.user.id
-                    )
-                    ingot_total = 0
-                    user_nickname = user_member.nickname if user_member else "User"
-
-                message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(
-                    correct_answer=correct_answer
-                )
-                message += handler._get_balance_message(user_nickname, ingot_total)
-            else:
-                message = handler.QUIZ_WRONG_PENALTY_MESSAGE.format(
-                    correct_answer=correct_answer,
-                    ingot_icon=handler.ingot_icon,
-                    penalty=penalty,
-                )
-                message += handler._get_balance_message(user_nickname, ingot_total)
-        else:
-            async with db.get_session() as session:
-                member_service = MemberService(session)
-                user_member = await member_service.get_member_by_discord_id(
-                    interaction.user.id
-                )
-                ingot_total = user_member.ingots if user_member else 0
-                user_nickname = user_member.nickname if user_member else "User"
-
-            message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(
-                correct_answer=correct_answer
-            )
-            message += handler._get_balance_message(user_nickname, ingot_total)
+        message = await _handle_wrong_answer(handler, interaction, correct_answer)
 
     embed = handler._build_embed(message)
     await interaction.followup.send(embed=embed)
