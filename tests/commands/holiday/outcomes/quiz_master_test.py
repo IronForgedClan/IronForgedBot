@@ -67,7 +67,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
 
             # Call the process function directly with correct answer
             await quiz_master.process_quiz_answer(
-                handler, self.interaction, 2, 2, "C"  # chosen, correct, answer text
+                handler, self.interaction, 2, 2  # chosen, correct
             )
 
             # Verify ingots were added (positive amount)
@@ -126,7 +126,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
 
             # Call the process function directly with wrong answer
             await quiz_master.process_quiz_answer(
-                handler, self.interaction, 0, 2, "C"  # chosen wrong, correct, answer
+                handler, self.interaction, 0, 2  # chosen wrong, correct
             )
 
             # Verify ingots were removed (negative amount)
@@ -177,7 +177,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         ) as mock_adjust:
             # Call the process function directly with wrong answer
             await quiz_master.process_quiz_answer(
-                handler, self.interaction, 0, 2, "C"  # chosen wrong, correct, answer
+                handler, self.interaction, 0, 2  # chosen wrong, correct
             )
 
             # Verify ingots were NOT adjusted

@@ -42,19 +42,6 @@ def _format_with_emojis(text: str) -> str:
     return re.sub(r"\{(\w+)\}", replace_emoji, text)
 
 
-def _get_correct_answer_text(question: Dict) -> str:
-    """Extract correct answer text from question dictionary.
-
-    Args:
-        question: Question dict with 'options' and 'correct_index'.
-
-    Returns:
-        The text of the correct answer.
-    """
-    correct_option = question["options"][question["correct_index"]]
-    return correct_option["text"]
-
-
 class QuizMasterView(discord.ui.View):
     """Discord UI View for the quiz master button interaction.
 
@@ -131,14 +118,11 @@ class QuizMasterView(discord.ui.View):
             if self.message:
                 await self.message.delete()
 
-            correct_answer = _get_correct_answer_text(self.question)
-
             await process_quiz_answer(
                 self.handler,
                 interaction,
                 option_index,
                 self.question["correct_index"],
-                correct_answer,
             )
 
             self.stop()
@@ -153,11 +137,8 @@ class QuizMasterView(discord.ui.View):
         self.clear_items()
 
         user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
-        correct_answer = _get_correct_answer_text(self.question)
 
-        message = self.handler.QUIZ_EXPIRED_MESSAGE.format(
-            correct_answer=correct_answer
-        )
+        message = self.handler.QUIZ_EXPIRED_MESSAGE
         if ingot_total is not None:
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
@@ -260,14 +241,12 @@ async def _handle_correct_answer(
 async def _handle_wrong_answer(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
-    correct_answer: str,
 ) -> str:
     """Handle a wrong quiz answer with potential penalty.
 
     Args:
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction context.
-        correct_answer: The text of the correct answer.
 
     Returns:
         The formatted response message.
@@ -290,22 +269,18 @@ async def _handle_wrong_answer(
             user_nickname, ingot_total = await handler._get_user_info(
                 interaction.user.id
             )
-            message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(
-                correct_answer=correct_answer
-            )
+            message = handler.QUIZ_WRONG_LUCKY_MESSAGE
             return message + handler._get_balance_message(user_nickname, ingot_total)
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
         message = handler.QUIZ_WRONG_PENALTY_MESSAGE.format(
-            correct_answer=correct_answer,
             ingot_icon=handler.ingot_icon,
             penalty=penalty,
         )
         return message + handler._get_balance_message(user_nickname, ingot_total)
 
-    # No penalty - just show correct answer
     user_nickname, ingot_total = await handler._get_user_info(interaction.user.id)
-    message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(correct_answer=correct_answer)
+    message = handler.QUIZ_WRONG_LUCKY_MESSAGE
     return message + handler._get_balance_message(user_nickname, ingot_total)
 
 
@@ -314,7 +289,6 @@ async def process_quiz_answer(
     interaction: discord.Interaction,
     chosen_index: int,
     correct_index: int,
-    correct_answer: str,
 ) -> None:
     """Process the result of a quiz answer.
 
@@ -326,7 +300,6 @@ async def process_quiz_answer(
         interaction: The Discord interaction context.
         chosen_index: The index of the answer the user chose.
         correct_index: The index of the correct answer.
-        correct_answer: The text of the correct answer.
     """
     assert interaction.guild
 
@@ -339,7 +312,7 @@ async def process_quiz_answer(
         if message is None:
             return  # Error response already sent
     else:
-        message = await _handle_wrong_answer(handler, interaction, correct_answer)
+        message = await _handle_wrong_answer(handler, interaction)
 
     embed = handler._build_embed(message, [thumbnail])
     await interaction.followup.send(embed=embed)

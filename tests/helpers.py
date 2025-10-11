@@ -528,9 +528,9 @@ MOCK_TRICK_OR_TREAT_DATA = """
             }
         ],
         "CORRECT_MESSAGE": "Correct {ingot_icon}{amount:,}",
-        "WRONG_LUCKY_MESSAGE": "Wrong but lucky {correct_answer}",
-        "WRONG_PENALTY_MESSAGE": "Wrong penalty {correct_answer} {ingot_icon}{penalty:,}",
-        "EXPIRED_MESSAGE": "Expired {correct_answer}"
+        "WRONG_LUCKY_MESSAGE": "Wrong but lucky",
+        "WRONG_PENALTY_MESSAGE": "Wrong penalty {ingot_icon}{penalty:,}",
+        "EXPIRED_MESSAGE": "Expired"
     },
     "MEDIA": {
         "GIFS": [],
