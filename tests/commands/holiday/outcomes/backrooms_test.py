@@ -89,6 +89,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots to return new total
         handler._adjust_ingots = AsyncMock(return_value=4500)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
@@ -136,6 +138,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots to return new total
         handler._adjust_ingots = AsyncMock(return_value=3000)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
@@ -180,6 +184,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots (should not be called for escape)
         handler._adjust_ingots = AsyncMock()
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
@@ -224,6 +230,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots to return None (user has no ingots)
         handler._adjust_ingots = AsyncMock(return_value=None)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 0))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]

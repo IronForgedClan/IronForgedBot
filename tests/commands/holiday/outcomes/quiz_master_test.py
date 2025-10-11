@@ -56,6 +56,9 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         }
         mock_choice.return_value = test_question
 
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
+
         # Mock the interaction to simulate correct answer
         with patch.object(
             handler, "_adjust_ingots", new_callable=AsyncMock
@@ -112,6 +115,9 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         mock_member_service = mock_member_service_class.return_value
         mock_member_service.get_member_by_discord_id = AsyncMock(return_value=mock_member)
 
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
+
         # Mock the interaction to simulate wrong answer with penalty
         with patch.object(
             handler, "_adjust_ingots", new_callable=AsyncMock
@@ -162,6 +168,9 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         mock_member_service = mock_member_service_class.return_value
         mock_member_service.get_member_by_discord_id = AsyncMock(return_value=mock_member)
 
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
+
         # Mock the interaction to simulate wrong answer without penalty
         with patch.object(
             handler, "_adjust_ingots", new_callable=AsyncMock
@@ -209,6 +218,9 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
 
         mock_member_service = mock_member_service_class.return_value
         mock_member_service.get_member_by_discord_id = AsyncMock(return_value=mock_member)
+
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
 
         view = quiz_master.QuizMasterView(
             handler, self.test_user.id, test_question

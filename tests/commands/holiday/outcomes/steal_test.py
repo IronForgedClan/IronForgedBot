@@ -152,6 +152,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots directly to avoid complex database mocking
         handler._adjust_ingots = AsyncMock(return_value=3000)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 2000))
 
         # Mock random to always succeed
         with patch(
@@ -204,6 +206,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots directly to avoid complex database mocking
         handler._adjust_ingots = AsyncMock(return_value=200)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
 
         # Mock random to always fail
         with patch(

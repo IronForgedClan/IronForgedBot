@@ -61,6 +61,8 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         )
 
         handler._adjust_ingots = AsyncMock(return_value=1_500_000)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 500_000))
 
         await jackpot.result_jackpot(handler, self.interaction)
 

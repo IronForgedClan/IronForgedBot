@@ -99,6 +99,8 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots directly to avoid complex database mocking
         handler._adjust_ingots = AsyncMock(return_value=3000)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 2500))
 
         # Mock random to always win
         with patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.random.random", return_value=0.3):
@@ -133,6 +135,8 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock _adjust_ingots directly to avoid complex database mocking
         handler._adjust_ingots = AsyncMock(return_value=500)
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
 
         # Mock random to always lose
         with patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.random.random", return_value=0.7):
@@ -164,6 +168,9 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_discord_id = AsyncMock(
             return_value=test_member
         )
+
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 2000))
 
         view = DoubleOrNothingView(handler, self.test_user.id, 500)
         view.message = AsyncMock()
@@ -202,6 +209,9 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_discord_id = AsyncMock(
             return_value=test_member
         )
+
+        # Mock _get_user_info to return nickname and ingots
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 2000))
 
         view = DoubleOrNothingView(handler, self.test_user.id, 500)
         view.message = AsyncMock()
