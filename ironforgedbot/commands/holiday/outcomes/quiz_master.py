@@ -161,7 +161,12 @@ class QuizMasterView(discord.ui.View):
         if ingot_total is not None:
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
-        embed = self.handler._build_embed(message)
+        embed = self.handler._build_embed(
+            message,
+            [
+                "https://oldschool.runescape.wiki/images/thumb/Skull_%28item%29_detail.png/1024px-Skull_%28item%29_detail.png"
+            ],
+        )
         try:
             await self.message.edit(embed=embed, view=self)
         except discord.NotFound:
@@ -207,7 +212,7 @@ async def result_quiz_master(
 
     embed = handler._build_embed(
         intro_message,
-        ["https://oldschool.runescape.wiki/w/Quiz_Master#/media/File:Quiz_Master.png"],
+        ["https://oldschool.runescape.wiki/images/Quiz_Master.png"],
     )
 
     view = QuizMasterView(handler, interaction.user.id, question)
@@ -327,12 +332,14 @@ async def process_quiz_answer(
 
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
+    thumbnail = "https://oldschool.runescape.wiki/images/thumb/Cabbage_detail.png/1280px-Cabbage_detail.png"
     if chosen_index == correct_index:
         message = await _handle_correct_answer(handler, interaction, user_nickname)
+        thumbnail = "https://oldschool.runescape.wiki/images/Mystery_box_detail.png"
         if message is None:
             return  # Error response already sent
     else:
         message = await _handle_wrong_answer(handler, interaction, correct_answer)
 
-    embed = handler._build_embed(message)
+    embed = handler._build_embed(message, [thumbnail])
     await interaction.followup.send(embed=embed)
