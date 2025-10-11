@@ -117,17 +117,9 @@ class DoubleOrNothingView(discord.ui.View):
         if self.message:
             await self.message.delete()
 
-        # Get member nickname from database
-        from ironforgedbot.database.database import db
-        from ironforgedbot.services.member_service import MemberService
-
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(
-                interaction.user.id
-            )
-            user_nickname = user_member.nickname if user_member else "User"
-            ingot_total = user_member.ingots if user_member else 0
+        user_nickname, ingot_total = await self.handler._get_user_info(
+            interaction.user.id
+        )
 
         # Send keep winnings message
         message = self.handler.DOUBLE_OR_NOTHING_KEEP.format(
@@ -157,18 +149,7 @@ class DoubleOrNothingView(discord.ui.View):
         self.clear_items()
 
         # Get current ingot total and nickname from database
-        from ironforgedbot.database.database import db
-        from ironforgedbot.services.member_service import MemberService
-
-        ingot_total = None
-        user_nickname = "User"
-
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(self.user_id)
-            if user_member:
-                ingot_total = user_member.ingots
-                user_nickname = user_member.nickname
+        user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
 
         # Update the message with timeout notification
         message = self.handler.DOUBLE_OR_NOTHING_EXPIRED.format(
@@ -215,13 +196,7 @@ async def result_double_or_nothing(
         return
 
     # Get member nickname from database
-    from ironforgedbot.database.database import db
-    from ironforgedbot.services.member_service import MemberService
-
-    async with db.get_session() as session:
-        member_service = MemberService(session)
-        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
-        user_nickname = user_member.nickname if user_member else "User"
+    user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     # Calculate expiration timestamp and format as Discord countdown
     expire_timestamp = int(time.time() + 30)
@@ -266,13 +241,7 @@ async def process_double_or_nothing(
     won = random.random() < 0.5
 
     # Get member nickname from database
-    from ironforgedbot.database.database import db
-    from ironforgedbot.services.member_service import MemberService
-
-    async with db.get_session() as session:
-        member_service = MemberService(session)
-        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
-        user_nickname = user_member.nickname if user_member else "User"
+    user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     if won:
         # Award additional ingots (they already have the original amount)

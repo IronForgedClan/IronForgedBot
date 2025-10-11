@@ -233,6 +233,22 @@ class TrickOrTreatHandler:
         if len(history_list) > limit:
             history_list.pop(0)
 
+    async def _get_user_info(self, user_id: int) -> tuple[str, int]:
+        """Get user nickname and ingot total from database.
+
+        Args:
+            user_id: Discord user ID.
+
+        Returns:
+            Tuple of (nickname, ingot_total). Uses defaults if user not found.
+        """
+        async with db.get_session() as session:
+            member_service = MemberService(session)
+            user_member = await member_service.get_member_by_discord_id(user_id)
+            if user_member:
+                return user_member.nickname, user_member.ingots
+            return "User", 0
+
     async def _adjust_ingots(
         self,
         interaction: discord.Interaction,

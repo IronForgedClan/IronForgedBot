@@ -174,10 +174,7 @@ async def process_door_choice(
     """
     assert interaction.guild
 
-    async with db.get_session() as session:
-        member_service = MemberService(session)
-        user_member = await member_service.get_member_by_discord_id(interaction.user.id)
-        user_nickname = user_member.nickname if user_member else "User"
+    user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     match outcome:
         case DoorOutcome.TREASURE:

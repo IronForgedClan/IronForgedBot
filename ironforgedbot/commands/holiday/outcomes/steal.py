@@ -295,12 +295,7 @@ async def process_steal(
 
     if success:
         # Get thief's nickname for target's changelog
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            thief_member = await member_service.get_member_by_discord_id(
-                interaction.user.id
-            )
-            thief_nickname = thief_member.nickname if thief_member else "User"
+        thief_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         await handler._adjust_ingots(
             interaction,
@@ -321,12 +316,7 @@ async def process_steal(
             return
 
         # Get member nickname from database
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(
-                interaction.user.id
-            )
-            user_nickname = user_member.nickname if user_member else "User"
+        user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         message = handler.STEAL_SUCCESS.format(
             ingot_icon=handler.ingot_icon,
@@ -351,12 +341,7 @@ async def process_steal(
             return
 
         # Get member nickname from database
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            user_member = await member_service.get_member_by_discord_id(
-                interaction.user.id
-            )
-            user_nickname = user_member.nickname if user_member else "User"
+        user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         message = handler.STEAL_FAILURE.format(
             ingot_icon=handler.ingot_icon,

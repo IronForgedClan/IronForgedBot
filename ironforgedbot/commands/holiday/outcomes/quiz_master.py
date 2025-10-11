@@ -21,28 +21,7 @@ if TYPE_CHECKING:
 
 # Constants
 QUIZ_TIMEOUT_SECONDS = 30
-DEFAULT_USER_NICKNAME = "User"
 DISCORD_BUTTON_LABEL_MAX_LENGTH = 80
-
-
-async def _get_user_info(user_id: int) -> tuple[str, int]:
-    """Get user nickname and ingot total from database.
-
-    Args:
-        user_id: Discord user ID.
-
-    Returns:
-        Tuple of (nickname, ingot_total). Uses defaults if user not found.
-    """
-    from ironforgedbot.database.database import db
-    from ironforgedbot.services.member_service import MemberService
-
-    async with db.get_session() as session:
-        member_service = MemberService(session)
-        user_member = await member_service.get_member_by_discord_id(user_id)
-        if user_member:
-            return user_member.nickname, user_member.ingots
-        return DEFAULT_USER_NICKNAME, 0
 
 
 def _format_with_emojis(text: str) -> str:
@@ -173,7 +152,7 @@ class QuizMasterView(discord.ui.View):
 
         self.clear_items()
 
-        user_nickname, ingot_total = await _get_user_info(self.user_id)
+        user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
         correct_answer = _get_correct_answer_text(self.question)
 
         message = self.handler.QUIZ_EXPIRED_MESSAGE.format(
@@ -303,13 +282,15 @@ async def _handle_wrong_answer(
 
         if ingot_total is None:
             # User has no ingots - lucky escape from penalty
-            user_nickname, ingot_total = await _get_user_info(interaction.user.id)
+            user_nickname, ingot_total = await handler._get_user_info(
+                interaction.user.id
+            )
             message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(
                 correct_answer=correct_answer
             )
             return message + handler._get_balance_message(user_nickname, ingot_total)
 
-        user_nickname, _ = await _get_user_info(interaction.user.id)
+        user_nickname, _ = await handler._get_user_info(interaction.user.id)
         message = handler.QUIZ_WRONG_PENALTY_MESSAGE.format(
             correct_answer=correct_answer,
             ingot_icon=handler.ingot_icon,
@@ -318,7 +299,7 @@ async def _handle_wrong_answer(
         return message + handler._get_balance_message(user_nickname, ingot_total)
 
     # No penalty - just show correct answer
-    user_nickname, ingot_total = await _get_user_info(interaction.user.id)
+    user_nickname, ingot_total = await handler._get_user_info(interaction.user.id)
     message = handler.QUIZ_WRONG_LUCKY_MESSAGE.format(correct_answer=correct_answer)
     return message + handler._get_balance_message(user_nickname, ingot_total)
 
@@ -344,7 +325,7 @@ async def process_quiz_answer(
     """
     assert interaction.guild
 
-    user_nickname, _ = await _get_user_info(interaction.user.id)
+    user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     if chosen_index == correct_index:
         message = await _handle_correct_answer(handler, interaction, user_nickname)
