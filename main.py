@@ -1,9 +1,13 @@
-from ironforgedbot.logging_config import (
-    get_logger_instance,
-)  # pyright: ignore  # isort:skip
+from dotenv import load_dotenv
+
+# Load environment variables before initializing logger
+load_dotenv()
+
+from ironforgedbot.logging_config import get_logger_instance
 
 # Initialize logging configuration
 get_logger_instance()
+
 import logging
 import os
 import sys

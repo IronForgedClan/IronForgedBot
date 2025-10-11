@@ -135,6 +135,12 @@ Now you can modify the example `.env` file with your values.
 | DB_USER                         | The name of the user account the bot will use to access the database.                 | Any value. Eg: test_user                                             |
 | DB_PASS                         | The password of the account the bot will use to access the database.                  | Generate a secure password.                                          |
 | DB_NAME                         | The name of the database the bot will attempt to connect to.                          | Any value. Eg: bot_test                                              |
+| LOG_LEVEL                       | File handler log level. Default: `INFO`.                                              | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`                      |
+| LOG_CONSOLE_LEVEL               | Console log level (overrides environment-based default).                              | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`                      |
+| LOG_DIR                         | Directory for log files. Default: `./logs`.                                           | Any valid directory path.                                            |
+| LOG_FILE_MAX_BYTES              | Max size of each log file before rotation. Default: `10000000` (10MB).                | Integer (bytes).                                                     |
+| LOG_FILE_BACKUP_COUNT           | Number of backup log files to keep. Default: `10`.                                    | Integer.                                                             |
+| LOG_JSON_FORMAT                 | Use JSON formatting for logs. Default: `false`.                                       | `true`, `false`                                                      |
 
 ### Migrations
 
@@ -211,10 +217,12 @@ view its source command and try running that instead.
   Reverts the most recent database migration.
 
 - `make update-deps`\
-  Updates all project dependencies to their latest versions and rebuilds the container.
+  Updates all project dependencies to their latest versions and rebuilds the
+  container.
 
 - `make clean`\
-  Stops containers, removes project containers and images, and prunes unused Docker resources to free up disk space.
+  Stops containers, removes project containers and images, and prunes unused
+  Docker resources to free up disk space.
 
 ## Tooling
 
@@ -248,11 +256,26 @@ pip install -r requirements.txt
 
 ## Logs
 
-The default log level of the application is `INFO`. This can be changed in
-`ironforgedbot/logging_config.py`.
+Logs output to both the console and rotating files inside the `logs` directory.
 
-Logs will output to the console, as well as to rotating files inside the `logs`
-directory.
+### Configuration
+
+Log behavior can be configured via environment variables in `.env`:
+
+- **File Logs**: Controlled by `LOG_LEVEL` (default: `INFO`)
+- **Console Logs**: Controlled by `LOG_CONSOLE_LEVEL` or automatically set based
+  on `ENVIRONMENT`:
+  - `dev` -> `DEBUG`
+  - `staging` -> `INFO`
+  - `prod` -> `WARNING`
+
+See the [Keys](#keys) section for all available log configuration options.
+
+### Log Files
+
+Log files are named `bot_{ENVIRONMENT}.log` and stored in the directory
+specified by `LOG_DIR` (default: `./logs`). Files rotate when they reach
+`LOG_FILE_MAX_BYTES` in size, keeping `LOG_FILE_BACKUP_COUNT` backups.
 
 ## Testing
 

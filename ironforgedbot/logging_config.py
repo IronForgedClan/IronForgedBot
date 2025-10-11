@@ -69,14 +69,10 @@ class IronForgedLogger:
         )
         self.environment = environment or os.getenv("ENVIRONMENT", "prod")
         self.use_json_format = os.getenv("LOG_JSON_FORMAT", "false").lower() == "true"
-
-        # Configure file handler
         self.file_handler = self._create_file_handler()
 
-        # Configure logging
         self.configure_logging()
 
-        # Register cleanup handler
         event_emitter.on("shutdown", self.cleanup, priority=100)
 
     def _create_file_handler(self) -> ConcurrentRotatingFileHandler:
@@ -84,7 +80,6 @@ class IronForgedLogger:
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        # Different log files for different environments
         log_filename = f"{self.log_dir}/bot_{self.environment}.log"
 
         return ConcurrentRotatingFileHandler(
@@ -97,7 +92,6 @@ class IronForgedLogger:
 
     def configure_logging(self) -> None:
         """Configure the logging system."""
-        # Configure root logger
         logging.basicConfig(
             level=self.log_level,
             encoding="utf-8",
@@ -105,31 +99,25 @@ class IronForgedLogger:
             datefmt=self.DEFAULT_DATE_FORMAT,
         )
 
-        # Create formatter
         if self.use_json_format and self.environment == "prod":
             formatter = JSONFormatter()
         else:
             formatter = logging.Formatter(self.DEFAULT_FORMAT, self.DEFAULT_DATE_FORMAT)
 
-        # Configure console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(self._get_console_log_level())
         console_handler.setFormatter(formatter)
 
-        # Configure file handler
         self.file_handler.setLevel(self.log_level)
         self.file_handler.setFormatter(formatter)
 
-        # Configure root logger
         root_logger = logging.getLogger()
         root_logger.handlers.clear()
         root_logger.addHandler(console_handler)
         root_logger.addHandler(self.file_handler)
 
-        # Configure third-party loggers
         self._configure_third_party_loggers()
 
-        # Log initial configuration
         logger = logging.getLogger(__name__)
         logger.info(
             f"Logging configured for {self.environment} environment at level {logging.getLevelName(self.log_level)}"
@@ -142,12 +130,11 @@ class IronForgedLogger:
         if console_level:
             return getattr(logging, console_level.upper())
 
-        # Default based on environment
         if self.environment == "dev":
             return logging.DEBUG
         elif self.environment == "staging":
             return logging.INFO
-        else:  # prod
+        else:
             return logging.WARNING
 
     def _configure_third_party_loggers(self) -> None:
@@ -189,19 +176,6 @@ def get_logger_instance() -> IronForgedLogger:
     if _logger_instance is None:
         _logger_instance = IronForgedLogger()
     return _logger_instance
-
-
-# Create a lazy LOG_DIR that will initialize the logger when first accessed
-class _LazyLogDir:
-    def __str__(self) -> str:
-        return get_logger_instance().log_dir
-
-    def __repr__(self) -> str:
-        return get_logger_instance().log_dir
-
-
-# Export LOG_DIR for backwards compatibility
-LOG_DIR = _LazyLogDir()
 
 
 def get_logger(name: str) -> logging.Logger:
