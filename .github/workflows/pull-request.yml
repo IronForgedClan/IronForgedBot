@@ -18,6 +18,5 @@ jobs:
         uses: ./.github/workflows/unit-test.yml
 
     formatting:
-        needs: unit-test
         uses: ./.github/workflows/formatting.yml
 
