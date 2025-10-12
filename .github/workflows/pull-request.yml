@@ -9,10 +9,6 @@ on:
             - synchronize
             - reopened
 
-defaults:
-    run:
-        shell: bash
-
 jobs:
     unit-test:
         uses: ./.github/workflows/unit-test.yml
