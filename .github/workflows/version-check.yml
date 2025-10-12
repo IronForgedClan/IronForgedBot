@@ -31,7 +31,6 @@ jobs:
           echo "Main version: ${MAIN_VERSION}"
 
       - name: Compare versions
-        continue-on-error: true
         run: |
           # Parse versions
           IFS='.' read -r PR_MAJOR PR_MINOR PR_PATCH <<< "$PR_VERSION"

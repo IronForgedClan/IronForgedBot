@@ -17,5 +17,6 @@ jobs:
         uses: ./.github/workflows/formatting.yml
 
     version-check:
+        continue-on-error: true
         uses: ./.github/workflows/version-check.yml
 
