@@ -19,18 +19,12 @@ jobs:
     unit-test:
         uses: ./.github/workflows/unit-test.yml
 
-    tag-release:
-        needs: unit-test
-        permissions:
-            contents: write
-        uses: ./.github/workflows/tag-release.yml
-
     build-and-publish:
         needs: unit-test
         uses: ./.github/workflows/publish.yml
 
     staging-deploy:
-        needs: [tag-release, build-and-publish]
+        needs: build-and-publish
         permissions:
             id-token: write
             contents: read
