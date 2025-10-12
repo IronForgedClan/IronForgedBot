@@ -50,59 +50,52 @@ jobs:
                   echo "Main: ${MAIN_MAJOR}.${MAIN_MINOR}.${MAIN_PATCH}"
                   echo "PR:   ${PR_MAJOR}.${PR_MINOR}.${PR_PATCH}"
 
-                  HAS_WARNING=false
+                  HAS_ERROR=false
 
-                  # Check if version is unchanged
+                  # Check if version is unchanged (warning only, don't fail)
                   if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
                     MSG="⚠️ Version hasn't been incremented (still ${MAIN_VERSION}). Consider bumping the version in this PR."
                     echo "::warning::${MSG}"
                     echo "${MSG}" >> $GITHUB_STEP_SUMMARY
-                    HAS_WARNING=true
+                    echo "✅ Version check completed with warning" >> $GITHUB_STEP_SUMMARY
+                    exit 0
                   fi
 
-                  # Check if version went backwards
+                  # Check if version went backwards (error - fail workflow)
                   if [ "$PR_MAJOR" -lt "$MAIN_MAJOR" ] || \
                      ([ "$PR_MAJOR" -eq "$MAIN_MAJOR" ] && [ "$PR_MINOR" -lt "$MAIN_MINOR" ]) || \
                      ([ "$PR_MAJOR" -eq "$MAIN_MAJOR" ] && [ "$PR_MINOR" -eq "$MAIN_MINOR" ] && [ "$PR_PATCH" -lt "$MAIN_PATCH" ]); then
-                    MSG="⚠️ Version decreased from ${MAIN_VERSION} to ${PR_VERSION}. This is unusual."
-                    echo "::warning::${MSG}"
+                    MSG="❌ Version decreased from ${MAIN_VERSION} to ${PR_VERSION}. This is not allowed."
+                    echo "::error::${MSG}"
                     echo "${MSG}" >> $GITHUB_STEP_SUMMARY
-                    HAS_WARNING=true
-                  fi
-
-                  # Calculate increment and check if it's more than 1
-                  if [ "$HAS_WARNING" = false ]; then
-                    if [ "$PR_MAJOR" -ne "$MAIN_MAJOR" ]; then
-                      MAJOR_DIFF=$((PR_MAJOR - MAIN_MAJOR))
-                      if [ "$MAJOR_DIFF" -gt 1 ]; then
-                        MSG="⚠️ Major version incremented by ${MAJOR_DIFF} (${MAIN_VERSION} → ${PR_VERSION}). This release may include multiple PRs."
-                        echo "::warning::${MSG}"
-                        echo "${MSG}" >> $GITHUB_STEP_SUMMARY
-                        HAS_WARNING=true
-                      fi
-                    elif [ "$PR_MINOR" -ne "$MAIN_MINOR" ]; then
-                      MINOR_DIFF=$((PR_MINOR - MAIN_MINOR))
-                      if [ "$MINOR_DIFF" -gt 1 ]; then
-                        MSG="⚠️ Minor version incremented by ${MINOR_DIFF} (${MAIN_VERSION} → ${PR_VERSION}). This release may include multiple PRs."
-                        echo "::warning::${MSG}"
-                        echo "${MSG}" >> $GITHUB_STEP_SUMMARY
-                        HAS_WARNING=true
-                      fi
-                    elif [ "$PR_PATCH" -ne "$MAIN_PATCH" ]; then
-                      PATCH_DIFF=$((PR_PATCH - MAIN_PATCH))
-                      if [ "$PATCH_DIFF" -gt 1 ]; then
-                        MSG="⚠️ Patch version incremented by ${PATCH_DIFF} (${MAIN_VERSION} → ${PR_VERSION}). This release may include multiple PRs."
-                        echo "::warning::${MSG}"
-                        echo "${MSG}" >> $GITHUB_STEP_SUMMARY
-                        HAS_WARNING=true
-                      fi
-                    fi
-                  fi
-
-                  # Exit with error if warnings found (will show amber indicator)
-                  if [ "$HAS_WARNING" = true ]; then
-                    echo "Version check found warnings"
                     exit 1
+                  fi
+
+                  # Calculate increment and check if it's more than 1 (error - fail workflow)
+                  if [ "$PR_MAJOR" -ne "$MAIN_MAJOR" ]; then
+                    MAJOR_DIFF=$((PR_MAJOR - MAIN_MAJOR))
+                    if [ "$MAJOR_DIFF" -gt 1 ]; then
+                      MSG="❌ Major version incremented by ${MAJOR_DIFF} (${MAIN_VERSION} → ${PR_VERSION}). Maximum increment is 1."
+                      echo "::error::${MSG}"
+                      echo "${MSG}" >> $GITHUB_STEP_SUMMARY
+                      exit 1
+                    fi
+                  elif [ "$PR_MINOR" -ne "$MAIN_MINOR" ]; then
+                    MINOR_DIFF=$((PR_MINOR - MAIN_MINOR))
+                    if [ "$MINOR_DIFF" -gt 1 ]; then
+                      MSG="❌ Minor version incremented by ${MINOR_DIFF} (${MAIN_VERSION} → ${PR_VERSION}). Maximum increment is 1."
+                      echo "::error::${MSG}"
+                      echo "${MSG}" >> $GITHUB_STEP_SUMMARY
+                      exit 1
+                    fi
+                  elif [ "$PR_PATCH" -ne "$MAIN_PATCH" ]; then
+                    PATCH_DIFF=$((PR_PATCH - MAIN_PATCH))
+                    if [ "$PATCH_DIFF" -gt 1 ]; then
+                      MSG="❌ Patch version incremented by ${PATCH_DIFF} (${MAIN_VERSION} → ${PR_VERSION}). Maximum increment is 1."
+                      echo "::error::${MSG}"
+                      echo "${MSG}" >> $GITHUB_STEP_SUMMARY
+                      exit 1
+                    fi
                   fi
 
                   echo "✅ Version check passed: ${MAIN_VERSION} → ${PR_VERSION}"
