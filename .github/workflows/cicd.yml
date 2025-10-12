@@ -33,12 +33,12 @@ jobs:
             environment: staging
         secrets: inherit
 
-    promote-latest:
+    release:
         needs: staging-deploy
-        uses: ./.github/workflows/promote-latest.yml
+        uses: ./.github/workflows/release.yml
 
     prod-deploy:
-        needs: promote-latest
+        needs: release
         permissions:
             id-token: write
             contents: read

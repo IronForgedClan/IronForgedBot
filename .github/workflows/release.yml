@@ -1,4 +1,4 @@
-name: Promote staging image to latest
+name: Release to production
 
 on:
   workflow_call:
