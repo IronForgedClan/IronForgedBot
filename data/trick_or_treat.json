@@ -147,6 +147,325 @@
             "**Why did the skeleton go to the party alone?**\nHe had no body to go with! 🩻"
         ]
     },
+    "QUIZ_MASTER": {
+        "INTRO": "🤔 **It's your lucky day!**\n\n**WELCOME** to the **GREATEST QUIZ QUESTION** in the entirety of Discord!\n\n⏳ This encounter expires {expires}.",
+        "QUESTIONS": [
+            {
+                "question": "What is the maximum number of {Hitpoints} hitpoints a player can have?",
+                "options": [
+                    {"text": "99", "emoji": "Hitpoints"},
+                    {"text": "100"},
+                    {"text": "120"},
+                    {"text": "99 + equipment bonuses"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "Which skill uses {Runecraft} runes?",
+                "options": [
+                    {"text": "Magic", "emoji": "Magic"},
+                    {"text": "Prayer", "emoji": "Prayer"},
+                    {"text": "Construction", "emoji": "Construction"},
+                    {"text": "All of the above"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "How many inventory slots does a player have?",
+                "options": [
+                    {"text": "24"},
+                    {"text": "26"},
+                    {"text": "28"},
+                    {"text": "30"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What is the {Attack} combat level requirement to enter the Warriors' Guild?",
+                "options": [
+                    {"text": "50", "emoji": "Attack"},
+                    {"text": "60", "emoji": "Attack"},
+                    {"text": "70", "emoji": "Attack"},
+                    {"text": "100 combined Attack and Strength"}
+                ],
+                "correct_index": 3
+            },
+            {
+                "question": "Which boss drops the {Twisted_bow} Twisted bow?",
+                "options": [
+                    {"text": "Zulrah"},
+                    {"text": "The Nightmare"},
+                    {"text": "Chambers of Xeric", "emoji": "Twisted_bow"},
+                    {"text": "Theatre of Blood"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What level does {Hitpoints} Hitpoints start at for a new account?",
+                "options": [
+                    {"text": "1"},
+                    {"text": "5"},
+                    {"text": "10", "emoji": "Hitpoints"},
+                    {"text": "15"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "How many {Prayer} prayer points does a player with 99 Prayer have?",
+                "options": [
+                    {"text": "99", "emoji": "Prayer"},
+                    {"text": "100"},
+                    {"text": "120"},
+                    {"text": "990"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "Which God Wars Dungeon boss represents Armadyl?",
+                "options": [
+                    {"text": "General Graardor"},
+                    {"text": "Kree'arra"},
+                    {"text": "Commander Zilyana"},
+                    {"text": "K'ril Tsutsaroth"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "What {Slayer} Slayer level is required to kill Abyssal demons?",
+                "options": [
+                    {"text": "75", "emoji": "Slayer"},
+                    {"text": "80"},
+                    {"text": "85", "emoji": "Slayer"},
+                    {"text": "90"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "Which quest is required to access the ancient spellbook?",
+                "options": [
+                    {"text": "Lunar Diplomacy"},
+                    {"text": "Desert Treasure", "emoji": "Magic"},
+                    {"text": "Dream Mentor"},
+                    {"text": "The Grand Tree"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "What is the maximum {Agility} level required for any shortcut in the game?",
+                "options": [
+                    {"text": "80", "emoji": "Agility"},
+                    {"text": "85"},
+                    {"text": "90", "emoji": "Agility"},
+                    {"text": "99"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "How many quest points are required to wear the Quest Point Cape?",
+                "options": [
+                    {"text": "All available quest points"},
+                    {"text": "250"},
+                    {"text": "200"},
+                    {"text": "300"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "Which {Woodcutting} tree requires 90 Woodcutting to cut?",
+                "options": [
+                    {"text": "Magic tree", "emoji": "Woodcutting"},
+                    {"text": "Yew tree"},
+                    {"text": "Redwood tree", "emoji": "Woodcutting"},
+                    {"text": "Elder tree"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What combat level is the TzTok-Jad in the Fight Caves?",
+                "options": [
+                    {"text": "380"},
+                    {"text": "702"},
+                    {"text": "550"},
+                    {"text": "999"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "Which {Farming} level is required to plant magic trees?",
+                "options": [
+                    {"text": "68", "emoji": "Farming"},
+                    {"text": "75", "emoji": "Farming"},
+                    {"text": "80"},
+                    {"text": "85"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "What is the name of the strongest {Dragon} dragon in the game (excluding quest-only bosses)?",
+                "options": [
+                    {"text": "King Black Dragon"},
+                    {"text": "Vorkath"},
+                    {"text": "Adamant dragon"},
+                    {"text": "Rune dragon"}
+                ],
+                "correct_index": 3
+            },
+            {
+                "question": "How many {Runecraft} runes can a player craft from one pure essence with no pouches?",
+                "options": [
+                    {"text": "Depends on Runecraft level"},
+                    {"text": "Always 1"},
+                    {"text": "Up to 10"},
+                    {"text": "Unlimited"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "What {Construction} Construction level is needed to build a gilded altar?",
+                "options": [
+                    {"text": "65"},
+                    {"text": "70"},
+                    {"text": "75", "emoji": "Construction"},
+                    {"text": "80"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "Which minigame awards Void Knight equipment?",
+                "options": [
+                    {"text": "Barbarian Assault"},
+                    {"text": "Pest Control"},
+                    {"text": "Castle Wars"},
+                    {"text": "Soul Wars"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "What {Mining} level is required to mine runite ore?",
+                "options": [
+                    {"text": "70"},
+                    {"text": "75"},
+                    {"text": "80"},
+                    {"text": "85", "emoji": "Mining"}
+                ],
+                "correct_index": 3
+            },
+            {
+                "question": "Which skill is NOT a members-only skill?",
+                "options": [
+                    {"text": "Fletching"},
+                    {"text": "Herblore"},
+                    {"text": "Firemaking"},
+                    {"text": "Agility"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "How many {Crafting} air runes are needed to cast High Level Alchemy?",
+                "options": [
+                    {"text": "1"},
+                    {"text": "3"},
+                    {"text": "5", "emoji": "Crafting"},
+                    {"text": "10"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What {Cooking} level is required to cook sharks without burning them (with cooking gauntlets)?",
+                "options": [
+                    {"text": "80"},
+                    {"text": "89", "emoji": "Cooking"},
+                    {"text": "94"},
+                    {"text": "99"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "Which dragon is fought during Dragon Slayer I?",
+                "options": [
+                    {"text": "King Black Dragon"},
+                    {"text": "Elvarg"},
+                    {"text": "Vorkath"},
+                    {"text": "Galvek"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "What {Thieving} level is required to pickpocket Master Farmers?",
+                "options": [
+                    {"text": "28"},
+                    {"text": "38", "emoji": "Thieving"},
+                    {"text": "48"},
+                    {"text": "58"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "How many {Smithing} bars are needed to make a platebody?",
+                "options": [
+                    {"text": "3"},
+                    {"text": "4"},
+                    {"text": "5", "emoji": "Smithing"},
+                    {"text": "10"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What {Hunter} level is required to catch red chinchompas?",
+                "options": [
+                    {"text": "53"},
+                    {"text": "63", "emoji": "Hunter"},
+                    {"text": "73"},
+                    {"text": "80"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "Which city is the Grand Exchange located in?",
+                "options": [
+                    {"text": "Falador"},
+                    {"text": "Lumbridge"},
+                    {"text": "Varrock"},
+                    {"text": "Ardougne"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What {Fishing} level is required to catch anglerfish?",
+                "options": [
+                    {"text": "72"},
+                    {"text": "75"},
+                    {"text": "80"},
+                    {"text": "82", "emoji": "Fishing"}
+                ],
+                "correct_index": 3
+            },
+            {
+                "question": "Which {Fletching} arrows have the highest ranged strength bonus?",
+                "options": [
+                    {"text": "Rune arrows"},
+                    {"text": "Amethyst arrows"},
+                    {"text": "Dragon arrows", "emoji": "Fletching"},
+                    {"text": "Adamant arrows"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What is the maximum total skill level a player can achieve?",
+                "options": [
+                    {"text": "2178"},
+                    {"text": "2277"},
+                    {"text": "2376"},
+                    {"text": "2475"}
+                ],
+                "correct_index": 2
+            }
+        ],
+        "CORRECT_MESSAGE": "✅ **DING DING DING!!**\n\nThat's **RIGHT!** Good for you!\n\nInside the box you find **{ingot_icon}{amount:,}** ingots. Excellent!",
+        "WRONG_LUCKY_MESSAGE": "❌ **No, no, no...**\n\nThat's completely **WRONG!**",
+        "WRONG_PENALTY_MESSAGE": "❌ **BZZZZZZZ!**\n\n**WRONG!**\n\n**{ingot_icon}{penalty:,}** ingots slip from your grasp as you retreat in embarrassment.",
+        "EXPIRED_MESSAGE": "⏱️ **Maybe later**\n\nYou neither gain nor lose ingots, but you've wasted everyone's time."
+    },
     "MEDIA": {
         "GIFS": [
             "https://giphy.com/embed/jbJYmyIdelAJh9LQPs",
