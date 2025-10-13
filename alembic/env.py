@@ -2,6 +2,7 @@ import os
 import asyncio
 from logging.config import fileConfig
 
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.engine import Connection
@@ -15,10 +16,21 @@ fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 
-# override URL if env var set
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# Load environment variables from .env file
+load_dotenv()
+
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    db_user = os.getenv("DB_USER")
+    db_pass = os.getenv("DB_PASS")
+    db_name = os.getenv("DB_NAME")
+    db_host = os.getenv("DB_HOST", "localhost")
+
+    if db_user and db_pass and db_name:
+        database_url = f"mysql+aiomysql://{db_user}:{db_pass}@{db_host}/{db_name}"
+
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
 
 
 def run_migrations_offline():
