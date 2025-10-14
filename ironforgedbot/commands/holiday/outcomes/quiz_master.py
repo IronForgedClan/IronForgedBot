@@ -198,18 +198,15 @@ async def result_quiz_master(
     )
 
     audience_confidence = random.randint(35, 90)
-    question_text = (
-        f"**contestant**: {interaction.user.display_name} "
-        f"**audience confidence**: {audience_confidence}%\n"
-        f"### {formatted_question}"
-    )
-    question_embed = handler._build_embed(
-        question_text,
-    )
+    question_text = f"### {formatted_question}"
+
     question_embed = build_response_embed(
-        "",
+        "Question",
         question_text,
         discord.Colour.blurple(),
+    )
+    question_embed.set_footer(
+        text=f"contestant: {interaction.user.display_name}   •   audience confidence: {audience_confidence}%"
     )
 
     view = QuizMasterView(handler, interaction.user.id, question)
