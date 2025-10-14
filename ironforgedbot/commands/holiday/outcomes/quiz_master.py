@@ -9,6 +9,7 @@ from ironforgedbot.commands.holiday.trick_or_treat_constants import (
     QUIZ_CORRECT_MAX,
     QUIZ_CORRECT_MIN,
     QUIZ_PENALTY_CHANCE,
+    QUIZ_QUESTION_HISTORY_LIMIT,
     QUIZ_WRONG_PENALTY_MAX,
     QUIZ_WRONG_PENALTY_MIN,
 )
@@ -40,6 +41,33 @@ def _format_with_emojis(text: str) -> str:
         return emoji if emoji else match.group(0)
 
     return re.sub(r"\{(\w+)\}", replace_emoji, text)
+
+
+def _get_random_quiz_question(handler: "TrickOrTreatHandler") -> Dict:
+    """Get a random quiz question that hasn't been used recently.
+
+    Args:
+        handler: The TrickOrTreatHandler instance to access questions and history.
+
+    Returns:
+        A question dictionary containing question text, options, and correct_index.
+    """
+    available = [
+        q
+        for q in handler.QUIZ_QUESTIONS
+        if q["question"] not in handler.quiz_question_history
+    ]
+
+    # If all questions have been used recently, reset history
+    if not available:
+        handler.quiz_question_history.clear()
+        available = handler.QUIZ_QUESTIONS
+
+    chosen = random.choice(available)
+    handler._add_to_history(
+        chosen["question"], handler.quiz_question_history, QUIZ_QUESTION_HISTORY_LIMIT
+    )
+    return chosen
 
 
 class QuizMasterView(discord.ui.View):
@@ -167,7 +195,7 @@ async def result_quiz_master(
     """
     assert interaction.guild
 
-    original_question = random.choice(handler.QUIZ_QUESTIONS)
+    original_question = _get_random_quiz_question(handler)
 
     correct_option = original_question["options"][original_question["correct_index"]]
 

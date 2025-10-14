@@ -37,6 +37,7 @@ class TrickOrTreatHandler:
         self.thumbnail_history: List[str] = []
         self.positive_message_history: List[str] = []
         self.negative_message_history: List[str] = []
+        self.quiz_question_history: List[str] = []
 
         # Data loaded from JSON
         self.GIFS: List[str]
