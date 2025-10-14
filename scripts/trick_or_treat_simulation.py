@@ -9,7 +9,7 @@ import random
 
 from tabulate import tabulate
 
-from ironforgedbot.commands.holiday.trick_or_treat_constants import TrickOrTreat
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import TrickOrTreat
 
 
 attempts = 20_000

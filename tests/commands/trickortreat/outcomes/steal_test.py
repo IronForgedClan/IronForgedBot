@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.commands.holiday.outcomes import steal
-from ironforgedbot.commands.holiday.outcomes.steal import (
+from ironforgedbot.commands.trickortreat.outcomes import steal
+from ironforgedbot.commands.trickortreat.outcomes.steal import (
     StealTargetView,
     _calculate_steal_penalty,
     _get_steal_success_rate,
@@ -29,8 +29,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
     async def test_result_steal_creates_view_with_buttons(
         self, mock_steal_member_service, mock_steal_db
     ):
@@ -63,8 +63,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIn("view", call_kwargs)
         self.assertIsNotNone(call_kwargs["view"])
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
     async def test_result_steal_no_targets(
         self, mock_member_service_class, mock_db
     ):
@@ -80,8 +80,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("no targets", embed.description.lower())
 
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
     async def test_result_steal_user_insufficient_ingots(
         self, mock_steal_member_service, mock_steal_db
     ):
@@ -112,8 +112,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("need", embed.description.lower())
 
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
     async def test_process_steal_success(self, mock_member_service_class, mock_db):
         """Test successful steal (25% chance)."""
         handler = create_test_trick_or_treat_handler()
@@ -157,7 +157,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock random to always succeed
         with patch(
-            "ironforgedbot.commands.holiday.outcomes.steal.random.random",
+            "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
             return_value=0.2,
         ):
             await steal.process_steal(handler, self.interaction, 1000, target_member)
@@ -166,8 +166,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(handler._adjust_ingots.call_count, 2)
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
     async def test_process_steal_failure(self, mock_member_service_class, mock_db):
         """Test failed steal (75% chance, user loses penalty)."""
         handler = create_test_trick_or_treat_handler()
@@ -211,7 +211,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock random to always fail
         with patch(
-            "ironforgedbot.commands.holiday.outcomes.steal.random.random",
+            "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
             return_value=0.7,
         ):
             await steal.process_steal(handler, self.interaction, 1000, target_member)
@@ -222,8 +222,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[1], -800)  # 3/4 of 1000 = 750, rounds up to nearest 100 = 800
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.steal.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
     async def test_process_steal_target_has_zero_ingots(
         self, mock_steal_member_service, mock_steal_db
     ):
@@ -248,7 +248,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         # Mock random to succeed
         with patch(
-            "ironforgedbot.commands.holiday.outcomes.steal.random.random",
+            "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
             return_value=0.2,
         ):
             await steal.process_steal(handler, self.interaction, 1000, target_member)

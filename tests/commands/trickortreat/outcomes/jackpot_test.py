@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from ironforgedbot.commands.holiday.outcomes import jackpot
+from ironforgedbot.commands.trickortreat.outcomes import jackpot
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
@@ -23,7 +23,7 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-    @patch("ironforgedbot.commands.holiday.outcomes.jackpot.STATE")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
     async def test_result_jackpot_already_claimed(self, mock_state):
         """Test that jackpot shows consolation message when already claimed."""
         handler = create_test_trick_or_treat_handler()
@@ -38,7 +38,7 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
-    @patch("ironforgedbot.commands.holiday.outcomes.jackpot.STATE")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
     async def test_result_jackpot_success(self, mock_state, mock_member_service_class, mock_db):
         """Test successful jackpot claim."""
         handler = create_test_trick_or_treat_handler()

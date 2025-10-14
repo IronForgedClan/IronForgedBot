@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.holiday.trick_or_treat_handler import get_handler
+from ironforgedbot.commands.trickortreat.trick_or_treat_handler import get_handler
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG

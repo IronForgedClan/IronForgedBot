@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Callable, Dict, Optional
 
 import discord
 
-from ironforgedbot.commands.holiday.trick_or_treat_constants import (
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     QUIZ_CORRECT_MAX,
     QUIZ_CORRECT_MIN,
     QUIZ_PENALTY_CHANCE,
@@ -17,7 +17,7 @@ from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed
 
 if TYPE_CHECKING:
-    from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
         TrickOrTreatHandler,
     )
 

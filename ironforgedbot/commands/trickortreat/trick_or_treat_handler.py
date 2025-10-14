@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import discord
 
-from ironforgedbot.commands.holiday.trick_or_treat_constants import (
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     NEGATIVE_MESSAGE_HISTORY_LIMIT,
     POSITIVE_MESSAGE_HISTORY_LIMIT,
     THUMBNAIL_HISTORY_LIMIT,
@@ -382,7 +382,7 @@ class TrickOrTreatHandler:
             interaction: The Discord interaction context.
         """
         # Import outcome modules here to avoid circular imports
-        from ironforgedbot.commands.holiday.outcomes import (
+        from ironforgedbot.commands.trickortreat.outcomes import (
             backrooms,
             double_or_nothing,
             gif,

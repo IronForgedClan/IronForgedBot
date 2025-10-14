@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 
 if TYPE_CHECKING:
-    from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
         TrickOrTreatHandler,
     )
 

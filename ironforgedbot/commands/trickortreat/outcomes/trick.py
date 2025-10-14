@@ -9,7 +9,7 @@ from ironforgedbot.database.database import db
 from ironforgedbot.services.member_service import MemberService
 
 if TYPE_CHECKING:
-    from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
         TrickOrTreatHandler,
     )
 

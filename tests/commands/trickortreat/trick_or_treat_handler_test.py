@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 
-from ironforgedbot.commands.holiday.trick_or_treat_constants import TrickOrTreat
-from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import TrickOrTreat
+from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
 from ironforgedbot.common.ranks import RANK
@@ -44,9 +44,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(handler.negative_message_history, [])
         self.assertEqual(handler.weights, expected_weights)
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
     async def test_adjust_ingots_add_success(
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
@@ -71,9 +71,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             self.test_user.id, 500, None, "Trick or treat: win"
         )
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
     async def test_adjust_ingots_remove_success(
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
@@ -106,10 +106,10 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, 500)
         mock_ingot_service.try_remove_ingots.assert_called_once()
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.send_error_response")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.send_error_response")
     async def test_adjust_ingots_member_has_zero_ingots(
         self,
         mock_send_error,
@@ -138,9 +138,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
     async def test_adjust_ingots_caps_removal_at_balance(
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
@@ -176,9 +176,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result, 0)
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.IngotService")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
     async def test_handle_ingot_result_positive(
         self, mock_member_service_class, mock_ingot_service_class, mock_db
     ):
@@ -210,8 +210,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         embed = call_args.kwargs["embed"]
         self.assertIsNotNone(embed)
 
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.db")
-    @patch("ironforgedbot.commands.holiday.trick_or_treat_handler.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
     async def test_handle_ingot_result_no_ingots(
         self, mock_member_service_class, mock_db
     ):

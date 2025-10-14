@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import discord
 
-from ironforgedbot.commands.holiday.trick_or_treat_constants import (
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     HIGH_INGOT_MAX,
     HIGH_INGOT_MIN,
     LOW_INGOT_MAX,
@@ -13,7 +13,7 @@ from ironforgedbot.commands.holiday.trick_or_treat_constants import (
 )
 
 if TYPE_CHECKING:
-    from ironforgedbot.commands.holiday.trick_or_treat_handler import (
+    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
         TrickOrTreatHandler,
     )
 

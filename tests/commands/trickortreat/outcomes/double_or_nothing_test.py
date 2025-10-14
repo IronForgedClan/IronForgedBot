@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from ironforgedbot.commands.holiday.outcomes import double_or_nothing
-from ironforgedbot.commands.holiday.outcomes.double_or_nothing import (
+from ironforgedbot.commands.trickortreat.outcomes import double_or_nothing
+from ironforgedbot.commands.trickortreat.outcomes.double_or_nothing import (
     DoubleOrNothingView,
 )
 from ironforgedbot.common.ranks import RANK
@@ -28,7 +28,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-    @patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.STATE")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.STATE")
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     async def test_result_double_or_nothing_creates_offer(
@@ -103,7 +103,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         handler._get_user_info = AsyncMock(return_value=("TestUser", 2500))
 
         # Mock random to always win
-        with patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.random.random", return_value=0.3):
+        with patch("ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.random.random", return_value=0.3):
             await double_or_nothing.process_double_or_nothing(handler, self.interaction, 500)
 
         # Should add the amount (winning)
@@ -139,7 +139,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
 
         # Mock random to always lose
-        with patch("ironforgedbot.commands.holiday.outcomes.double_or_nothing.random.random", return_value=0.7):
+        with patch("ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.random.random", return_value=0.7):
             await double_or_nothing.process_double_or_nothing(handler, self.interaction, 500)
 
         # Should remove the amount (losing)

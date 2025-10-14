@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import AsyncMock
 
-from ironforgedbot.commands.holiday.outcomes import ingot_changes
-from ironforgedbot.commands.holiday.trick_or_treat_constants import (
+from ironforgedbot.commands.trickortreat.outcomes import ingot_changes
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     HIGH_INGOT_MAX,
     HIGH_INGOT_MIN,
     LOW_INGOT_MAX,

@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from ironforgedbot.commands.holiday.outcomes import trick
+from ironforgedbot.commands.trickortreat.outcomes import trick
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
@@ -23,8 +23,8 @@ class TestTrickOutcome(unittest.IsolatedAsyncioTestCase):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
-    @patch("ironforgedbot.commands.holiday.outcomes.trick.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.trick.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.trick.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.trick.MemberService")
     async def test_trick_remove_all_with_ingots(
         self, mock_member_service_class, mock_db
     ):
@@ -53,8 +53,8 @@ class TestTrickOutcome(unittest.IsolatedAsyncioTestCase):
         # Should show the fake removal message
         self.assertIn("5", embed.description)
 
-    @patch("ironforgedbot.commands.holiday.outcomes.trick.db")
-    @patch("ironforgedbot.commands.holiday.outcomes.trick.MemberService")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.trick.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.trick.MemberService")
     async def test_trick_remove_all_no_ingots(
         self, mock_member_service_class, mock_db
     ):

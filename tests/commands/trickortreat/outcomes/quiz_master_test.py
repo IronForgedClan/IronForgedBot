@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.commands.holiday.outcomes import quiz_master
-from ironforgedbot.commands.holiday.trick_or_treat_constants import (
+from ironforgedbot.commands.trickortreat.outcomes import quiz_master
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     QUIZ_CORRECT_MAX,
     QUIZ_CORRECT_MIN,
     QUIZ_PENALTY_CHANCE,
@@ -51,7 +51,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         # Verify view has 4 buttons
         self.assertEqual(len(view.children), 4)
 
-    @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.choice")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.choice")
     async def test_correct_answer_awards_ingots(self, mock_choice):
         """Test that correct answer awards high ingots."""
         handler = create_test_trick_or_treat_handler()
@@ -93,9 +93,9 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
-    @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.choice")
-    @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.random")
-    @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.randrange")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.choice")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.random")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.randrange")
     async def test_wrong_answer_with_penalty(
         self, mock_randrange, mock_random, mock_choice, mock_member_service_class, mock_db
     ):
@@ -150,8 +150,8 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
-    @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.choice")
-    @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.random")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.choice")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.random")
     async def test_wrong_answer_no_penalty(self, mock_random, mock_choice, mock_member_service_class, mock_db):
         """Test that wrong answer can result in no penalty."""
         handler = create_test_trick_or_treat_handler()

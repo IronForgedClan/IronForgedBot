@@ -2,7 +2,7 @@
 
 import unittest
 
-from ironforgedbot.commands.holiday.outcomes import gif
+from ironforgedbot.commands.trickortreat.outcomes import gif
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
