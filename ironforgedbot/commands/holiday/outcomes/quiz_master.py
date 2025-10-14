@@ -70,8 +70,6 @@ class QuizMasterView(discord.ui.View):
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
-        button_labels = ["A", "B", "C", "D"]
-
         for i in range(4):
             option = question["options"][i]
             text = option["text"]
@@ -80,7 +78,7 @@ class QuizMasterView(discord.ui.View):
             emoji = emoji or None
 
             button = discord.ui.Button(
-                label=f"{button_labels[i]}: {text}"[:DISCORD_BUTTON_LABEL_MAX_LENGTH],
+                label=text[:DISCORD_BUTTON_LABEL_MAX_LENGTH],
                 style=discord.ButtonStyle.primary,
                 custom_id=f"quiz_master_option_{i}",
                 emoji=emoji,
