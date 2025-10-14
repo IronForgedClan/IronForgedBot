@@ -148,30 +148,30 @@
         ]
     },
     "QUIZ_MASTER": {
-        "INTRO": "🤔 **It's your lucky day!**\n\n**WELCOME** to the **GREATEST QUIZ QUESTION** in the entirety of Discord!\n\n⏳ This encounter expires {expires}.",
+        "INTRO": "🤔 **It's your lucky day!**\n\n**WELCOME** to the **GREATEST QUIZ SHOW** on Discord!\n\n⏳ This encounter expires {expires}.",
         "QUESTIONS": [
             {
-                "question": "What is the maximum number of {Hitpoints} hitpoints a player can have?",
+                "question": "What is the maximum number of __{Hitpoints} hitpoints__ a player can have?",
                 "options": [
                     {"text": "99", "emoji": "Hitpoints"},
-                    {"text": "100"},
-                    {"text": "120"},
-                    {"text": "99 + equipment bonuses"}
+                    {"text": "100", "emoji": "Hitpoints"},
+                    {"text": "120", "emoji": "Hitpoints"},
+                    {"text": "125", "emoji": "Hitpoints"}
                 ],
                 "correct_index": 0
             },
             {
-                "question": "Which skill uses {Runecraft} runes?",
+                "question": "Which skill allows players to __create__ runes?",
                 "options": [
                     {"text": "Magic", "emoji": "Magic"},
                     {"text": "Prayer", "emoji": "Prayer"},
                     {"text": "Construction", "emoji": "Construction"},
-                    {"text": "All of the above"}
+                    {"text": "Runecraft", "emoji": "Runecraft"}
                 ],
-                "correct_index": 0
+                "correct_index": 3
             },
             {
-                "question": "How many inventory slots does a player have?",
+                "question": "How many __inventory slots__ does a player have?",
                 "options": [
                     {"text": "24"},
                     {"text": "26"},
@@ -181,157 +181,157 @@
                 "correct_index": 2
             },
             {
-                "question": "What is the {Attack} combat level requirement to enter the Warriors' Guild?",
+                "question": "You have __{Attack} 92 Attack__, what other level do you need to enter the __Warriors' Guild__?",
                 "options": [
-                    {"text": "50", "emoji": "Attack"},
-                    {"text": "60", "emoji": "Attack"},
-                    {"text": "70", "emoji": "Attack"},
-                    {"text": "100 combined Attack and Strength"}
-                ],
-                "correct_index": 3
-            },
-            {
-                "question": "Which boss drops the {Twisted_bow} Twisted bow?",
-                "options": [
-                    {"text": "Zulrah"},
-                    {"text": "The Nightmare"},
-                    {"text": "Chambers of Xeric", "emoji": "Twisted_bow"},
-                    {"text": "Theatre of Blood"}
+                    {"text": "68 Defence", "emoji": "Defence"},
+                    {"text": "78 Hitpoints", "emoji": "Hitpoints"},
+                    {"text": "48 Strength", "emoji": "Strength"},
+                    {"text": "88 Magic", "emoji": "Magic"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "What level does {Hitpoints} Hitpoints start at for a new account?",
+                "question": "Which boss drops the __Elysian sigil__?",
                 "options": [
-                    {"text": "1"},
-                    {"text": "5"},
+                    {"text": "Corporeal Beast", "emoji": "Corporeal_Beast"},
+                    {"text": "The Nightmare", "emoji": "Nightmare"},
+                    {"text": "Phantom Muspah", "emoji": "Phantom_Muspah"},
+                    {"text": "Corrupted Gauntlet", "emoji": "Corrupted_Gauntlet"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "Fresh off tutorial island, how many __{Hitpoints} Hitpoints__ do you have?",
+                "options": [
+                    {"text": "1", "emoji": "Hitpoints"},
+                    {"text": "3", "emoji": "Hitpoints"},
                     {"text": "10", "emoji": "Hitpoints"},
-                    {"text": "15"}
+                    {"text": "11", "emoji": "Hitpoints"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "How many {Prayer} prayer points does a player with 99 Prayer have?",
+                "question": "How many __{Prayer} Prayer__ points does a player with 99 Prayer have?",
                 "options": [
                     {"text": "99", "emoji": "Prayer"},
-                    {"text": "100"},
-                    {"text": "120"},
-                    {"text": "990"}
+                    {"text": "100", "emoji": "Prayer"},
+                    {"text": "120", "emoji": "Prayer"},
+                    {"text": "111", "emoji": "Prayer"}
                 ],
                 "correct_index": 0
             },
             {
-                "question": "Which God Wars Dungeon boss represents Armadyl?",
+                "question": "Which God Wars Dungeon boss represents __Armadyl__?",
                 "options": [
-                    {"text": "General Graardor"},
-                    {"text": "Kree'arra"},
-                    {"text": "Commander Zilyana"},
-                    {"text": "K'ril Tsutsaroth"}
+                    {"text": "General Graardor", "emoji": "General_Graardor"},
+                    {"text": "Kree'arra", "emoji": "Kree_Arra"},
+                    {"text": "Commander Zilyana", "emoji": "Commander_Zilyana"},
+                    {"text": "K'ril Tsutsaroth", "emoji": "Kril_Tsutsaroth"}
                 ],
                 "correct_index": 1
             },
             {
-                "question": "What {Slayer} Slayer level is required to kill Abyssal demons?",
+                "question": "What __{Slayer} Slayer__ level is required to kill Abyssal demons?",
                 "options": [
                     {"text": "75", "emoji": "Slayer"},
-                    {"text": "80"},
+                    {"text": "80", "emoji": "Slayer"},
                     {"text": "85", "emoji": "Slayer"},
-                    {"text": "90"}
+                    {"text": "90", "emoji": "Slayer"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "Which quest is required to access the ancient spellbook?",
+                "question": "Which quest is required to access the __ancient spellbook__?",
                 "options": [
-                    {"text": "Lunar Diplomacy"},
+                    {"text": "Lunar Diplomacy", "emoji": "Magic"},
                     {"text": "Desert Treasure", "emoji": "Magic"},
-                    {"text": "Dream Mentor"},
-                    {"text": "The Grand Tree"}
+                    {"text": "Dream Mentor", "emoji": "Magic"},
+                    {"text": "The Grand Tree", "emoji": "Magic"}
                 ],
                 "correct_index": 1
             },
             {
-                "question": "What is the maximum {Agility} level required for any shortcut in the game?",
+                "question": "What is the maximum __{Agility} Agility__ level required for any shortcut in the game?",
                 "options": [
                     {"text": "80", "emoji": "Agility"},
-                    {"text": "85"},
-                    {"text": "90", "emoji": "Agility"},
-                    {"text": "99"}
+                    {"text": "85", "emoji": "Agility"},
+                    {"text": "96", "emoji": "Agility"},
+                    {"text": "99", "emoji": "Agility"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "How many quest points are required to wear the Quest Point Cape?",
+                "question": "How many quest points are required to wear the __Quest Point Cape__?",
                 "options": [
-                    {"text": "All available quest points"},
-                    {"text": "250"},
-                    {"text": "200"},
-                    {"text": "300"}
+                    {"text": "173"},
+                    {"text": "172"},
+                    {"text": "171"},
+                    {"text": "174"}
                 ],
                 "correct_index": 0
             },
             {
-                "question": "Which {Woodcutting} tree requires 90 Woodcutting to cut?",
+                "question": "Which tree requires __90 {Woodcutting} Woodcutting__ to cut?",
                 "options": [
                     {"text": "Magic tree", "emoji": "Woodcutting"},
-                    {"text": "Yew tree"},
+                    {"text": "Yew tree", "emoji": "Woodcutting"},
                     {"text": "Redwood tree", "emoji": "Woodcutting"},
-                    {"text": "Elder tree"}
+                    {"text": "Sulliuscep", "emoji": "Woodcutting"}
                 ],
                 "correct_index": 2
             },
             {
                 "question": "What combat level is the TzTok-Jad in the Fight Caves?",
                 "options": [
-                    {"text": "380"},
-                    {"text": "702"},
-                    {"text": "550"},
-                    {"text": "999"}
+                    {"text": "602", "emoji": "Tztok_Jad"},
+                    {"text": "702", "emoji": "Tztok_Jad"},
+                    {"text": "802", "emoji": "Tztok_Jad"},
+                    {"text": "502", "emoji": "Tztok_Jad"}
                 ],
                 "correct_index": 1
             },
             {
-                "question": "Which {Farming} level is required to plant magic trees?",
+                "question": "Which __{Farming} Farming__ level is required to plant magic trees?",
                 "options": [
                     {"text": "68", "emoji": "Farming"},
                     {"text": "75", "emoji": "Farming"},
-                    {"text": "80"},
-                    {"text": "85"}
+                    {"text": "80", "emoji": "Farming"},
+                    {"text": "85", "emoji": "Farming"}
                 ],
                 "correct_index": 1
             },
             {
-                "question": "What is the name of the strongest {Dragon} dragon in the game (excluding quest-only bosses)?",
+                "question": "Which __dragon__ has the most {Hitpoints} Hitpoints?",
                 "options": [
-                    {"text": "King Black Dragon"},
+                    {"text": "The Hueycoatl"},
                     {"text": "Vorkath"},
-                    {"text": "Adamant dragon"},
-                    {"text": "Rune dragon"}
-                ],
-                "correct_index": 3
-            },
-            {
-                "question": "How many {Runecraft} runes can a player craft from one pure essence with no pouches?",
-                "options": [
-                    {"text": "Depends on Runecraft level"},
-                    {"text": "Always 1"},
-                    {"text": "Up to 10"},
-                    {"text": "Unlimited"}
+                    {"text": "Alchemical Hydra"},
+                    {"text": "Galvek"}
                 ],
                 "correct_index": 0
             },
             {
-                "question": "What {Construction} Construction level is needed to build a gilded altar?",
+                "question": "At __{Runecraft} 71__, without any other bonuses, how many __air runes__ can be created from __one pure essence__?",
                 "options": [
-                    {"text": "65"},
-                    {"text": "70"},
+                    {"text": "8"},
+                    {"text": "9"},
+                    {"text": "7"},
+                    {"text": "6"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "What __{Construction} Construction__ level is needed to build a gilded altar?",
+                "options": [
+                    {"text": "65", "emoji": "Construction"},
+                    {"text": "70", "emoji": "Construction"},
                     {"text": "75", "emoji": "Construction"},
-                    {"text": "80"}
+                    {"text": "80", "emoji": "Construction"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "Which minigame awards Void Knight equipment?",
+                "question": "Which minigame awards __Void Knight__ equipment?",
                 "options": [
                     {"text": "Barbarian Assault"},
                     {"text": "Pest Control"},
@@ -341,47 +341,47 @@
                 "correct_index": 1
             },
             {
-                "question": "What {Mining} level is required to mine runite ore?",
+                "question": "What __{Mining} Mining__ level is required to mine __runite ore__?",
                 "options": [
-                    {"text": "70"},
-                    {"text": "75"},
-                    {"text": "80"},
+                    {"text": "70", "emoji": "Mining"},
+                    {"text": "75", "emoji": "Mining"},
+                    {"text": "80", "emoji": "Mining"},
                     {"text": "85", "emoji": "Mining"}
                 ],
                 "correct_index": 3
             },
             {
-                "question": "Which skill is NOT a members-only skill?",
+                "question": "Which skill is NOT a __members only skill__?",
                 "options": [
-                    {"text": "Fletching"},
-                    {"text": "Herblore"},
-                    {"text": "Firemaking"},
-                    {"text": "Agility"}
+                    {"text": "Fletching", "emoji": "Fletching"},
+                    {"text": "Herblore", "emoji": "Herblore"},
+                    {"text": "Firemaking", "emoji": "Firemaking"},
+                    {"text": "Agility", "emoji": "Firemaking"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "How many {Crafting} air runes are needed to cast High Level Alchemy?",
+                "question": "How many __fire runes__ are needed to cast __{Magic} Low Level Alchemy__?",
                 "options": [
-                    {"text": "1"},
-                    {"text": "3"},
-                    {"text": "5", "emoji": "Crafting"},
-                    {"text": "10"}
+                    {"text": "1", "emoji": "Magic"},
+                    {"text": "2", "emoji": "Magic"},
+                    {"text": "3", "emoji": "Magic"},
+                    {"text": "4", "emoji": "Magic"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "What {Cooking} level is required to cook sharks without burning them (with cooking gauntlets)?",
+                "question": "What __{Cooking} Cooking__ level is required to cook sharks?",
                 "options": [
-                    {"text": "80"},
-                    {"text": "89", "emoji": "Cooking"},
-                    {"text": "94"},
-                    {"text": "99"}
+                    {"text": "80", "emoji": "Cooking"},
+                    {"text": "83", "emoji": "Cooking"},
+                    {"text": "85", "emoji": "Cooking"},
+                    {"text": "75", "emoji": "Cooking"}
                 ],
-                "correct_index": 2
+                "correct_index": 0
             },
             {
-                "question": "Which dragon is fought during Dragon Slayer I?",
+                "question": "Which dragon is fought during __Dragon Slayer I__?",
                 "options": [
                     {"text": "King Black Dragon"},
                     {"text": "Elvarg"},
@@ -391,37 +391,37 @@
                 "correct_index": 1
             },
             {
-                "question": "What {Thieving} level is required to pickpocket Master Farmers?",
+                "question": "What __{Thieving} Theiving__ level is required to pickpocket __Master Farmers__?",
                 "options": [
-                    {"text": "28"},
+                    {"text": "28", "emoji": "Thieving"},
                     {"text": "38", "emoji": "Thieving"},
-                    {"text": "48"},
-                    {"text": "58"}
+                    {"text": "48", "emoji": "Thieving"},
+                    {"text": "58", "emoji": "Thieving"}
                 ],
                 "correct_index": 1
             },
             {
-                "question": "How many {Smithing} bars are needed to make a platebody?",
+                "question": "{Smithing} How many runite bars are needed to make a __platebody__?",
                 "options": [
-                    {"text": "3"},
-                    {"text": "4"},
-                    {"text": "5", "emoji": "Smithing"},
-                    {"text": "10"}
+                    {"text": "3", "emoji": "Rune"},
+                    {"text": "4", "emoji": "Rune"},
+                    {"text": "5", "emoji": "Rune"},
+                    {"text": "6", "emoji": "Rune"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "What {Hunter} level is required to catch red chinchompas?",
+                "question": "What __{Hunter} Hunter__ level is required to catch __red chinchompas__?",
                 "options": [
-                    {"text": "53"},
+                    {"text": "53", "emoji": "Hunter"},
                     {"text": "63", "emoji": "Hunter"},
-                    {"text": "73"},
-                    {"text": "80"}
+                    {"text": "73", "emoji": "Hunter"},
+                    {"text": "80", "emoji": "Hunter"}
                 ],
                 "correct_index": 1
             },
             {
-                "question": "Which city is the Grand Exchange located in?",
+                "question": "Which city is the __Grand Exchange__ located in?",
                 "options": [
                     {"text": "Falador"},
                     {"text": "Lumbridge"},
@@ -431,32 +431,82 @@
                 "correct_index": 2
             },
             {
-                "question": "What {Fishing} level is required to catch anglerfish?",
+                "question": "What __{Fishing} Fishing__ level is required to catch __anglerfish__?",
                 "options": [
-                    {"text": "72"},
-                    {"text": "75"},
-                    {"text": "80"},
+                    {"text": "72", "emoji": "Fishing"},
+                    {"text": "75", "emoji": "Fishing"},
+                    {"text": "80", "emoji": "Fishing"},
                     {"text": "82", "emoji": "Fishing"}
                 ],
                 "correct_index": 3
             },
             {
-                "question": "Which {Fletching} arrows have the highest ranged strength bonus?",
+                "question": "{Fletching} Which arrows have the __highest ranged strength__ bonus?",
                 "options": [
-                    {"text": "Rune arrows"},
+                    {"text": "Broad bolts"},
                     {"text": "Amethyst arrows"},
-                    {"text": "Dragon arrows", "emoji": "Fletching"},
-                    {"text": "Adamant arrows"}
+                    {"text": "Dragon arrows"},
+                    {"text": "Dragon javelin"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "What is the maximum total skill level a player can achieve?",
+                "question": "In __October 2025__ what is the maximum __total level__ a player can achieve?",
                 "options": [
                     {"text": "2178"},
                     {"text": "2277"},
                     {"text": "2376"},
                     {"text": "2475"}
+                ],
+                "correct_index": 1
+            },
+            {
+                "question": "When __⚓ Sailing__ releases, what will be the new maximum __total level__ a player can achieve?",
+                "options": [
+                    {"text": "2378"},
+                    {"text": "2377"},
+                    {"text": "2376"},
+                    {"text": "2375"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "How many __chompy kills__ do you need to obtain the __Ogre Dragon Archer__ hat?",
+                "options": [
+                    {"text": "550"},
+                    {"text": "2250"},
+                    {"text": "4000"},
+                    {"text": "17700"}
+                ],
+                "correct_index": 3
+            },
+            {
+                "question": "What is the __fairy ring code__ used to access the __Enchanted Valley__?",
+                "options": [
+                    {"text": "BLS"},
+                    {"text": "CLP"},
+                    {"text": "BKQ"},
+                    {"text": "AKQ"}
+                ],
+                "correct_index": 2
+            },
+            {
+                "question": "What is the __fairy ring code__ used to access the __Lighthouse__?",
+                "options": [
+                    {"text": "ALP"},
+                    {"text": "CLP"},
+                    {"text": "BKQ"},
+                    {"text": "AKQ"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "What is the __fairy ring code__ used to access the __Zanaris__?",
+                "options": [
+                    {"text": "ALP"},
+                    {"text": "CLP"},
+                    {"text": "BKS"},
+                    {"text": "AKQ"}
                 ],
                 "correct_index": 2
             }
