@@ -1,5 +1,3 @@
-"""Tests for the trick outcome in trick-or-treat."""
-
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -31,8 +29,7 @@ class TestTrickOutcome(unittest.IsolatedAsyncioTestCase):
         """Test trick outcome when user has ingots (displays fake removal)."""
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
-        mock_db_session, mock_member_service = setup_database_service_mocks(
+        _, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
 
@@ -50,18 +47,14 @@ class TestTrickOutcome(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        # Should show the fake removal message
         self.assertIn("5", embed.description)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.trick.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.trick.MemberService")
-    async def test_trick_remove_all_no_ingots(
-        self, mock_member_service_class, mock_db
-    ):
+    async def test_trick_remove_all_no_ingots(self, mock_member_service_class, mock_db):
         """Test trick outcome when user has no ingots."""
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -80,5 +73,4 @@ class TestTrickOutcome(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        # Should show no ingots message
         self.assertIn("no ingots", embed.description.lower())

@@ -1,5 +1,3 @@
-"""Ingot addition/removal outcomes for trick-or-treat."""
-
 import random
 from typing import TYPE_CHECKING
 

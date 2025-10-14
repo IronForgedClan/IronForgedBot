@@ -1,5 +1,3 @@
-"""Double-or-nothing outcome for trick-or-treat."""
-
 import random
 import time
 from typing import TYPE_CHECKING, Optional
@@ -23,7 +21,6 @@ class DoubleOrNothingView(discord.ui.View):
 
     Displays buttons that allow users to risk their winnings for a chance to double them,
     or keep their winnings safely.
-    The view times out after 30 seconds.
     """
 
     def __init__(self, handler: "TrickOrTreatHandler", user_id: int, amount: int):
@@ -79,7 +76,6 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
-        # Delete the original message
         await interaction.response.defer()
         if self.message:
             await self.message.delete()
@@ -112,7 +108,6 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
-        # Delete the original message
         await interaction.response.defer()
         if self.message:
             await self.message.delete()
@@ -121,7 +116,6 @@ class DoubleOrNothingView(discord.ui.View):
             interaction.user.id
         )
 
-        # Send keep winnings message
         message = self.handler.DOUBLE_OR_NOTHING_KEEP.format(
             ingot_icon=self.handler.ingot_icon, amount=self.amount
         )
@@ -145,13 +139,10 @@ class DoubleOrNothingView(discord.ui.View):
         if self.has_interacted or not self.message:
             return
 
-        # Remove all buttons
         self.clear_items()
 
-        # Get current ingot total and nickname from database
         user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
 
-        # Update the message with timeout notification
         message = self.handler.DOUBLE_OR_NOTHING_EXPIRED.format(
             ingot_icon=self.handler.ingot_icon, amount=self.amount
         )
@@ -181,7 +172,6 @@ async def result_double_or_nothing(
 
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
 
-    # Award the ingots
     ingot_total = await handler._adjust_ingots(
         interaction,
         quantity,
@@ -195,14 +185,11 @@ async def result_double_or_nothing(
         )
         return
 
-    # Get member nickname from database
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
-    # Calculate expiration timestamp and format as Discord countdown
     expire_timestamp = int(time.time() + 30)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    # Create the offer message
     offer_message = handler.DOUBLE_OR_NOTHING_OFFER.format(
         ingot_icon=handler.ingot_icon, amount=quantity, expires=expires_formatted
     )
@@ -210,14 +197,12 @@ async def result_double_or_nothing(
 
     embed = handler._build_embed(offer_message)
 
-    # Store the offer in state
     user_id_str = str(interaction.user.id)
     STATE.state["double_or_nothing_offers"][user_id_str] = {
         "amount": quantity,
         "expires_at": time.time() + 30,
     }
 
-    # Create and send the view with the button
     view = DoubleOrNothingView(handler, interaction.user.id, quantity)
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message
@@ -237,14 +222,11 @@ async def process_double_or_nothing(
     """
     assert interaction.guild
 
-    # 50/50 chance
     won = random.random() < 0.5
 
-    # Get member nickname from database
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     if won:
-        # Award additional ingots (they already have the original amount)
         ingot_total = await handler._adjust_ingots(
             interaction,
             amount,
@@ -265,7 +247,6 @@ async def process_double_or_nothing(
         )
         message += handler._get_balance_message(user_nickname, ingot_total)
     else:
-        # Remove the ingots they won
         ingot_total = await handler._adjust_ingots(
             interaction,
             -amount,

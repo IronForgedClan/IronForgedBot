@@ -1,5 +1,3 @@
-"""Tests for the jackpot outcome in trick-or-treat."""
-
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -39,13 +37,14 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
-    async def test_result_jackpot_success(self, mock_state, mock_member_service_class, mock_db):
+    async def test_result_jackpot_success(
+        self, mock_state, mock_member_service_class, mock_db
+    ):
         """Test successful jackpot claim."""
         handler = create_test_trick_or_treat_handler()
 
         mock_state.state = {"trick_or_treat_jackpot_claimed": False}
 
-        # Setup database mocks for jackpot module
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -61,7 +60,6 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         )
 
         handler._adjust_ingots = AsyncMock(return_value=1_500_000)
-        # Mock _get_user_info to return nickname and ingots
         handler._get_user_info = AsyncMock(return_value=("TestUser", 500_000))
 
         await jackpot.result_jackpot(handler, self.interaction)

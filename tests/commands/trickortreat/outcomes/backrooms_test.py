@@ -1,5 +1,3 @@
-"""Tests for the backrooms outcome in trick-or-treat."""
-
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -33,17 +31,14 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         await backrooms.result_backrooms(handler, self.interaction)
 
-        # Verify a view was sent (has the corridor buttons)
         self.interaction.followup.send.assert_called_once()
         call_kwargs = self.interaction.followup.send.call_args.kwargs
         self.assertIn("view", call_kwargs)
         self.assertIsNotNone(call_kwargs["view"])
 
-        # Verify it's a BackroomsView
         view = call_kwargs["view"]
         self.assertIsInstance(view, BackroomsView)
 
-        # Verify embed was sent
         self.assertIn("embed", call_kwargs)
 
     async def test_backrooms_view_has_three_doors(self):
@@ -54,10 +49,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         view = BackroomsView(handler, self.test_user.id, outcomes, labels)
 
-        # Should have 3 buttons (one for each corridor)
         self.assertEqual(len(view.children), 3)
 
-        # All buttons should be on row 0
         for button in view.children:
             self.assertEqual(button.row, 0)
 
@@ -72,7 +65,6 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -87,9 +79,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        # Mock _adjust_ingots to return new total
         handler._adjust_ingots = AsyncMock(return_value=4500)
-        # Mock _get_user_info to return nickname and ingots
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -99,7 +89,6 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             handler, self.interaction, DoorOutcome.TREASURE, 0, outcomes, labels
         )
 
-        # Verify ingots were added
         handler._adjust_ingots.assert_called_once()
         call_args = handler._adjust_ingots.call_args
         self.assertEqual(call_args[0][1], 3000)  # Amount added
@@ -107,7 +96,6 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             call_args.kwargs["reason"], "Trick or treat: backrooms treasure"
         )
 
-        # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
@@ -121,7 +109,6 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -136,9 +123,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        # Mock _adjust_ingots to return new total
         handler._adjust_ingots = AsyncMock(return_value=3000)
-        # Mock _get_user_info to return nickname and ingots
         handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -148,26 +133,19 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
-        # Verify ingots were removed (negative amount)
         handler._adjust_ingots.assert_called_once()
         call_args = handler._adjust_ingots.call_args
         self.assertEqual(call_args[0][1], -2000)  # Amount removed
-        self.assertEqual(
-            call_args.kwargs["reason"], "Trick or treat: backrooms entity"
-        )
+        self.assertEqual(call_args.kwargs["reason"], "Trick or treat: backrooms entity")
 
-        # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.MemberService")
-    async def test_process_door_choice_escape(
-        self, mock_member_service_class, mock_db
-    ):
+    async def test_process_door_choice_escape(self, mock_member_service_class, mock_db):
         """Test escape door outcome (no ingot change)."""
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -182,9 +160,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        # Mock _adjust_ingots (should not be called for escape)
         handler._adjust_ingots = AsyncMock()
-        # Mock _get_user_info to return nickname and ingots
         handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -194,10 +170,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             handler, self.interaction, DoorOutcome.ESCAPE, 2, outcomes, labels
         )
 
-        # Verify ingots were NOT adjusted
         handler._adjust_ingots.assert_not_called()
 
-        # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
@@ -213,7 +187,6 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -228,9 +201,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        # Mock _adjust_ingots to return None (user has no ingots)
         handler._adjust_ingots = AsyncMock(return_value=None)
-        # Mock _get_user_info to return nickname and ingots
         handler._get_user_info = AsyncMock(return_value=("TestUser", 0))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -240,13 +211,10 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
-        # Verify ingots adjustment was attempted
         handler._adjust_ingots.assert_called_once()
 
-        # Verify lucky escape message was chosen
         mock_choice.assert_called()
 
-        # Verify followup message was sent
         self.interaction.followup.send.assert_called_once()
 
     async def test_backrooms_view_timeout(self):
@@ -261,12 +229,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         await view.on_timeout()
 
-        # Verify message was edited with expired message
         view.message.edit.assert_called_once()
         call_kwargs = view.message.edit.call_args.kwargs
         self.assertIn("embed", call_kwargs)
         self.assertIsNone(call_kwargs["view"])
-
-
-if __name__ == "__main__":
-    unittest.main()

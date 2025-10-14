@@ -1,5 +1,3 @@
-"""Tests for the ingot addition/removal outcomes in trick-or-treat."""
-
 import unittest
 from unittest.mock import AsyncMock
 

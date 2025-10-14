@@ -1,5 +1,3 @@
-"""Jackpot outcome for trick-or-treat."""
-
 from typing import TYPE_CHECKING
 
 import discord
@@ -16,7 +14,7 @@ if TYPE_CHECKING:
 async def result_jackpot(
     handler: "TrickOrTreatHandler", interaction: discord.Interaction
 ) -> None:
-    """Award the jackpot prize (1 million ingots) to the player.
+    """Award the jackpot prize to the player.
 
     Only one player can claim the jackpot per event. Subsequent attempts
     receive a consolation message.
@@ -39,7 +37,6 @@ async def result_jackpot(
 
     STATE.state["trick_or_treat_jackpot_claimed"] = True
 
-    # Get member nickname from database
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     message = handler.JACKPOT_SUCCESS_PREFIX.format(

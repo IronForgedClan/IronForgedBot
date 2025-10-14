@@ -1,5 +1,3 @@
-"""Steal outcome for trick-or-treat."""
-
 import logging
 import random
 import time
@@ -33,7 +31,7 @@ def _calculate_steal_penalty(amount: int) -> int:
         The penalty amount (3/4 of amount, rounded up to nearest 100).
     """
     penalty_raw = (amount * 3 + 3) // 4
-    return ((penalty_raw + 99) // 100) * 100  # Round up to nearest 100
+    return ((penalty_raw + 99) // 100) * 100
 
 
 def _get_steal_success_rate(target_ingots: int) -> float:
@@ -195,8 +193,8 @@ async def result_steal(
     """Offer the player a chance to steal ingots from guild members.
 
     Presents up to 4 random members as targets, plus a walk away option.
-    Success rate scales based on target's ingot balance (0%-45% chance). On failure,
-    lose 3/4 of the attempted amount (rounded up to nearest 100). Walking away has no consequences.
+    Success rate scales based on target's ingot balance. On failure,
+    lose 3/4 of the attempted amount rounded up. Walking away has no consequences.
 
     Args:
         handler: The TrickOrTreatHandler instance.
@@ -256,16 +254,9 @@ async def process_steal(
 ) -> None:
     """Process the result of a steal attempt.
 
-    Success rate scales based on target's ingot balance:
-    - Under 25k ingots: 0% chance
-    - Under 50k ingots: 5% chance
-    - Under 100k ingots: 25% chance
-    - Under 250k ingots: 30% chance
-    - Under 500k ingots: 35% chance
-    - Under 2M ingots: 40% chance
-    - 2M+ ingots: 45% chance
+    Success rate scales based on target's ingot balance.
 
-    On failure, lose 3/4 of the amount (rounded up to nearest 100) as penalty.
+    On failure, lose 3/4 of the amount rounded up as penalty.
 
     Args:
         handler: The TrickOrTreatHandler instance.
@@ -288,13 +279,11 @@ async def process_steal(
 
         success_rate = _get_steal_success_rate(target_member.ingots)
 
-        # Cap amount at target's balance
         actual_amount = min(amount, target_member.ingots)
 
     success = random.random() < success_rate
 
     if success:
-        # Get thief's nickname for target's changelog
         thief_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         await handler._adjust_ingots(
@@ -315,7 +304,6 @@ async def process_steal(
             logger.error("Error adding stolen ingots to user")
             return
 
-        # Get member nickname from database
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         message = handler.STEAL_SUCCESS.format(
@@ -336,11 +324,9 @@ async def process_steal(
         )
 
         if user_new_total is None:
-            # User somehow lost their ingots between check and now
             logger.error("Error removing penalty from user")
             return
 
-        # Get member nickname from database
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         message = handler.STEAL_FAILURE.format(

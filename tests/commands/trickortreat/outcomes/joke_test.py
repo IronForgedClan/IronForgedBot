@@ -1,5 +1,3 @@
-"""Tests for the joke outcome in trick-or-treat."""
-
 import unittest
 
 from ironforgedbot.commands.trickortreat.outcomes import joke

@@ -1,5 +1,3 @@
-"""Remove all ingots trick outcome for trick-or-treat."""
-
 from typing import TYPE_CHECKING
 
 import discord
@@ -17,7 +15,7 @@ if TYPE_CHECKING:
 async def result_remove_all_ingots_trick(
     handler: "TrickOrTreatHandler", interaction: discord.Interaction
 ) -> None:
-    """Pretend to remove all ingots from the player (doesn't actually remove them).
+    """Pretend to remove all ingots from the player.
 
     Args:
         handler: The TrickOrTreatHandler instance.

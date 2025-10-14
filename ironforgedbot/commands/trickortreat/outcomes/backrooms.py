@@ -1,5 +1,3 @@
-"""Backrooms outcome for trick-or-treat."""
-
 import asyncio
 import random
 from enum import Enum
@@ -14,8 +12,6 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     BACKROOMS_TREASURE_MAX,
     BACKROOMS_TREASURE_MIN,
 )
-from ironforgedbot.database.database import db
-from ironforgedbot.services.member_service import MemberService
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
@@ -31,11 +27,10 @@ class DoorOutcome(Enum):
     ESCAPE = "escape"
 
 
-# Weighted probabilities for door outcomes
 OUTCOME_WEIGHTS = {
-    DoorOutcome.TREASURE: 0.30,  # 30%
-    DoorOutcome.MONSTER: 0.40,  # 40%
-    DoorOutcome.ESCAPE: 0.30,  # 30%
+    DoorOutcome.TREASURE: 0.30,
+    DoorOutcome.MONSTER: 0.40,
+    DoorOutcome.ESCAPE: 0.30,
 }
 
 
@@ -43,7 +38,6 @@ class BackroomsView(discord.ui.View):
     """Discord UI View for the backrooms corridor selection.
 
     Displays buttons for each corridor the user can choose from.
-    The view times out after 45 seconds.
     """
 
     def __init__(
@@ -106,7 +100,6 @@ class BackroomsView(discord.ui.View):
 
             await interaction.response.defer()
 
-            # Show suspense message with specific corridor being entered
             door_label = self.door_labels[door_index]
             suspense_message = self.handler.BACKROOMS_OPENING_DOOR.format(
                 door=door_label
@@ -117,10 +110,8 @@ class BackroomsView(discord.ui.View):
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
 
-            # Wait for suspense
             await asyncio.sleep(2)
 
-            # Delete the suspense message
             if self.message:
                 await self.message.delete()
 
@@ -178,10 +169,7 @@ async def process_door_choice(
 
     match outcome:
         case DoorOutcome.TREASURE:
-            # Win ingots
-            amount = random.randint(
-                BACKROOMS_TREASURE_MIN, BACKROOMS_TREASURE_MAX
-            )
+            amount = random.randint(BACKROOMS_TREASURE_MIN, BACKROOMS_TREASURE_MAX)
             message = random.choice(handler.BACKROOMS_TREASURE_MESSAGES)
 
             ingot_total = await handler._adjust_ingots(
@@ -204,10 +192,7 @@ async def process_door_choice(
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.MONSTER:
-            # Lose ingots
-            amount = random.randint(
-                BACKROOMS_MONSTER_MIN, BACKROOMS_MONSTER_MAX
-            )
+            amount = random.randint(BACKROOMS_MONSTER_MIN, BACKROOMS_MONSTER_MAX)
             message = random.choice(handler.BACKROOMS_MONSTER_MESSAGES)
 
             ingot_total = await handler._adjust_ingots(
@@ -218,7 +203,6 @@ async def process_door_choice(
             )
 
             if ingot_total is None:
-                # User has no ingots to lose - lucky escape!
                 lucky_message = random.choice(handler.BACKROOMS_LUCKY_ESCAPE_MESSAGES)
                 lucky_message += handler._get_balance_message(user_nickname, 0)
                 embed = handler._build_embed(
@@ -238,7 +222,6 @@ async def process_door_choice(
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.ESCAPE:
-            # No ingot change
             message = random.choice(handler.BACKROOMS_ESCAPE_MESSAGES)
             embed = handler._build_embed(message, handler.BACKROOMS_THUMBNAILS)
             await interaction.followup.send(embed=embed)
@@ -253,19 +236,14 @@ async def result_backrooms(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction.
     """
-    # Randomly assign weighted outcomes to corridors
     outcome_choices = list(OUTCOME_WEIGHTS.keys())
     outcome_probabilities = list(OUTCOME_WEIGHTS.values())
     outcomes = random.choices(
         outcome_choices, weights=outcome_probabilities, k=BACKROOMS_DOOR_COUNT
     )
 
-    # Randomly select 3 corridor labels from available options
-    selected_labels = random.sample(
-        handler.BACKROOMS_DOOR_LABELS, BACKROOMS_DOOR_COUNT
-    )
+    selected_labels = random.sample(handler.BACKROOMS_DOOR_LABELS, BACKROOMS_DOOR_COUNT)
 
-    # Build the intro message with expiry timestamp
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
     intro_message = handler.BACKROOMS_INTRO.format(expires=expires_timestamp)
 
