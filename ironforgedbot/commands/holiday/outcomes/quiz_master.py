@@ -196,7 +196,7 @@ async def result_quiz_master(
         ["https://oldschool.runescape.wiki/images/Quiz_Master.png"],
     )
 
-    question_text = f"## Question\n### {formatted_question}"
+    question_text = f"### Question:\n#### {formatted_question}"
     question_embed = handler._build_embed(
         question_text,
         [
