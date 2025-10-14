@@ -28,12 +28,20 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_called_once()
         call_args = self.interaction.followup.send.call_args
-        embed = call_args.kwargs["embed"]
+        embeds = call_args.kwargs["embeds"]
         view = call_args.kwargs["view"]
 
-        # Verify embed has question content
-        self.assertIsNotNone(embed.description)
-        self.assertIn("Quiz Master", embed.description)
+        # Verify we have 2 embeds (intro and question)
+        self.assertEqual(len(embeds), 2)
+        intro_embed = embeds[0]
+        question_embed = embeds[1]
+
+        # Verify intro embed has Quiz Master content
+        self.assertIsNotNone(intro_embed.description)
+        self.assertIn("Quiz Master", intro_embed.description)
+
+        # Verify question embed has question content
+        self.assertIsNotNone(question_embed.description)
 
         # Verify view has 4 buttons
         self.assertEqual(len(view.children), 4)
@@ -42,6 +50,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
     async def test_correct_answer_awards_ingots(self, mock_choice):
         """Test that correct answer awards high ingots."""
         handler = create_test_trick_or_treat_handler()
+        handler.ingot_icon = "🪙"  # Mock ingot icon as string
 
         # Mock a simple question
         test_question = {
@@ -75,8 +84,8 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             call_args = mock_adjust.call_args
             amount = call_args[0][1]
             self.assertGreater(amount, 0)  # Should be positive
-            self.assertGreaterEqual(amount, 3000)  # Min reward
-            self.assertLessEqual(amount, 7000)  # Max reward
+            self.assertGreaterEqual(amount, 4000)  # Min reward (HIGH_INGOT_MIN + 1000)
+            self.assertLessEqual(amount, 8500)  # Max reward (HIGH_INGOT_MAX + 2500)
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
@@ -88,6 +97,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
     ):
         """Test that wrong answer can result in penalty."""
         handler = create_test_trick_or_treat_handler()
+        handler.ingot_icon = "🪙"  # Mock ingot icon as string
 
         # Mock a simple question
         test_question = {
@@ -101,7 +111,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
-        mock_random.return_value = 0.3  # < 0.5, so penalty applies
+        mock_random.return_value = 0.3  # < 0.75, so penalty applies
         mock_randrange.return_value = 500  # Penalty amount
 
         # Mock database and member service
@@ -142,6 +152,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
     async def test_wrong_answer_no_penalty(self, mock_random, mock_choice, mock_member_service_class, mock_db):
         """Test that wrong answer can result in no penalty (50% chance)."""
         handler = create_test_trick_or_treat_handler()
+        handler.ingot_icon = "🪙"  # Mock ingot icon as string
 
         # Mock a simple question
         test_question = {
@@ -155,7 +166,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
-        mock_random.return_value = 0.7  # > 0.5, so no penalty
+        mock_random.return_value = 0.8  # > 0.75, so no penalty
 
         # Mock database and member service
         mock_session = AsyncMock()
