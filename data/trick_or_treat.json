@@ -151,7 +151,7 @@
         "INTRO": "🤔 **It's your lucky day!**\n\n**WELCOME** to the **GREATEST QUIZ SHOW** on Discord!\n\n⏳ This encounter expires {expires}.",
         "QUESTIONS": [
             {
-                "question": "What is the maximum number of __{Hitpoints} hitpoints__ a player can have?",
+                "question": "Without any boosts, what is the __maximum__ number of {Hitpoints} hitpoints a player can have?",
                 "options": [
                     {"text": "99", "emoji": "Hitpoints"},
                     {"text": "100", "emoji": "Hitpoints"},
@@ -161,11 +161,11 @@
                 "correct_index": 0
             },
             {
-                "question": "Which skill allows players to __create__ runes?",
+                "question": "Which skill allows players to __create runes__?",
                 "options": [
                     {"text": "Magic", "emoji": "Magic"},
                     {"text": "Prayer", "emoji": "Prayer"},
-                    {"text": "Construction", "emoji": "Construction"},
+                    {"text": "Crafting", "emoji": "Crafting"},
                     {"text": "Runecraft", "emoji": "Runecraft"}
                 ],
                 "correct_index": 3
@@ -181,7 +181,7 @@
                 "correct_index": 2
             },
             {
-                "question": "You have __{Attack} 92 Attack__, what other level do you need to enter the __Warriors' Guild__?",
+                "question": "You have {Attack} 92 attack, what other level do you need to enter the __Warriors' Guild__?",
                 "options": [
                     {"text": "68 Defence", "emoji": "Defence"},
                     {"text": "78 Hitpoints", "emoji": "Hitpoints"},
@@ -201,7 +201,7 @@
                 "correct_index": 0
             },
             {
-                "question": "Fresh off tutorial island, how many __{Hitpoints} Hitpoints__ do you have?",
+                "question": "Fresh off tutorial island, how many {Hitpoints} hitpoints do you have?",
                 "options": [
                     {"text": "1", "emoji": "Hitpoints"},
                     {"text": "3", "emoji": "Hitpoints"},
@@ -211,7 +211,7 @@
                 "correct_index": 2
             },
             {
-                "question": "How many __{Prayer} Prayer__ points does a player with 99 Prayer have?",
+                "question": "How many {Prayer} prayer points does a player with __99 Prayer__ have?",
                 "options": [
                     {"text": "99", "emoji": "Prayer"},
                     {"text": "100", "emoji": "Prayer"},
@@ -231,7 +231,7 @@
                 "correct_index": 1
             },
             {
-                "question": "What __{Slayer} Slayer__ level is required to kill Abyssal demons?",
+                "question": "What {Slayer} slayer level is required to kill __abyssal demons__?",
                 "options": [
                     {"text": "75", "emoji": "Slayer"},
                     {"text": "80", "emoji": "Slayer"},
@@ -251,7 +251,7 @@
                 "correct_index": 1
             },
             {
-                "question": "What is the maximum __{Agility} Agility__ level required for any shortcut in the game?",
+                "question": "What is the minimum {Agility} agility level required to use __all__ shortcuts?",
                 "options": [
                     {"text": "80", "emoji": "Agility"},
                     {"text": "85", "emoji": "Agility"},
@@ -271,7 +271,7 @@
                 "correct_index": 0
             },
             {
-                "question": "Which tree requires __90 {Woodcutting} Woodcutting__ to cut?",
+                "question": "Which tree requires {Woodcutting} 90 woodcutting to cut?",
                 "options": [
                     {"text": "Magic tree", "emoji": "Woodcutting"},
                     {"text": "Yew tree", "emoji": "Woodcutting"},
@@ -281,7 +281,7 @@
                 "correct_index": 2
             },
             {
-                "question": "What combat level is the TzTok-Jad in the Fight Caves?",
+                "question": "What combat level is the {Tztok_Jad} TzTok-Jad in the __Fight Caves__?",
                 "options": [
                     {"text": "602", "emoji": "Tztok_Jad"},
                     {"text": "702", "emoji": "Tztok_Jad"},
@@ -291,7 +291,7 @@
                 "correct_index": 1
             },
             {
-                "question": "Which __{Farming} Farming__ level is required to plant magic trees?",
+                "question": "Which {Farming} farming level is required to plant magic trees?",
                 "options": [
                     {"text": "68", "emoji": "Farming"},
                     {"text": "75", "emoji": "Farming"},
@@ -301,7 +301,7 @@
                 "correct_index": 1
             },
             {
-                "question": "Which __dragon__ has the most {Hitpoints} Hitpoints?",
+                "question": "Which __dragon__ has the most {Hitpoints} hitpoints?",
                 "options": [
                     {"text": "The Hueycoatl"},
                     {"text": "Vorkath"},
@@ -311,7 +311,7 @@
                 "correct_index": 0
             },
             {
-                "question": "At __{Runecraft} 71__, without any other bonuses, how many __air runes__ can be created from __one pure essence__?",
+                "question": "At {Runecraft} 71 runecraft and without any other bonuses, how many __air runes__ can be created from __one pure essence__?",
                 "options": [
                     {"text": "8"},
                     {"text": "9"},
@@ -321,7 +321,7 @@
                 "correct_index": 0
             },
             {
-                "question": "What __{Construction} Construction__ level is needed to build a gilded altar?",
+                "question": "What {Construction} construction level is needed to build a gilded altar?",
                 "options": [
                     {"text": "65", "emoji": "Construction"},
                     {"text": "70", "emoji": "Construction"},
@@ -341,7 +341,7 @@
                 "correct_index": 1
             },
             {
-                "question": "What __{Mining} Mining__ level is required to mine __runite ore__?",
+                "question": "What {Mining} mining level is required to mine __runite ore__?",
                 "options": [
                     {"text": "70", "emoji": "Mining"},
                     {"text": "75", "emoji": "Mining"},
@@ -356,12 +356,12 @@
                     {"text": "Fletching", "emoji": "Fletching"},
                     {"text": "Herblore", "emoji": "Herblore"},
                     {"text": "Firemaking", "emoji": "Firemaking"},
-                    {"text": "Agility", "emoji": "Firemaking"}
+                    {"text": "Agility", "emoji": "Agility"}
                 ],
                 "correct_index": 2
             },
             {
-                "question": "How many __fire runes__ are needed to cast __{Magic} Low Level Alchemy__?",
+                "question": "How many __fire runes__ are needed to cast {Magic} __Low Level Alchemy__?",
                 "options": [
                     {"text": "1", "emoji": "Magic"},
                     {"text": "2", "emoji": "Magic"},
@@ -371,9 +371,19 @@
                 "correct_index": 2
             },
             {
-                "question": "What __{Cooking} Cooking__ level is required to cook sharks?",
+                "question": "What {Cooking} cooking level is required to cook raw sharks?",
                 "options": [
                     {"text": "80", "emoji": "Cooking"},
+                    {"text": "83", "emoji": "Cooking"},
+                    {"text": "85", "emoji": "Cooking"},
+                    {"text": "75", "emoji": "Cooking"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "What {Cooking} cooking level is required to cook raw anglerfish?",
+                "options": [
+                    {"text": "82", "emoji": "Cooking"},
                     {"text": "83", "emoji": "Cooking"},
                     {"text": "85", "emoji": "Cooking"},
                     {"text": "75", "emoji": "Cooking"}
@@ -391,7 +401,7 @@
                 "correct_index": 1
             },
             {
-                "question": "What __{Thieving} Theiving__ level is required to pickpocket __Master Farmers__?",
+                "question": "What {Thieving} theiving level is required to pickpocket __Master Farmers__?",
                 "options": [
                     {"text": "28", "emoji": "Thieving"},
                     {"text": "38", "emoji": "Thieving"},
@@ -411,7 +421,7 @@
                 "correct_index": 2
             },
             {
-                "question": "What __{Hunter} Hunter__ level is required to catch __red chinchompas__?",
+                "question": "What {Hunter} hunter level is required to catch __red chinchompas__?",
                 "options": [
                     {"text": "53", "emoji": "Hunter"},
                     {"text": "63", "emoji": "Hunter"},
@@ -431,7 +441,7 @@
                 "correct_index": 2
             },
             {
-                "question": "What __{Fishing} Fishing__ level is required to catch __anglerfish__?",
+                "question": "What {Fishing} fishing level is required to catch __anglerfish__?",
                 "options": [
                     {"text": "72", "emoji": "Fishing"},
                     {"text": "75", "emoji": "Fishing"},
@@ -461,7 +471,7 @@
                 "correct_index": 1
             },
             {
-                "question": "When __⚓ Sailing__ releases, what will be the new maximum __total level__ a player can achieve?",
+                "question": "When ⚓ Sailing releases, what will be the new maximum __total level__ a player can achieve?",
                 "options": [
                     {"text": "2378"},
                     {"text": "2377"},
@@ -476,7 +486,7 @@
                     {"text": "550"},
                     {"text": "2250"},
                     {"text": "4000"},
-                    {"text": "17700"}
+                    {"text": "1700"}
                 ],
                 "correct_index": 3
             },
@@ -509,6 +519,26 @@
                     {"text": "AKQ"}
                 ],
                 "correct_index": 2
+            },
+            {
+                "question": "How many __banks__ are there in Gielinor?",
+                "options": [
+                    {"text": "115"},
+                    {"text": "100"},
+                    {"text": "99"},
+                    {"text": "121"}
+                ],
+                "correct_index": 0
+            },
+            {
+                "question": "How many __regular bank deposit boxes__ are there in Gielinor?",
+                "options": [
+                    {"text": "115"},
+                    {"text": "71"},
+                    {"text": "69"},
+                    {"text": "95"}
+                ],
+                "correct_index": 1
             }
         ],
         "CORRECT_MESSAGE": "✅ **DING DING DING!!**\n\nThat's **RIGHT!** Good for you!\n\nInside the box you find **{ingot_icon}{amount:,}** ingots. Excellent!",
