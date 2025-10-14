@@ -6,14 +6,11 @@ from ironforgedbot.commands.trickortreat.outcomes.backrooms import (
     BackroomsView,
     DoorOutcome,
 )
-from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
-    create_test_db_member,
     create_test_member,
     create_test_trick_or_treat_handler,
-    setup_database_service_mocks,
 )
 
 
@@ -54,30 +51,12 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         for button in view.children:
             self.assertEqual(button.row, 0)
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
-    async def test_process_door_choice_treasure(
-        self, mock_randint, mock_member_service_class, mock_db
-    ):
+    async def test_process_door_choice_treasure(self, mock_randint):
         """Test treasure door outcome."""
         mock_randint.return_value = 3000
 
         handler = create_test_trick_or_treat_handler()
-
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
-        )
-
-        test_member = create_test_db_member(
-            nickname="TestUser",
-            discord_id=self.test_user.id,
-            rank=RANK.IRON,
-            ingots=1500,
-        )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
-            return_value=test_member
-        )
 
         handler._adjust_ingots = AsyncMock(return_value=4500)
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
@@ -91,37 +70,19 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler._adjust_ingots.assert_called_once()
         call_args = handler._adjust_ingots.call_args
-        self.assertEqual(call_args[0][1], 3000)  # Amount added
+        self.assertEqual(call_args[0][1], 3000)
         self.assertEqual(
             call_args.kwargs["reason"], "Trick or treat: backrooms treasure"
         )
 
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
-    async def test_process_door_choice_monster(
-        self, mock_randint, mock_member_service_class, mock_db
-    ):
+    async def test_process_door_choice_monster(self, mock_randint):
         """Test monster door outcome."""
         mock_randint.return_value = 2000
 
         handler = create_test_trick_or_treat_handler()
-
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
-        )
-
-        test_member = create_test_db_member(
-            nickname="TestUser",
-            discord_id=self.test_user.id,
-            rank=RANK.IRON,
-            ingots=5000,
-        )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
-            return_value=test_member
-        )
 
         handler._adjust_ingots = AsyncMock(return_value=3000)
         handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
@@ -135,30 +96,14 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler._adjust_ingots.assert_called_once()
         call_args = handler._adjust_ingots.call_args
-        self.assertEqual(call_args[0][1], -2000)  # Amount removed
+        self.assertEqual(call_args[0][1], -2000)
         self.assertEqual(call_args.kwargs["reason"], "Trick or treat: backrooms entity")
 
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.MemberService")
-    async def test_process_door_choice_escape(self, mock_member_service_class, mock_db):
+    async def test_process_door_choice_escape(self):
         """Test escape door outcome (no ingot change)."""
         handler = create_test_trick_or_treat_handler()
-
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
-        )
-
-        test_member = create_test_db_member(
-            nickname="TestUser",
-            discord_id=self.test_user.id,
-            rank=RANK.IRON,
-            ingots=1500,
-        )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
-            return_value=test_member
-        )
 
         handler._adjust_ingots = AsyncMock()
         handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
@@ -174,32 +119,16 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         self.interaction.followup.send.assert_called_once()
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.db")
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
     async def test_process_door_choice_monster_no_ingots(
-        self, mock_choice, mock_randint, mock_member_service_class, mock_db
+        self, mock_choice, mock_randint
     ):
         """Test monster door when user has no ingots - should get lucky escape message."""
         mock_randint.return_value = 2000
         mock_choice.return_value = "Lucky escape message"
 
         handler = create_test_trick_or_treat_handler()
-
-        mock_db_session, mock_member_service = setup_database_service_mocks(
-            mock_db, mock_member_service_class
-        )
-
-        test_member = create_test_db_member(
-            nickname="TestUser",
-            discord_id=self.test_user.id,
-            rank=RANK.IRON,
-            ingots=0,
-        )
-        mock_member_service.get_member_by_discord_id = AsyncMock(
-            return_value=test_member
-        )
 
         handler._adjust_ingots = AsyncMock(return_value=None)
         handler._get_user_info = AsyncMock(return_value=("TestUser", 0))

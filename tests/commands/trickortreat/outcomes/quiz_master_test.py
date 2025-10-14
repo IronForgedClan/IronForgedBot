@@ -76,7 +76,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             mock_adjust.assert_called_once()
             call_args = mock_adjust.call_args
             amount = call_args[0][1]
-            self.assertGreater(amount, 0)  # Should be positive
+            self.assertGreater(amount, 0)
             self.assertGreaterEqual(amount, QUIZ_CORRECT_MIN)
             self.assertLessEqual(amount, QUIZ_CORRECT_MAX)
 
@@ -107,10 +107,8 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
-        mock_random.return_value = (
-            QUIZ_PENALTY_CHANCE - 0.1
-        )  # Below threshold, penalty applies
-        mock_randrange.return_value = 500  # Penalty amount
+        mock_random.return_value = QUIZ_PENALTY_CHANCE - 0.1
+        mock_randrange.return_value = 500
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -138,7 +136,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             mock_adjust.assert_called_once()
             call_args = mock_adjust.call_args
             amount = call_args[0][1]
-            self.assertLess(amount, 0)  # Should be negative (penalty)
+            self.assertLess(amount, 0)
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
@@ -161,9 +159,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
-        mock_random.return_value = (
-            QUIZ_PENALTY_CHANCE + 0.1
-        )  # Above threshold, no penalty
+        mock_random.return_value = QUIZ_PENALTY_CHANCE + 0.1
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -211,7 +207,6 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 0,
         }
 
-        # Mock database and member service
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
 

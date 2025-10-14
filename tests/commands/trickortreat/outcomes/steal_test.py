@@ -248,7 +248,6 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         rate_very_high = _get_steal_success_rate(THRESHOLD_VERY_HIGH)
         rate_max = _get_steal_success_rate(THRESHOLD_MAX)
 
-        # Verify monotonically increasing (or equal for lowest tier)
         self.assertLessEqual(rate_under_min, rate_low)
         self.assertLess(rate_low, rate_mid)
         self.assertLess(rate_mid, rate_high)
@@ -257,7 +256,6 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
     async def test_steal_success_rate_boundaries(self):
         """Test that rates are consistent within brackets and change at boundaries."""
-        # Within same bracket, rate should be equal
         self.assertEqual(
             _get_steal_success_rate(THRESHOLD_MIN),
             _get_steal_success_rate(THRESHOLD_LOW - 1),
@@ -267,7 +265,6 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
             _get_steal_success_rate(THRESHOLD_HIGH - 1),
         )
 
-        # Crossing bracket boundary changes rate
         self.assertNotEqual(
             _get_steal_success_rate(THRESHOLD_LOW - 1),
             _get_steal_success_rate(THRESHOLD_LOW),

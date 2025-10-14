@@ -1,5 +1,3 @@
-"""Tests for the trick-or-treat handler core functionality."""
-
 import asyncio
 import json
 import unittest
@@ -170,7 +168,6 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
 
-        # Should cap the removal at the member's balance
         mock_ingot_service.try_remove_ingots.assert_called_once_with(
             self.test_user.id, -100, None, "Trick or treat: loss"
         )
@@ -185,7 +182,6 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test _handle_ingot_result with a positive outcome."""
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -200,7 +196,6 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        # Mock _adjust_ingots to return a successful balance
         handler._adjust_ingots = AsyncMock(return_value=1500)
 
         await handler._handle_ingot_result(self.interaction, 500, is_positive=True)
@@ -218,7 +213,6 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test _handle_ingot_result when player has no ingots."""
         handler = create_test_trick_or_treat_handler()
 
-        # Setup database mocks
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
@@ -233,7 +227,6 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        # Mock _adjust_ingots to return None (no ingots)
         handler._adjust_ingots = AsyncMock(return_value=None)
 
         await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
