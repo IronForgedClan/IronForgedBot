@@ -4,7 +4,7 @@ from reactionmenu import ViewMenu, ViewButton
 
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
-from ironforgedbot.config import CONFIG, ENVIRONMENT
+from ironforgedbot.config import CONFIG
 from ironforgedbot.state import STATE
 
 
@@ -12,35 +12,18 @@ from ironforgedbot.state import STATE
 async def cmd_help(interaction: discord.Interaction):
     tree = interaction.client.tree
 
-    user_role_names = {role.name for role in interaction.user.roles}
-    has_leadership = "Leadership" in user_role_names
-    has_member = "Member" in user_role_names or has_leadership
+    all_commands = tree.get_commands()
+    all_commands.sort(key=lambda cmd: cmd.name)
 
-    commands = tree.get_commands(guild=None)
-    commands.sort(key=lambda cmd: cmd.name)
-
-    leadership_only_commands = {
-        "admin", "get_role_members", "raffle", "add_remove_ingots", "roster"
-    }
-
-    debug_only_commands = {
-        "debug_commands", "debug_error_report", "stress_test"
-    }
-
-    visible_commands = []
-    for cmd in commands:
-        if cmd.name in leadership_only_commands and not has_leadership:
-            continue
-        if cmd.name in debug_only_commands and CONFIG.ENVIRONMENT not in (
-            ENVIRONMENT.DEVELOPMENT,
-            ENVIRONMENT.STAGING,
-        ):
-            continue
-        visible_commands.append(cmd)
+    visible_commands = [
+        cmd for cmd in all_commands
+        if cmd.name != "raffle" or STATE.state.get("raffle_on", False)
+    ]
 
     chunk_size = 4
     pages = [
-        visible_commands[i : i + chunk_size] for i in range(0, len(visible_commands), chunk_size)
+        visible_commands[i:i + chunk_size]
+        for i in range(0, len(visible_commands), chunk_size)
     ]
 
     menu = ViewMenu(
@@ -57,14 +40,12 @@ async def cmd_help(interaction: discord.Interaction):
             description="Here’s a list of commands you can use:",
             color=discord.Color.blurple(),
         )
-
         for cmd in page_cmds:
             embed.add_field(
                 name=f"/{cmd.name}",
                 value=cmd.description or "No description provided.",
                 inline=False,
             )
-
         menu.add_page(embed)
 
     usage_embed = discord.Embed(
@@ -127,7 +108,6 @@ async def cmd_help(interaction: discord.Interaction):
         )
 
     menu.add_page(usage_embed)
-
     menu.add_button(ViewButton.back())
     menu.add_button(ViewButton.next())
 
