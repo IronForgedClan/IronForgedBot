@@ -394,7 +394,6 @@ class TrickOrTreatHandler:
             trick,
         )
 
-        return await quiz_master.result_quiz_master(self, interaction)
         match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await jackpot.result_jackpot(self, interaction)
