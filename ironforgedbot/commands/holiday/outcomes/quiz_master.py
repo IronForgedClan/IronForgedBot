@@ -197,8 +197,11 @@ async def result_quiz_master(
         ["https://oldschool.runescape.wiki/images/Quiz_Master.png"],
     )
 
+    audience_confidence = random.randint(35, 90)
     question_text = (
-        f"**Contestant**: {interaction.user.display_name}\n### {formatted_question}"
+        f"**contestant**: {interaction.user.display_name} "
+        f"**audience confidence**: {audience_confidence}%\n"
+        f"### {formatted_question}"
     )
     question_embed = handler._build_embed(
         question_text,
