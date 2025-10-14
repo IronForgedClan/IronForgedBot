@@ -51,7 +51,7 @@ class DoubleOrNothingView(discord.ui.View):
         self.add_item(double_button)
 
         keep_button = discord.ui.Button(
-            label="🐔 Nothing",
+            label="🐔 Keep winnings",
             style=discord.ButtonStyle.secondary,
             custom_id="double_or_nothing_keep",
             row=0,
