@@ -76,6 +76,7 @@ class QuizMasterView(discord.ui.View):
             text = option["text"]
             emoji_name = option.get("emoji")
             emoji = find_emoji(emoji_name) if emoji_name else None
+            emoji = emoji or None
 
             button = discord.ui.Button(
                 label=f"{button_labels[i]}: {text}"[:DISCORD_BUTTON_LABEL_MAX_LENGTH],
@@ -130,7 +131,7 @@ class QuizMasterView(discord.ui.View):
         return callback
 
     async def on_timeout(self):
-        """Handle the view timing out after 30 seconds."""
+        """Handle the view timing out."""
         if self.has_interacted or not self.message:
             return
 
@@ -151,7 +152,7 @@ class QuizMasterView(discord.ui.View):
         try:
             await self.message.edit(embed=embed, view=self)
         except discord.NotFound:
-            pass  # Message was deleted before timeout could edit it
+            pass
 
 
 async def result_quiz_master(
@@ -189,15 +190,24 @@ async def result_quiz_master(
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
     intro_message = handler.QUIZ_INTRO.format(expires=expires_formatted)
-    intro_message += f"\n\n**{formatted_question}**"
 
-    embed = handler._build_embed(
+    intro_embed = handler._build_embed(
         intro_message,
         ["https://oldschool.runescape.wiki/images/Quiz_Master.png"],
     )
 
+    question_text = f"## Question\n### {formatted_question}"
+    question_embed = handler._build_embed(
+        question_text,
+        [
+            "https://oldschool.runescape.wiki/images/thumb/Cake_of_guidance_detail.png/1280px-Cake_of_guidance_detail.png"
+        ],
+    )
+
     view = QuizMasterView(handler, interaction.user.id, question)
-    message = await interaction.followup.send(embed=embed, view=view)
+    message = await interaction.followup.send(
+        embeds=[intro_embed, question_embed], view=view
+    )
     view.message = message
 
 
@@ -310,7 +320,7 @@ async def process_quiz_answer(
         message = await _handle_correct_answer(handler, interaction, user_nickname)
         thumbnail = "https://oldschool.runescape.wiki/images/Mystery_box_detail.png"
         if message is None:
-            return  # Error response already sent
+            return
     else:
         message = await _handle_wrong_answer(handler, interaction)
 
