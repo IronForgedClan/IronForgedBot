@@ -83,7 +83,7 @@
         "USER_NO_INGOTS": "You don't have enough ingots to risk a failed steal attempt. You need at least **{ingot_icon}{penalty:,}** ingots."
     },
     "BACKROOMS": {
-        "INTRO": "⚠️ **You clip through reality and fall into the backrooms...**\n\nEndless yellow hallways stretch before you. Fluorescent lights hum overhead.\nThree corridors beckon - one holds forgotten treasure, another hides a lurking entity, and the third... might lead you out.\n\nChoose your path carefully.\n\n⏳ You must decide {expires}.",
+        "INTRO": "⚠️ **You clip through reality and fall into the backrooms...**\n\nEndless yellow hallways stretch before you. Fluorescent lights hum overhead.\n\nThree corridors beckon - one holds forgotten treasure, another hides a lurking entity, and the third... might lead you out.\n\nChoose your path carefully.\n\n⏳ You must decide {expires}.",
         "DOOR_LABELS": [
             "🟨 Yellow Hallway",
             "💡 Buzzing Lights",
@@ -137,9 +137,11 @@
         "OPENING_DOOR": "🚪 **Entering the {door}...**\n\n_The fluorescent lights hum overhead as you step inside..._",
         "EXPIRED": "⏱️ **The walls shift!**\n\nYou took too long to decide. The backrooms consume your hesitation.\n\nThe corridors rearrange and your chance is lost.",
         "THUMBNAILS": [
-            "https://upload.wikimedia.org/wikipedia/commons/b/bb/HobbyTown_USA_Oshkosh_interior_under_construction_2002_%28The_Backrooms%29.jpg",
-            "https://upload.wikimedia.org/wikipedia/commons/f/f9/Lorain_High_School_hallway.jpg",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTUya25qZGtsMTNmbnR0cTdrMHRnaXlteHpnaGs2ajZ0ZGo0YjZkNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/UyYcK4GZKyBHA44JXW/giphy.gif"
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWczNjU0cTExdHQ3b3NseHV5c25hNGxrcHJ5amVxbW12NnpubXRtMSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/UyYcK4GZKyBHA44JXW/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExemFva24zY2RzOXVrZnQ1bzgyaDh5ZjJzdnp5dnkweGQ0dmR0aGh4MyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LNLpm8hhY2yc7GPXB9/giphy.gif",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmk5OHNkcHdobDZsY3p4OHlqMGtycWdhcjhrZHRvdWVlYnB4aGJieiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbQyWrYmEj79O72sUH/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExcjA1c2JsajRwZzVhZ3l6NzV4YXE1Z3J5dnRiaXVoMmEzczk3ODN1aiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/K839ugFBGcdKWUMUCS/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTN6a2l4OGJtM2E2ZzlpM3Fkc2V0bjRsbzBvejBobHp0bzdtaW02cyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/h2VRjenjc8ly5JGUN0/giphy.gif"
         ]
     },
     "JOKE": {
