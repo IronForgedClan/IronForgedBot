@@ -20,6 +20,7 @@ async def result_joke(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction context.
     """
-    await interaction.followup.send(
-        embed=handler._build_embed(random.choice(handler.JOKES))
-    )
+    joke = random.choice(handler.JOKES)
+    content = f"🤡 **Joke**\n\n{joke}"
+
+    await interaction.followup.send(embed=handler._build_embed(content))
