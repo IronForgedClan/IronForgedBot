@@ -20,7 +20,6 @@ if TYPE_CHECKING:
         TrickOrTreatHandler,
     )
 
-# Constants
 QUIZ_TIMEOUT_SECONDS = 35
 DISCORD_BUTTON_LABEL_MAX_LENGTH = 80
 
