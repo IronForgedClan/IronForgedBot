@@ -485,14 +485,14 @@ MOCK_TRICK_OR_TREAT_DATA = """
     "DOUBLE_OR_NOTHING": {
         "OFFER": "Double or nothing {ingot_icon}{amount:,} expires {expires}",
         "WIN": "You won {ingot_icon}{total_amount:,}",
-        "LOSE": "You lost {ingot_icon}{amount:,}",
+        "LOSE": "You lost {ingot_icon}{amount}",
         "KEEP": "You kept {ingot_icon}{amount:,}",
         "EXPIRED": "Expired {ingot_icon}{amount:,}"
     },
     "STEAL": {
         "OFFER": "Steal {ingot_icon}{amount:,} penalty {ingot_icon}{penalty:,} expires {expires}",
         "SUCCESS": "Success {ingot_icon}{amount:,} from {target_mention}",
-        "FAILURE": "Failed {ingot_icon}{amount:,} {target_mention} penalty {ingot_icon}{penalty:,}",
+        "FAILURE": "Failed {ingot_icon}{amount:,} {target_mention} penalty {ingot_icon}{penalty}",
         "WALK_AWAY": "Walked away",
         "EXPIRED": "Time's up",
         "NO_TARGETS": "No targets",
@@ -529,7 +529,7 @@ MOCK_TRICK_OR_TREAT_DATA = """
         ],
         "CORRECT_MESSAGE": "Correct {ingot_icon}{amount:,}",
         "WRONG_LUCKY_MESSAGE": "Wrong but lucky",
-        "WRONG_PENALTY_MESSAGE": "Wrong penalty {ingot_icon}{penalty:,}",
+        "WRONG_PENALTY_MESSAGE": "Wrong penalty {ingot_icon}{penalty}",
         "EXPIRED_MESSAGE": "Expired"
     },
     "MEDIA": {

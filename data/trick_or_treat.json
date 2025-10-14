@@ -69,14 +69,14 @@
     "DOUBLE_OR_NOTHING": {
         "OFFER": "🎲 **Double or nothing?**\n\nYou just won **{ingot_icon}{amount:,}** ingots.\n\nFeeling lucky? Decide below to risk it all for a chance to **double your winnings**, or to play it safe and keep what you've already won.\n\n⏳ This offer expires {expires}.",
         "WIN": "💰 **You doubled it!**\n\nYou have won a total of **{ingot_icon}{total_amount:,}** ingots!",
-        "LOSE": "💀 **You lost it all!**\n\nYou lost your original **{ingot_icon}{amount:,}** ingot win. Sometimes the risk isn't worth the reward.",
+        "LOSE": "💀 **You lost it all!**\n\n**{ingot_icon}{amount}** ingots!\n\nSometimes the risk isn't worth the reward.",
         "KEEP": "😴 **You did nothing.**\n\nYou safely kept your original **{ingot_icon}{amount:,}** ingot win.\n\nThat was either smart or cowardly, I can't tell.",
         "EXPIRED": "⏱️ **Offer expired.**\n\nYou keep your original **{ingot_icon}{amount:,}** ingot win."
     },
     "STEAL": {
         "OFFER": "🔪 **Steal or no steal?**\n\nTheir backs are turned, you have a chance to steal **{ingot_icon}{amount:,}** ingots from one of the following members.\n\nYou notice that the members with the **most ingots** are particularly distracted...\n\nChoose your victim wisely, getting caught will cost you **{ingot_icon}{penalty:,}** ingots.\n\nOr you can walk away safely with nothing.\n\n⏳ This opportunity expires {expires}.",
         "SUCCESS": "💰 **Success!**\n\nYou stealthily slide your hand into {target_mention}'s pocket, grabbing **{ingot_icon}{amount:,}** ingots!\n\nHopefully they'll never notice. It's a good job nobody pinged them or anything 👀",
-        "FAILURE": "💀 **Busted!**\n\nStop right there criminal scum!\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention}, but got caught red handed.\n\nYou are fined **{ingot_icon}{penalty:,}** ingots as punishment. At least you avoid jail... this time.",
+        "FAILURE": "💀 **Busted!**\n\nStop right there criminal scum!\n\nYou tried to steal **{ingot_icon}{amount:,}** ingots from {target_mention}, but got caught red handed.\n\nThe court delivers its punishment:\n\n**{ingot_icon}{penalty}** ingots!\n\nAt least you avoid jail... this time.",
         "WALK_AWAY": "🚶 **You walked away.**\n\nYou're already 99 theiving anyway, what's the point?",
         "EXPIRED": "⏱️ **Time's up!**\n\nYou took too long to decide. Now everyone is staring at you... run!",
         "NO_TARGETS": "There are no targets available to steal from right now. Try again later!",
@@ -108,14 +108,14 @@
             "🌟 **Exit gift!**\n\nA mysterious figure appears, hands you **{ingots}** ingots, and vanishes into the walls.\n\nWas that real?"
         ],
         "MONSTER_MESSAGES": [
-            "👁️ **The Smiler found you!**\n\nA grinning entity emerges from the shadows! You run, dropping **{ingots}** ingots in terror!\n\nThose eyes... those teeth... never look back.",
-            "🐕 **Hound attack!**\n\nA deformed creature on all fours chases you down the corridor! You lose **{ingots}** ingots in the panic!\n\nYou can still hear it howling in the distance...",
-            "👤 **Skin-stealer!**\n\nSomething wearing a human face lunges at you! You flee, abandoning **{ingots}** ingots!\n\nIt almost looked like someone you knew...",
-            "⚡ **Reality shift!**\n\nThe walls suddenly close in! In your desperate escape, you drop **{ingots}** ingots!\n\nThe backrooms don't follow the rules of physics.",
-            "🌀 **Lost in the maze!**\n\nYou run through infinite identical hallways until **{ingots}** ingots fall from your pockets!\n\nEvery turn looks the same... are you going in circles?",
-            "👥 **Faceling swarm!**\n\nHumanoid figures with blank faces surround you! You break through, losing **{ingots}** ingots!\n\nThey moved so unnaturally...",
-            "💀 **The Entity!**\n\nSomething ancient and wrong manifests before you! You sprint away, dropping **{ingots}** ingots!\n\nYou're not supposed to be here.",
-            "🔊 **Sound trap!**\n\nDeafening static fills the air! Disoriented, you stumble and lose **{ingots}** ingots!\n\nThe fluorescent lights buzz louder and louder..."
+            "👁️ **The Smiler found you!**\n\nA grinning entity emerges from the shadows! You run in terror!\n\n**{ingots}** ingots!\n\nThose eyes... those teeth... never look back.",
+            "🐕 **Hound attack!**\n\nA deformed creature on all fours chases you down the corridor!\n\n**{ingots}** ingots!\n\nYou can still hear it howling in the distance...",
+            "👤 **Skin-stealer!**\n\nSomething wearing a human face lunges at you! You flee!\n\n**{ingots}** ingots!\n\nIt almost looked like someone you knew...",
+            "⚡ **Reality shift!**\n\nThe walls suddenly close in! You escape desperately!\n\n**{ingots}** ingots!\n\nThe backrooms don't follow the rules of physics.",
+            "🌀 **Lost in the maze!**\n\nYou run through infinite identical hallways!\n\n**{ingots}** ingots!\n\nEvery turn looks the same... are you going in circles?",
+            "👥 **Faceling swarm!**\n\nHumanoid figures with blank faces surround you! You break through!\n\n**{ingots}** ingots!\n\nThey moved so unnaturally...",
+            "💀 **The Entity!**\n\nSomething ancient and wrong manifests before you! You sprint away!\n\n**{ingots}** ingots!\n\nYou're not supposed to be here.",
+            "🔊 **Sound trap!**\n\nDeafening static fills the air! You stumble, disoriented!\n\n**{ingots}** ingots!\n\nThe fluorescent lights buzz louder and louder..."
         ],
         "ESCAPE_MESSAGES": [
             "🚪 **Found the exit!**\n\nThe corridor leads to a glowing portal back to reality! You noclip through.\n\nNo ingots gained or lost, but you made it out alive!",
@@ -558,7 +558,7 @@
         ],
         "CORRECT_MESSAGE": "✅ **DING DING DING!!**\n\nThat's **RIGHT!** Good for you!\n\nInside the box you find **{ingot_icon}{amount:,}** ingots. Excellent!",
         "WRONG_LUCKY_MESSAGE": "❌ **No, no, no...**\n\nThat's completely **WRONG!**",
-        "WRONG_PENALTY_MESSAGE": "❌ **BZZZZZZZ!**\n\n**WRONG!**\n\n**{ingot_icon}{penalty:,}** ingots slip from your grasp as you retreat in embarrassment.",
+        "WRONG_PENALTY_MESSAGE": "❌ **BZZZZZZZ!**\n\n**WRONG!**\n\nYou retreat in embarrassment.\n\n**{ingot_icon}{penalty}** ingots!",
         "EXPIRED_MESSAGE": "⏱️ **Maybe later**\n\nYou neither gain nor lose ingots, but you've wasted everyone's time."
     },
     "MEDIA": {

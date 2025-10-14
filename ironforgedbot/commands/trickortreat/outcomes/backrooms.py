@@ -211,7 +211,7 @@ async def process_door_choice(
                 await interaction.followup.send(embed=embed)
             else:
                 formatted_message = message.format(
-                    ingots=f"{handler.ingot_icon}{amount:,}"
+                    ingots=f"{handler.ingot_icon}-{amount:,}"
                 )
                 formatted_message += handler._get_balance_message(
                     user_nickname, ingot_total

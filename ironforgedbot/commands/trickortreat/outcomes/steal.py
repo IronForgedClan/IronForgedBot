@@ -329,11 +329,12 @@ async def process_steal(
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
+        formatted_penalty = f"-{penalty:,}"
         message = handler.STEAL_FAILURE.format(
             ingot_icon=handler.ingot_icon,
             amount=amount,
             target_mention=target.mention,
-            penalty=penalty,
+            penalty=formatted_penalty,
         )
         message += handler._get_balance_message(user_nickname, user_new_total)
 

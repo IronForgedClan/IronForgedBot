@@ -313,9 +313,10 @@ async def _handle_wrong_answer(
             return message + handler._get_balance_message(user_nickname, ingot_total)
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
+        formatted_penalty = f"-{penalty:,}"
         message = handler.QUIZ_WRONG_PENALTY_MESSAGE.format(
             ingot_icon=handler.ingot_icon,
-            penalty=penalty,
+            penalty=formatted_penalty,
         )
         return message + handler._get_balance_message(user_nickname, ingot_total)
 
