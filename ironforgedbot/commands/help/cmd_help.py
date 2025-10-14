@@ -16,13 +16,14 @@ async def cmd_help(interaction: discord.Interaction):
     all_commands.sort(key=lambda cmd: cmd.name)
 
     visible_commands = [
-        cmd for cmd in all_commands
+        cmd
+        for cmd in all_commands
         if cmd.name != "raffle" or STATE.state.get("raffle_on", False)
     ]
 
     chunk_size = 6
     pages = [
-        visible_commands[i:i + chunk_size]
+        visible_commands[i : i + chunk_size]
         for i in range(0, len(visible_commands), chunk_size)
     ]
 
