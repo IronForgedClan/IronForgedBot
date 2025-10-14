@@ -4,6 +4,11 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from ironforgedbot.commands.holiday.outcomes import quiz_master
+from ironforgedbot.commands.holiday.trick_or_treat_constants import (
+    QUIZ_CORRECT_MAX,
+    QUIZ_CORRECT_MIN,
+    QUIZ_PENALTY_CHANCE,
+)
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -50,7 +55,6 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
     async def test_correct_answer_awards_ingots(self, mock_choice):
         """Test that correct answer awards high ingots."""
         handler = create_test_trick_or_treat_handler()
-        handler.ingot_icon = "🪙"  # Mock ingot icon as string
 
         # Mock a simple question
         test_question = {
@@ -84,8 +88,8 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             call_args = mock_adjust.call_args
             amount = call_args[0][1]
             self.assertGreater(amount, 0)  # Should be positive
-            self.assertGreaterEqual(amount, 4000)  # Min reward (HIGH_INGOT_MIN + 1000)
-            self.assertLessEqual(amount, 8500)  # Max reward (HIGH_INGOT_MAX + 2500)
+            self.assertGreaterEqual(amount, QUIZ_CORRECT_MIN)
+            self.assertLessEqual(amount, QUIZ_CORRECT_MAX)
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
@@ -97,7 +101,6 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
     ):
         """Test that wrong answer can result in penalty."""
         handler = create_test_trick_or_treat_handler()
-        handler.ingot_icon = "🪙"  # Mock ingot icon as string
 
         # Mock a simple question
         test_question = {
@@ -111,7 +114,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
-        mock_random.return_value = 0.3  # < 0.75, so penalty applies
+        mock_random.return_value = QUIZ_PENALTY_CHANCE - 0.1  # Below threshold, penalty applies
         mock_randrange.return_value = 500  # Penalty amount
 
         # Mock database and member service
@@ -150,9 +153,8 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.choice")
     @patch("ironforgedbot.commands.holiday.outcomes.quiz_master.random.random")
     async def test_wrong_answer_no_penalty(self, mock_random, mock_choice, mock_member_service_class, mock_db):
-        """Test that wrong answer can result in no penalty (50% chance)."""
+        """Test that wrong answer can result in no penalty."""
         handler = create_test_trick_or_treat_handler()
-        handler.ingot_icon = "🪙"  # Mock ingot icon as string
 
         # Mock a simple question
         test_question = {
@@ -166,7 +168,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             "correct_index": 2,
         }
         mock_choice.return_value = test_question
-        mock_random.return_value = 0.8  # > 0.75, so no penalty
+        mock_random.return_value = QUIZ_PENALTY_CHANCE + 0.1  # Above threshold, no penalty
 
         # Mock database and member service
         mock_session = AsyncMock()
