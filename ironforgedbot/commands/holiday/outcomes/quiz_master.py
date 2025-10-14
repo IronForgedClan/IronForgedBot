@@ -13,6 +13,7 @@ from ironforgedbot.commands.holiday.trick_or_treat_constants import (
     QUIZ_WRONG_PENALTY_MIN,
 )
 from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.responses import build_response_embed
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.holiday.trick_or_treat_handler import (
@@ -196,12 +197,16 @@ async def result_quiz_master(
         ["https://oldschool.runescape.wiki/images/Quiz_Master.png"],
     )
 
-    question_text = f"### Question:\n#### {formatted_question}"
+    question_text = (
+        f"**Contestant**: {interaction.user.display_name}\n### {formatted_question}"
+    )
     question_embed = handler._build_embed(
         question_text,
-        [
-            "https://oldschool.runescape.wiki/images/thumb/Cake_of_guidance_detail.png/1280px-Cake_of_guidance_detail.png"
-        ],
+    )
+    question_embed = build_response_embed(
+        "",
+        question_text,
+        discord.Colour.blurple(),
     )
 
     view = QuizMasterView(handler, interaction.user.id, question)
