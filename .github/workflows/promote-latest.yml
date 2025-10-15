@@ -23,6 +23,7 @@ jobs:
         with:
           app-id: ${{ secrets.SUBMODULE_APP_ID }}
           private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: IronForgedClan
 
       - name: Checkout code
         uses: actions/checkout@v4
