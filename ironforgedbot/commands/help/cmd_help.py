@@ -56,9 +56,7 @@ async def cmd_help(interaction: discord.Interaction):
     all_commands = tree.get_commands()
     all_commands.sort(key=lambda cmd: (cmd.name not in context, cmd.name))
 
-    visible_commands = [
-        cmd for cmd in all_commands if cmd.name not in IGNORED_COMMANDS
-    ]
+    visible_commands = [cmd for cmd in all_commands if cmd.name not in IGNORED_COMMANDS]
 
     chunk_size = 6
     pages = [
