@@ -7,7 +7,19 @@ jobs:
     check-formatting:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - name: Generate App token
+              id: app-token
+              uses: actions/create-github-app-token@v1
+              with:
+                  app-id: ${{ secrets.SUBMODULE_APP_ID }}
+                  private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+
+            - name: Check out repository
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ steps.app-token.outputs.token }}
+                  submodules: recursive
+
             - uses: psf/black@stable
               with:
                   options: "--check"
