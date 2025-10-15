@@ -107,7 +107,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
-    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.send_error_response")
+    @patch(
+        "ironforgedbot.commands.trickortreat.trick_or_treat_handler.send_error_response"
+    )
     async def test_adjust_ingots_member_has_zero_ingots(
         self,
         mock_send_error,
@@ -263,7 +265,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             data = json.load(f)
             THUMBNAILS = data["MEDIA"]["THUMBNAILS"]
 
-        duplicates = [thumb for thumb, count in Counter(THUMBNAILS).items() if count > 1]
+        duplicates = [
+            thumb for thumb, count in Counter(THUMBNAILS).items() if count > 1
+        ]
         assert not duplicates, f"Duplicate thumbnails: {duplicates}"
 
     @unittest.skip("Network heavy, run only when necessary")

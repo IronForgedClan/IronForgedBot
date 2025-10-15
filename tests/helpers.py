@@ -546,9 +546,15 @@ def create_test_trick_or_treat_handler():
         A TrickOrTreatHandler instance with MOCK_TRICK_OR_TREAT_DATA loaded.
     """
     import unittest.mock
-    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import TrickOrTreatHandler
+    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
+        TrickOrTreatHandler,
+    )
 
-    with unittest.mock.patch("builtins.open", unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA)):
+    with unittest.mock.patch(
+        "builtins.open", unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA)
+    ):
         handler = TrickOrTreatHandler()
-        handler.ingot_icon = "🪙"  # Mock ingot_icon as string to avoid AsyncMock formatting issues
+        handler.ingot_icon = (
+            "🪙"  # Mock ingot_icon as string to avoid AsyncMock formatting issues
+        )
         return handler
