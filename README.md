@@ -109,7 +109,10 @@ git clone --recurse-submodules git@github.com:IronForgedClan/IronForgedBot.git
 #### Updating data files
 
 ```sh
-# Pull latest data changes
+# Using make command
+make update-data
+
+# Or manually
 git submodule update --remote data
 ```
 
@@ -288,6 +291,9 @@ view its source command and try running that instead.
 - `make update-deps`\
   Updates all project dependencies to their latest versions and rebuilds the
   container.
+
+- `make update-data`\
+  Updates the data submodule to the latest commit from the private repository.
 
 - `make clean`\
   Stops containers, removes project containers and images, and prunes unused
