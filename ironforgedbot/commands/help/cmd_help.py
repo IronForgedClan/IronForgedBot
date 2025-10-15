@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import discord
 from discord import app_commands
@@ -21,6 +22,7 @@ IGNORED_COMMANDS = [
 
 
 @require_role(ROLE.MEMBER)
+@log_command_execution(logger)
 async def cmd_help(interaction: discord.Interaction):
     RAFFLE = STATE.state.get("raffle_on", False)
     tree = interaction.client.tree
