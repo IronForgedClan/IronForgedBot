@@ -18,10 +18,12 @@ defaults:
 jobs:
     unit-test:
         uses: ./.github/workflows/unit-test.yml
+        secrets: inherit
 
     build-and-publish:
         needs: unit-test
         uses: ./.github/workflows/publish.yml
+        secrets: inherit
 
     staging-deploy:
         needs: build-and-publish
@@ -36,6 +38,7 @@ jobs:
     release:
         needs: staging-deploy
         uses: ./.github/workflows/release.yml
+        secrets: inherit
 
     prod-deploy:
         needs: release
