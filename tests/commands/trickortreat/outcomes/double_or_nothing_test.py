@@ -52,6 +52,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         )
 
         handler._adjust_ingots = AsyncMock(return_value=2000)
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
 
         await double_or_nothing.result_double_or_nothing(handler, self.interaction)
 
