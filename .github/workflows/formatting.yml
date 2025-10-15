@@ -13,7 +13,9 @@ jobs:
               with:
                   app-id: ${{ secrets.SUBMODULE_APP_ID }}
                   private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
-                  owner: IronForgedClan
+                  repositories: |
+                      IronForgedBot
+                      IronForgedBot_Data
 
             - name: Check out repository
               uses: actions/checkout@v4
