@@ -33,14 +33,88 @@
 
 This setup guide assumes use of a Linux terminal.
 
+### Set up SSH authentication with GitHub
+
+This project uses a private submodule that requires SSH authentication.
+
+> [!IMPORTANT]
+> You must set up SSH keys with GitHub before cloning. HTTPS will not work for
+> the private submodule.
+
+#### Generate SSH key (if you don't have one)
+
+```sh
+ssh-keygen -t ed25519 -C "your_email@example.com"
+# Press Enter to accept default location
+# Optionally enter a passphrase
+```
+
+#### Add SSH key to ssh-agent
+
+```sh
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+```
+
+#### Add SSH key to GitHub
+
+1. Copy your public key:
+   ```sh
+   cat ~/.ssh/id_ed25519.pub
+   ```
+2. Go to GitHub → Settings → SSH and GPG keys → New SSH key
+3. Paste your public key and save
+
+#### Test your connection
+
+```sh
+ssh -T git@github.com
+# Should respond: "Hi username! You've successfully authenticated..."
+```
+
+For more details, see [GitHub's SSH documentation](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+
 ### Clone the repository
 
 Navigate to a location you want to store the project. Then run the following
 command to clone this repository to your machine.
 
 ```sh
-git clone https://github.com/IronForgedClan/IronForgedBot
+git clone git@github.com:IronForgedClan/IronForgedBot.git
 ```
+
+### Initialize Data Submodule
+
+This project uses a private git submodule for data files.
+
+> [!IMPORTANT]
+> You'll need access to the `IronForgedBot_Data` private repository. Contact
+> repository maintainers if you don't have access.
+
+#### First-time setup (after cloning)
+
+```sh
+# Initialize and fetch the submodule
+git submodule init
+git submodule update
+```
+
+#### Or clone with submodules in one step
+
+```sh
+git clone --recurse-submodules git@github.com:IronForgedClan/IronForgedBot.git
+```
+
+#### Updating data files
+
+```sh
+# Pull latest data changes
+git submodule update --remote data
+```
+
+> [!NOTE]
+> If you see errors about missing `data/*.json` files, ensure the submodule is
+> initialized using the commands above.
 
 ### Docker
 
@@ -211,10 +285,12 @@ view its source command and try running that instead.
   Reverts the most recent database migration.
 
 - `make update-deps`\
-  Updates all project dependencies to their latest versions and rebuilds the container.
+  Updates all project dependencies to their latest versions and rebuilds the
+  container.
 
 - `make clean`\
-  Stops containers, removes project containers and images, and prunes unused Docker resources to free up disk space.
+  Stops containers, removes project containers and images, and prunes unused
+  Docker resources to free up disk space.
 
 ## Tooling
 
