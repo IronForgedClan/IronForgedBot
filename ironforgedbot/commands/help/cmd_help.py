@@ -1,3 +1,5 @@
+import logging
+
 import discord
 from discord import app_commands
 from reactionmenu import ViewMenu, ViewButton
@@ -6,19 +8,56 @@ from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators import require_role
 from ironforgedbot.config import CONFIG
 from ironforgedbot.state import STATE
+from ironforgedbot.common.responses import build_response_embed
+
+logger = logging.getLogger(__name__)
+
+IGNORED_COMMANDS = [
+    "admin",
+    "add_remove_ingots",
+    "roster",
+    "get_role_members",
+]
 
 
 @require_role(ROLE.MEMBER)
 async def cmd_help(interaction: discord.Interaction):
+    RAFFLE = STATE.state.get("raffle_on", False)
     tree = interaction.client.tree
 
+    context = {
+        "score": (
+            "• **Optional**: `/score [player]:` to check another player's score.\n"
+            "• If omitted, it will default to your nickname.\n"
+            "• Score is based on skilling, bossing, raids, and clue completion."
+        ),
+        "breakdown": (
+            "• **Optional**: `/breakdown [player]:` for another player.\n"
+            "• Includes skills, bosses, raids, and clue points.\n"
+            "• Separated by multiple pages, use the arrows to navigate."
+        ),
+        "ingots": (
+            "• **Optional**: `/ingots [player]:` to check someone else.\n"
+            "• You earn ingots by participating in clan events."
+        ),
+        "raffle": (
+            "• Use `/raffle` to view or enter the raffle.\n"
+            "• Use ingots to buy tickets in the raffle channel!"
+        ),
+        "trick_or_treat": (
+            "• Join the seasonal fun with `/trick_or_treat`!\n"
+            "• Gain spooky surprises in the `trick_or_treat` channel!"
+        ),
+    }
+
+    if RAFFLE:
+        context["raffle"] += "\n\n🎉 **A raffle is currently active!**"
+
     all_commands = tree.get_commands()
-    all_commands.sort(key=lambda cmd: cmd.name)
+    all_commands.sort(key=lambda cmd: (cmd.name not in context, cmd.name))
 
     visible_commands = [
-        cmd
-        for cmd in all_commands
-        if cmd.name != "raffle" or STATE.state.get("raffle_on", False)
+        cmd for cmd in all_commands if cmd.name not in IGNORED_COMMANDS
     ]
 
     chunk_size = 6
@@ -31,84 +70,31 @@ async def cmd_help(interaction: discord.Interaction):
         interaction,
         menu_type=ViewMenu.TypeEmbed,
         show_page_director=True,
-        timeout=300,
+        timeout=150,
         delete_on_timeout=True,
     )
 
     for page_cmds in pages:
-        embed = discord.Embed(
+        embed = build_response_embed(
             title="📘 Available Commands",
             description="Here’s a list of commands you can use:",
             color=discord.Color.blurple(),
         )
+
         for cmd in page_cmds:
+            extra = context.get(cmd.name)
+            description = cmd.description or "No description provided."
+            if extra:
+                description += f"\n{extra}"
+
             embed.add_field(
                 name=f"/{cmd.name}",
-                value=cmd.description or "No description provided.",
+                value=description,
                 inline=False,
             )
+
         menu.add_page(embed)
 
-    usage_embed = discord.Embed(
-        title="Getting Started with Iron Forged Bot",
-        description="Helpful tips to get the most out of the bot.",
-        color=discord.Color.gold(),
-    )
-
-    usage_embed.add_field(
-        name="/score",
-        value=(
-            "Displays your clan score.\n"
-            "• **Optional**: `/score player:` to check another player's score.\n"
-            "• If omitted, it will default to your nickname.\n"
-            "• Score is based on skilling, bossing, raids, and clue completion."
-        ),
-        inline=False,
-    )
-
-    usage_embed.add_field(
-        name="/breakdown",
-        value=(
-            "Gives a full breakdown of your score.\n"
-            "• **Optional**: `/breakdown player:` for another player.\n"
-            "• Includes skills, bosses, raids, and clue points.\n"
-            "• Separated by multiple pages, use the arrows to navigate through them."
-        ),
-        inline=False,
-    )
-
-    usage_embed.add_field(
-        name="/ingots",
-        value=(
-            "Shows how many ingots you (or another player) have.\n"
-            "• **Optional**: `/ingots player:` to check someone else.\n"
-            "• You earn ingots by participating in clan events. \n"
-        ),
-        inline=False,
-    )
-
-    if STATE.state.get("raffle_on", False):
-        usage_embed.add_field(
-            name="🎟️ Raffle Active!",
-            value=(
-                "A raffle is currently running!\n"
-                "Use `/raffle` to view or enter the raffle.\n"
-                "Use ingots to buy tickets in the raffle channel!"
-            ),
-            inline=False,
-        )
-
-    if CONFIG.TRICK_OR_TREAT_ENABLED:
-        usage_embed.add_field(
-            name="🎃 Trick or Treat Event Active!",
-            value=(
-                "Join the seasonal fun with `/trick_or_treat`!\n"
-                "Gain spooky surprises in the trick_or_treat channel!"
-            ),
-            inline=False,
-        )
-
-    menu.add_page(usage_embed)
     menu.add_button(ViewButton.back())
     menu.add_button(ViewButton.next())
 
