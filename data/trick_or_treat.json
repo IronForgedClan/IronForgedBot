@@ -107,8 +107,8 @@
         "NO_INGOTS_MESSAGE": "You lost... well, you would have lost ingots if you had any!\n\nAttend some events, throw us a bond or _something_. You're making me look bad. 💀"
     },
     "JACKPOT": {
-        "SUCCESS_PREFIX": "**JACKPOT!!** 🎉🎊🥳\n\nToday is your lucky day {mention}!\nYou have been blessed with the biggest payout I am authorized to give.\n\nA cool **{ingot_icon}{amount:,}** ingots wired directly into your bank account.\n\nCongratulations!!",
-        "CLAIMED_MESSAGE": "**JACKPOT!!**\n\nOr, well, it would have been... but you were just too slow.\n\nI don't know what to tell you, I don't make the rules. 🤷‍♂️\n\nEnjoy this consolation pumpkin emoji 🎃"
+        "SUCCESS_PREFIX": "**JACKPOT!!** 🎉🎊🥳\n\nWait... this can't be right. Let me check my code...\n\n...\n\nOkay {mention}, somehow you actually won. **{ingot_icon}{amount:,}** ingots.\n\nThis is the maximum payout my programming allows. You literally cannot get more than this.\n\nI'm as shocked as you are.\n-# Mostly because I thought I coded this to be impossible.",
+        "CLAIMED_MESSAGE": "**JACKPOT!!** 🎉🎊🥳\n\nOh wait, someone else already claimed it.\n\nYou were too slow. Someone better looking than you beat you to it.\n\nI would say better luck next time, but the odds of seeing another jackpot are... not great.\n\nConsolation prize: 🎃\n-# At least you got to see the word \"JACKPOT\" I guess."
     },
     "REMOVE_ALL_TRICK": {
         "MESSAGE": "You lost **{ingot_icon}-{amount:,}**...\nNow that's gotta sting."
