@@ -15,6 +15,7 @@ from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
+from ironforgedbot.commands.help.cmd_help import cmd_help
 from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.common.responses import send_error_response
@@ -98,6 +99,13 @@ class IronForgedCommands:
                 name="whois",
                 description="Get player's rsn history.",
                 callback=cmd_whois,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="help",
+                description="Return a list of all commands.",
+                callback=cmd_help,
             )
         )
         self._tree.add_command(
