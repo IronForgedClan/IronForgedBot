@@ -72,7 +72,8 @@ ssh -T git@github.com
 # Should respond: "Hi username! You've successfully authenticated..."
 ```
 
-For more details, see [GitHub's SSH documentation](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
+For more details, see
+[GitHub's SSH documentation](https://docs.github.com/en/authentication/connecting-to-github-with-ssh).
 
 ### Clone the repository
 
@@ -344,75 +345,22 @@ make test
 When creating new test files, the filename must follow the pattern `*_test.py`.
 And the class name must follow the pattern `Test*`.
 
-## Data
+## Data Files
 
-Upon startup, the bot will attempt to read four files inside the `./data`
-directory. These files are:
+The bot uses JSON data files to configure:
 
-- `data/skills.json`
-- `data/bosses.json`
-- `data/clues.json`
-- `data/raids.json`
+- **OSRS Skills** (`skills.json`) - XP-per-point values and display settings
+- **Boss Activities** (`bosses.json`) - KC-per-point values for boss encounters
+- **Clue Scrolls** (`clues.json`) - KC-per-point values for clue tiers
+- **Raids** (`raids.json`) - KC-per-point values for raid activities
+- **Seasonal Events** (`trick_or_treat.json`) - Event content and mechanics
 
-These files contain information on how the bot will award points, control output
-order, and set emojis. They are in `json` format so as to be human readable, and
-easy to modify for someone non-technical. Once a file has been changed, the bot
-will need to be restarted to load the new values. No code changes necessary.
+These files control point calculation, display order, and emoji mappings.
+Changes to these files require a bot restart but no code changes.
 
-There are two categories of data files, `Skill` and `Activity`. `skills.json` is
-the only `Skill` type, while the others are all types of `Activity`.
-
-All files contain an array `[]` of objects `{}`.
-
-### Skill
-
-A `Skill` file looks something like this:
-
-```json
-[
-  {
-    "name": "Attack",
-    "display_order": 1,
-    "emoji_key": "Attack",
-    "xp_per_point": 100000,
-    "xp_per_point_post_99": 300000
-  }
-]
-```
-
-- `name`: This field **must** be identical to the value on the official
-  hiscores.
-- `display_order`: This is the order in which it is displayed. Currently only
-  used in the `breakdown` command.
-- `emoji_key`: This is the name of the emoji to use to represent this skill.
-- `xp_per_point`: This is the amount of xp required to award one point.
-- `xp_per_point_post_99`: This is the amount of xp required to award one point
-  beyond level 99.
-
-### Activity
-
-An `Activity` file looks something like this:
-
-```json
-[
-  {
-    "name": "Clue Scrolls (beginner)",
-    "display_name": "Beginner",
-    "display_order": 1,
-    "emoji_key": "ClueScrolls_Beginner",
-    "kc_per_point": 10
-  }
-]
-```
-
-- `name`: This field **must** be identical to the value on the official
-  hiscores.
-- `display_name`: This field is optional. It is the text that will be displayed
-  for this activity. Currently only used in the `breakdown` command for clues.
-- `display_order`: This is the order in which it is displayed. Currently only
-  used in the `breakdown` command.
-- `emoji_key`: This is the name of the emoji to use to represent this skill.
-- `kc_per_point`: This is the number of kill count required to award one point.
+> [!NOTE]
+> For detailed schema documentation and editing instructions, see the
+> [IronForgedBot_Data repository README](https://github.com/IronForgedClan/IronForgedBot_Data).
 
 ## Contributing
 
