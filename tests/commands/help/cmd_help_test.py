@@ -39,7 +39,10 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         mock_view_button.next = MagicMock(return_value=MagicMock())
 
         import sys
-        IGNORED_COMMANDS = sys.modules["ironforgedbot.commands.help.cmd_help"].IGNORED_COMMANDS
+
+        IGNORED_COMMANDS = sys.modules[
+            "ironforgedbot.commands.help.cmd_help"
+        ].IGNORED_COMMANDS
         if "ignored_command" not in IGNORED_COMMANDS:
             IGNORED_COMMANDS.append("ignored_command")
 
