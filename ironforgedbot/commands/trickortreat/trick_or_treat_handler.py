@@ -44,7 +44,6 @@ class TrickOrTreatHandler:
         self.THUMBNAILS: List[str]
         self.POSITIVE_MESSAGES: List[str]
         self.NEGATIVE_MESSAGES: List[str]
-        self.NEGATIVE_ANNOYANCES: List[str]
         self.JOKES: List[str]
         self.NO_INGOTS_MESSAGE: str
         self.JACKPOT_SUCCESS_PREFIX: str
@@ -87,7 +86,6 @@ class TrickOrTreatHandler:
             self.THUMBNAILS = data["MEDIA"]["THUMBNAILS"]
             self.POSITIVE_MESSAGES = data["GENERAL"]["POSITIVE_MESSAGES"]
             self.NEGATIVE_MESSAGES = data["GENERAL"]["NEGATIVE_MESSAGES"]
-            self.NEGATIVE_ANNOYANCES = data["GENERAL"]["NEGATIVE_ANNOYANCES"]
             self.JOKES = data["JOKE"]["MESSAGES"]
             self.NO_INGOTS_MESSAGE = data["GENERAL"]["NO_INGOTS_MESSAGE"]
             self.JACKPOT_SUCCESS_PREFIX = data["JACKPOT"]["SUCCESS_PREFIX"]

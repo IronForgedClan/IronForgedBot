@@ -472,7 +472,6 @@ MOCK_TRICK_OR_TREAT_DATA = """
     "GENERAL": {
         "POSITIVE_MESSAGES": ["Test positive {ingots}"],
         "NEGATIVE_MESSAGES": ["Test negative {ingots}"],
-        "NEGATIVE_ANNOYANCES": ["bud"],
         "NO_INGOTS_MESSAGE": "No ingots test message"
     },
     "JACKPOT": {

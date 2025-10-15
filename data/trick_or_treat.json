@@ -104,7 +104,6 @@
             "You could've bought a bond with those ingots.\nNow you can't even afford a bronze dagger. **{ingots}**",
             "Some people are born lucky.\nYou were born to feed me ingots. **{ingots}**\n-# Thank you for your service."
         ],
-        "NEGATIVE_ANNOYANCES": ["bud", "buddy", "pal", "champ", "boss", "chief", "friend", "mate", "kid", "kiddo"],
         "NO_INGOTS_MESSAGE": "You lost... well, you would have lost ingots if you had any!\n\nAttend some events, throw us a bond or _something_. You're making me look bad. 💀"
     },
     "JACKPOT": {
