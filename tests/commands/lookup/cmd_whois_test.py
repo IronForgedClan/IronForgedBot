@@ -11,7 +11,7 @@ from tests.helpers import (
     create_test_member,
 )
 
-with patch("ironforgedbot.decorators.require_role", mock_require_role):
+with patch("ironforgedbot.decorators.decorators.require_role", mock_require_role):
     from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 
 

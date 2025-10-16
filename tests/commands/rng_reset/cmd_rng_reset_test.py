@@ -10,8 +10,19 @@ from tests.helpers import (
     create_test_member,
 )
 
-with patch("ironforgedbot.decorators.require_role", mock_require_role):
-    from ironforgedbot.commands.rng_reset.cmd_rng_reset import cmd_rng_reset
+
+def mock_cost_ingots(amount: int, ephemeral: bool = True):
+    """Mock cost_ingots decorator that just calls the wrapped function."""
+
+    def decorator(func):
+        return func
+
+    return decorator
+
+
+with patch("ironforgedbot.decorators.decorators.require_role", mock_require_role):
+    with patch("ironforgedbot.decorators.decorators.cost_ingots", mock_cost_ingots):
+        from ironforgedbot.commands.rng_reset.cmd_rng_reset import cmd_rng_reset
 
 
 class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):

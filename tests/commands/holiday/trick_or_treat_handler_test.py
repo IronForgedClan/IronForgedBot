@@ -29,7 +29,7 @@ BOT_CHANGELOG_ENTRY = "[BOT] Trick or Treat"
 @unittest.skip("Skipping until trick or treat implementation rewrite")
 class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     async def test_init(self):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
+        with patch("ironforgedbot.decorators.decorators.singleton", lambda x: x):
             handler = await TrickOrTreatHandler()
             expected_weights = [1 / item.value for item in TrickOrTreat]
 
@@ -44,7 +44,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         new_callable=AsyncMock,
     )
     async def test_adjust_ingots_add(self, mock_storage):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
+        with patch("ironforgedbot.decorators.decorators.singleton", lambda x: x):
             caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
@@ -67,7 +67,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         new_callable=AsyncMock,
     )
     async def test_adjust_ingots_remove(self, mock_storage):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
+        with patch("ironforgedbot.decorators.decorators.singleton", lambda x: x):
             caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
@@ -90,7 +90,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         new_callable=AsyncMock,
     )
     async def test_adjust_ingots_member_has_none(self, mock_storage):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
+        with patch("ironforgedbot.decorators.decorators.singleton", lambda x: x):
             caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 
@@ -112,7 +112,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     async def test_adjust_ingots_member_has_less_than_wanted_to_remove(
         self, mock_storage
     ):
-        with patch("ironforgedbot.decorators.singleton", lambda x: x):
+        with patch("ironforgedbot.decorators.decorators.singleton", lambda x: x):
             caller = create_test_member("bob", [ROLE.MEMBER])
             interaction = create_mock_discord_interaction(user=caller)
 

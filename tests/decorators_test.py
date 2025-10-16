@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import discord
 
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.decorators import (
+from ironforgedbot.decorators.decorators import (
     require_channel,
     require_role,
     retry_on_exception,
@@ -95,7 +95,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
             f"Member '{mock_member.display_name}' tried using '{mock_func.__name__}' but does not have permission",
         )
 
-    @patch("ironforgedbot.decorators.STATE")
+    @patch("ironforgedbot.decorators.decorators.STATE")
     async def test_require_role_ignore_command_if_shutting_down(self, mock_state):
         mock_state.state["is_shutting_down"].return_value = True
 
@@ -140,7 +140,7 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(func.call_count, 1)
         mock_sleep.assert_not_called()
 
-    @patch("ironforgedbot.decorators.logger", new_callable=MagicMock)
+    @patch("ironforgedbot.decorators.decorators.logger", new_callable=MagicMock)
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception_retries(self, mock_sleep, mock_logger):
         func = self.create_retry_func(fail_count=2, success_msg="Success!")
@@ -153,7 +153,7 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_sleep.call_count, 2)
         mock_logger.warning.assert_called()
 
-    @patch("ironforgedbot.decorators.logger", new_callable=MagicMock)
+    @patch("ironforgedbot.decorators.decorators.logger", new_callable=MagicMock)
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception_raises_after_max_retries(
         self, mock_sleep, mock_logger
