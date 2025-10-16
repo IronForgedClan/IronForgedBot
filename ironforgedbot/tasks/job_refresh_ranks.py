@@ -288,7 +288,7 @@ async def job_refresh_ranks(
 
         for index, member in enumerate(members):
             if index > 0:
-                await asyncio.sleep(round(random.uniform(0.2, 1.5), 2))
+                await asyncio.sleep(round(random.uniform(0.1, 1), 2))
 
             logger.debug(f"Processing member: {member.nickname}")
 
