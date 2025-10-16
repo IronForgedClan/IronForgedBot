@@ -22,7 +22,6 @@ from ironforgedbot.common.ranks import (
 )
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
-from ironforgedbot.models.score_history import ScoreHistory
 from ironforgedbot.services.service_factory import (
     create_member_service,
     create_score_history_service,
@@ -41,6 +40,24 @@ PROBATION_DAYS = 28
 async def job_refresh_ranks(
     guild: discord.Guild, report_channel: discord.TextChannel
 ) -> None:
+    """
+    Refreshes member ranks based on calculated OSRS hiscores points and checks
+    probation status.
+
+    Iterates through all active members, fetches their current OSRS hiscores stats,
+    calculates points, and compares their actual rank with what they should have
+    based on points.
+
+    Reports discrepancies (upgrades/downgrades needed), probation completions,
+    and other issues like missing members or name changes.
+
+    Args:
+        guild: The Discord guild to process members from.
+        report_channel: The Discord text channel where progress and results are reported.
+
+    Returns:
+        None
+    """
     now: datetime = datetime.now(tz=timezone.utc)
     start_time: float = time.perf_counter()
     random_rank: str = random.choice(seq=RANK.list())

@@ -48,6 +48,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests successful rank refresh with valid member data and score tracking."""
         setup_time_mocks(None, mock_time, duration_seconds=5.0)
 
         mock_session, mock_member_service = setup_database_service_mocks(
@@ -88,6 +89,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that a report is sent when an active member is not found in the guild."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
@@ -124,6 +126,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that banned members are skipped during rank refresh."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
@@ -163,6 +166,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that members with God alignment are skipped but their scores are still tracked."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
@@ -209,6 +213,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that members with God rank but no alignment are reported."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.return_value = "👑"
 
@@ -264,6 +269,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that members without any rank are reported with the rank they should have."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.return_value = "🥉"
         mock_text_bold.side_effect = lambda x: f"**{x}**"
@@ -317,6 +323,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that members not found on hiscores are reported for suspected name change or ban."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
@@ -374,6 +381,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_sleep,
         mock_time,
     ):
+        """Tests that members whose points qualify for a higher rank are reported for upgrade."""
         mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.side_effect = lambda target: (
             "⚪" if target == RANK.IRON else "🥉"
