@@ -233,7 +233,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
         # Check that the message content appears in one of the sent messages
-        expected_text = "- <@12345> has 👑 God rank - missing alignment"
+        expected_text = "- <@12345> has 👑 God rank but missing alignment"
         sent_messages = [
             call.args[0] for call in self.mock_report_channel.send.call_args_list
         ]
@@ -295,7 +295,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         # Check that the message content appears in one of the sent messages
         expected_text = (
-            "- <@12345> missing rank → should be 🥉 **Mithril** (**705** points)"
+            "- <@12345> missing rank, should be 🥉 **Mithril** (**705** points)"
         )
         sent_messages = [
             call.args[0] for call in self.mock_report_channel.send.call_args_list
@@ -352,7 +352,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         # Check that the message content appears in one of the sent messages
         expected_text = (
-            "- <@12345> not found on hiscores - likely RSN change or OSRS ban"
+            "- <@12345> not found on hiscores - likely RSN change or ban"
         )
         sent_messages = [
             call.args[0] for call in self.mock_report_channel.send.call_args_list
