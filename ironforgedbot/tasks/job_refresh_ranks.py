@@ -34,6 +34,7 @@ from ironforgedbot.services.score_service import (
 logger = logging.getLogger(__name__)
 
 PROBATION_DAYS = 28
+REPORT_BATCH_SIZE = 5
 
 
 @log_task_execution(logger)
@@ -74,6 +75,13 @@ async def job_refresh_ranks(
         history = create_score_history_service(session)
         members = await member_service.get_all_active_members()
 
+        report_batch = []
+
+        async def send_batch_if_ready():
+            if len(report_batch) >= REPORT_BATCH_SIZE:
+                await report_channel.send("\n".join(report_batch))
+                report_batch.clear()
+
         for index, member in enumerate(members):
             if index > 0:
                 await asyncio.sleep(round(random.uniform(0.2, 1.5), 2))
@@ -89,9 +97,10 @@ async def job_refresh_ranks(
 
             if not discord_member:
                 logger.debug("...discord member not found")
-                _ = await report_channel.send(
+                report_batch.append(
                     f"❌ {member.nickname} (ID: {member.id}) not found in guild"
                 )
+                await send_batch_if_ready()
                 continue
 
             if is_member_banned(discord_member):
@@ -112,16 +121,18 @@ async def job_refresh_ranks(
                     and current_rank != RANK.IRON
                 ):
                     logger.debug("...suspected name change or ban")
-                    _ = await report_channel.send(
+                    report_batch.append(
                         f"🚫 {discord_member.mention} not found on hiscores - likely RSN change or OSRS ban"
                     )
+                    await send_batch_if_ready()
                     continue
                 else:
                     current_points = 0
             except Exception:
-                _ = await report_channel.send(
+                report_batch.append(
                     f"❌ Failed to fetch points for {discord_member.mention} - check logs"
                 )
+                await send_batch_if_ready()
                 continue
 
             await history.track_score(member.discord_id, current_points)
@@ -136,7 +147,8 @@ async def job_refresh_ranks(
                     f"ℹ️ {discord_member.mention} has {find_emoji(current_rank)} "
                     "God rank - missing alignment"
                 )
-                _ = await report_channel.send(message)
+                report_batch.append(message)
+                await send_batch_if_ready()
                 continue
 
             correct_rank = get_rank_from_points(current_points)
@@ -144,21 +156,21 @@ async def job_refresh_ranks(
             if check_member_has_role(discord_member, ROLE.PROSPECT):
                 if not isinstance(member.joined_date, datetime):
                     logger.debug("...has invalid join date")
-                    _ = await report_channel.send(
+                    report_batch.append(
                         f"❌ {discord_member.mention} ({text_bold(ROLE.PROSPECT)}) has invalid join date - fix in database"
                     )
+                    await send_batch_if_ready()
                     continue
 
                 if datetime.now(timezone.utc) >= member.joined_date + timedelta(
                     days=PROBATION_DAYS
                 ):
                     logger.debug("...completed probation")
-                    _ = await report_channel.send(
-                        (
-                            f"✅ {discord_member.mention} completed {text_bold(f'{PROBATION_DAYS} day')} "
-                            f"probation → eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)}"
-                        )
+                    report_batch.append(
+                        f"✅ {discord_member.mention} completed {text_bold(f'{PROBATION_DAYS} day')} "
+                        f"probation → eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)}"
                     )
+                    await send_batch_if_ready()
                     continue
 
                 logger.debug("...still on probation")
@@ -166,13 +178,12 @@ async def job_refresh_ranks(
 
             if current_rank is None:
                 logger.debug("...has no rank set")
-                _ = await report_channel.send(
-                    (
-                        f"⚠️ {discord_member.mention} missing rank → should be "
-                        f"{find_emoji(correct_rank)} {text_bold(correct_rank)} "
-                        f"({text_bold(f'{current_points:,}')} points)"
-                    )
+                report_batch.append(
+                    f"⚠️ {discord_member.mention} missing rank → should be "
+                    f"{find_emoji(correct_rank)} {text_bold(correct_rank)} "
+                    f"({text_bold(f'{current_points:,}')} points)"
                 )
+                await send_batch_if_ready()
                 continue
 
             if current_rank != str(correct_rank):
@@ -186,7 +197,8 @@ async def job_refresh_ranks(
                         f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
                         f"({text_bold(f'{current_points:,}')} points)"
                     )
-                    _ = await report_channel.send(message)
+                    report_batch.append(message)
+                    await send_batch_if_ready()
                 else:
                     logger.debug("...flagged for downgrade")
                     message = (
@@ -195,10 +207,14 @@ async def job_refresh_ranks(
                         f"({text_bold(f'{current_points:,}')} points)\n"
                         "-# Verify before changing"
                     )
-                    _ = await report_channel.send(message)
+                    report_batch.append(message)
+                    await send_batch_if_ready()
                 continue
 
             logger.debug("...no change")
+
+        if report_batch:
+            await report_channel.send("\n".join(report_batch))
 
         await member_service.close()
 
