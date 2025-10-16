@@ -91,6 +91,150 @@ def build_rank_downgrade_message(
     )
 
 
+async def fetch_member_points(
+    member_nickname: str,
+    discord_member,
+    current_rank: str,
+    score_service,
+) -> tuple[int, str | None]:
+    """
+    Fetch member points from hiscores API.
+
+    Args:
+        member_nickname: OSRS username
+        discord_member: Discord member object
+        current_rank: Member's current rank
+        score_service: Score service instance
+
+    Returns:
+        Tuple of (points, error_message)
+        - If successful: (points, None)
+        - If error: (0, error_message)
+    """
+    try:
+        points = await score_service.get_player_points_total(
+            member_nickname, bypass_cache=True
+        )
+        return points, None
+    except HiscoresNotFound:
+        if (
+            not check_member_has_role(discord_member, ROLE.PROSPECT)
+            and current_rank != RANK.IRON
+        ):
+            return 0, build_hiscores_not_found_message(discord_member.mention)
+        else:
+            return 0, None
+    except Exception:
+        return 0, build_fetch_error_message(discord_member.mention)
+
+
+def process_member_rank_check(
+    member,
+    discord_member,
+    current_rank: str,
+    current_points: int,
+) -> tuple[str | None, str | None, str | None]:
+    """
+    Process a member's rank and probation status.
+
+    Args:
+        member: Database member object
+        discord_member: Discord member object
+        current_rank: Member's current rank
+        current_points: Member's OSRS points
+
+    Returns:
+        Tuple of (rank_change_msg, probation_msg, issue_msg)
+        Only one will be non-None, or all None if no action needed
+    """
+    if current_rank in GOD_ALIGNMENT:
+        logger.debug("...has God alignment")
+        return None, None, None
+
+    if current_rank == RANK.GOD:
+        logger.debug("...has God role but no alignment")
+        return (
+            None,
+            None,
+            build_god_no_alignment_message(
+                discord_member.mention, find_emoji(current_rank)
+            ),
+        )
+
+    correct_rank = get_rank_from_points(current_points)
+
+    if check_member_has_role(discord_member, ROLE.PROSPECT):
+        if not isinstance(member.joined_date, datetime):
+            logger.debug("...has invalid join date")
+            return (
+                None,
+                None,
+                build_invalid_join_date_message(discord_member.mention, ROLE.PROSPECT),
+            )
+
+        if datetime.now(timezone.utc) >= member.joined_date + timedelta(
+            days=PROBATION_DAYS
+        ):
+            logger.debug("...completed probation")
+            return (
+                None,
+                build_probation_completed_message(
+                    discord_member.mention,
+                    find_emoji(correct_rank),
+                    correct_rank,
+                ),
+                None,
+            )
+
+        logger.debug("...still on probation")
+        return None, None, None
+
+    if current_rank is None or current_rank is "":
+        logger.debug("...has no rank set")
+        return (
+            None,
+            None,
+            build_missing_rank_message(
+                discord_member.mention,
+                find_emoji(correct_rank),
+                correct_rank,
+                current_points,
+            ),
+        )
+
+    if current_rank != str(correct_rank):
+        current_rank_points = RANK_POINTS[RANK(current_rank).name]
+        correct_rank_points = RANK_POINTS[RANK(correct_rank).name]
+
+        if correct_rank_points > current_rank_points:
+            logger.debug("...needs upgrading")
+            return (
+                build_rank_upgrade_message(
+                    discord_member.mention,
+                    find_emoji(current_rank),
+                    find_emoji(correct_rank),
+                    current_points,
+                ),
+                None,
+                None,
+            )
+        else:
+            logger.debug("...flagged for downgrade")
+            return (
+                build_rank_downgrade_message(
+                    discord_member.mention,
+                    find_emoji(current_rank),
+                    find_emoji(correct_rank),
+                    current_points,
+                ),
+                None,
+                None,
+            )
+
+    logger.debug("...no change")
+    return None, None, None
+
+
 @log_task_execution(logger)
 async def job_refresh_ranks(
     guild: discord.Guild, report_channel: discord.TextChannel
@@ -157,109 +301,27 @@ async def job_refresh_ranks(
             current_rank = get_rank_from_member(discord_member)
 
             score_service = get_score_service(HTTP)
-            current_points = 0
-            try:
-                current_points = await score_service.get_player_points_total(
-                    member.nickname, bypass_cache=True
-                )
-            except HiscoresNotFound:
-                if (
-                    not check_member_has_role(discord_member, ROLE.PROSPECT)
-                    and current_rank != RANK.IRON
-                ):
-                    logger.debug("...suspected name change or ban")
-                    issues.append(
-                        build_hiscores_not_found_message(discord_member.mention)
-                    )
-                    continue
-                else:
-                    current_points = 0
-            except Exception:
-                issues.append(build_fetch_error_message(discord_member.mention))
+            current_points, error_message = await fetch_member_points(
+                member.nickname, discord_member, current_rank, score_service
+            )
+
+            if error_message:
+                logger.debug("...error fetching points")
+                issues.append(error_message)
                 continue
 
             await history.track_score(member.discord_id, current_points)
 
-            if current_rank in GOD_ALIGNMENT:
-                logger.debug("...has God alignment")
-                continue
+            rank_change_msg, probation_msg, issue_msg = process_member_rank_check(
+                member, discord_member, current_rank, current_points
+            )
 
-            if current_rank == RANK.GOD:
-                logger.debug("...has God role but no alignment")
-                issues.append(
-                    build_god_no_alignment_message(
-                        discord_member.mention, find_emoji(current_rank)
-                    )
-                )
-                continue
-
-            correct_rank = get_rank_from_points(current_points)
-
-            if check_member_has_role(discord_member, ROLE.PROSPECT):
-                if not isinstance(member.joined_date, datetime):
-                    logger.debug("...has invalid join date")
-                    issues.append(
-                        build_invalid_join_date_message(
-                            discord_member.mention, ROLE.PROSPECT
-                        )
-                    )
-                    continue
-
-                if datetime.now(timezone.utc) >= member.joined_date + timedelta(
-                    days=PROBATION_DAYS
-                ):
-                    logger.debug("...completed probation")
-                    probation_completed.append(
-                        build_probation_completed_message(
-                            discord_member.mention,
-                            find_emoji(correct_rank),
-                            correct_rank,
-                        )
-                    )
-                    continue
-
-                logger.debug("...still on probation")
-                continue
-
-            if current_rank is None:
-                logger.debug("...has no rank set")
-                issues.append(
-                    build_missing_rank_message(
-                        discord_member.mention,
-                        find_emoji(correct_rank),
-                        correct_rank,
-                        current_points,
-                    )
-                )
-                continue
-
-            if current_rank != str(correct_rank):
-                current_rank_points = RANK_POINTS[RANK(current_rank).name]
-                correct_rank_points = RANK_POINTS[RANK(correct_rank).name]
-
-                if correct_rank_points > current_rank_points:
-                    logger.debug("...needs upgrading")
-                    rank_changes.append(
-                        build_rank_upgrade_message(
-                            discord_member.mention,
-                            find_emoji(current_rank),
-                            find_emoji(correct_rank),
-                            current_points,
-                        )
-                    )
-                else:
-                    logger.debug("...flagged for downgrade")
-                    rank_changes.append(
-                        build_rank_downgrade_message(
-                            discord_member.mention,
-                            find_emoji(current_rank),
-                            find_emoji(correct_rank),
-                            current_points,
-                        )
-                    )
-                continue
-
-            logger.debug("...no change")
+            if rank_change_msg:
+                rank_changes.append(rank_change_msg)
+            if probation_msg:
+                probation_completed.append(probation_msg)
+            if issue_msg:
+                issues.append(issue_msg)
 
         await progress_message.delete()
 
