@@ -18,7 +18,7 @@ from ironforgedbot.common.ranks import (
     get_rank_from_member,
     get_rank_from_points,
 )
-from ironforgedbot.common.text_formatters import text_bold, text_h2, text_h3
+from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.http import HTTP
 from ironforgedbot.services.service_factory import (
     create_member_service,
@@ -32,6 +32,63 @@ from ironforgedbot.services.score_service import (
 logger = logging.getLogger(__name__)
 
 PROBATION_DAYS = 28
+
+
+def build_missing_member_message(nickname: str, member_id: int) -> str:
+    return f"- {nickname} (ID: {member_id}) not found in guild"
+
+
+def build_hiscores_not_found_message(mention: str) -> str:
+    return f"- {mention} not found on hiscores - likely RSN change or ban"
+
+
+def build_fetch_error_message(mention: str) -> str:
+    return f"- Failed to fetch points for {mention} - check logs"
+
+
+def build_god_no_alignment_message(mention: str, rank_emoji: str) -> str:
+    return f"- {mention} has {rank_emoji} God rank but missing alignment"
+
+
+def build_invalid_join_date_message(mention: str, role: str) -> str:
+    return f"- {mention} ({text_bold(role)}) has invalid join date"
+
+
+def build_probation_completed_message(
+    mention: str, rank_emoji: str, rank_name: str
+) -> str:
+    return f"- {mention} is eligible for {rank_emoji} {text_bold(rank_name)}"
+
+
+def build_missing_rank_message(
+    mention: str, rank_emoji: str, rank_name: str, points: int
+) -> str:
+    return (
+        f"- {mention} missing rank, should be "
+        f"{rank_emoji} {text_bold(rank_name)} "
+        f"({text_bold(f'{points:,}')} points)"
+    )
+
+
+def build_rank_upgrade_message(
+    mention: str, old_emoji: str, new_emoji: str, points: int
+) -> str:
+    return (
+        f"- {mention} upgrade "
+        f"{old_emoji} → {new_emoji} "
+        f"({text_bold(f'{points:,}')} points)"
+    )
+
+
+def build_rank_downgrade_message(
+    mention: str, old_emoji: str, new_emoji: str, points: int
+) -> str:
+    return (
+        f"- {mention} downgrade "
+        f"{old_emoji} → {new_emoji} "
+        f"({text_bold(f'{points:,}')} points) "
+        "(Verify before changing)"
+    )
 
 
 @log_task_execution(logger)
@@ -90,9 +147,7 @@ async def job_refresh_ranks(
 
             if not discord_member:
                 logger.debug("...discord member not found")
-                issues.append(
-                    f"- {member.nickname} (ID: {member.id}) not found in guild"
-                )
+                issues.append(build_missing_member_message(member.nickname, member.id))
                 continue
 
             if is_member_banned(discord_member):
@@ -114,15 +169,13 @@ async def job_refresh_ranks(
                 ):
                     logger.debug("...suspected name change or ban")
                     issues.append(
-                        f"- {discord_member.mention} not found on hiscores - likely RSN change or ban"
+                        build_hiscores_not_found_message(discord_member.mention)
                     )
                     continue
                 else:
                     current_points = 0
             except Exception:
-                issues.append(
-                    f"- Failed to fetch points for {discord_member.mention} - check logs"
-                )
+                issues.append(build_fetch_error_message(discord_member.mention))
                 continue
 
             await history.track_score(member.discord_id, current_points)
@@ -133,11 +186,11 @@ async def job_refresh_ranks(
 
             if current_rank == RANK.GOD:
                 logger.debug("...has God role but no alignment")
-                message = (
-                    f"- {discord_member.mention} has {find_emoji(current_rank)} "
-                    "God rank but missing alignment"
+                issues.append(
+                    build_god_no_alignment_message(
+                        discord_member.mention, find_emoji(current_rank)
+                    )
                 )
-                issues.append(message)
                 continue
 
             correct_rank = get_rank_from_points(current_points)
@@ -146,7 +199,9 @@ async def job_refresh_ranks(
                 if not isinstance(member.joined_date, datetime):
                     logger.debug("...has invalid join date")
                     issues.append(
-                        f"- {discord_member.mention} ({text_bold(ROLE.PROSPECT)}) has invalid join date"
+                        build_invalid_join_date_message(
+                            discord_member.mention, ROLE.PROSPECT
+                        )
                     )
                     continue
 
@@ -155,7 +210,11 @@ async def job_refresh_ranks(
                 ):
                     logger.debug("...completed probation")
                     probation_completed.append(
-                        f"- {discord_member.mention} is eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)}"
+                        build_probation_completed_message(
+                            discord_member.mention,
+                            find_emoji(correct_rank),
+                            correct_rank,
+                        )
                     )
                     continue
 
@@ -165,9 +224,12 @@ async def job_refresh_ranks(
             if current_rank is None:
                 logger.debug("...has no rank set")
                 issues.append(
-                    f"- {discord_member.mention} missing rank, should be "
-                    f"{find_emoji(correct_rank)} {text_bold(correct_rank)} "
-                    f"({text_bold(f'{current_points:,}')} points)"
+                    build_missing_rank_message(
+                        discord_member.mention,
+                        find_emoji(correct_rank),
+                        correct_rank,
+                        current_points,
+                    )
                 )
                 continue
 
@@ -177,21 +239,24 @@ async def job_refresh_ranks(
 
                 if correct_rank_points > current_rank_points:
                     logger.debug("...needs upgrading")
-                    message = (
-                        f"- {discord_member.mention} upgrade "
-                        f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
-                        f"({text_bold(f'{current_points:,}')} points)"
+                    rank_changes.append(
+                        build_rank_upgrade_message(
+                            discord_member.mention,
+                            find_emoji(current_rank),
+                            find_emoji(correct_rank),
+                            current_points,
+                        )
                     )
-                    rank_changes.append(message)
                 else:
                     logger.debug("...flagged for downgrade")
-                    message = (
-                        f"- {discord_member.mention} downgrade "
-                        f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
-                        f"({text_bold(f'{current_points:,}')} points) "
-                        "(Verify before changing)"
+                    rank_changes.append(
+                        build_rank_downgrade_message(
+                            discord_member.mention,
+                            find_emoji(current_rank),
+                            find_emoji(correct_rank),
+                            current_points,
+                        )
                     )
-                    rank_changes.append(message)
                 continue
 
             logger.debug("...no change")
