@@ -16,6 +16,7 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.user = Mock()
         self.mock_interaction.user.id = 12345
         self.mock_interaction.delete_original_response = AsyncMock()
+        self.mock_interaction.edit_original_response = AsyncMock()
 
         self.view = IngotCostConfirmationView(
             cost=100,
@@ -25,12 +26,16 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
             command_name="test_command",
         )
 
+    @patch("ironforgedbot.decorators.views.ingot_cost_confirmation_view.find_emoji")
+    @patch(
+        "ironforgedbot.decorators.views.ingot_cost_confirmation_view.build_response_embed"
+    )
     @patch("ironforgedbot.decorators.views.ingot_cost_confirmation_view.db")
     @patch("ironforgedbot.decorators.views.ingot_cost_confirmation_view.IngotService")
     async def test_on_confirm_with_sufficient_ingots(
-        self, mock_ingot_service_class, mock_db
+        self, mock_ingot_service_class, mock_db, mock_build_embed, mock_find_emoji
     ):
-        """Test confirm button with sufficient ingots executes the wrapped function."""
+        """Test confirm button with sufficient ingots edits to show success and executes the wrapped function."""
         mock_button_interaction = AsyncMock(spec=discord.Interaction)
         mock_button_interaction.user.id = 12345
         mock_button_interaction.response.defer = AsyncMock()
@@ -44,13 +49,32 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
         )
         mock_ingot_service_class.return_value = mock_ingot_service
 
+        mock_find_emoji.return_value = "<:Ingot:123>"
+        mock_embed = Mock()
+        mock_build_embed.return_value = mock_embed
+
         await self.view.on_confirm(mock_button_interaction)
 
         mock_button_interaction.response.defer.assert_called_once_with(ephemeral=True)
-        self.mock_interaction.delete_original_response.assert_called_once()
         mock_ingot_service.try_remove_ingots.assert_called_once_with(
             12345, -100, None, "Command usage: test_command"
         )
+
+        # Verify buttons are removed
+        self.assertEqual(len(self.view.children), 0)
+
+        # Verify success embed is built
+        mock_build_embed.assert_called_once_with(
+            title="✅ Ingots Deducted",
+            description="Deducted <:Ingot:123> **100** ingots\nNew balance: <:Ingot:123> **50**",
+            color=discord.Colour.green(),
+        )
+
+        # Verify original message is edited (not deleted)
+        self.mock_interaction.edit_original_response.assert_called_once_with(
+            embed=mock_embed, view=self.view
+        )
+
         self.mock_wrapped_function.assert_called_once_with(mock_button_interaction)
 
     @patch("ironforgedbot.decorators.views.ingot_cost_confirmation_view.find_emoji")
@@ -66,11 +90,10 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
         mock_build_embed,
         mock_find_emoji,
     ):
-        """Test confirm button with insufficient ingots shows error message."""
+        """Test confirm button with insufficient ingots edits to show error message."""
         mock_button_interaction = AsyncMock(spec=discord.Interaction)
         mock_button_interaction.user.id = 12345
         mock_button_interaction.response.defer = AsyncMock()
-        mock_button_interaction.followup.send = AsyncMock()
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -88,18 +111,25 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
         await self.view.on_confirm(mock_button_interaction)
 
         mock_button_interaction.response.defer.assert_called_once_with(ephemeral=True)
-        self.mock_interaction.delete_original_response.assert_called_once()
         mock_ingot_service.try_remove_ingots.assert_called_once_with(
             12345, -100, None, "Command usage: test_command"
         )
+
+        # Verify buttons are removed
+        self.assertEqual(len(self.view.children), 0)
+
+        # Verify error embed is built
         mock_build_embed.assert_called_once_with(
-            title="Insufficient Ingots",
+            title="❌ Insufficient Ingots",
             description="You need <:Ingot:123> **100** but only have <:Ingot:123> **25**",
             color=discord.Colour.red(),
         )
-        mock_button_interaction.followup.send.assert_called_once_with(
-            embed=mock_embed, ephemeral=True
+
+        # Verify original message is edited (not deleted)
+        self.mock_interaction.edit_original_response.assert_called_once_with(
+            embed=mock_embed, view=self.view
         )
+
         self.mock_wrapped_function.assert_not_called()
 
     async def test_on_cancel(self):

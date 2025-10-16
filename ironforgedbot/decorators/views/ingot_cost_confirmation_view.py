@@ -52,17 +52,30 @@ class IngotCostConfirmationView(View):
                 f"Command usage: {self.command_name}",
             )
 
+        self.clear_items()
+
+        ingot_icon = find_emoji("Ingot")
+
         if not result.status:
-            ingot_icon = find_emoji("Ingot")
-            embed = build_response_embed(
-                title="Insufficient Ingots",
+            error_embed = build_response_embed(
+                title="❌ Insufficient Ingots",
                 description=f"You need {ingot_icon} **{self.cost:,}** but only have {ingot_icon} **{result.new_total:,}**",
                 color=discord.Colour.red(),
             )
-            await self.original_interaction.delete_original_response()
-            return await button_interaction.followup.send(embed=embed, ephemeral=True)
+            await self.original_interaction.edit_original_response(
+                embed=error_embed, view=self
+            )
+            return
 
-        await self.original_interaction.delete_original_response()
+        success_embed = build_response_embed(
+            title="✅ Ingots Deducted",
+            description=f"Deducted {ingot_icon} **{self.cost:,}** ingots\nNew balance: {ingot_icon} **{result.new_total:,}**",
+            color=discord.Colour.green(),
+        )
+        await self.original_interaction.edit_original_response(
+            embed=success_embed, view=self
+        )
+
         new_args = (button_interaction,) + self.original_args[1:]
         await self.wrapped_function(*new_args, **self.original_kwargs)
 
