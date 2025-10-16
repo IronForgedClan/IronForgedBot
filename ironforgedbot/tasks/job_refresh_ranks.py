@@ -90,10 +90,7 @@ async def job_refresh_ranks(
             if not discord_member:
                 logger.debug("...discord member not found")
                 _ = await report_channel.send(
-                    (
-                        f"❌ Active member {member.nickname} ({member.id}) could not be "
-                        "found in this guild."
-                    )
+                    f"❌ {member.nickname} (ID: {member.id}) not found in guild"
                 )
                 continue
 
@@ -116,17 +113,14 @@ async def job_refresh_ranks(
                 ):
                     logger.debug("...suspected name change or ban")
                     _ = await report_channel.send(
-                        (
-                            f"🚫 {discord_member.mention} has no presence on the hiscores. "
-                            "This member has either changed their rsn, or been banned."
-                        )
+                        f"🚫 {discord_member.mention} not found on hiscores - likely RSN change or OSRS ban"
                     )
                     continue
                 else:
                     current_points = 0
             except Exception:
                 _ = await report_channel.send(
-                    f"❌ Unhandled error getting points for {discord_member.mention}."
+                    f"❌ Failed to fetch points for {discord_member.mention} - check logs"
                 )
                 continue
 
@@ -140,7 +134,7 @@ async def job_refresh_ranks(
                 logger.debug("...has God role but no alignment")
                 message = (
                     f"ℹ️ {discord_member.mention} has {find_emoji(current_rank)} "
-                    "God rank but no alignment."
+                    "God rank - missing alignment"
                 )
                 _ = await report_channel.send(message)
                 continue
@@ -151,10 +145,7 @@ async def job_refresh_ranks(
                 if not isinstance(member.joined_date, datetime):
                     logger.debug("...has invalid join date")
                     _ = await report_channel.send(
-                        (
-                            f"❌ {discord_member.mention} is a {text_bold(ROLE.PROSPECT)} "
-                            "with an invalid join date."
-                        )
+                        f"❌ {discord_member.mention} ({text_bold(ROLE.PROSPECT)}) has invalid join date - fix in database"
                     )
                     continue
 
@@ -164,10 +155,8 @@ async def job_refresh_ranks(
                     logger.debug("...completed probation")
                     _ = await report_channel.send(
                         (
-                            f"✅ {discord_member.mention} has completed their "
-                            f"{text_bold(f'{PROBATION_DAYS} day')} probation period and "
-                            f"is now eligible for {find_emoji(correct_rank)} "
-                            f"{text_bold(correct_rank)} rank."
+                            f"✅ {discord_member.mention} completed {text_bold(f'{PROBATION_DAYS} day')} "
+                            f"probation → eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)}"
                         )
                     )
                     continue
@@ -179,8 +168,9 @@ async def job_refresh_ranks(
                 logger.debug("...has no rank set")
                 _ = await report_channel.send(
                     (
-                        f"⚠️ {discord_member.mention} detected without any rank. Should have "
-                        f"{find_emoji(correct_rank)} {text_bold(correct_rank)}."
+                        f"⚠️ {discord_member.mention} missing rank → should be "
+                        f"{find_emoji(correct_rank)} {text_bold(correct_rank)} "
+                        f"({text_bold(f'{current_points:,}')} points)"
                     )
                 )
                 continue
@@ -192,7 +182,7 @@ async def job_refresh_ranks(
                 if correct_rank_points > current_rank_points:
                     logger.debug("...needs upgrading")
                     message = (
-                        f"⬆️ {discord_member.mention} needs upgrading "
+                        f"⬆️ {discord_member.mention} "
                         f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
                         f"({text_bold(f'{current_points:,}')} points)"
                     )
@@ -200,7 +190,7 @@ async def job_refresh_ranks(
                 else:
                     logger.debug("...flagged for downgrade")
                     message = (
-                        f"⬇️ {discord_member.mention} should be downgraded "
+                        f"⬇️ {discord_member.mention} "
                         f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
                         f"({text_bold(f'{current_points:,}')} points)\n"
                         "-# Verify before changing"
