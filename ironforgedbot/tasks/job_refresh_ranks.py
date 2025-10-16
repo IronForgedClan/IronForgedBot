@@ -26,6 +26,7 @@ from ironforgedbot.services.service_factory import (
 )
 from ironforgedbot.services.score_service import (
     HiscoresNotFound,
+    ScoreService,
     get_score_service,
 )
 
@@ -35,34 +36,41 @@ PROBATION_DAYS = 28
 
 
 def build_missing_member_message(nickname: str, member_id: int) -> str:
+    """Build message for member not found in Discord guild."""
     return f"- {nickname} (ID: {member_id}) not found in guild"
 
 
 def build_hiscores_not_found_message(mention: str) -> str:
+    """Build message for member not found on OSRS hiscores."""
     return f"- {mention} not found on hiscores - likely RSN change or ban"
 
 
 def build_fetch_error_message(mention: str) -> str:
+    """Build message for error fetching member points."""
     return f"- Failed to fetch points for {mention} - check logs"
 
 
 def build_god_no_alignment_message(mention: str, rank_emoji: str) -> str:
+    """Build message for God rank without alignment."""
     return f"- {mention} has {rank_emoji} God rank but missing alignment"
 
 
 def build_invalid_join_date_message(mention: str, role: str) -> str:
+    """Build message for invalid probation join date."""
     return f"- {mention} ({text_bold(role)}) has invalid join date"
 
 
 def build_probation_completed_message(
     mention: str, rank_emoji: str, rank_name: str
 ) -> str:
+    """Build message for completed probation period."""
     return f"- {mention} is eligible for {rank_emoji} {text_bold(rank_name)}"
 
 
 def build_missing_rank_message(
     mention: str, rank_emoji: str, rank_name: str, points: int
 ) -> str:
+    """Build message for member missing rank assignment."""
     return (
         f"- {mention} missing rank, should be "
         f"{rank_emoji} {text_bold(rank_name)} "
@@ -73,6 +81,7 @@ def build_missing_rank_message(
 def build_rank_upgrade_message(
     mention: str, old_emoji: str, new_emoji: str, points: int
 ) -> str:
+    """Build message for rank upgrade."""
     return (
         f"- {mention} upgrade "
         f"{old_emoji} → {new_emoji} "
@@ -83,6 +92,7 @@ def build_rank_upgrade_message(
 def build_rank_downgrade_message(
     mention: str, old_emoji: str, new_emoji: str, points: int
 ) -> str:
+    """Build message for rank downgrade."""
     return (
         f"- {mention} downgrade "
         f"{old_emoji} → {new_emoji} "
@@ -93,9 +103,9 @@ def build_rank_downgrade_message(
 
 async def fetch_member_points(
     member_nickname: str,
-    discord_member,
+    discord_member: discord.Member,
     current_rank: str,
-    score_service,
+    score_service: ScoreService,
 ) -> tuple[int, str | None]:
     """
     Fetch member points from hiscores API.
@@ -130,7 +140,7 @@ async def fetch_member_points(
 
 def process_member_rank_check(
     member,
-    discord_member,
+    discord_member: discord.Member,
     current_rank: str,
     current_points: int,
 ) -> tuple[str | None, str | None, str | None]:
