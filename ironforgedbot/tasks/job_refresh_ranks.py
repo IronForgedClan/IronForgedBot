@@ -16,6 +16,7 @@ from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.common.ranks import (
     GOD_ALIGNMENT,
     RANK,
+    RANK_POINTS,
     get_rank_from_member,
     get_rank_from_points,
 )
@@ -168,13 +169,26 @@ async def job_refresh_ranks(
                 continue
 
             if current_rank != str(correct_rank):
-                logger.debug("...needs upgrading")
-                message = (
-                    f"{discord_member.mention} needs upgrading "
-                    f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
-                    f"({text_bold(f'{current_points:,}')} points)"
-                )
-                _ = await report_channel.send(message)
+                current_rank_points = RANK_POINTS[RANK(current_rank).name]
+                correct_rank_points = RANK_POINTS[RANK(correct_rank).name]
+
+                if correct_rank_points > current_rank_points:
+                    logger.debug("...needs upgrading")
+                    message = (
+                        f"{discord_member.mention} needs upgrading "
+                        f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
+                        f"({text_bold(f'{current_points:,}')} points)"
+                    )
+                    _ = await report_channel.send(message)
+                else:
+                    logger.debug("...flagged for downgrade")
+                    message = (
+                        f"{discord_member.mention} should be downgraded "
+                        f"{find_emoji(current_rank)} → {find_emoji(correct_rank)} "
+                        f"({text_bold(f'{current_points:,}')} points)\n"
+                        "-# Verify before changing"
+                    )
+                    _ = await report_channel.send(message)
                 continue
 
             logger.debug("...no change")

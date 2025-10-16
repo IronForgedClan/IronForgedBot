@@ -408,3 +408,66 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         self.mock_report_channel.send.assert_any_call(
             "<@12345> needs upgrading ⚪ → 🥉 (**705** points)"
         )
+
+    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.db")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_member")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_points")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.find_emoji")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.text_bold")
+    async def test_job_refresh_ranks_member_flagged_for_downgrade(
+        self,
+        mock_text_bold,
+        mock_find_emoji,
+        mock_check_role,
+        mock_get_rank_from_points,
+        mock_get_rank,
+        mock_is_banned,
+        mock_db,
+        mock_create_member_service,
+        mock_create_score_history_service,
+        mock_get_score_service,
+        mock_sleep,
+        mock_time,
+    ):
+        """Tests that members whose points no longer qualify for current rank are flagged for downgrade."""
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
+        mock_find_emoji.side_effect = lambda target: (
+            "🐉" if target == RANK.DRAGON else "🟢"
+        )
+        mock_text_bold.side_effect = lambda x: f"**{x}**"
+        mock_get_rank_from_points.return_value = RANK.ADAMANT
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [self.mock_db_member]
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_history_service = AsyncMock()
+        mock_create_score_history_service.return_value = mock_history_service
+
+        mock_score_service = AsyncMock()
+        mock_score_service.get_player_points_total.return_value = 1000
+        mock_get_score_service.return_value = mock_score_service
+
+        mock_discord_member = Mock(spec=discord.Member)
+        mock_discord_member.mention = "<@12345>"
+        mock_discord_member.roles = []
+        mock_is_banned.return_value = False
+        mock_get_rank.return_value = RANK.DRAGON
+        mock_check_role.return_value = False
+        self.mock_guild.get_member.return_value = mock_discord_member
+
+        await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
+
+        self.mock_report_channel.send.assert_any_call(
+            "<@12345> should be downgraded 🐉 → 🟢 (**1,000** points)\n-# Verify before changing"
+        )
