@@ -200,37 +200,62 @@ async def job_refresh_ranks(
 
             logger.debug("...no change")
 
-        async def send_category_reports(title: str, messages: list[str], emoji: str):
+        async def send_category_reports(
+            title: str, messages: list[str], emoji: str, description: str = ""
+        ):
             if not messages:
                 return
 
             header = f"{text_h2(f'{emoji} {title}')}\n"
+            if description:
+                header += f"{description}\n\n"
 
-            full_message = header + "\n".join(messages)
+            footer_text = (
+                f"\n\nProcessed {datetime_to_discord_relative(dt=now, format='R')}."
+            )
+
+            full_message = header + "\n".join(messages) + footer_text
             if len(full_message) <= 2000:
                 await report_channel.send(full_message)
             else:
                 current_batch = []
-                current_length = len(header)
+                current_length = len(header) + len(footer_text)
 
                 for msg in messages:
                     msg_length = len(msg) + 1  # +1 for newline
                     if current_length + msg_length > 2000:
-                        await report_channel.send(header + "\n".join(current_batch))
+                        await report_channel.send(
+                            header + "\n".join(current_batch) + footer_text
+                        )
                         current_batch = [msg]
-                        current_length = len(header) + msg_length
+                        current_length = len(header) + len(footer_text) + msg_length
                     else:
                         current_batch.append(msg)
                         current_length += msg_length
 
                 if current_batch:
-                    await report_channel.send(header + "\n".join(current_batch))
+                    await report_channel.send(
+                        header + "\n".join(current_batch) + footer_text
+                    )
 
-        await send_category_reports("Rank Changes", rank_changes, icon)
         await send_category_reports(
-            "Probation Completed", probation_completed, find_emoji("Prospect")
+            "Rank Changes",
+            rank_changes,
+            icon,
+            "Members who need rank adjustments based on their current points.",
         )
-        await send_category_reports("Issues", issues, "⚠️")
+        await send_category_reports(
+            "Probation Completed",
+            probation_completed,
+            find_emoji("Prospect"),
+            "Members who have completed their probation period and are eligible for rank assignment.",
+        )
+        await send_category_reports(
+            "Issues",
+            issues,
+            "⚠️",
+            "Problems requiring manual attention.",
+        )
 
         await member_service.close()
 
