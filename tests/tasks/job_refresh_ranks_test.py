@@ -33,7 +33,6 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
             joined_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
         )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -46,10 +45,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests successful rank refresh with valid member data and score tracking."""
-        setup_time_mocks(None, mock_time, duration_seconds=5.0)
 
         mock_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_create_member_service
@@ -72,7 +69,6 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_history_service.track_score.assert_called_once_with(12345, 150)
         mock_member_service.close.assert_called_once()
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -87,10 +83,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that a report is sent when an active member is not found in the guild."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -106,10 +100,16 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        expected_message = f"❌ {self.mock_db_member.nickname} (ID: {self.mock_db_member.id}) not found in guild"
-        self.mock_report_channel.send.assert_any_call(expected_message)
+        # Check that the message content appears in one of the sent messages
+        expected_text = f"- {self.mock_db_member.nickname} (ID: {self.mock_db_member.id}) not found in guild"
+        sent_messages = [
+            call.args[0] for call in self.mock_report_channel.send.call_args_list
+        ]
+        self.assertTrue(
+            any(expected_text in msg for msg in sent_messages),
+            f"Expected text '{expected_text}' not found in any sent message",
+        )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -124,10 +124,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that banned members are skipped during rank refresh."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -147,7 +145,6 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_history_service.track_score.assert_not_called()
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -164,10 +161,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that members with God alignment are skipped but their scores are still tracked."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -192,7 +187,6 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         mock_history_service.track_score.assert_called_once_with(12345, 150)
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -211,10 +205,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that members with God rank but no alignment are reported."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.return_value = "👑"
 
         mock_session = AsyncMock()
@@ -240,11 +232,16 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        self.mock_report_channel.send.assert_any_call(
-            "ℹ️ <@12345> has 👑 God rank - missing alignment"
+        # Check that the message content appears in one of the sent messages
+        expected_text = "- <@12345> has 👑 God rank - missing alignment"
+        sent_messages = [
+            call.args[0] for call in self.mock_report_channel.send.call_args_list
+        ]
+        self.assertTrue(
+            any(expected_text in msg for msg in sent_messages),
+            f"Expected text '{expected_text}' not found in any sent message",
         )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -267,10 +264,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that members without any rank are reported with the rank they should have."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.return_value = "🥉"
         mock_text_bold.side_effect = lambda x: f"**{x}**"
         mock_get_rank_from_points.return_value = RANK.MITHRIL
@@ -298,11 +293,18 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        self.mock_report_channel.send.assert_any_call(
-            "⚠️ <@12345> missing rank → should be 🥉 **Mithril** (**705** points)"
+        # Check that the message content appears in one of the sent messages
+        expected_text = (
+            "- <@12345> missing rank → should be 🥉 **Mithril** (**705** points)"
+        )
+        sent_messages = [
+            call.args[0] for call in self.mock_report_channel.send.call_args_list
+        ]
+        self.assertTrue(
+            any(expected_text in msg for msg in sent_messages),
+            f"Expected text '{expected_text}' not found in any sent message",
         )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -321,10 +323,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that members not found on hiscores are reported for suspected name change or ban."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -350,11 +350,18 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        self.mock_report_channel.send.assert_any_call(
-            "🚫 <@12345> not found on hiscores - likely RSN change or OSRS ban"
+        # Check that the message content appears in one of the sent messages
+        expected_text = (
+            "- <@12345> not found on hiscores - likely RSN change or OSRS ban"
+        )
+        sent_messages = [
+            call.args[0] for call in self.mock_report_channel.send.call_args_list
+        ]
+        self.assertTrue(
+            any(expected_text in msg for msg in sent_messages),
+            f"Expected text '{expected_text}' not found in any sent message",
         )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -379,10 +386,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that members whose points qualify for a higher rank are reported for upgrade."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.side_effect = lambda target: (
             "⚪" if target == RANK.IRON else "🥉"
         )
@@ -413,11 +418,16 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        self.mock_report_channel.send.assert_any_call(
-            "⬆️ <@12345> ⚪ → 🥉 (**705** points)"
+        # Check that the message content appears in one of the sent messages
+        expected_text = "- <@12345> upgrade ⚪ → 🥉 (**705** points)"
+        sent_messages = [
+            call.args[0] for call in self.mock_report_channel.send.call_args_list
+        ]
+        self.assertTrue(
+            any(expected_text in msg for msg in sent_messages),
+            f"Expected text '{expected_text}' not found in any sent message",
         )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.time")
     @patch("ironforgedbot.tasks.job_refresh_ranks.asyncio.sleep")
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_score_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
@@ -442,10 +452,8 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         mock_create_score_history_service,
         mock_get_score_service,
         mock_sleep,
-        mock_time,
     ):
         """Tests that members whose points no longer qualify for current rank are flagged for downgrade."""
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_find_emoji.side_effect = lambda target: (
             "🐉" if target == RANK.DRAGON else "🟢"
         )
@@ -476,6 +484,14 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        self.mock_report_channel.send.assert_any_call(
-            "⬇️ <@12345> 🐉 → 🟢 (**1,000** points)\n-# Verify before changing"
+        # Check that the message content appears in one of the sent messages
+        expected_text = (
+            "- <@12345> downgrade 🐉 → 🟢 (**1,000** points) (Verify before changing)"
+        )
+        sent_messages = [
+            call.args[0] for call in self.mock_report_channel.send.call_args_list
+        ]
+        self.assertTrue(
+            any(expected_text in msg for msg in sent_messages),
+            f"Expected text '{expected_text}' not found in any sent message",
         )
