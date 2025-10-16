@@ -189,7 +189,7 @@ def process_member_rank_check(
         logger.debug("...still on probation")
         return None, None, None
 
-    if current_rank is None or current_rank is "":
+    if current_rank is None or not current_rank:
         logger.debug("...has no rank set")
         return (
             None,
