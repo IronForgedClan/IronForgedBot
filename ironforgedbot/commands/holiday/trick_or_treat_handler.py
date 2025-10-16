@@ -8,7 +8,7 @@ import discord
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.database.database import db
-from ironforgedbot.decorators import singleton
+from ironforgedbot.decorators.decorators import singleton
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.state import STATE

@@ -58,7 +58,8 @@ def require_role(role: ROLE, ephemeral=False):
                     f"tried using '{func.__name__}' but does not have permission"
                 )
 
-            await interaction.response.defer(thinking=True, ephemeral=ephemeral)
+            if not interaction.response.is_done():
+                await interaction.response.defer(thinking=True, ephemeral=ephemeral)
             await func(*args, **kwargs)
 
         return wrapper
@@ -217,3 +218,61 @@ def singleton(cls):
             return async_new(*args, **kwargs)
 
     return Wrapper
+
+
+def cost_ingots(amount: int, ephemeral: bool = True):
+    """Charges ingots before executing command. Shows confirmation prompt.
+
+    This decorator works alongside @require_role by passing the button interaction down the chain.
+
+    Args:
+        amount: Number of ingots to charge
+        ephemeral: Whether confirmation prompt is ephemeral (default: True)
+
+    Usage:
+        @cost_ingots(100)
+        @require_role(ROLE.MEMBER)
+        @log_command_execution(logger)
+        async def cmd_rng_reset(interaction):
+            ...
+
+    IMPORTANT: Must be the OUTERMOST decorator (listed first).
+    """
+    from ironforgedbot.decorators.views.ingot_cost_confirmation_view import (
+        IngotCostConfirmationView,
+    )
+    from ironforgedbot.common.helpers import find_emoji
+    from ironforgedbot.common.responses import build_response_embed
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            interaction = args[0]
+
+            if not isinstance(interaction, discord.Interaction):
+                raise ReferenceError(
+                    f"Expected discord.Interaction as first argument ({func.__name__})"
+                )
+
+            ingot_icon = find_emoji("Ingot")
+            embed = build_response_embed(
+                title="💰 Command Cost",
+                description=f"This command costs {ingot_icon} **{amount:,}** ingots to use.\n\nDo you want to continue?",
+                color=discord.Colour.gold(),
+            )
+
+            view = IngotCostConfirmationView(
+                cost=amount,
+                wrapped_function=func,
+                original_args=args,
+                original_kwargs=kwargs,
+                command_name=func.__name__,
+            )
+
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=ephemeral
+            )
+
+        return wrapper
+
+    return decorator

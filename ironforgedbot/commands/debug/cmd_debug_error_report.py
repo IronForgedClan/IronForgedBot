@@ -8,7 +8,7 @@ from discord import app_commands
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators.decorators import require_role
 
 logger = logging.getLogger(__name__)
 

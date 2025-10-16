@@ -10,7 +10,7 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.config import CONFIG
-from ironforgedbot.decorators import require_channel, require_role
+from ironforgedbot.decorators.decorators import require_channel, require_role
 from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db

@@ -10,7 +10,7 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators.decorators import require_role
 from ironforgedbot.services.wom_service import (
     get_wom_service,
     WomServiceError,

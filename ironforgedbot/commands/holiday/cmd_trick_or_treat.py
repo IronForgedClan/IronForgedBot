@@ -6,7 +6,11 @@ from ironforgedbot.commands.holiday.trick_or_treat_handler import TrickOrTreatHa
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.decorators import rate_limit, require_channel, require_role
+from ironforgedbot.decorators.decorators import (
+    rate_limit,
+    require_channel,
+    require_role,
+)
 
 logger = logging.getLogger(__name__)
 

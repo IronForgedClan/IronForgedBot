@@ -28,7 +28,7 @@ from ironforgedbot.common.responses import (
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators.decorators import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
 from ironforgedbot.models.score import ScoreBreakdown
