@@ -2,7 +2,6 @@ import asyncio
 import logging
 import random
 from datetime import datetime, timedelta, timezone
-import time
 
 import discord
 from ironforgedbot.common.roles import ROLE, check_member_has_role, is_member_banned
@@ -10,7 +9,6 @@ from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
     find_emoji,
-    format_duration,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.common.ranks import (
@@ -59,11 +57,10 @@ async def job_refresh_ranks(
         None
     """
     now: datetime = datetime.now(tz=timezone.utc)
-    start_time: float = time.perf_counter()
     random_rank: str = random.choice(seq=RANK.list())
     icon: str = find_emoji(target=random_rank)
     primary_message_str = (
-        f"{text_h2(input=f'{icon} Rank & Probation Check')}\n"
+        f"{text_h2(input=f'{icon} Checking ranks and probations...')}\n"
         f"Initiated: {datetime_to_discord_relative(dt=now, format='t')}\n"
     )
 
@@ -117,7 +114,7 @@ async def job_refresh_ranks(
                 ):
                     logger.debug("...suspected name change or ban")
                     issues.append(
-                        f"- {discord_member.mention} not found on hiscores - likely RSN change or OSRS ban"
+                        f"- {discord_member.mention} not found on hiscores - likely RSN change or ban"
                     )
                     continue
                 else:
@@ -138,7 +135,7 @@ async def job_refresh_ranks(
                 logger.debug("...has God role but no alignment")
                 message = (
                     f"- {discord_member.mention} has {find_emoji(current_rank)} "
-                    "God rank - missing alignment"
+                    "God rank but missing alignment"
                 )
                 issues.append(message)
                 continue
@@ -149,7 +146,7 @@ async def job_refresh_ranks(
                 if not isinstance(member.joined_date, datetime):
                     logger.debug("...has invalid join date")
                     issues.append(
-                        f"- {discord_member.mention} ({text_bold(ROLE.PROSPECT)}) has invalid join date - fix in database"
+                        f"- {discord_member.mention} ({text_bold(ROLE.PROSPECT)}) has invalid join date"
                     )
                     continue
 
@@ -158,8 +155,7 @@ async def job_refresh_ranks(
                 ):
                     logger.debug("...completed probation")
                     probation_completed.append(
-                        f"- {discord_member.mention} completed {text_bold(f'{PROBATION_DAYS} day')} "
-                        f"probation → eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)}"
+                        f"- {discord_member.mention} is eligible for {find_emoji(correct_rank)} {text_bold(correct_rank)}"
                     )
                     continue
 
@@ -169,7 +165,7 @@ async def job_refresh_ranks(
             if current_rank is None:
                 logger.debug("...has no rank set")
                 issues.append(
-                    f"- {discord_member.mention} missing rank → should be "
+                    f"- {discord_member.mention} missing rank, should be "
                     f"{find_emoji(correct_rank)} {text_bold(correct_rank)} "
                     f"({text_bold(f'{current_points:,}')} points)"
                 )
@@ -200,6 +196,8 @@ async def job_refresh_ranks(
 
             logger.debug("...no change")
 
+        await progress_message.delete()
+
         async def send_category_reports(
             title: str, messages: list[str], emoji: str, description: str = ""
         ):
@@ -209,6 +207,8 @@ async def job_refresh_ranks(
             header = f"{text_h2(f'{emoji} {title}')}\n"
             if description:
                 header += f"{description}\n\n"
+            else:
+                header += "\n"
 
             footer_text = (
                 f"\n\nProcessed {datetime_to_discord_relative(dt=now, format='R')}."
@@ -248,21 +248,12 @@ async def job_refresh_ranks(
             "Probation Completed",
             probation_completed,
             find_emoji("Prospect"),
-            "Members who have completed their probation period and are eligible for rank assignment.",
+            f"Members who have completed their **{PROBATION_DAYS} day** probation period.",
         )
         await send_category_reports(
-            "Issues",
+            "Rank Issues",
             issues,
             "⚠️",
-            "Problems requiring manual attention.",
         )
 
         await member_service.close()
-
-        end_time = time.perf_counter()
-        _ = await report_channel.send(
-            (
-                f"**{icon} Rank & probation check:** Completed in "
-                f"**{format_duration(start_time, end_time)}**."
-            )
-        )
