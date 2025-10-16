@@ -106,7 +106,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
 
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
-        expected_message = f"Active member {self.mock_db_member.nickname} ({self.mock_db_member.id}) could not be found in this guild."
+        expected_message = f"❌ Active member {self.mock_db_member.nickname} ({self.mock_db_member.id}) could not be found in this guild."
         self.mock_report_channel.send.assert_any_call(expected_message)
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
@@ -241,7 +241,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
         self.mock_report_channel.send.assert_any_call(
-            "<@12345> has 👑 God rank but no alignment."
+            "ℹ️ <@12345> has 👑 God rank but no alignment."
         )
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
@@ -299,7 +299,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
         self.mock_report_channel.send.assert_any_call(
-            "<@12345> detected without any rank. Should have 🥉 **Mithril**."
+            "⚠️ <@12345> detected without any rank. Should have 🥉 **Mithril**."
         )
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
@@ -351,7 +351,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
         self.mock_report_channel.send.assert_any_call(
-            "<@12345> has no presence on the hiscores. This member has either changed their rsn, or been banned."
+            "🚫 <@12345> has no presence on the hiscores. This member has either changed their rsn, or been banned."
         )
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
@@ -414,7 +414,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
         self.mock_report_channel.send.assert_any_call(
-            "<@12345> needs upgrading ⚪ → 🥉 (**705** points)"
+            "⬆️ <@12345> needs upgrading ⚪ → 🥉 (**705** points)"
         )
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.time")
@@ -477,5 +477,5 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
         await job_refresh_ranks(self.mock_guild, self.mock_report_channel)
 
         self.mock_report_channel.send.assert_any_call(
-            "<@12345> should be downgraded 🐉 → 🟢 (**1,000** points)\n-# Verify before changing"
+            "⬇️ <@12345> should be downgraded 🐉 → 🟢 (**1,000** points)\n-# Verify before changing"
         )
