@@ -69,9 +69,13 @@ class IngotCostConfirmationView(View):
             return
 
         success_embed = build_response_embed(
-            title="✅ Ingots Deducted",
-            description=f"Deducted {ingot_icon} **{self.cost:,}** ingots\nNew balance: {ingot_icon} **{result.new_total:,}**",
-            color=discord.Colour.green(),
+            title="💳 Payment Confirmed",
+            description="",
+            color=discord.Colour.gold(),
+        )
+        success_embed.add_field(name="Charged", value=f"{ingot_icon} {self.cost:,}")
+        success_embed.add_field(
+            name="New Balance", value=f"{ingot_icon} {result.new_total:,}"
         )
         await self.original_interaction.edit_original_response(
             embed=success_embed, view=self

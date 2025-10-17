@@ -51,6 +51,7 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
+        mock_embed.add_field = Mock()
         mock_build_embed.return_value = mock_embed
 
         await self.view.on_confirm(mock_button_interaction)
@@ -65,9 +66,16 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
 
         # Verify success embed is built
         mock_build_embed.assert_called_once_with(
-            title="✅ Ingots Deducted",
-            description="Deducted <:Ingot:123> **100** ingots\nNew balance: <:Ingot:123> **50**",
-            color=discord.Colour.green(),
+            title="💳 Payment Confirmed", description="", color=discord.Colour.gold()
+        )
+
+        # Verify fields are added
+        self.assertEqual(mock_embed.add_field.call_count, 2)
+        mock_embed.add_field.assert_any_call(
+            name="Amount Deducted", value="<:Ingot:123> **100**"
+        )
+        mock_embed.add_field.assert_any_call(
+            name="New Balance", value="<:Ingot:123> **50**"
         )
 
         # Verify original message is edited (not deleted)
