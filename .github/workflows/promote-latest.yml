@@ -1,4 +1,4 @@
-name: Build image and push to registry
+name: Promote staging image to latest
 
 on:
   workflow_call:
@@ -13,6 +13,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+    environment: prod
 
     steps:
       - name: Generate App token
@@ -42,13 +44,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build staging image
-        run: |
-          docker build --target prod -t ${{ env.IMAGE_NAME }}:${{ env.VERSION }} .
-          docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:staging
+      - name: Pull latest build
+        run: docker pull ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
-      - name: Push images to registry
+      - name: Tag as latest
         run: |
-          docker push ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-          docker push ${{ env.IMAGE_NAME }}:staging
+          docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:latest
+
+      - name: Push latest tag to registry
+        run: |
+          docker push ${{ env.IMAGE_NAME }}:latest
 

@@ -11,7 +11,7 @@ from ironforgedbot.commands.debug.cmd_debug_error_report import cmd_debug_error_
 from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
-from ironforgedbot.commands.holiday.cmd_trick_or_treat import cmd_trick_or_treat
+from ironforgedbot.commands.trickortreat.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois

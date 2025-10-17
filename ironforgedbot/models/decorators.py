@@ -6,6 +6,7 @@ class UTCDateTime(TypeDecorator):
     """A DateTime type that always stores timestamps in UTC."""
 
     impl = DateTime()
+    cache_ok = True
 
     def process_bind_param(self, value, dialect):
         """Ensure that datetime values stored in the database are in UTC."""
