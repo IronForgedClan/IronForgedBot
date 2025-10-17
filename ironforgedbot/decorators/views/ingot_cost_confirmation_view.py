@@ -41,6 +41,7 @@ class IngotCostConfirmationView(View):
         self.add_item(cancel_button)
 
     async def on_confirm(self, button_interaction: discord.Interaction):
+        self.stop()
         await button_interaction.response.defer(ephemeral=True)
 
         async with db.get_session() as session:
@@ -80,9 +81,9 @@ class IngotCostConfirmationView(View):
         await self.wrapped_function(*new_args, **self.original_kwargs)
 
     async def on_cancel(self, button_interaction: discord.Interaction):
+        self.stop()
         await button_interaction.response.defer(ephemeral=True)
         await self.original_interaction.delete_original_response()
 
     async def on_timeout(self):
-        for item in self.children:
-            item.disabled = True
+        await self.original_interaction.delete_original_response()

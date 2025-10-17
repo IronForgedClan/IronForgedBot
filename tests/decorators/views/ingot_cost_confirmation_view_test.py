@@ -143,13 +143,8 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.delete_original_response.assert_called_once()
         self.mock_wrapped_function.assert_not_called()
 
-    async def test_on_timeout_disables_buttons(self):
-        """Test timeout disables all buttons in the view."""
-        self.assertEqual(len(self.view.children), 2)
-        for item in self.view.children:
-            self.assertFalse(item.disabled)
-
+    async def test_on_timeout_deletes_message(self):
+        """Test timeout deletes the message (same as cancel)."""
         await self.view.on_timeout()
 
-        for item in self.view.children:
-            self.assertTrue(item.disabled)
+        self.mock_interaction.delete_original_response.assert_called_once()
