@@ -10,6 +10,16 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     CONTENT_FILE,
     TrickOrTreat,
 )
+from ironforgedbot.commands.trickortreat.types import (
+    BackroomsData,
+    DoubleOrNothingData,
+    GeneralData,
+    JackpotData,
+    JokeData,
+    QuizData,
+    StealData,
+    TrickData,
+)
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.database.database import db
@@ -53,15 +63,15 @@ class TrickOrTreatHandler:
         self.positive_messages: List[str] = data["GENERAL"]["POSITIVE_MESSAGES"]
         self.negative_messages: List[str] = data["GENERAL"]["NEGATIVE_MESSAGES"]
 
-        # Feature data
-        self.general = data["GENERAL"]
-        self.jackpot = data["JACKPOT"]
-        self.double_or_nothing = data["DOUBLE_OR_NOTHING"]
-        self.steal = data["STEAL"]
-        self.backrooms = data["BACKROOMS"]
-        self.quiz = data["QUIZ_MASTER"]
-        self.joke = data["JOKE"]
-        self.trick = data["REMOVE_ALL_TRICK"]
+        # Outcome data
+        self.general: GeneralData = data["GENERAL"]
+        self.jackpot: JackpotData = data["JACKPOT"]
+        self.double_or_nothing: DoubleOrNothingData = data["DOUBLE_OR_NOTHING"]
+        self.steal: StealData = data["STEAL"]
+        self.backrooms: BackroomsData = data["BACKROOMS"]
+        self.quiz: QuizData = data["QUIZ_MASTER"]
+        self.joke: JokeData = data["JOKE"]
+        self.trick: TrickData = data["REMOVE_ALL_TRICK"]
 
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
