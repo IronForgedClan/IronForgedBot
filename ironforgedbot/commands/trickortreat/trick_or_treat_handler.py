@@ -42,90 +42,29 @@ class TrickOrTreatHandler:
         self.quiz_question_history: deque[int] = deque(maxlen=20)
         self.joke_history: deque[int] = deque(maxlen=20)
 
-        # Data loaded from JSON
-        self.GIFS: List[str]
-        self.THUMBNAILS: List[str]
-        self.POSITIVE_MESSAGES: List[str]
-        self.NEGATIVE_MESSAGES: List[str]
-        self.JOKES: List[str]
-        self.NO_INGOTS_MESSAGE: str
-        self.JACKPOT_SUCCESS_PREFIX: str
-        self.JACKPOT_CLAIMED_MESSAGE: str
-        self.REMOVE_ALL_TRICK_MESSAGE: str
-        self.DOUBLE_OR_NOTHING_OFFER: str
-        self.DOUBLE_OR_NOTHING_WIN: str
-        self.DOUBLE_OR_NOTHING_LOSE: str
-        self.DOUBLE_OR_NOTHING_KEEP: str
-        self.DOUBLE_OR_NOTHING_EXPIRED: str
-        self.STEAL_OFFER: str
-        self.STEAL_SUCCESS: str
-        self.STEAL_FAILURE: str
-        self.STEAL_WALK_AWAY: str
-        self.STEAL_EXPIRED: str
-        self.STEAL_NO_TARGETS: str
-        self.STEAL_TARGET_NO_INGOTS: str
-        self.STEAL_USER_NO_INGOTS: str
-        self.BACKROOMS_INTRO: str
-        self.BACKROOMS_DOOR_LABELS: list[str]
-        self.BACKROOMS_TREASURE_MESSAGES: list[str]
-        self.BACKROOMS_MONSTER_MESSAGES: list[str]
-        self.BACKROOMS_ESCAPE_MESSAGES: list[str]
-        self.BACKROOMS_LUCKY_ESCAPE_MESSAGES: list[str]
-        self.BACKROOMS_OPENING_DOOR: str
-        self.BACKROOMS_EXPIRED_MESSAGE: str
-        self.BACKROOMS_THUMBNAILS: list[str]
-        self.QUIZ_INTRO: str
-        self.QUIZ_QUESTIONS: list[dict]
-        self.QUIZ_CORRECT_MESSAGE: str
-        self.QUIZ_WRONG_LUCKY_MESSAGE: str
-        self.QUIZ_WRONG_PENALTY_MESSAGE: str
-        self.QUIZ_EXPIRED_MESSAGE: str
-
+        # Load content
         with open(CONTENT_FILE) as f:
             logger.debug("Loading trick or treat data...")
             data = json.load(f)
 
-            self.GIFS = data["MEDIA"]["GIFS"]
-            self.THUMBNAILS = data["MEDIA"]["THUMBNAILS"]
-            self.POSITIVE_MESSAGES = data["GENERAL"]["POSITIVE_MESSAGES"]
-            self.NEGATIVE_MESSAGES = data["GENERAL"]["NEGATIVE_MESSAGES"]
-            self.JOKES = data["JOKE"]["MESSAGES"]
-            self.NO_INGOTS_MESSAGE = data["GENERAL"]["NO_INGOTS_MESSAGE"]
-            self.JACKPOT_SUCCESS_PREFIX = data["JACKPOT"]["SUCCESS_PREFIX"]
-            self.JACKPOT_CLAIMED_MESSAGE = data["JACKPOT"]["CLAIMED_MESSAGE"]
-            self.REMOVE_ALL_TRICK_MESSAGE = data["REMOVE_ALL_TRICK"]["MESSAGE"]
-            self.DOUBLE_OR_NOTHING_OFFER = data["DOUBLE_OR_NOTHING"]["OFFER"]
-            self.DOUBLE_OR_NOTHING_WIN = data["DOUBLE_OR_NOTHING"]["WIN"]
-            self.DOUBLE_OR_NOTHING_LOSE = data["DOUBLE_OR_NOTHING"]["LOSE"]
-            self.DOUBLE_OR_NOTHING_KEEP = data["DOUBLE_OR_NOTHING"]["KEEP"]
-            self.DOUBLE_OR_NOTHING_EXPIRED = data["DOUBLE_OR_NOTHING"]["EXPIRED"]
-            self.STEAL_OFFER = data["STEAL"]["OFFER"]
-            self.STEAL_SUCCESS = data["STEAL"]["SUCCESS"]
-            self.STEAL_FAILURE = data["STEAL"]["FAILURE"]
-            self.STEAL_WALK_AWAY = data["STEAL"]["WALK_AWAY"]
-            self.STEAL_EXPIRED = data["STEAL"]["EXPIRED"]
-            self.STEAL_NO_TARGETS = data["STEAL"]["NO_TARGETS"]
-            self.STEAL_TARGET_NO_INGOTS = data["STEAL"]["TARGET_NO_INGOTS"]
-            self.STEAL_USER_NO_INGOTS = data["STEAL"]["USER_NO_INGOTS"]
-            self.BACKROOMS_INTRO = data["BACKROOMS"]["INTRO"]
-            self.BACKROOMS_DOOR_LABELS = data["BACKROOMS"]["DOOR_LABELS"]
-            self.BACKROOMS_TREASURE_MESSAGES = data["BACKROOMS"]["TREASURE_MESSAGES"]
-            self.BACKROOMS_MONSTER_MESSAGES = data["BACKROOMS"]["MONSTER_MESSAGES"]
-            self.BACKROOMS_ESCAPE_MESSAGES = data["BACKROOMS"]["ESCAPE_MESSAGES"]
-            self.BACKROOMS_LUCKY_ESCAPE_MESSAGES = data["BACKROOMS"][
-                "LUCKY_ESCAPE_MESSAGES"
-            ]
-            self.BACKROOMS_OPENING_DOOR = data["BACKROOMS"]["OPENING_DOOR"]
-            self.BACKROOMS_EXPIRED_MESSAGE = data["BACKROOMS"]["EXPIRED"]
-            self.BACKROOMS_THUMBNAILS = data["BACKROOMS"]["THUMBNAILS"]
-            self.QUIZ_INTRO = data["QUIZ_MASTER"]["INTRO"]
-            self.QUIZ_QUESTIONS = data["QUIZ_MASTER"]["QUESTIONS"]
-            self.QUIZ_CORRECT_MESSAGE = data["QUIZ_MASTER"]["CORRECT_MESSAGE"]
-            self.QUIZ_WRONG_LUCKY_MESSAGE = data["QUIZ_MASTER"]["WRONG_LUCKY_MESSAGE"]
-            self.QUIZ_WRONG_PENALTY_MESSAGE = data["QUIZ_MASTER"][
-                "WRONG_PENALTY_MESSAGE"
-            ]
-            self.QUIZ_EXPIRED_MESSAGE = data["QUIZ_MASTER"]["EXPIRED_MESSAGE"]
+        # General lists
+        self.gifs: List[str] = data["MEDIA"]["GIFS"]
+        self.thumbnails: List[str] = data["MEDIA"]["THUMBNAILS"]
+        self.positive_messages: List[str] = data["GENERAL"]["POSITIVE_MESSAGES"]
+        self.negative_messages: List[str] = data["GENERAL"]["NEGATIVE_MESSAGES"]
+        self.jokes: List[str] = data["JOKE"]["MESSAGES"]
+        self.quiz_questions: list[dict] = data["QUIZ_MASTER"]["QUESTIONS"]
+        self.backrooms_thumbnails: list[str] = data["BACKROOMS"]["THUMBNAILS"]
+        self.backrooms_door_labels: list[str] = data["BACKROOMS"]["DOOR_LABELS"]
+
+        # Feature data
+        self.general = data["GENERAL"]
+        self.jackpot = data["JACKPOT"]
+        self.double_or_nothing = data["DOUBLE_OR_NOTHING"]
+        self.steal = data["STEAL"]
+        self.backrooms = data["BACKROOMS"]
+        self.quiz = data["QUIZ_MASTER"]
+        self.trick = data["REMOVE_ALL_TRICK"]
 
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
@@ -177,7 +116,7 @@ class TrickOrTreatHandler:
         Returns:
             A Discord embed with orange color and random thumbnail.
         """
-        thumbnails = thumbnail_list if thumbnail_list is not None else self.THUMBNAILS
+        thumbnails = thumbnail_list if thumbnail_list is not None else self.thumbnails
         history = (
             thumbnail_history
             if thumbnail_history is not None
@@ -203,7 +142,7 @@ class TrickOrTreatHandler:
             A Discord embed with a humorous error message.
         """
         return self._build_embed(
-            self.NO_INGOTS_MESSAGE + self._get_balance_message(username, 0)
+            self.general["NO_INGOTS_MESSAGE"] + self._get_balance_message(username, 0)
         )
 
     def _add_to_history(
@@ -346,11 +285,11 @@ class TrickOrTreatHandler:
 
         if is_positive:
             message_text = self._get_random_from_list(
-                self.POSITIVE_MESSAGES, self.positive_message_history
+                self.positive_messages, self.positive_message_history
             )
         else:
             message_text = self._get_random_from_list(
-                self.NEGATIVE_MESSAGES, self.negative_message_history
+                self.negative_messages, self.negative_message_history
             )
 
         prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"

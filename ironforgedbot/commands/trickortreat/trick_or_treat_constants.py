@@ -4,7 +4,6 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-# File paths
 TRICK_OR_TREAT_DATA_DIR = "data/trick_or_treat"
 VALUES_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/values.yaml"
 WEIGHTS_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/weights.yaml"
