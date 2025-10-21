@@ -2,7 +2,7 @@ import json
 import logging
 import random
 from collections import deque
-from typing import List, Optional
+from typing import List, Optional, TypeVar
 
 import discord
 
@@ -12,6 +12,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     JOKE_HISTORY_LIMIT,
     NEGATIVE_MESSAGE_HISTORY_LIMIT,
     POSITIVE_MESSAGE_HISTORY_LIMIT,
+    QUIZ_QUESTION_HISTORY_LIMIT,
     THUMBNAIL_HISTORY_LIMIT,
     TrickOrTreat,
 )
@@ -22,6 +23,8 @@ from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class TrickOrTreatHandler:
@@ -46,7 +49,9 @@ class TrickOrTreatHandler:
         self.negative_message_history: deque[int] = deque(
             maxlen=NEGATIVE_MESSAGE_HISTORY_LIMIT
         )
-        self.quiz_question_history: List[str] = []
+        self.quiz_question_history: deque[int] = deque(
+            maxlen=QUIZ_QUESTION_HISTORY_LIMIT
+        )
         self.joke_history: deque[int] = deque(maxlen=JOKE_HISTORY_LIMIT)
 
         # Data loaded from JSON
@@ -134,7 +139,7 @@ class TrickOrTreatHandler:
             ]
             self.QUIZ_EXPIRED_MESSAGE = data["QUIZ_MASTER"]["EXPIRED_MESSAGE"]
 
-    def _get_random_from_list(self, items: List[str], history: deque[int]) -> str:
+    def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
 
         Args:

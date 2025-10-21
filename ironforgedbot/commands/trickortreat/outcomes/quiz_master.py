@@ -9,7 +9,6 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     QUIZ_CORRECT_MAX,
     QUIZ_CORRECT_MIN,
     QUIZ_PENALTY_CHANCE,
-    QUIZ_QUESTION_HISTORY_LIMIT,
     QUIZ_WRONG_PENALTY_MAX,
     QUIZ_WRONG_PENALTY_MIN,
 )
@@ -52,22 +51,9 @@ def _get_random_quiz_question(handler: "TrickOrTreatHandler") -> Dict:
     Returns:
         A question dictionary containing question text, options, and correct_index.
     """
-    available = [
-        q
-        for q in handler.QUIZ_QUESTIONS
-        if q["question"] not in handler.quiz_question_history
-    ]
-
-    # If all questions have been used recently, reset history
-    if not available:
-        handler.quiz_question_history.clear()
-        available = handler.QUIZ_QUESTIONS
-
-    chosen = random.choice(available)
-    handler._add_to_history(
-        chosen["question"], handler.quiz_question_history, QUIZ_QUESTION_HISTORY_LIMIT
+    return handler._get_random_from_list(
+        handler.QUIZ_QUESTIONS, handler.quiz_question_history
     )
-    return chosen
 
 
 class QuizMasterView(discord.ui.View):
