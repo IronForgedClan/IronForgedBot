@@ -4,26 +4,157 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-# Ingot reward/deduction ranges
-LOW_INGOT_MIN = 1_000
-LOW_INGOT_MAX = 2_500
-HIGH_INGOT_MIN = 3_000
-HIGH_INGOT_MAX = 6_000
-JACKPOT_VALUE = 1_000_000
+try:
+    with open("data/trick_or_treat_values.yaml") as f:
+        _values = yaml.safe_load(f)
+except FileNotFoundError as e:
+    raise FileNotFoundError(
+        f"Trick-or-treat values file not found: {e.filename}. "
+        "Expected file at: data/trick_or_treat_values.yaml"
+    ) from e
+except yaml.YAMLError as e:
+    raise ValueError(f"Invalid YAML syntax in trick-or-treat values file: {e}") from e
+except Exception as e:
+    raise RuntimeError(f"Unexpected error loading trick-or-treat values: {e}") from e
+
+
+def _validate_values(values: dict) -> None:
+    """Validate trick-or-treat game values.
+
+    Args:
+        values: Dictionary containing game configuration values.
+
+    Raises:
+        ValueError: If validation fails.
+        KeyError: If required fields are missing.
+    """
+    required_sections = ["ingot_ranges", "jackpot_value", "backrooms", "quiz_master"]
+    missing_sections = [s for s in required_sections if s not in values]
+    if missing_sections:
+        raise KeyError(f"Missing required sections in values file: {missing_sections}")
+
+    ranges = values["ingot_ranges"]
+    required_range_fields = ["low_min", "low_max", "high_min", "high_max"]
+    missing_range_fields = [f for f in required_range_fields if f not in ranges]
+    if missing_range_fields:
+        raise KeyError(f"Missing required ingot_ranges fields: {missing_range_fields}")
+
+    for field, value in ranges.items():
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError(
+                f"ingot_ranges.{field} must be a positive integer, got: {value}"
+            )
+
+    if ranges["low_min"] >= ranges["low_max"]:
+        raise ValueError(
+            f"low_min ({ranges['low_min']}) must be < low_max ({ranges['low_max']})"
+        )
+    if ranges["high_min"] >= ranges["high_max"]:
+        raise ValueError(
+            f"high_min ({ranges['high_min']}) must be < high_max ({ranges['high_max']})"
+        )
+
+    if not isinstance(values["jackpot_value"], int) or values["jackpot_value"] <= 0:
+        raise ValueError(
+            f"jackpot_value must be a positive integer, got: {values['jackpot_value']}"
+        )
+
+    backrooms = values["backrooms"]
+    required_backrooms_fields = [
+        "door_count",
+        "treasure_min",
+        "treasure_max",
+        "monster_min",
+        "monster_max",
+    ]
+    missing_backrooms = [f for f in required_backrooms_fields if f not in backrooms]
+    if missing_backrooms:
+        raise KeyError(f"Missing required backrooms fields: {missing_backrooms}")
+
+    for field, value in backrooms.items():
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError(
+                f"backrooms.{field} must be a positive integer, got: {value}"
+            )
+
+    if backrooms["treasure_min"] >= backrooms["treasure_max"]:
+        raise ValueError(
+            f"backrooms.treasure_min ({backrooms['treasure_min']}) must be < "
+            f"treasure_max ({backrooms['treasure_max']})"
+        )
+    if backrooms["monster_min"] >= backrooms["monster_max"]:
+        raise ValueError(
+            f"backrooms.monster_min ({backrooms['monster_min']}) must be < "
+            f"monster_max ({backrooms['monster_max']})"
+        )
+
+    quiz = values["quiz_master"]
+    required_quiz_fields = [
+        "correct_min",
+        "correct_max",
+        "wrong_penalty_min",
+        "wrong_penalty_max",
+        "penalty_chance",
+    ]
+    missing_quiz = [f for f in required_quiz_fields if f not in quiz]
+    if missing_quiz:
+        raise KeyError(f"Missing required quiz_master fields: {missing_quiz}")
+
+    for field in [
+        "correct_min",
+        "correct_max",
+        "wrong_penalty_min",
+        "wrong_penalty_max",
+    ]:
+        value = quiz[field]
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError(
+                f"quiz_master.{field} must be a positive integer, got: {value}"
+            )
+
+    penalty_chance = quiz["penalty_chance"]
+    if not isinstance(penalty_chance, (int, float)):
+        raise ValueError(
+            f"quiz_master.penalty_chance must be a number, got: {penalty_chance}"
+        )
+    if not 0 <= penalty_chance <= 1:
+        raise ValueError(
+            f"quiz_master.penalty_chance must be between 0 and 1, got: {penalty_chance}"
+        )
+
+    if quiz["correct_min"] >= quiz["correct_max"]:
+        raise ValueError(
+            f"quiz_master.correct_min ({quiz['correct_min']}) must be < "
+            f"correct_max ({quiz['correct_max']})"
+        )
+    if quiz["wrong_penalty_min"] >= quiz["wrong_penalty_max"]:
+        raise ValueError(
+            f"quiz_master.wrong_penalty_min ({quiz['wrong_penalty_min']}) must be < "
+            f"wrong_penalty_max ({quiz['wrong_penalty_max']})"
+        )
+
+
+_validate_values(_values)
+
+LOW_INGOT_MIN = _values["ingot_ranges"]["low_min"]
+LOW_INGOT_MAX = _values["ingot_ranges"]["low_max"]
+HIGH_INGOT_MIN = _values["ingot_ranges"]["high_min"]
+HIGH_INGOT_MAX = _values["ingot_ranges"]["high_max"]
+JACKPOT_VALUE = _values["jackpot_value"]
 
 # Backrooms configuration
-BACKROOMS_DOOR_COUNT = 3
-BACKROOMS_TREASURE_MIN = HIGH_INGOT_MIN + 2_000
-BACKROOMS_TREASURE_MAX = HIGH_INGOT_MAX + 2_000
-BACKROOMS_MONSTER_MIN = LOW_INGOT_MIN + 1_000
-BACKROOMS_MONSTER_MAX = LOW_INGOT_MAX + 1_000
+BACKROOMS_DOOR_COUNT = _values["backrooms"]["door_count"]
+BACKROOMS_TREASURE_MIN = _values["backrooms"]["treasure_min"]
+BACKROOMS_TREASURE_MAX = _values["backrooms"]["treasure_max"]
+BACKROOMS_MONSTER_MIN = _values["backrooms"]["monster_min"]
+BACKROOMS_MONSTER_MAX = _values["backrooms"]["monster_max"]
 
 # Quiz Master configuration
-QUIZ_CORRECT_MIN = HIGH_INGOT_MIN + 1_000
-QUIZ_CORRECT_MAX = HIGH_INGOT_MAX + 2_500
-QUIZ_WRONG_PENALTY_MIN = HIGH_INGOT_MIN + 1_000
-QUIZ_WRONG_PENALTY_MAX = HIGH_INGOT_MAX + 2_000
-QUIZ_PENALTY_CHANCE = 0.75
+QUIZ_CORRECT_MIN = _values["quiz_master"]["correct_min"]
+QUIZ_CORRECT_MAX = _values["quiz_master"]["correct_max"]
+QUIZ_WRONG_PENALTY_MIN = _values["quiz_master"]["wrong_penalty_min"]
+QUIZ_WRONG_PENALTY_MAX = _values["quiz_master"]["wrong_penalty_max"]
+QUIZ_PENALTY_CHANCE = _values["quiz_master"]["penalty_chance"]
 
 # History limits
 POSITIVE_MESSAGE_HISTORY_LIMIT = 15
