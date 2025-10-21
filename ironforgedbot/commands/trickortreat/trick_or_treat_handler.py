@@ -55,9 +55,7 @@ class TrickOrTreatHandler:
         }
 
         # Load content
-        with open(CONTENT_FILE) as f:
-            logger.debug("Loading trick or treat data...")
-            data = json.load(f)
+        data = self._load_content_file()
 
         # Outcomes
         self.jackpot: JackpotData = data["jackpot"]
@@ -74,6 +72,60 @@ class TrickOrTreatHandler:
         self.general: GeneralData = data["general"]
         self.positive_messages: List[str] = self.general["positive_messages"]
         self.negative_messages: List[str] = self.general["negative_messages"]
+
+    @staticmethod
+    def _load_content_file(file_path: str = CONTENT_FILE) -> dict:
+        """Load and parse the trick-or-treat content JSON file.
+
+        Args:
+            file_path: Path to the content JSON file. Defaults to CONTENT_FILE.
+
+        Returns:
+            Parsed JSON data as a dictionary.
+
+        Raises:
+            FileNotFoundError: If the content file doesn't exist.
+            ValueError: If the JSON syntax is invalid.
+            KeyError: If required keys are missing from the JSON.
+            RuntimeError: For unexpected errors during loading.
+        """
+        try:
+            with open(file_path) as f:
+                logger.debug("Loading trick or treat data...")
+                data = json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"Trick-or-treat content file not found: {e.filename}. "
+                f"Expected file at: {file_path}"
+            ) from e
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Invalid JSON syntax in trick-or-treat content file: {e}"
+            ) from e
+        except Exception as e:
+            raise RuntimeError(
+                f"Unexpected error loading trick-or-treat content: {e}"
+            ) from e
+
+        required_keys = [
+            "jackpot",
+            "double_or_nothing",
+            "steal",
+            "backrooms",
+            "quiz_master",
+            "joke",
+            "remove_all_trick",
+            "media",
+            "general",
+        ]
+        missing_keys = [key for key in required_keys if key not in data]
+        if missing_keys:
+            raise KeyError(
+                f"Missing required keys in content file: {missing_keys}. "
+                f"File: {file_path}"
+            )
+
+        return data
 
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
