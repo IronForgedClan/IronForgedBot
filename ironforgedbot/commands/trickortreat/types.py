@@ -1,3 +1,4 @@
+from collections import deque
 from typing import TypedDict
 
 
@@ -89,3 +90,15 @@ class QuizData(TypedDict):
     WRONG_LUCKY_MESSAGE: str
     WRONG_PENALTY_MESSAGE: str
     EXPIRED_MESSAGE: str
+
+
+class HistoryDict(TypedDict):
+    """History tracking."""
+
+    gif: deque[int]
+    thumbnail: deque[int]
+    backrooms_thumbnail: deque[int]
+    positive_message: deque[int]
+    negative_message: deque[int]
+    quiz_question: deque[int]
+    joke: deque[int]

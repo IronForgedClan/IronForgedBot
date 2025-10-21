@@ -14,6 +14,7 @@ from ironforgedbot.commands.trickortreat.types import (
     BackroomsData,
     DoubleOrNothingData,
     GeneralData,
+    HistoryDict,
     JackpotData,
     JokeData,
     QuizData,
@@ -44,7 +45,7 @@ class TrickOrTreatHandler:
         self.ingot_icon: str = find_emoji("Ingot")
 
         # History tracking
-        self.history: dict[str, deque[int]] = {
+        self.history: HistoryDict = {
             "gif": deque(maxlen=150),
             "thumbnail": deque(maxlen=30),
             "backrooms_thumbnail": deque(maxlen=30),
