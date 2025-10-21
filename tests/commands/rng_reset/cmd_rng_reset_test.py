@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
@@ -30,76 +30,212 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
         test_member = create_test_member("TestPlayer", [ROLE.MEMBER], "TestPlayer")
         self.mock_interaction = create_mock_discord_interaction(user=test_member)
 
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_success(self, mock_build_embed, mock_random):
+    async def test_cmd_rng_reset_success(
+        self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
+    ):
         mock_random.return_value = 0.3
 
-        mock_embed = Mock()
-        mock_embed.set_thumbnail = Mock()
-        mock_build_embed.return_value = mock_embed
+        dice_embed = Mock()
+        dice_embed.set_image = Mock()
+        mock_discord_embed.return_value = dice_embed
+
+        result_embed = Mock()
+        result_embed.set_thumbnail = Mock()
+        mock_build_embed.return_value = result_embed
+
+        mock_dice_message = Mock()
+        mock_dice_message.delete = AsyncMock()
+
+        # First send() for dice embed, second for result embed
+        self.mock_interaction.followup.send.side_effect = [
+            mock_dice_message,
+            Mock(),
+        ]
 
         await cmd_rng_reset(self.mock_interaction)
 
+        # Verify dice embed created with correct description and color
+        mock_discord_embed.assert_called_once_with(
+            description=f"### {self.mock_interaction.user.mention} is rolling for an RNG reset...",
+            color=discord.Colour.blurple()
+        )
+        dice_embed.set_image.assert_called_once_with(
+            url="https://oldschool.runescape.wiki/images/thumb/Dice_(6).png/245px-Dice_(6).png"
+        )
+        self.mock_interaction.followup.send.assert_any_call(embed=dice_embed)
+
+        # Verify 5 second sleep
+        mock_sleep.assert_called_once_with(5)
+
+        # Verify dice message deleted
+        mock_dice_message.delete.assert_called_once()
+
+        # Verify result embed built and sent
         mock_build_embed.assert_called_once_with(
             title="RNG Reset Successful!",
             description="Your RNG has been restored. That pet is definitely dropping on your next kill. Probably.",
             color=discord.Colour.green(),
         )
-        mock_embed.set_thumbnail.assert_called_once_with(
+        result_embed.set_thumbnail.assert_called_once_with(
             url="https://oldschool.runescape.wiki/images/thumb/Reward_casket_%28master%29.png/150px-Reward_casket_%28master%29.png"
         )
-        self.mock_interaction.followup.send.assert_called_once_with(embed=mock_embed)
+        self.mock_interaction.followup.send.assert_any_call(embed=result_embed)
 
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_failure(self, mock_build_embed, mock_random):
+    async def test_cmd_rng_reset_failure(
+        self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
+    ):
         mock_random.return_value = 0.7
 
-        mock_embed = Mock()
-        mock_embed.set_thumbnail = Mock()
-        mock_build_embed.return_value = mock_embed
+        dice_embed = Mock()
+        dice_embed.set_image = Mock()
+        mock_discord_embed.return_value = dice_embed
+
+        result_embed = Mock()
+        result_embed.set_thumbnail = Mock()
+        mock_build_embed.return_value = result_embed
+
+        mock_dice_message = Mock()
+        mock_dice_message.delete = AsyncMock()
+
+        # First send() for dice embed, second for result embed
+        self.mock_interaction.followup.send.side_effect = [
+            mock_dice_message,
+            Mock(),
+        ]
 
         await cmd_rng_reset(self.mock_interaction)
 
+        # Verify dice embed created with correct description and color
+        mock_discord_embed.assert_called_once_with(
+            description=f"### {self.mock_interaction.user.mention} is rolling for an RNG reset...",
+            color=discord.Colour.blurple()
+        )
+        dice_embed.set_image.assert_called_once_with(
+            url="https://oldschool.runescape.wiki/images/thumb/Dice_(6).png/245px-Dice_(6).png"
+        )
+        self.mock_interaction.followup.send.assert_any_call(embed=dice_embed)
+
+        # Verify 5 second sleep
+        mock_sleep.assert_called_once_with(5)
+
+        # Verify dice message deleted
+        mock_dice_message.delete.assert_called_once()
+
+        # Verify result embed built and sent
         mock_build_embed.assert_called_once_with(
             title="You rolled a 0!",
             description="The RNG gods have denied your request. Enjoy staying dry for another 10,000 kills.",
             color=discord.Colour.red(),
         )
-        mock_embed.set_thumbnail.assert_called_once_with(
+        result_embed.set_thumbnail.assert_called_once_with(
             url="https://oldschool.runescape.wiki/images/thumb/Skull.png/130px-Skull.png"
         )
-        self.mock_interaction.followup.send.assert_called_once_with(embed=mock_embed)
+        self.mock_interaction.followup.send.assert_any_call(embed=result_embed)
 
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_boundary_success(self, mock_build_embed, mock_random):
+    async def test_cmd_rng_reset_boundary_success(
+        self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
+    ):
         mock_random.return_value = 0.49999
 
-        mock_embed = Mock()
-        mock_embed.set_thumbnail = Mock()
-        mock_build_embed.return_value = mock_embed
+        dice_embed = Mock()
+        dice_embed.set_image = Mock()
+        mock_discord_embed.return_value = dice_embed
+
+        result_embed = Mock()
+        result_embed.set_thumbnail = Mock()
+        mock_build_embed.return_value = result_embed
+
+        mock_dice_message = Mock()
+        mock_dice_message.delete = AsyncMock()
+
+        # First send() for dice embed, second for result embed
+        self.mock_interaction.followup.send.side_effect = [
+            mock_dice_message,
+            Mock(),
+        ]
 
         await cmd_rng_reset(self.mock_interaction)
 
+        # Verify dice embed created with correct description and color
+        mock_discord_embed.assert_called_once_with(
+            description=f"### {self.mock_interaction.user.mention} is rolling for an RNG reset...",
+            color=discord.Colour.blurple()
+        )
+        dice_embed.set_image.assert_called_once_with(
+            url="https://oldschool.runescape.wiki/images/thumb/Dice_(6).png/245px-Dice_(6).png"
+        )
+        self.mock_interaction.followup.send.assert_any_call(embed=dice_embed)
+
+        # Verify 5 second sleep
+        mock_sleep.assert_called_once_with(5)
+
+        # Verify dice message deleted
+        mock_dice_message.delete.assert_called_once()
+
+        # Verify result embed built and sent (boundary case should succeed)
         mock_build_embed.assert_called_once_with(
             title="RNG Reset Successful!",
             description="Your RNG has been restored. That pet is definitely dropping on your next kill. Probably.",
             color=discord.Colour.green(),
         )
 
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
+    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
     @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_boundary_failure(self, mock_build_embed, mock_random):
+    async def test_cmd_rng_reset_boundary_failure(
+        self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
+    ):
         mock_random.return_value = 0.5
 
-        mock_embed = Mock()
-        mock_embed.set_thumbnail = Mock()
-        mock_build_embed.return_value = mock_embed
+        dice_embed = Mock()
+        dice_embed.set_image = Mock()
+        mock_discord_embed.return_value = dice_embed
+
+        result_embed = Mock()
+        result_embed.set_thumbnail = Mock()
+        mock_build_embed.return_value = result_embed
+
+        mock_dice_message = Mock()
+        mock_dice_message.delete = AsyncMock()
+
+        # First send() for dice embed, second for result embed
+        self.mock_interaction.followup.send.side_effect = [
+            mock_dice_message,
+            Mock(),
+        ]
 
         await cmd_rng_reset(self.mock_interaction)
 
+        # Verify dice embed created with correct description and color
+        mock_discord_embed.assert_called_once_with(
+            description=f"### {self.mock_interaction.user.mention} is rolling for an RNG reset...",
+            color=discord.Colour.blurple()
+        )
+        dice_embed.set_image.assert_called_once_with(
+            url="https://oldschool.runescape.wiki/images/thumb/Dice_(6).png/245px-Dice_(6).png"
+        )
+        self.mock_interaction.followup.send.assert_any_call(embed=dice_embed)
+
+        # Verify 5 second sleep
+        mock_sleep.assert_called_once_with(5)
+
+        # Verify dice message deleted
+        mock_dice_message.delete.assert_called_once()
+
+        # Verify result embed built and sent (boundary case should fail)
         mock_build_embed.assert_called_once_with(
             title="You rolled a 0!",
             description="The RNG gods have denied your request. Enjoy staying dry for another 10,000 kills.",

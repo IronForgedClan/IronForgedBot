@@ -13,7 +13,7 @@ from tests.helpers import (
 
 with patch(
     "ironforgedbot.decorators.decorators.require_role", mock_require_role
-), patch("ironforgedbot.decorators.require_channel", mock_require_channel):
+), patch("ironforgedbot.decorators.decorators.require_channel", mock_require_channel):
     from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle, build_embed
 
 

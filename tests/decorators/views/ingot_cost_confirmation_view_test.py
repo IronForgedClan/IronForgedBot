@@ -72,10 +72,10 @@ class TestIngotCostConfirmationView(unittest.IsolatedAsyncioTestCase):
         # Verify fields are added
         self.assertEqual(mock_embed.add_field.call_count, 2)
         mock_embed.add_field.assert_any_call(
-            name="Amount Deducted", value="<:Ingot:123> **100**"
+            name="Charged", value="<:Ingot:123> 100"
         )
         mock_embed.add_field.assert_any_call(
-            name="New Balance", value="<:Ingot:123> **50**"
+            name="New Balance", value="<:Ingot:123> 50"
         )
 
         # Verify original message is edited (not deleted)
