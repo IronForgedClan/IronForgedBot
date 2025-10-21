@@ -9,18 +9,41 @@ VALUES_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/values.yaml"
 WEIGHTS_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/weights.yaml"
 CONTENT_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/content.json"
 
-try:
-    with open(VALUES_FILE) as f:
-        _values = yaml.safe_load(f)
-except FileNotFoundError as e:
-    raise FileNotFoundError(
-        f"Trick-or-treat values file not found: {e.filename}. "
-        f"Expected file at: {VALUES_FILE}"
-    ) from e
-except yaml.YAMLError as e:
-    raise ValueError(f"Invalid YAML syntax in trick-or-treat values file: {e}") from e
-except Exception as e:
-    raise RuntimeError(f"Unexpected error loading trick-or-treat values: {e}") from e
+
+def _load_values_file(file_path: str = VALUES_FILE) -> dict:
+    """Load and validate the trick-or-treat values YAML file.
+
+    Args:
+        file_path: Path to the values YAML file. Defaults to VALUES_FILE.
+
+    Returns:
+        Validated values dictionary.
+
+    Raises:
+        FileNotFoundError: If the values file doesn't exist.
+        ValueError: If the YAML syntax is invalid or validation fails.
+        KeyError: If required fields are missing.
+        RuntimeError: For unexpected errors during loading.
+    """
+    try:
+        with open(file_path) as f:
+            values = yaml.safe_load(f)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"Trick-or-treat values file not found: {e.filename}. "
+            f"Expected file at: {file_path}"
+        ) from e
+    except yaml.YAMLError as e:
+        raise ValueError(
+            f"Invalid YAML syntax in trick-or-treat values file: {e}"
+        ) from e
+    except Exception as e:
+        raise RuntimeError(
+            f"Unexpected error loading trick-or-treat values: {e}"
+        ) from e
+
+    _validate_values(values)
+    return values
 
 
 def _validate_values(values: dict) -> None:
@@ -139,7 +162,7 @@ def _validate_values(values: dict) -> None:
         )
 
 
-_validate_values(_values)
+_values = _load_values_file()
 
 LOW_INGOT_MIN = _values["ingot_ranges"]["low_min"]
 LOW_INGOT_MAX = _values["ingot_ranges"]["low_max"]
@@ -178,6 +201,42 @@ REQUIRED_OUTCOMES = {
 }
 
 EXPECTED_TOTAL_WEIGHT = 1000
+
+
+def _load_weights_file(file_path: str = WEIGHTS_FILE) -> dict:
+    """Load and validate the trick-or-treat weights YAML file.
+
+    Args:
+        file_path: Path to the weights YAML file. Defaults to WEIGHTS_FILE.
+
+    Returns:
+        Validated weights dictionary.
+
+    Raises:
+        FileNotFoundError: If the weights file doesn't exist.
+        ValueError: If the YAML syntax is invalid or validation fails.
+        TypeError: If weight values are not integers.
+        RuntimeError: For unexpected errors during loading.
+    """
+    try:
+        with open(file_path) as f:
+            weights = yaml.safe_load(f)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"Trick-or-treat weights file not found: {e.filename}. "
+            f"Expected file at: {file_path}"
+        ) from e
+    except yaml.YAMLError as e:
+        raise ValueError(
+            f"Invalid YAML syntax in trick-or-treat weights file: {e}"
+        ) from e
+    except Exception as e:
+        raise RuntimeError(
+            f"Unexpected error loading trick-or-treat weights: {e}"
+        ) from e
+
+    _validate_weights(weights)
+    return weights
 
 
 def _validate_weights(weights: dict) -> None:
@@ -239,20 +298,7 @@ def _validate_weights(weights: dict) -> None:
         )
 
 
-try:
-    with open(WEIGHTS_FILE) as f:
-        _weights = yaml.safe_load(f)
-except FileNotFoundError as e:
-    raise FileNotFoundError(
-        f"Trick-or-treat weights file not found: {e.filename}. "
-        f"Expected file at: {WEIGHTS_FILE}"
-    ) from e
-except yaml.YAMLError as e:
-    raise ValueError(f"Invalid YAML syntax in trick-or-treat weights file: {e}") from e
-except Exception as e:
-    raise RuntimeError(f"Unexpected error loading trick-or-treat weights: {e}") from e
-
-_validate_weights(_weights)
+_weights = _load_weights_file()
 
 
 class TrickOrTreat(Enum):
