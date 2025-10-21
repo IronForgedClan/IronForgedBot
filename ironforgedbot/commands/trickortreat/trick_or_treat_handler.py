@@ -8,6 +8,7 @@ from typing import List, Optional
 import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    CONTENT_FILE,
     NEGATIVE_MESSAGE_HISTORY_LIMIT,
     POSITIVE_MESSAGE_HISTORY_LIMIT,
     THUMBNAIL_HISTORY_LIMIT,
@@ -78,7 +79,7 @@ class TrickOrTreatHandler:
         self.QUIZ_WRONG_PENALTY_MESSAGE: str
         self.QUIZ_EXPIRED_MESSAGE: str
 
-        with open("data/trick_or_treat.json") as f:
+        with open(CONTENT_FILE) as f:
             logger.debug("Loading trick or treat data...")
             data = json.load(f)
 

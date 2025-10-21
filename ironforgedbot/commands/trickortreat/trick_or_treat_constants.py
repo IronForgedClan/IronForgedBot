@@ -4,13 +4,26 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+# File paths
+TRICK_OR_TREAT_DATA_DIR = "data/trick_or_treat"
+VALUES_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/values.yaml"
+WEIGHTS_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/weights.yaml"
+CONTENT_FILE = f"{TRICK_OR_TREAT_DATA_DIR}/content.json"
+
+# History limits
+POSITIVE_MESSAGE_HISTORY_LIMIT = 15
+NEGATIVE_MESSAGE_HISTORY_LIMIT = 15
+THUMBNAIL_HISTORY_LIMIT = 25
+GIF_HISTORY_LIMIT = 125
+QUIZ_QUESTION_HISTORY_LIMIT = 15
+
 try:
-    with open("data/trick_or_treat_values.yaml") as f:
+    with open(VALUES_FILE) as f:
         _values = yaml.safe_load(f)
 except FileNotFoundError as e:
     raise FileNotFoundError(
         f"Trick-or-treat values file not found: {e.filename}. "
-        "Expected file at: data/trick_or_treat_values.yaml"
+        f"Expected file at: {VALUES_FILE}"
     ) from e
 except yaml.YAMLError as e:
     raise ValueError(f"Invalid YAML syntax in trick-or-treat values file: {e}") from e
@@ -156,12 +169,6 @@ QUIZ_WRONG_PENALTY_MIN = _values["quiz_master"]["wrong_penalty_min"]
 QUIZ_WRONG_PENALTY_MAX = _values["quiz_master"]["wrong_penalty_max"]
 QUIZ_PENALTY_CHANCE = _values["quiz_master"]["penalty_chance"]
 
-# History limits
-POSITIVE_MESSAGE_HISTORY_LIMIT = 15
-NEGATIVE_MESSAGE_HISTORY_LIMIT = 15
-THUMBNAIL_HISTORY_LIMIT = 25
-GIF_HISTORY_LIMIT = 125
-QUIZ_QUESTION_HISTORY_LIMIT = 15
 
 REQUIRED_OUTCOMES = {
     "GIF",
@@ -241,12 +248,12 @@ def _validate_weights(weights: dict) -> None:
 
 
 try:
-    with open("data/trick_or_treat_weights.yaml") as f:
+    with open(WEIGHTS_FILE) as f:
         _weights = yaml.safe_load(f)
 except FileNotFoundError as e:
     raise FileNotFoundError(
         f"Trick-or-treat weights file not found: {e.filename}. "
-        "Expected file at: data/trick_or_treat_weights.yaml"
+        f"Expected file at: {WEIGHTS_FILE}"
     ) from e
 except yaml.YAMLError as e:
     raise ValueError(f"Invalid YAML syntax in trick-or-treat weights file: {e}") from e
