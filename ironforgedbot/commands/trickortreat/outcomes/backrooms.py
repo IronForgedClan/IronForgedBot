@@ -105,7 +105,9 @@ class BackroomsView(discord.ui.View):
                 door=door_label
             )
             suspense_embed = self.handler._build_embed(
-                suspense_message, self.handler.BACKROOMS_THUMBNAILS
+                suspense_message,
+                self.handler.BACKROOMS_THUMBNAILS,
+                self.handler.backrooms_thumbnail_history,
             )
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
@@ -139,6 +141,7 @@ class BackroomsView(discord.ui.View):
                 embed = self.handler._build_embed(
                     self.handler.BACKROOMS_EXPIRED_MESSAGE,
                     self.handler.BACKROOMS_THUMBNAILS,
+                    self.handler.backrooms_thumbnail_history,
                 )
                 await self.message.edit(embed=embed, view=None)
             except discord.HTTPException:
@@ -187,7 +190,9 @@ async def process_door_choice(
                     user_nickname, ingot_total
                 )
                 embed = handler._build_embed(
-                    formatted_message, handler.BACKROOMS_THUMBNAILS
+                    formatted_message,
+                    handler.BACKROOMS_THUMBNAILS,
+                    handler.backrooms_thumbnail_history,
                 )
                 await interaction.followup.send(embed=embed)
 
@@ -206,7 +211,9 @@ async def process_door_choice(
                 lucky_message = random.choice(handler.BACKROOMS_LUCKY_ESCAPE_MESSAGES)
                 lucky_message += handler._get_balance_message(user_nickname, 0)
                 embed = handler._build_embed(
-                    lucky_message, handler.BACKROOMS_THUMBNAILS
+                    lucky_message,
+                    handler.BACKROOMS_THUMBNAILS,
+                    handler.backrooms_thumbnail_history,
                 )
                 await interaction.followup.send(embed=embed)
             else:
@@ -217,13 +224,17 @@ async def process_door_choice(
                     user_nickname, ingot_total
                 )
                 embed = handler._build_embed(
-                    formatted_message, handler.BACKROOMS_THUMBNAILS
+                    formatted_message,
+                    handler.BACKROOMS_THUMBNAILS,
+                    handler.backrooms_thumbnail_history,
                 )
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.ESCAPE:
             message = random.choice(handler.BACKROOMS_ESCAPE_MESSAGES)
-            embed = handler._build_embed(message, handler.BACKROOMS_THUMBNAILS)
+            embed = handler._build_embed(
+                message, handler.BACKROOMS_THUMBNAILS, handler.backrooms_thumbnail_history
+            )
             await interaction.followup.send(embed=embed)
 
 
@@ -247,7 +258,9 @@ async def result_backrooms(
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
     intro_message = handler.BACKROOMS_INTRO.format(expires=expires_timestamp)
 
-    embed = handler._build_embed(intro_message, handler.BACKROOMS_THUMBNAILS)
+    embed = handler._build_embed(
+        intro_message, handler.BACKROOMS_THUMBNAILS, handler.backrooms_thumbnail_history
+    )
 
     view = BackroomsView(handler, interaction.user.id, outcomes, selected_labels)
     message = await interaction.followup.send(embed=embed, view=view)

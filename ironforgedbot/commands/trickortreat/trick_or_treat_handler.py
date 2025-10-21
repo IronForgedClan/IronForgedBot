@@ -1,5 +1,3 @@
-"""Handler for the trick-or-treat Halloween event minigame."""
-
 import json
 import logging
 import random
@@ -38,7 +36,10 @@ class TrickOrTreatHandler:
         self.weights: List[float] = [item.value for item in TrickOrTreat]
         self.ingot_icon: str = find_emoji("Ingot")
         self.gif_history: deque[int] = deque(maxlen=GIF_HISTORY_LIMIT)
-        self.thumbnail_history: List[str] = []
+        self.thumbnail_history: deque[int] = deque(maxlen=THUMBNAIL_HISTORY_LIMIT)
+        self.backrooms_thumbnail_history: deque[int] = deque(
+            maxlen=THUMBNAIL_HISTORY_LIMIT
+        )
         self.positive_message_history: deque[int] = deque(
             maxlen=POSITIVE_MESSAGE_HISTORY_LIMIT
         )
@@ -133,9 +134,7 @@ class TrickOrTreatHandler:
             ]
             self.QUIZ_EXPIRED_MESSAGE = data["QUIZ_MASTER"]["EXPIRED_MESSAGE"]
 
-    def _get_random_from_list(
-        self, items: List[str], history: deque[int]
-    ) -> str:
+    def _get_random_from_list(self, items: List[str], history: deque[int]) -> str:
         """Get a random item from a list, avoiding recently used items.
 
         Args:
@@ -168,7 +167,10 @@ class TrickOrTreatHandler:
         return f"\n\n**{username}** now has **{self.ingot_icon}{balance:,}** ingots."
 
     def _build_embed(
-        self, content: str, thumbnail_list: Optional[List[str]] = None
+        self,
+        content: str,
+        thumbnail_list: Optional[List[str]] = None,
+        thumbnail_history: Optional[deque[int]] = None,
     ) -> discord.Embed:
         """Build a Discord embed with Halloween-themed styling.
 
@@ -176,25 +178,23 @@ class TrickOrTreatHandler:
             content: The message content to display in the embed.
             thumbnail_list: Optional list of thumbnails to choose from.
                            If None, uses default THUMBNAILS.
+            thumbnail_history: Optional index-based history for thumbnail selection.
+                              If None, uses self.thumbnail_history.
 
         Returns:
             A Discord embed with orange color and random thumbnail.
         """
         thumbnails = thumbnail_list if thumbnail_list is not None else self.THUMBNAILS
-        available = [s for s in thumbnails if s not in self.thumbnail_history]
-
-        # If all thumbnails have been used recently, reset history for this thumbnail list
-        if not available:
-            # Clear only items from the current thumbnail list from history
-            self.thumbnail_history = [
-                h for h in self.thumbnail_history if h not in thumbnails
-            ]
-            available = thumbnails
-
-        chosen_thumbnail = random.choice(available)
-        self._add_to_history(
-            chosen_thumbnail, self.thumbnail_history, THUMBNAIL_HISTORY_LIMIT
+        history = (
+            thumbnail_history
+            if thumbnail_history is not None
+            else self.thumbnail_history
         )
+
+        if len(thumbnails) == 1:
+            chosen_thumbnail = thumbnails[0]
+        else:
+            chosen_thumbnail = self._get_random_from_list(thumbnails, history)
 
         embed = build_response_embed("", content, discord.Color.orange())
         embed.set_thumbnail(url=chosen_thumbnail)
@@ -362,9 +362,7 @@ class TrickOrTreatHandler:
 
         prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"
         formatted_quantity = f"-{abs(quantity):,}" if quantity < 0 else f"{quantity:,}"
-        message = message_text.format(
-            ingots=f"{self.ingot_icon}{formatted_quantity}"
-        )
+        message = message_text.format(ingots=f"{self.ingot_icon}{formatted_quantity}")
 
         embed = self._build_embed(
             prefix + message + self._get_balance_message(user_nickname, ingot_total)
@@ -419,7 +417,6 @@ class TrickOrTreatHandler:
                 return await gif.result_gif(self, interaction)
 
 
-# Module-level handler instance cache
 _handler_instance: Optional[TrickOrTreatHandler] = None
 
 
