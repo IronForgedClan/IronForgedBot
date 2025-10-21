@@ -21,6 +21,17 @@ from ironforgedbot.commands.trickortreat.types import (
     StealData,
     TrickData,
 )
+from ironforgedbot.commands.trickortreat.outcomes import (
+    backrooms,
+    double_or_nothing,
+    gif,
+    ingot_changes,
+    jackpot,
+    joke,
+    quiz_master,
+    steal,
+    trick,
+)
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.database.database import db
@@ -316,19 +327,6 @@ class TrickOrTreatHandler:
         Args:
             interaction: The Discord interaction context.
         """
-        # Import outcome modules here to avoid circular imports
-        from ironforgedbot.commands.trickortreat.outcomes import (
-            backrooms,
-            double_or_nothing,
-            gif,
-            ingot_changes,
-            jackpot,
-            joke,
-            quiz_master,
-            steal,
-            trick,
-        )
-
         match random.choices(
             list(TrickOrTreat), weights=[item.value for item in TrickOrTreat]
         )[0]:
