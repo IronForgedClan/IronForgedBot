@@ -107,7 +107,7 @@ class BackroomsView(discord.ui.View):
             suspense_embed = self.handler._build_embed(
                 suspense_message,
                 self.handler.backrooms["THUMBNAILS"],
-                self.handler.backrooms_thumbnail_history,
+                self.handler.history["backrooms_thumbnail"],
             )
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
@@ -139,9 +139,9 @@ class BackroomsView(discord.ui.View):
         if self.message:
             try:
                 embed = self.handler._build_embed(
-                    self.handler.backrooms["EXPIRED_MESSAGE"],
+                    self.handler.backrooms["EXPIRED"],
                     self.handler.backrooms["THUMBNAILS"],
-                    self.handler.backrooms_thumbnail_history,
+                    self.handler.history["backrooms_thumbnail"],
                 )
                 await self.message.edit(embed=embed, view=None)
             except discord.HTTPException:
@@ -192,7 +192,7 @@ async def process_door_choice(
                 embed = handler._build_embed(
                     formatted_message,
                     handler.backrooms["THUMBNAILS"],
-                    handler.backrooms_thumbnail_history,
+                    handler.history["backrooms_thumbnail"],
                 )
                 await interaction.followup.send(embed=embed)
 
@@ -215,7 +215,7 @@ async def process_door_choice(
                 embed = handler._build_embed(
                     lucky_message,
                     handler.backrooms["THUMBNAILS"],
-                    handler.backrooms_thumbnail_history,
+                    handler.history["backrooms_thumbnail"],
                 )
                 await interaction.followup.send(embed=embed)
             else:
@@ -228,7 +228,7 @@ async def process_door_choice(
                 embed = handler._build_embed(
                     formatted_message,
                     handler.backrooms["THUMBNAILS"],
-                    handler.backrooms_thumbnail_history,
+                    handler.history["backrooms_thumbnail"],
                 )
                 await interaction.followup.send(embed=embed)
 
@@ -237,7 +237,7 @@ async def process_door_choice(
             embed = handler._build_embed(
                 message,
                 handler.backrooms["THUMBNAILS"],
-                handler.backrooms_thumbnail_history,
+                handler.history["backrooms_thumbnail"],
             )
             await interaction.followup.send(embed=embed)
 
@@ -267,7 +267,7 @@ async def result_backrooms(
     embed = handler._build_embed(
         intro_message,
         handler.backrooms["THUMBNAILS"],
-        handler.backrooms_thumbnail_history,
+        handler.history["backrooms_thumbnail"],
     )
 
     view = BackroomsView(handler, interaction.user.id, outcomes, selected_labels)

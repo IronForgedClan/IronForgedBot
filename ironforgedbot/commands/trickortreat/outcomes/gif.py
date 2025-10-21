@@ -17,6 +17,6 @@ async def result_gif(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction context.
     """
-    chosen_gif = handler._get_random_from_list(handler.gifs, handler.gif_history)
+    chosen_gif = handler._get_random_from_list(handler.gifs, handler.history["gif"])
 
     return await interaction.followup.send(chosen_gif)

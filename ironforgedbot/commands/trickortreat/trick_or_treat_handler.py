@@ -44,13 +44,15 @@ class TrickOrTreatHandler:
         self.ingot_icon: str = find_emoji("Ingot")
 
         # History tracking
-        self.gif_history: deque[int] = deque(maxlen=150)
-        self.thumbnail_history: deque[int] = deque(maxlen=30)
-        self.backrooms_thumbnail_history: deque[int] = deque(maxlen=30)
-        self.positive_message_history: deque[int] = deque(maxlen=20)
-        self.negative_message_history: deque[int] = deque(maxlen=20)
-        self.quiz_question_history: deque[int] = deque(maxlen=20)
-        self.joke_history: deque[int] = deque(maxlen=20)
+        self.history: dict[str, deque[int]] = {
+            "gif": deque(maxlen=150),
+            "thumbnail": deque(maxlen=30),
+            "backrooms_thumbnail": deque(maxlen=30),
+            "positive_message": deque(maxlen=20),
+            "negative_message": deque(maxlen=20),
+            "quiz_question": deque(maxlen=20),
+            "joke": deque(maxlen=20),
+        }
 
         # Load content
         with open(CONTENT_FILE) as f:
@@ -118,7 +120,7 @@ class TrickOrTreatHandler:
             thumbnail_list: Optional list of thumbnails to choose from.
                            If None, uses default THUMBNAILS.
             thumbnail_history: Optional index-based history for thumbnail selection.
-                              If None, uses self.thumbnail_history.
+                              If None, uses self.history["thumbnail"].
 
         Returns:
             A Discord embed with orange color and random thumbnail.
@@ -127,7 +129,7 @@ class TrickOrTreatHandler:
         history = (
             thumbnail_history
             if thumbnail_history is not None
-            else self.thumbnail_history
+            else self.history["thumbnail"]
         )
 
         if len(thumbnails) == 1:
@@ -292,11 +294,11 @@ class TrickOrTreatHandler:
 
         if is_positive:
             message_text = self._get_random_from_list(
-                self.positive_messages, self.positive_message_history
+                self.positive_messages, self.history["positive_message"]
             )
         else:
             message_text = self._get_random_from_list(
-                self.negative_messages, self.negative_message_history
+                self.negative_messages, self.history["negative_message"]
             )
 
         prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"
