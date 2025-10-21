@@ -8,12 +8,6 @@ import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     CONTENT_FILE,
-    GIF_HISTORY_LIMIT,
-    JOKE_HISTORY_LIMIT,
-    NEGATIVE_MESSAGE_HISTORY_LIMIT,
-    POSITIVE_MESSAGE_HISTORY_LIMIT,
-    QUIZ_QUESTION_HISTORY_LIMIT,
-    THUMBNAIL_HISTORY_LIMIT,
     TrickOrTreat,
 )
 from ironforgedbot.common.helpers import find_emoji
@@ -38,21 +32,15 @@ class TrickOrTreatHandler:
         """Initialize the TrickOrTreatHandler with weighted outcomes and message history."""
         self.weights: List[float] = [item.value for item in TrickOrTreat]
         self.ingot_icon: str = find_emoji("Ingot")
-        self.gif_history: deque[int] = deque(maxlen=GIF_HISTORY_LIMIT)
-        self.thumbnail_history: deque[int] = deque(maxlen=THUMBNAIL_HISTORY_LIMIT)
-        self.backrooms_thumbnail_history: deque[int] = deque(
-            maxlen=THUMBNAIL_HISTORY_LIMIT
-        )
-        self.positive_message_history: deque[int] = deque(
-            maxlen=POSITIVE_MESSAGE_HISTORY_LIMIT
-        )
-        self.negative_message_history: deque[int] = deque(
-            maxlen=NEGATIVE_MESSAGE_HISTORY_LIMIT
-        )
-        self.quiz_question_history: deque[int] = deque(
-            maxlen=QUIZ_QUESTION_HISTORY_LIMIT
-        )
-        self.joke_history: deque[int] = deque(maxlen=JOKE_HISTORY_LIMIT)
+
+        # History tracking
+        self.gif_history: deque[int] = deque(maxlen=150)
+        self.thumbnail_history: deque[int] = deque(maxlen=30)
+        self.backrooms_thumbnail_history: deque[int] = deque(maxlen=30)
+        self.positive_message_history: deque[int] = deque(maxlen=20)
+        self.negative_message_history: deque[int] = deque(maxlen=20)
+        self.quiz_question_history: deque[int] = deque(maxlen=20)
+        self.joke_history: deque[int] = deque(maxlen=20)
 
         # Data loaded from JSON
         self.GIFS: List[str]
