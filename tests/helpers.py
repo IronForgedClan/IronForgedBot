@@ -469,52 +469,52 @@ def create_test_score_breakdown(skills_count=2, activities_count=2):
 
 MOCK_TRICK_OR_TREAT_DATA = """
 {
-    "GENERAL": {
-        "POSITIVE_MESSAGES": ["Test positive {ingots}"],
-        "NEGATIVE_MESSAGES": ["Test negative {ingots}"],
-        "NO_INGOTS_MESSAGE": "No ingots test message"
+    "general": {
+        "positive_messages": ["Test positive {ingots}"],
+        "negative_messages": ["Test negative {ingots}"],
+        "no_ingots_message": "No ingots test message"
     },
-    "JACKPOT": {
-        "SUCCESS_PREFIX": "Jackpot {mention} {ingot_icon}{amount:,}",
-        "CLAIMED_MESSAGE": "Already claimed"
+    "jackpot": {
+        "success_prefix": "Jackpot {mention} {ingot_icon}{amount:,}",
+        "claimed_message": "Already claimed"
     },
-    "REMOVE_ALL_TRICK": {
-        "MESSAGE": "Removed {ingot_icon}-{amount:,}"
+    "remove_all_trick": {
+        "message": "Removed {ingot_icon}-{amount:,}"
     },
-    "DOUBLE_OR_NOTHING": {
-        "OFFER": "Double or nothing {ingot_icon}{amount:,} expires {expires}",
-        "WIN": "You won {ingot_icon}{total_amount:,}",
-        "LOSE": "You lost {ingot_icon}{amount}",
-        "KEEP": "You kept {ingot_icon}{amount:,}",
-        "EXPIRED": "Expired {ingot_icon}{amount:,}"
+    "double_or_nothing": {
+        "offer": "Double or nothing {ingot_icon}{amount:,} expires {expires}",
+        "win": "You won {ingot_icon}{total_amount:,}",
+        "lose": "You lost {ingot_icon}{amount}",
+        "keep": "You kept {ingot_icon}{amount:,}",
+        "expired": "Expired {ingot_icon}{amount:,}"
     },
-    "STEAL": {
-        "OFFER": "Steal {ingot_icon}{amount:,} penalty {ingot_icon}{penalty:,} expires {expires}",
-        "SUCCESS": "Success {ingot_icon}{amount:,} from {target_mention}",
-        "FAILURE": "Failed {ingot_icon}{amount:,} {target_mention} penalty {ingot_icon}{penalty}",
-        "WALK_AWAY": "Walked away",
-        "EXPIRED": "Time's up",
-        "NO_TARGETS": "No targets",
-        "TARGET_NO_INGOTS": "{target_mention} has no ingots",
-        "USER_NO_INGOTS": "Need {ingot_icon}{penalty:,}"
+    "steal": {
+        "offer": "Steal {ingot_icon}{amount:,} penalty {ingot_icon}{penalty:,} expires {expires}",
+        "success": "Success {ingot_icon}{amount:,} from {target_mention}",
+        "failure": "Failed {ingot_icon}{amount:,} {target_mention} penalty {ingot_icon}{penalty}",
+        "walk_away": "Walked away",
+        "expired": "Time's up",
+        "no_targets": "No targets",
+        "target_no_ingots": "{target_mention} has no ingots",
+        "user_no_ingots": "Need {ingot_icon}{penalty:,}"
     },
-    "BACKROOMS": {
-        "INTRO": "Backrooms test intro {expires}",
-        "DOOR_LABELS": ["Test Door 1", "Test Door 2", "Test Door 3"],
-        "TREASURE_MESSAGES": ["Test treasure {ingots}"],
-        "MONSTER_MESSAGES": ["Test monster {ingots}"],
-        "ESCAPE_MESSAGES": ["Test escape"],
-        "LUCKY_ESCAPE_MESSAGES": ["Test lucky escape"],
-        "OPENING_DOOR": "Opening {door}",
-        "EXPIRED": "Test expired",
-        "THUMBNAILS": ["http://test.com/backrooms.png"]
+    "backrooms": {
+        "intro": "Backrooms test intro {expires}",
+        "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
+        "treasure_messages": ["Test treasure {ingots}"],
+        "monster_messages": ["Test monster {ingots}"],
+        "escape_messages": ["Test escape"],
+        "lucky_escape_messages": ["Test lucky escape"],
+        "opening_door": "Opening {door}",
+        "expired": "Test expired",
+        "thumbnails": ["http://test.com/backrooms.png"]
     },
-    "JOKE": {
-        "MESSAGES": ["Test joke"]
+    "joke": {
+        "messages": ["Test joke"]
     },
-    "QUIZ_MASTER": {
-        "INTRO": "Quiz Master test intro {expires}",
-        "QUESTIONS": [
+    "quiz_master": {
+        "intro": "Quiz Master test intro {expires}",
+        "questions": [
             {
                 "question": "Test question?",
                 "options": [
@@ -526,14 +526,14 @@ MOCK_TRICK_OR_TREAT_DATA = """
                 "correct_index": 2
             }
         ],
-        "CORRECT_MESSAGE": "Correct {ingot_icon}{amount:,}",
-        "WRONG_LUCKY_MESSAGE": "Wrong but lucky",
-        "WRONG_PENALTY_MESSAGE": "Wrong penalty {ingot_icon}{penalty}",
-        "EXPIRED_MESSAGE": "Expired"
+        "correct_message": "Correct {ingot_icon}{amount:,}",
+        "wrong_lucky_message": "Wrong but lucky",
+        "wrong_penalty_message": "Wrong penalty {ingot_icon}{penalty}",
+        "expired_message": "Expired"
     },
-    "MEDIA": {
-        "GIFS": [],
-        "THUMBNAILS": ["http://test.com/img.png"]
+    "media": {
+        "gifs": [],
+        "thumbnails": ["http://test.com/img.png"]
     }
 }
 """

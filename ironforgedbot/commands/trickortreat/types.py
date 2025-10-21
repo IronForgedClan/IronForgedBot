@@ -20,80 +20,80 @@ class QuizQuestion(TypedDict):
 class GeneralData(TypedDict):
     """General messages and responses used across outcomes."""
 
-    POSITIVE_MESSAGES: list[str]
-    NEGATIVE_MESSAGES: list[str]
-    NO_INGOTS_MESSAGE: str
+    positive_messages: list[str]
+    negative_messages: list[str]
+    no_ingots_message: str
 
 
 class JackpotData(TypedDict):
     """Jackpot outcome messages."""
 
-    SUCCESS_PREFIX: str
-    CLAIMED_MESSAGE: str
+    success_prefix: str
+    claimed_message: str
 
 
 class TrickData(TypedDict):
     """Remove-all-ingots trick outcome message."""
 
-    MESSAGE: str
+    message: str
 
 
 class DoubleOrNothingData(TypedDict):
     """Double-or-nothing outcome messages."""
 
-    OFFER: str
-    WIN: str
-    LOSE: str
-    KEEP: str
-    EXPIRED: str
+    offer: str
+    win: str
+    lose: str
+    keep: str
+    expired: str
 
 
 class StealData(TypedDict):
     """Steal outcome messages."""
 
-    OFFER: str
-    SUCCESS: str
-    FAILURE: str
-    WALK_AWAY: str
-    EXPIRED: str
-    NO_TARGETS: str
-    TARGET_NO_INGOTS: str
-    USER_NO_INGOTS: str
+    offer: str
+    success: str
+    failure: str
+    walk_away: str
+    expired: str
+    no_targets: str
+    target_no_ingots: str
+    user_no_ingots: str
 
 
 class BackroomsData(TypedDict):
     """Backrooms outcome messages and content."""
 
-    INTRO: str
-    DOOR_LABELS: list[str]
-    TREASURE_MESSAGES: list[str]
-    MONSTER_MESSAGES: list[str]
-    ESCAPE_MESSAGES: list[str]
-    LUCKY_ESCAPE_MESSAGES: list[str]
-    OPENING_DOOR: str
-    EXPIRED: str
-    THUMBNAILS: list[str]
+    intro: str
+    door_labels: list[str]
+    treasure_messages: list[str]
+    monster_messages: list[str]
+    escape_messages: list[str]
+    lucky_escape_messages: list[str]
+    opening_door: str
+    expired: str
+    thumbnails: list[str]
 
 
 class JokeData(TypedDict):
     """Joke outcome messages."""
 
-    MESSAGES: list[str]
+    messages: list[str]
 
 
 class QuizData(TypedDict):
     """Quiz master outcome messages and questions."""
 
-    INTRO: str
-    QUESTIONS: list[QuizQuestion]
-    CORRECT_MESSAGE: str
-    WRONG_LUCKY_MESSAGE: str
-    WRONG_PENALTY_MESSAGE: str
-    EXPIRED_MESSAGE: str
+    intro: str
+    questions: list[QuizQuestion]
+    correct_message: str
+    wrong_lucky_message: str
+    wrong_penalty_message: str
+    expired_message: str
 
 
 class HistoryDict(TypedDict):
-    """History tracking."""
+    """History tracking for preventing recent repeats of content."""
 
     gif: deque[int]
     thumbnail: deque[int]

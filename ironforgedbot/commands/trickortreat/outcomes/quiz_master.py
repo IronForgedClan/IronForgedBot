@@ -52,7 +52,7 @@ def _get_random_quiz_question(handler: "TrickOrTreatHandler") -> Dict:
         A question dictionary containing question text, options, and correct_index.
     """
     return handler._get_random_from_list(
-        handler.quiz["QUESTIONS"], handler.history["quiz_question"]
+        handler.quiz["questions"], handler.history["quiz_question"]
     )
 
 
@@ -151,7 +151,7 @@ class QuizMasterView(discord.ui.View):
 
         user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
 
-        message = self.handler.quiz["EXPIRED_MESSAGE"]
+        message = self.handler.quiz["expired_message"]
         if ingot_total is not None:
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
@@ -201,7 +201,7 @@ async def result_quiz_master(
     expire_timestamp = int(time.time() + QUIZ_TIMEOUT_SECONDS)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    intro_message = handler.quiz["INTRO"].format(expires=expires_formatted)
+    intro_message = handler.quiz["intro"].format(expires=expires_formatted)
 
     intro_embed = handler._build_embed(
         intro_message,
@@ -258,7 +258,7 @@ async def _handle_correct_answer(
         )
         return None
 
-    message = handler.quiz["CORRECT_MESSAGE"].format(
+    message = handler.quiz["correct_message"].format(
         ingot_icon=handler.ingot_icon, amount=amount
     )
     return message + handler._get_balance_message(user_nickname, ingot_total)
@@ -295,19 +295,19 @@ async def _handle_wrong_answer(
             user_nickname, ingot_total = await handler._get_user_info(
                 interaction.user.id
             )
-            message = handler.quiz["WRONG_LUCKY_MESSAGE"]
+            message = handler.quiz["wrong_lucky_message"]
             return message + handler._get_balance_message(user_nickname, ingot_total)
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
         formatted_penalty = f"-{penalty:,}"
-        message = handler.quiz["WRONG_PENALTY_MESSAGE"].format(
+        message = handler.quiz["wrong_penalty_message"].format(
             ingot_icon=handler.ingot_icon,
             penalty=formatted_penalty,
         )
         return message + handler._get_balance_message(user_nickname, ingot_total)
 
     user_nickname, ingot_total = await handler._get_user_info(interaction.user.id)
-    message = handler.quiz["WRONG_LUCKY_MESSAGE"]
+    message = handler.quiz["wrong_lucky_message"]
     return message + handler._get_balance_message(user_nickname, ingot_total)
 
 

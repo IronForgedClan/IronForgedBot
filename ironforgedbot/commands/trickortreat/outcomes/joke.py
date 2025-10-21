@@ -18,7 +18,7 @@ async def result_joke(
         interaction: The Discord interaction context.
     """
     joke = handler._get_random_from_list(
-        handler.joke["MESSAGES"], handler.history["joke"]
+        handler.joke["messages"], handler.history["joke"]
     )
     content = f"🤡 **Joke**\n\n{joke}"
 

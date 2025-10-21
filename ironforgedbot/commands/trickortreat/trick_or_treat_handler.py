@@ -60,21 +60,21 @@ class TrickOrTreatHandler:
             logger.debug("Loading trick or treat data...")
             data = json.load(f)
 
-        # Outcome data
-        self.general: GeneralData = data["GENERAL"]
-        self.jackpot: JackpotData = data["JACKPOT"]
-        self.double_or_nothing: DoubleOrNothingData = data["DOUBLE_OR_NOTHING"]
-        self.steal: StealData = data["STEAL"]
-        self.backrooms: BackroomsData = data["BACKROOMS"]
-        self.quiz: QuizData = data["QUIZ_MASTER"]
-        self.joke: JokeData = data["JOKE"]
-        self.trick: TrickData = data["REMOVE_ALL_TRICK"]
+        # Outcomes
+        self.jackpot: JackpotData = data["jackpot"]
+        self.double_or_nothing: DoubleOrNothingData = data["double_or_nothing"]
+        self.steal: StealData = data["steal"]
+        self.backrooms: BackroomsData = data["backrooms"]
+        self.quiz: QuizData = data["quiz_master"]
+        self.joke: JokeData = data["joke"]
+        self.trick: TrickData = data["remove_all_trick"]
 
-        # Common lists
-        self.gifs: List[str] = data["MEDIA"]["GIFS"]
-        self.thumbnails: List[str] = data["MEDIA"]["THUMBNAILS"]
-        self.positive_messages: List[str] = self.general["POSITIVE_MESSAGES"]
-        self.negative_messages: List[str] = self.general["NEGATIVE_MESSAGES"]
+        # Common
+        self.gifs: List[str] = data["media"]["gifs"]
+        self.thumbnails: List[str] = data["media"]["thumbnails"]
+        self.general: GeneralData = data["general"]
+        self.positive_messages: List[str] = self.general["positive_messages"]
+        self.negative_messages: List[str] = self.general["negative_messages"]
 
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
@@ -152,7 +152,7 @@ class TrickOrTreatHandler:
             A Discord embed with a humorous error message.
         """
         return self._build_embed(
-            self.general["NO_INGOTS_MESSAGE"] + self._get_balance_message(username, 0)
+            self.general["no_ingots_message"] + self._get_balance_message(username, 0)
         )
 
     def _add_to_history(

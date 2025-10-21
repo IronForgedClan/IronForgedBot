@@ -167,7 +167,7 @@ class StealTargetView(discord.ui.View):
         if self.message:
             await self.message.delete()
 
-        embed = self.handler._build_embed(self.handler.steal["WALK_AWAY"])
+        embed = self.handler._build_embed(self.handler.steal["walk_away"])
         await interaction.followup.send(embed=embed)
 
         self.stop()
@@ -180,7 +180,7 @@ class StealTargetView(discord.ui.View):
         # Remove all buttons
         self.clear_items()
 
-        embed = self.handler._build_embed(self.handler.steal["EXPIRED"])
+        embed = self.handler._build_embed(self.handler.steal["expired"])
         try:
             await self.message.edit(embed=embed, view=self)
         except discord.HTTPException:
@@ -210,7 +210,7 @@ async def result_steal(
     ]
 
     if not member_targets:
-        embed = handler._build_embed(handler.steal["NO_TARGETS"])
+        embed = handler._build_embed(handler.steal["no_targets"])
         return await interaction.followup.send(embed=embed)
 
     num_targets = min(4, len(member_targets))
@@ -224,7 +224,7 @@ async def result_steal(
         user_member = await member_service.get_member_by_discord_id(interaction.user.id)
 
         if user_member and user_member.ingots < penalty:
-            message = handler.steal["USER_NO_INGOTS"].format(
+            message = handler.steal["user_no_ingots"].format(
                 ingot_icon=handler.ingot_icon, penalty=penalty
             )
             embed = handler._build_embed(message)
@@ -233,7 +233,7 @@ async def result_steal(
     expire_timestamp = int(time.time() + 45)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    offer_message = handler.steal["OFFER"].format(
+    offer_message = handler.steal["offer"].format(
         ingot_icon=handler.ingot_icon,
         amount=quantity,
         penalty=penalty,
@@ -271,7 +271,7 @@ async def process_steal(
         target_member = await member_service.get_member_by_discord_id(target.id)
 
         if not target_member or target_member.ingots == 0:
-            message = handler.steal["TARGET_NO_INGOTS"].format(
+            message = handler.steal["target_no_ingots"].format(
                 target_mention=target.mention
             )
             embed = handler._build_embed(message)
@@ -306,7 +306,7 @@ async def process_steal(
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
-        message = handler.steal["SUCCESS"].format(
+        message = handler.steal["success"].format(
             ingot_icon=handler.ingot_icon,
             amount=actual_amount,
             target_mention=target.mention,
@@ -330,7 +330,7 @@ async def process_steal(
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         formatted_penalty = f"-{penalty:,}"
-        message = handler.steal["FAILURE"].format(
+        message = handler.steal["failure"].format(
             ingot_icon=handler.ingot_icon,
             amount=amount,
             target_mention=target.mention,

@@ -101,12 +101,12 @@ class BackroomsView(discord.ui.View):
             await interaction.response.defer()
 
             door_label = self.door_labels[door_index]
-            suspense_message = self.handler.backrooms["OPENING_DOOR"].format(
+            suspense_message = self.handler.backrooms["opening_door"].format(
                 door=door_label
             )
             suspense_embed = self.handler._build_embed(
                 suspense_message,
-                self.handler.backrooms["THUMBNAILS"],
+                self.handler.backrooms["thumbnails"],
                 self.handler.history["backrooms_thumbnail"],
             )
             if self.message:
@@ -139,8 +139,8 @@ class BackroomsView(discord.ui.View):
         if self.message:
             try:
                 embed = self.handler._build_embed(
-                    self.handler.backrooms["EXPIRED"],
-                    self.handler.backrooms["THUMBNAILS"],
+                    self.handler.backrooms["expired"],
+                    self.handler.backrooms["thumbnails"],
                     self.handler.history["backrooms_thumbnail"],
                 )
                 await self.message.edit(embed=embed, view=None)
@@ -173,7 +173,7 @@ async def process_door_choice(
     match outcome:
         case DoorOutcome.TREASURE:
             amount = random.randint(BACKROOMS_TREASURE_MIN, BACKROOMS_TREASURE_MAX)
-            message = random.choice(handler.backrooms["TREASURE_MESSAGES"])
+            message = random.choice(handler.backrooms["treasure_messages"])
 
             ingot_total = await handler._adjust_ingots(
                 interaction,
@@ -191,14 +191,14 @@ async def process_door_choice(
                 )
                 embed = handler._build_embed(
                     formatted_message,
-                    handler.backrooms["THUMBNAILS"],
+                    handler.backrooms["thumbnails"],
                     handler.history["backrooms_thumbnail"],
                 )
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.MONSTER:
             amount = random.randint(BACKROOMS_MONSTER_MIN, BACKROOMS_MONSTER_MAX)
-            message = random.choice(handler.backrooms["MONSTER_MESSAGES"])
+            message = random.choice(handler.backrooms["monster_messages"])
 
             ingot_total = await handler._adjust_ingots(
                 interaction,
@@ -209,12 +209,12 @@ async def process_door_choice(
 
             if ingot_total is None:
                 lucky_message = random.choice(
-                    handler.backrooms["LUCKY_ESCAPE_MESSAGES"]
+                    handler.backrooms["lucky_escape_messages"]
                 )
                 lucky_message += handler._get_balance_message(user_nickname, 0)
                 embed = handler._build_embed(
                     lucky_message,
-                    handler.backrooms["THUMBNAILS"],
+                    handler.backrooms["thumbnails"],
                     handler.history["backrooms_thumbnail"],
                 )
                 await interaction.followup.send(embed=embed)
@@ -227,16 +227,16 @@ async def process_door_choice(
                 )
                 embed = handler._build_embed(
                     formatted_message,
-                    handler.backrooms["THUMBNAILS"],
+                    handler.backrooms["thumbnails"],
                     handler.history["backrooms_thumbnail"],
                 )
                 await interaction.followup.send(embed=embed)
 
         case DoorOutcome.ESCAPE:
-            message = random.choice(handler.backrooms["ESCAPE_MESSAGES"])
+            message = random.choice(handler.backrooms["escape_messages"])
             embed = handler._build_embed(
                 message,
-                handler.backrooms["THUMBNAILS"],
+                handler.backrooms["thumbnails"],
                 handler.history["backrooms_thumbnail"],
             )
             await interaction.followup.send(embed=embed)
@@ -258,15 +258,15 @@ async def result_backrooms(
     )
 
     selected_labels = random.sample(
-        handler.backrooms["DOOR_LABELS"], BACKROOMS_DOOR_COUNT
+        handler.backrooms["door_labels"], BACKROOMS_DOOR_COUNT
     )
 
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
-    intro_message = handler.backrooms["INTRO"].format(expires=expires_timestamp)
+    intro_message = handler.backrooms["intro"].format(expires=expires_timestamp)
 
     embed = handler._build_embed(
         intro_message,
-        handler.backrooms["THUMBNAILS"],
+        handler.backrooms["thumbnails"],
         handler.history["backrooms_thumbnail"],
     )
 
