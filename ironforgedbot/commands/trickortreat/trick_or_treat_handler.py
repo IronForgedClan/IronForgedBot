@@ -43,7 +43,6 @@ class TrickOrTreatHandler:
         """Initialize the TrickOrTreatHandler with message history and content."""
         self.ingot_icon: str = find_emoji("Ingot")
 
-        # History tracking
         self.history: HistoryDict = {
             "gif": deque(maxlen=150),
             "thumbnail": deque(maxlen=30),
@@ -54,10 +53,8 @@ class TrickOrTreatHandler:
             "joke": deque(maxlen=20),
         }
 
-        # Load content
         data = self._load_content_file()
 
-        # Outcomes
         self.jackpot: JackpotData = data["jackpot"]
         self.double_or_nothing: DoubleOrNothingData = data["double_or_nothing"]
         self.steal: StealData = data["steal"]
@@ -66,7 +63,6 @@ class TrickOrTreatHandler:
         self.joke: JokeData = data["joke"]
         self.trick: TrickData = data["remove_all_trick"]
 
-        # Common
         self.gifs: List[str] = data["media"]["gifs"]
         self.thumbnails: List[str] = data["media"]["thumbnails"]
         self.general: GeneralData = data["general"]

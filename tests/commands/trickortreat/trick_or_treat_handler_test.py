@@ -3,7 +3,7 @@ import json
 import unittest
 from collections import deque
 from typing import Counter
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import aiohttp
 
@@ -293,3 +293,61 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
             for url, result in zip(THUMBNAILS, results):
                 assert result == 200, f"{url} returned status code {result}"
+
+
+class TestLoadContentFile(unittest.TestCase):
+    """Test cases for the _load_content_file method."""
+
+    def test_load_content_file_success(self):
+        """Test successfully loading a valid content file."""
+        valid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        mock_file = mock_open(read_data=json.dumps(valid_data))
+
+        with patch("builtins.open", mock_file):
+            result = TrickOrTreatHandler._load_content_file("test_path.json")
+
+        self.assertEqual(result, valid_data)
+        mock_file.assert_called_once_with("test_path.json")
+
+    def test_load_content_file_not_found(self):
+        """Test that FileNotFoundError is raised when file doesn't exist."""
+        with patch("builtins.open", side_effect=FileNotFoundError("test.json")):
+            with self.assertRaises(FileNotFoundError) as context:
+                TrickOrTreatHandler._load_content_file("missing.json")
+
+        self.assertIn("Trick-or-treat content file not found", str(context.exception))
+        self.assertIn("missing.json", str(context.exception))
+
+    def test_load_content_file_invalid_json(self):
+        """Test that ValueError is raised for invalid JSON syntax."""
+        mock_file = mock_open(read_data="{invalid json")
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaises(ValueError) as context:
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+        self.assertIn("Invalid JSON syntax", str(context.exception))
+
+    def test_load_content_file_missing_keys(self):
+        """Test that KeyError is raised when required keys are missing."""
+        incomplete_data = {"jackpot": {}, "media": {}}
+        mock_file = mock_open(read_data=json.dumps(incomplete_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaises(KeyError) as context:
+                TrickOrTreatHandler._load_content_file("incomplete.json")
+
+        error_msg = str(context.exception)
+        self.assertIn("Missing required keys", error_msg)
+        self.assertIn("double_or_nothing", error_msg)
+        self.assertIn("steal", error_msg)
+
+    def test_load_content_file_unexpected_error(self):
+        """Test that RuntimeError is raised for unexpected errors."""
+        with patch("builtins.open", side_effect=PermissionError("Access denied")):
+            with self.assertRaises(RuntimeError) as context:
+                TrickOrTreatHandler._load_content_file("test.json")
+
+        self.assertIn(
+            "Unexpected error loading trick-or-treat content", str(context.exception)
+        )
