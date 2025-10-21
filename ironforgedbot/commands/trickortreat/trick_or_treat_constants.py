@@ -1,5 +1,6 @@
 """Constants and configuration for the trick-or-treat Halloween event."""
 
+import yaml
 from enum import Enum
 
 # Ingot reward/deduction ranges
@@ -31,24 +32,9 @@ GIF_HISTORY_LIMIT = 125
 QUIZ_QUESTION_HISTORY_LIMIT = 15
 
 
-class TrickOrTreat(Enum):
-    """Enum representing different trick-or-treat outcomes with their probability weights.
+# Load outcome weights from data file
+with open("data/trick_or_treat_weights.yaml") as f:
+    _weights = yaml.safe_load(f)
 
-    Values represent relative weights (higher value = higher probability).
-    Total weight: 1500
-    """
-
-    # fmt: off
-    GIF = 526                      # 35.1% (1/2.9)
-    REMOVE_INGOTS_LOW = 180        # 12.0% (1/8.3)
-    REMOVE_INGOTS_HIGH = 170       # 11.3% (1/8.8)
-    ADD_INGOTS_LOW = 150           # 10.0% (1/10.0)
-    ADD_INGOTS_HIGH = 130          #  8.7% (1/11.5)
-    QUIZ_MASTER = 130              #  8.7% (1/11.5)
-    DOUBLE_OR_NOTHING = 80         #  5.3% (1/18.8)
-    STEAL = 50                     #  3.3% (1/30.0)
-    JOKE = 40                      #  2.7% (1/37.5)
-    REMOVE_ALL_INGOTS_TRICK = 20   #  1.3% (1/75.0)
-    BACKROOMS = 20                 #  1.3% (1/75.0)
-    JACKPOT_INGOTS = 4             #  0.3% (1/375.0)
-    # fmt: on
+# Create TrickOrTreat enum dynamically from weights
+TrickOrTreat = Enum("TrickOrTreat", _weights)
