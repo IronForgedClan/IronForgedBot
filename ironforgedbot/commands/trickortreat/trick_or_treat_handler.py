@@ -3,12 +3,14 @@
 import json
 import logging
 import random
+from collections import deque
 from typing import List, Optional
 
 import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     CONTENT_FILE,
+    GIF_HISTORY_LIMIT,
     JOKE_HISTORY_LIMIT,
     NEGATIVE_MESSAGE_HISTORY_LIMIT,
     POSITIVE_MESSAGE_HISTORY_LIMIT,
@@ -35,12 +37,16 @@ class TrickOrTreatHandler:
         """Initialize the TrickOrTreatHandler with weighted outcomes and message history."""
         self.weights: List[float] = [item.value for item in TrickOrTreat]
         self.ingot_icon: str = find_emoji("Ingot")
-        self.gif_history: List[str] = []
+        self.gif_history: deque[int] = deque(maxlen=GIF_HISTORY_LIMIT)
         self.thumbnail_history: List[str] = []
-        self.positive_message_history: List[str] = []
-        self.negative_message_history: List[str] = []
+        self.positive_message_history: deque[int] = deque(
+            maxlen=POSITIVE_MESSAGE_HISTORY_LIMIT
+        )
+        self.negative_message_history: deque[int] = deque(
+            maxlen=NEGATIVE_MESSAGE_HISTORY_LIMIT
+        )
         self.quiz_question_history: List[str] = []
-        self.joke_history: List[str] = []
+        self.joke_history: deque[int] = deque(maxlen=JOKE_HISTORY_LIMIT)
 
         # Data loaded from JSON
         self.GIFS: List[str]
@@ -127,53 +133,27 @@ class TrickOrTreatHandler:
             ]
             self.QUIZ_EXPIRED_MESSAGE = data["QUIZ_MASTER"]["EXPIRED_MESSAGE"]
 
-    def _get_random_positive_message(self) -> str:
-        """Get a random positive message for when player wins ingots.
+    def _get_random_from_list(
+        self, items: List[str], history: deque[int]
+    ) -> str:
+        """Get a random item from a list, avoiding recently used items.
+
+        Args:
+            items: The full list of items to choose from.
+            history: Index-based deque tracking recently used item indices.
 
         Returns:
-            A message template string with {ingots} placeholder.
+            A randomly chosen item that hasn't been used recently.
         """
-        chosen = random.choice(
-            [
-                s
-                for s in self.POSITIVE_MESSAGES
-                if s not in self.positive_message_history
-            ]
-        )
-        self._add_to_history(
-            chosen, self.positive_message_history, POSITIVE_MESSAGE_HISTORY_LIMIT
-        )
-        return chosen
+        available_indices = [i for i in range(len(items)) if i not in history]
 
-    def _get_random_negative_message(self) -> str:
-        """Get a random negative message for when player loses ingots.
+        if not available_indices:
+            history.clear()
+            available_indices = list(range(len(items)))
 
-        Returns:
-            A message template string with {ingots} placeholder.
-        """
-        chosen = random.choice(
-            [
-                s
-                for s in self.NEGATIVE_MESSAGES
-                if s not in self.negative_message_history
-            ]
-        )
-        self._add_to_history(
-            chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT
-        )
-        return chosen
-
-    def _get_random_joke(self) -> str:
-        """Get a random joke from the jokes list.
-
-        Returns:
-            A random joke string that hasn't been used recently.
-        """
-        chosen = random.choice(
-            [s for s in self.JOKES if s not in self.joke_history]
-        )
-        self._add_to_history(chosen, self.joke_history, JOKE_HISTORY_LIMIT)
-        return chosen
+        chosen_idx = random.choice(available_indices)
+        history.append(chosen_idx)
+        return items[chosen_idx]
 
     def _get_balance_message(self, username: str, balance: int) -> str:
         """Generate a formatted message showing the user's new ingot balance.
@@ -371,15 +351,18 @@ class TrickOrTreatHandler:
             )
             return
 
-        message_getter = (
-            self._get_random_positive_message
-            if is_positive
-            else self._get_random_negative_message
-        )
+        if is_positive:
+            message_text = self._get_random_from_list(
+                self.POSITIVE_MESSAGES, self.positive_message_history
+            )
+        else:
+            message_text = self._get_random_from_list(
+                self.NEGATIVE_MESSAGES, self.negative_message_history
+            )
 
         prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"
         formatted_quantity = f"-{abs(quantity):,}" if quantity < 0 else f"{quantity:,}"
-        message = message_getter().format(
+        message = message_text.format(
             ingots=f"{self.ingot_icon}{formatted_quantity}"
         )
 
