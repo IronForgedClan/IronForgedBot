@@ -40,8 +40,7 @@ class TrickOrTreatHandler:
     """
 
     def __init__(self) -> None:
-        """Initialize the TrickOrTreatHandler with weighted outcomes and message history."""
-        self.weights: List[float] = [item.value for item in TrickOrTreat]
+        """Initialize the TrickOrTreatHandler with message history and content."""
         self.ingot_icon: str = find_emoji("Ingot")
 
         # History tracking
@@ -330,7 +329,9 @@ class TrickOrTreatHandler:
             trick,
         )
 
-        match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
+        match random.choices(
+            list(TrickOrTreat), weights=[item.value for item in TrickOrTreat]
+        )[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await jackpot.result_jackpot(self, interaction)
             case TrickOrTreat.REMOVE_ALL_INGOTS_TRICK:
