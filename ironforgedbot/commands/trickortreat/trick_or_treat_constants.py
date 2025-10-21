@@ -254,4 +254,19 @@ except Exception as e:
 
 _validate_weights(_weights)
 
-TrickOrTreat = Enum("TrickOrTreat", _weights)
+
+class TrickOrTreat(Enum):
+    """Trick-or-treat outcome types with probability weights loaded from YAML."""
+
+    JACKPOT_INGOTS = _weights["JACKPOT_INGOTS"]
+    REMOVE_ALL_INGOTS_TRICK = _weights["REMOVE_ALL_INGOTS_TRICK"]
+    DOUBLE_OR_NOTHING = _weights["DOUBLE_OR_NOTHING"]
+    STEAL = _weights["STEAL"]
+    QUIZ_MASTER = _weights["QUIZ_MASTER"]
+    BACKROOMS = _weights["BACKROOMS"]
+    REMOVE_INGOTS_HIGH = _weights["REMOVE_INGOTS_HIGH"]
+    ADD_INGOTS_HIGH = _weights["ADD_INGOTS_HIGH"]
+    REMOVE_INGOTS_LOW = _weights["REMOVE_INGOTS_LOW"]
+    ADD_INGOTS_LOW = _weights["ADD_INGOTS_LOW"]
+    JOKE = _weights["JOKE"]
+    GIF = _weights["GIF"]
