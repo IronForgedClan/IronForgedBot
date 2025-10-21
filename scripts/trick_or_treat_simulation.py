@@ -12,7 +12,7 @@ from tabulate import tabulate
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import TrickOrTreat
 
 
-attempts = 20_000
+attempts = 30_000
 outcomes = list(TrickOrTreat)
 weights = [item.value for item in outcomes]
 total_weight = sum(weights)
@@ -25,18 +25,17 @@ for _ in range(attempts):
 print(f"Distribution of outcomes after {attempts:,} attempts:")
 print(f"Total weight: {total_weight}\n")
 
-# Sort by count (highest to lowest)
-sorted_results = sorted(counter.items(), key=lambda x: x[1], reverse=True)
-
 table_data = [
     [
-        name,
-        f"{count:,}",
-        f"{(count / attempts) * 100:.2f}%",
-        f"{(TrickOrTreat[name].value / total_weight) * 100:.2f}%",
+        outcome.name,
+        f"{counter[outcome.name]:,}",
+        f"{(counter[outcome.name] / attempts) * 100:.2f}%",
+        f"{(outcome.value / total_weight) * 100:.2f}%",
     ]
-    for name, count in sorted_results
+    for outcome in outcomes
 ]
+
+table_data.sort(key=lambda x: int(x[1].replace(",", "")), reverse=True)
 
 print(
     tabulate(
