@@ -9,6 +9,7 @@ import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     CONTENT_FILE,
+    JOKE_HISTORY_LIMIT,
     NEGATIVE_MESSAGE_HISTORY_LIMIT,
     POSITIVE_MESSAGE_HISTORY_LIMIT,
     THUMBNAIL_HISTORY_LIMIT,
@@ -39,6 +40,7 @@ class TrickOrTreatHandler:
         self.positive_message_history: List[str] = []
         self.negative_message_history: List[str] = []
         self.quiz_question_history: List[str] = []
+        self.joke_history: List[str] = []
 
         # Data loaded from JSON
         self.GIFS: List[str]
@@ -159,6 +161,18 @@ class TrickOrTreatHandler:
         self._add_to_history(
             chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT
         )
+        return chosen
+
+    def _get_random_joke(self) -> str:
+        """Get a random joke from the jokes list.
+
+        Returns:
+            A random joke string that hasn't been used recently.
+        """
+        chosen = random.choice(
+            [s for s in self.JOKES if s not in self.joke_history]
+        )
+        self._add_to_history(chosen, self.joke_history, JOKE_HISTORY_LIMIT)
         return chosen
 
     def _get_balance_message(self, username: str, balance: int) -> str:
