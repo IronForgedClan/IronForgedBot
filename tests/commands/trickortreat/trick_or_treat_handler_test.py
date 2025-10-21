@@ -1,12 +1,16 @@
 import asyncio
 import json
 import unittest
+from collections import deque
 from typing import Counter
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 
-from ironforgedbot.commands.trickortreat.trick_or_treat_constants import TrickOrTreat
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    CONTENT_FILE,
+    TrickOrTreat,
+)
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
@@ -32,15 +36,21 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
     async def test_init(self):
-        """Test that TrickOrTreatHandler initializes with correct weights and empty history."""
+        """Test that TrickOrTreatHandler initializes with empty history."""
         handler = create_test_trick_or_treat_handler()
-        expected_weights = [item.value for item in TrickOrTreat]
 
-        self.assertEqual(handler.gif_history, [])
-        self.assertEqual(handler.thumbnail_history, [])
-        self.assertEqual(handler.positive_message_history, [])
-        self.assertEqual(handler.negative_message_history, [])
-        self.assertEqual(handler.weights, expected_weights)
+        self.assertIsInstance(handler.history, dict)
+        self.assertIn("gif", handler.history)
+        self.assertIn("thumbnail", handler.history)
+        self.assertIn("backrooms_thumbnail", handler.history)
+        self.assertIn("positive_message", handler.history)
+        self.assertIn("negative_message", handler.history)
+        self.assertIn("quiz_question", handler.history)
+        self.assertIn("joke", handler.history)
+
+        for key, history_deque in handler.history.items():
+            self.assertIsInstance(history_deque, deque)
+            self.assertEqual(len(history_deque), 0)
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
@@ -238,9 +248,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     # Media validation tests
     async def test_unique_gifs(self):
         """Test that all GIFs in the data file are unique."""
-        with open("data/trick_or_treat.json") as f:
+        with open(CONTENT_FILE) as f:
             data = json.load(f)
-            GIFS = data["MEDIA"]["GIFS"]
+            GIFS = data["media"]["gifs"]
 
         duplicates = [gif for gif, count in Counter(GIFS).items() if count > 1]
         assert not duplicates, f"Duplicate gifs: {duplicates}"
@@ -248,9 +258,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     @unittest.skip("Network heavy, run only when necessary")
     async def test_gifs_return_200(self):
         """Test that all GIF URLs are accessible (returns 200)."""
-        with open("data/trick_or_treat.json") as f:
+        with open(CONTENT_FILE) as f:
             data = json.load(f)
-            GIFS = data["MEDIA"]["GIFS"]
+            GIFS = data["media"]["gifs"]
 
         async with aiohttp.ClientSession() as session:
             tasks = [get_url_status_code(session, url) for url in GIFS]
@@ -261,9 +271,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
     async def test_unique_thumbnails(self):
         """Test that all thumbnails in the data file are unique."""
-        with open("data/trick_or_treat.json") as f:
+        with open(CONTENT_FILE) as f:
             data = json.load(f)
-            THUMBNAILS = data["MEDIA"]["THUMBNAILS"]
+            THUMBNAILS = data["media"]["thumbnails"]
 
         duplicates = [
             thumb for thumb, count in Counter(THUMBNAILS).items() if count > 1
@@ -273,9 +283,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     @unittest.skip("Network heavy, run only when necessary")
     async def test_thumbnails_return_200(self):
         """Test that all thumbnail URLs are accessible (returns 200)."""
-        with open("data/trick_or_treat.json") as f:
+        with open(CONTENT_FILE) as f:
             data = json.load(f)
-            THUMBNAILS = data["MEDIA"]["THUMBNAILS"]
+            THUMBNAILS = data["media"]["thumbnails"]
 
         async with aiohttp.ClientSession() as session:
             tasks = [get_url_status_code(session, url) for url in THUMBNAILS]
