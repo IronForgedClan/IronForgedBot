@@ -52,7 +52,7 @@ def _get_random_quiz_question(handler: "TrickOrTreatHandler") -> Dict:
         A question dictionary containing question text, options, and correct_index.
     """
     return handler._get_random_from_list(
-        handler.quiz_questions, handler.quiz_question_history
+        handler.quiz["QUESTIONS"], handler.quiz_question_history
     )
 
 

@@ -47,15 +47,11 @@ class TrickOrTreatHandler:
             logger.debug("Loading trick or treat data...")
             data = json.load(f)
 
-        # General lists
+        # Common lists
         self.gifs: List[str] = data["MEDIA"]["GIFS"]
         self.thumbnails: List[str] = data["MEDIA"]["THUMBNAILS"]
         self.positive_messages: List[str] = data["GENERAL"]["POSITIVE_MESSAGES"]
         self.negative_messages: List[str] = data["GENERAL"]["NEGATIVE_MESSAGES"]
-        self.jokes: List[str] = data["JOKE"]["MESSAGES"]
-        self.quiz_questions: list[dict] = data["QUIZ_MASTER"]["QUESTIONS"]
-        self.backrooms_thumbnails: list[str] = data["BACKROOMS"]["THUMBNAILS"]
-        self.backrooms_door_labels: list[str] = data["BACKROOMS"]["DOOR_LABELS"]
 
         # Feature data
         self.general = data["GENERAL"]
@@ -64,6 +60,7 @@ class TrickOrTreatHandler:
         self.steal = data["STEAL"]
         self.backrooms = data["BACKROOMS"]
         self.quiz = data["QUIZ_MASTER"]
+        self.joke = data["JOKE"]
         self.trick = data["REMOVE_ALL_TRICK"]
 
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
