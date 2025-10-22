@@ -16,31 +16,30 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
 
     def decorator(func):
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs) -> None:
             interaction = args[0]
             if not isinstance(interaction, discord.Interaction):
                 raise ReferenceError(
                     f"Expected discord.Interaction as first argument ({func.__name__})"
                 )
 
-            assert interaction.command
+            if not interaction.command:
+                raise ValueError(
+                    f"Interaction command is None, cannot apply rate limit ({func.__name__})"
+                )
+
             command_name = interaction.command.name
-            user_id = str(
-                interaction.user.id
-            )  # when serializing state to json keys are strings
+            user_id = str(interaction.user.id)
             now = time.time()
 
-            # make sure we have a dict for this command
             if command_name not in STATE.state["rate_limit"]:
                 STATE.state["rate_limit"][command_name] = {}
 
             command_limits = STATE.state["rate_limit"][command_name]
 
-            # make sure we have an array for this user id
             if user_id not in command_limits:
                 command_limits[user_id] = []
 
-            # remove timestamps older than the cooldown period
             timestamps = command_limits[user_id]
             timestamps = [t for t in timestamps if now - t < seconds]
             command_limits[user_id] = timestamps
@@ -67,9 +66,6 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
                 )
 
             timestamps.append(now)
-
-            command_limits[user_id] = timestamps
-            STATE.state["rate_limit"][command_name] = command_limits
 
             return await func(*args, **kwargs)
 
