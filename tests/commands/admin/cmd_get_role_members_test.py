@@ -9,7 +9,9 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_require_role_patcher = patch("ironforgedbot.decorators.require_role")
+        self.mock_require_role_patcher = patch(
+            "ironforgedbot.decorators.require_role.require_role"
+        )
         self.mock_require_role = self.mock_require_role_patcher.start()
         self.mock_require_role.side_effect = lambda *args, **kwargs: lambda func: func
 

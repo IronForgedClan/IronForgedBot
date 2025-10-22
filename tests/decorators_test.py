@@ -5,12 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import discord
 
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.decorators import (
-    require_channel,
-    require_role,
-    retry_on_exception,
-    singleton,
-)
+from ironforgedbot.decorators.require_channel import require_channel
+from ironforgedbot.decorators.require_role import require_role
+from ironforgedbot.decorators.retry_on_exception import retry_on_exception
+from ironforgedbot.decorators.singleton import singleton
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -38,7 +36,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
-        from ironforgedbot.decorators import check_member_has_role
+        from ironforgedbot.common.roles import check_member_has_role
 
         self.assertTrue(
             check_member_has_role(mock_member, ROLE.LEADERSHIP, or_higher=True)
@@ -93,7 +91,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("does not have permission", str(context.exception))
 
-    @patch("ironforgedbot.decorators.STATE")
+    @patch("ironforgedbot.decorators.require_role.STATE")
     async def test_require_role_returns_message_when_shutting_down(self, mock_state):
         """Test that shutdown message is sent when bot is shutting down"""
         mock_state.state = {"is_shutting_down": True}
@@ -137,7 +135,7 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(func.call_count, 1)
         mock_sleep.assert_not_called()
 
-    @patch("ironforgedbot.decorators.logger", new_callable=MagicMock)
+    @patch("ironforgedbot.decorators.retry_on_exception.logger", new_callable=MagicMock)
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception_retries(self, mock_sleep, mock_logger):
         func = self.create_retry_func(fail_count=2, success_msg="Success!")
@@ -150,7 +148,7 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_sleep.call_count, 2)
         mock_logger.warning.assert_called()
 
-    @patch("ironforgedbot.decorators.logger", new_callable=MagicMock)
+    @patch("ironforgedbot.decorators.retry_on_exception.logger", new_callable=MagicMock)
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception_raises_after_max_retries(
         self, mock_sleep, mock_logger
@@ -305,7 +303,7 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_check_member_has_role_logic(self):
         """Test the core role checking logic"""
-        from ironforgedbot.decorators import check_member_has_role
+        from ironforgedbot.common.roles import check_member_has_role
 
         # User with Member role should have access to Member commands
         member_user = create_test_member("member", [ROLE.MEMBER])
@@ -322,7 +320,7 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_rate_limit_still_returns_result(self):
         """Test that rate_limit decorator preserves return values"""
-        from ironforgedbot.decorators import rate_limit
+        from ironforgedbot.decorators.rate_limit import rate_limit
 
         expected_result = "test_result"
 
@@ -334,17 +332,17 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
         mock_interaction.command = Mock()
         mock_interaction.command.name = "test_command"
 
-        with patch("ironforgedbot.decorators.STATE") as mock_state:
+        with patch("ironforgedbot.decorators.rate_limit.STATE") as mock_state:
             mock_state.state = {"rate_limit": {}}
             decorated_func = rate_limit(1, 3600)(mock_func)
             result = await decorated_func(mock_interaction)
 
             self.assertEqual(result, expected_result)
 
-    @patch("ironforgedbot.decorators.STATE")
+    @patch("ironforgedbot.decorators.require_role.STATE")
     async def test_stacked_decorators_role_pass_channel_fail(self, mock_state):
         """Test that stacked decorators don't defer multiple times when channel check fails"""
-        from ironforgedbot.decorators import rate_limit
+        from ironforgedbot.decorators.rate_limit import rate_limit
 
         mock_state.state = {"rate_limit": {}, "is_shutting_down": False}
 
@@ -359,10 +357,13 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
 
         # Set up is_done to track defer calls properly
         defer_count = [0]
+
         def track_defer(*args, **kwargs):
             defer_count[0] += 1
+
         def is_done_check():
             return defer_count[0] > 0
+
         mock_interaction.response.defer.side_effect = track_defer
         mock_interaction.response.is_done.side_effect = is_done_check
 
@@ -379,12 +380,12 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
         # Function should not be called since channel check failed
         mock_func.assert_not_called()
 
-    @patch("ironforgedbot.decorators.STATE")
+    @patch("ironforgedbot.decorators.rate_limit.STATE")
     async def test_stacked_decorators_role_channel_pass_rate_limit_fail(
         self, mock_state
     ):
         """Test that stacked decorators don't defer multiple times when rate limit hits"""
-        from ironforgedbot.decorators import rate_limit
+        from ironforgedbot.decorators.rate_limit import rate_limit
 
         mock_state.state = {"rate_limit": {}, "is_shutting_down": False}
 
@@ -399,10 +400,13 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
 
         # Set up is_done to track defer calls properly
         defer_count = [0]
+
         def track_defer(*args, **kwargs):
             defer_count[0] += 1
+
         def is_done_check():
             return defer_count[0] > 0
+
         mock_interaction.response.defer.side_effect = track_defer
         mock_interaction.response.is_done.side_effect = is_done_check
 
@@ -425,10 +429,10 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
         # Function should not be called since rate limit hit
         mock_func.assert_not_called()
 
-    @patch("ironforgedbot.decorators.STATE")
+    @patch("ironforgedbot.decorators.rate_limit.STATE")
     async def test_stacked_decorators_all_pass(self, mock_state):
         """Test that stacked decorators work correctly when all checks pass"""
-        from ironforgedbot.decorators import rate_limit
+        from ironforgedbot.decorators.rate_limit import rate_limit
 
         mock_state.state = {"rate_limit": {}, "is_shutting_down": False}
 
@@ -444,10 +448,13 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
 
         # Set up is_done to track defer calls properly
         defer_count = [0]
+
         def track_defer(*args, **kwargs):
             defer_count[0] += 1
+
         def is_done_check():
             return defer_count[0] > 0
+
         mock_interaction.response.defer.side_effect = track_defer
         mock_interaction.response.is_done.side_effect = is_done_check
 
