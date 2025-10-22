@@ -18,8 +18,8 @@ from ironforgedbot.database.database import db
 logger = logging.getLogger(__name__)
 
 
-@require_channel([CONFIG.RAFFLE_CHANNEL_ID])
 @require_role(ROLE.MEMBER, ephemeral=True)
+@require_channel([CONFIG.RAFFLE_CHANNEL_ID])
 @log_command_execution(logger)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""

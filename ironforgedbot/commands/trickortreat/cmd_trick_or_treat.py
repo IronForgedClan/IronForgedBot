@@ -11,9 +11,9 @@ from ironforgedbot.decorators import rate_limit, require_channel, require_role
 logger = logging.getLogger(__name__)
 
 
+@require_role(ROLE.MEMBER)
 @require_channel([CONFIG.TRICK_OR_TREAT_CHANNEL_ID])
 @rate_limit(1, CONFIG.TRICK_OR_TREAT_COOLDOWN_SECONDS)
-@require_role(ROLE.MEMBER)
 @log_command_execution(logger)
 async def cmd_trick_or_treat(interaction: discord.Interaction):
     handler = get_handler()
