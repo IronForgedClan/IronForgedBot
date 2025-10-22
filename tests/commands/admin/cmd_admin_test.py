@@ -43,7 +43,7 @@ class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
         mock_get_text_channel.assert_called_once()
         mock_admin_menu_view.assert_called_once_with(report_channel=mock_channel)
         self.mock_interaction.followup.send.assert_called_once_with(
-            content="## 🤓 Administration Menu", view=mock_menu
+            content="## 🤓 Administration Menu", view=mock_menu, ephemeral=True
         )
         self.assertEqual(mock_menu.message, mock_message)
 

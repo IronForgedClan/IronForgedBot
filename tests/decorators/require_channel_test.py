@@ -22,7 +22,6 @@ class TestRequireChannelDecorator(unittest.IsolatedAsyncioTestCase):
 
         decorated_func = require_channel(allowed_channels)(mock_func)
 
-        # Verify the channel would pass the check
         self.assertIn(mock_interaction.channel_id, allowed_channels)
 
     async def test_require_channel_with_empty_channel_list(self):
@@ -32,12 +31,9 @@ class TestRequireChannelDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction.response.is_done.return_value = False
         decorated_func = require_channel([])(mock_func)
 
-        # Original implementation doesn't validate at decorator time
-        # Empty list means no channels are allowed
         result = await decorated_func(mock_interaction)
 
-        # Should send error response and return early
-        mock_interaction.response.defer.assert_called_once()
+        mock_interaction.response.send_message.assert_called_once()
         self.assertIsNone(result)
 
     async def test_require_channel_sends_error_for_invalid_channel(self):
@@ -50,9 +46,7 @@ class TestRequireChannelDecorator(unittest.IsolatedAsyncioTestCase):
         decorated_func = require_channel([12345, 54321])(mock_func)
         result = await decorated_func(mock_interaction)
 
-        # Should defer and send error response
-        mock_interaction.response.defer.assert_called_once_with(
-            thinking=True, ephemeral=True
-        )
-        # Function should not be called
+        mock_interaction.response.send_message.assert_called_once()
+        call_args = mock_interaction.response.send_message.call_args
+        self.assertTrue(call_args.kwargs.get("ephemeral", False))
         mock_func.assert_not_called()

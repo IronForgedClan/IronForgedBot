@@ -174,7 +174,7 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
         mock_check_role.assert_called_once()
         mock_menu_class.assert_called_once_with(False)
         self.mock_interaction.followup.send.assert_called_once_with(
-            embed=mock_embed, view=mock_menu
+            embed=mock_embed, view=mock_menu, ephemeral=True
         )
 
     @patch("ironforgedbot.commands.raffle.cmd_raffle.RaffleMenuView")
@@ -195,7 +195,7 @@ class TestCmdRaffle(unittest.IsolatedAsyncioTestCase):
 
         mock_menu_class.assert_called_once_with(True)
         self.mock_interaction.followup.send.assert_called_once_with(
-            embed=mock_embed, view=mock_menu
+            embed=mock_embed, view=mock_menu, ephemeral=True
         )
 
     async def test_cmd_raffle_build_embed_returns_none(self):
