@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import unittest
 from collections import deque
 from typing import Counter
@@ -7,10 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import aiohttp
 
-from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
-    CONTENT_FILE,
-    TrickOrTreat,
-)
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import CONTENT_FILE
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
@@ -255,7 +253,10 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         duplicates = [gif for gif, count in Counter(GIFS).items() if count > 1]
         assert not duplicates, f"Duplicate gifs: {duplicates}"
 
-    @unittest.skip("Network heavy, run only when necessary")
+    @unittest.skipUnless(
+        os.getenv("RUN_NETWORK_TESTS") == "1",
+        "Network heavy test, set RUN_NETWORK_TESTS=1 to run",
+    )
     async def test_gifs_return_200(self):
         """Test that all GIF URLs are accessible (returns 200)."""
         with open(CONTENT_FILE) as f:
@@ -280,7 +281,10 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         ]
         assert not duplicates, f"Duplicate thumbnails: {duplicates}"
 
-    @unittest.skip("Network heavy, run only when necessary")
+    @unittest.skipUnless(
+        os.getenv("RUN_NETWORK_TESTS") == "1",
+        "Network heavy test, set RUN_NETWORK_TESTS=1 to run",
+    )
     async def test_thumbnails_return_200(self):
         """Test that all thumbnail URLs are accessible (returns 200)."""
         with open(CONTENT_FILE) as f:
@@ -293,6 +297,208 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
             for url, result in zip(THUMBNAILS, results):
                 assert result == 200, f"{url} returned status code {result}"
+
+    async def test_unique_backrooms_thumbnails(self):
+        """Test that all backrooms thumbnails are unique."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            BACKROOMS_THUMBNAILS = data["backrooms"]["thumbnails"]
+
+        duplicates = [
+            thumb for thumb, count in Counter(BACKROOMS_THUMBNAILS).items() if count > 1
+        ]
+        assert not duplicates, f"Duplicate backrooms thumbnails: {duplicates}"
+
+    @unittest.skipUnless(
+        os.getenv("RUN_NETWORK_TESTS") == "1",
+        "Network heavy test, set RUN_NETWORK_TESTS=1 to run",
+    )
+    async def test_backrooms_thumbnails_return_200(self):
+        """Test that all backrooms thumbnail URLs are accessible (returns 200)."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            BACKROOMS_THUMBNAILS = data["backrooms"]["thumbnails"]
+
+        async with aiohttp.ClientSession() as session:
+            tasks = [get_url_status_code(session, url) for url in BACKROOMS_THUMBNAILS]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for url, result in zip(BACKROOMS_THUMBNAILS, results):
+                assert result == 200, f"{url} returned status code {result}"
+
+    async def test_quiz_questions_structure(self):
+        """Test that all quiz questions have valid structure."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            QUESTIONS = data["quiz_master"]["questions"]
+
+        assert len(QUESTIONS) > 0, "Quiz master should have at least one question"
+
+        for i, question in enumerate(QUESTIONS):
+            assert (
+                "question" in question
+            ), f"Question {i} missing 'question' field: {question}"
+            assert (
+                "options" in question
+            ), f"Question {i} missing 'options' field: {question}"
+            assert (
+                "correct_index" in question
+            ), f"Question {i} missing 'correct_index' field: {question}"
+
+            assert isinstance(
+                question["question"], str
+            ), f"Question {i} 'question' must be a string"
+            assert (
+                len(question["question"]) > 0
+            ), f"Question {i} 'question' cannot be empty"
+
+            options = question["options"]
+            assert isinstance(options, list), f"Question {i} 'options' must be a list"
+            assert (
+                len(options) >= 2
+            ), f"Question {i} must have at least 2 options, got {len(options)}"
+
+            for j, option in enumerate(options):
+                assert isinstance(
+                    option, dict
+                ), f"Question {i}, option {j} must be a dict"
+                assert (
+                    "text" in option
+                ), f"Question {i}, option {j} missing 'text' field"
+                assert isinstance(
+                    option["text"], str
+                ), f"Question {i}, option {j} 'text' must be a string"
+                assert (
+                    len(option["text"]) > 0
+                ), f"Question {i}, option {j} 'text' cannot be empty"
+
+            correct_index = question["correct_index"]
+            assert isinstance(
+                correct_index, int
+            ), f"Question {i} 'correct_index' must be an integer"
+            assert (
+                0 <= correct_index < len(options)
+            ), f"Question {i} 'correct_index' {correct_index} out of range [0, {len(options)})"
+
+    async def test_unique_door_labels(self):
+        """Test that all backrooms door labels are unique."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            DOOR_LABELS = data["backrooms"]["door_labels"]
+
+        duplicates = [
+            label for label, count in Counter(DOOR_LABELS).items() if count > 1
+        ]
+        assert not duplicates, f"Duplicate door labels: {duplicates}"
+
+    async def test_sufficient_door_labels(self):
+        """Test that there are at least 3 door labels for backrooms."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            DOOR_LABELS = data["backrooms"]["door_labels"]
+
+        assert (
+            len(DOOR_LABELS) >= 3
+        ), f"Backrooms needs at least 3 door labels, got {len(DOOR_LABELS)}"
+
+    async def test_door_labels_are_non_empty_strings(self):
+        """Test that all door labels are non-empty strings."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            DOOR_LABELS = data["backrooms"]["door_labels"]
+
+        for i, label in enumerate(DOOR_LABELS):
+            assert isinstance(label, str), f"Door label {i} must be a string: {label}"
+            assert len(label) > 0, f"Door label {i} cannot be empty"
+
+    async def test_positive_messages_valid(self):
+        """Test that positive messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["general"]["positive_messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one positive message"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Positive message {i} must be a string"
+            assert len(msg) > 0, f"Positive message {i} cannot be empty"
+            assert (
+                "{ingots}" in msg
+            ), f"Positive message {i} missing {{ingots}} placeholder"
+
+    async def test_negative_messages_valid(self):
+        """Test that negative messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["general"]["negative_messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one negative message"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Negative message {i} must be a string"
+            assert len(msg) > 0, f"Negative message {i} cannot be empty"
+            assert (
+                "{ingots}" in msg
+            ), f"Negative message {i} missing {{ingots}} placeholder"
+
+    async def test_backrooms_treasure_messages_valid(self):
+        """Test that backrooms treasure messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["backrooms"]["treasure_messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one treasure message"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Treasure message {i} must be a string"
+            assert len(msg) > 0, f"Treasure message {i} cannot be empty"
+            assert (
+                "{ingots}" in msg
+            ), f"Treasure message {i} missing {{ingots}} placeholder"
+
+    async def test_backrooms_monster_messages_valid(self):
+        """Test that backrooms monster messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["backrooms"]["monster_messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one monster message"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Monster message {i} must be a string"
+            assert len(msg) > 0, f"Monster message {i} cannot be empty"
+            assert (
+                "{ingots}" in msg
+            ), f"Monster message {i} missing {{ingots}} placeholder"
+
+    async def test_backrooms_escape_messages_valid(self):
+        """Test that backrooms escape messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["backrooms"]["escape_messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one escape message"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Escape message {i} must be a string"
+            assert len(msg) > 0, f"Escape message {i} cannot be empty"
+
+    async def test_backrooms_lucky_escape_messages_valid(self):
+        """Test that backrooms lucky escape messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["backrooms"]["lucky_escape_messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one lucky escape message"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Lucky escape message {i} must be a string"
+            assert len(msg) > 0, f"Lucky escape message {i} cannot be empty"
+
+    async def test_joke_messages_valid(self):
+        """Test that joke messages array is valid."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            MESSAGES = data["joke"]["messages"]
+
+        assert len(MESSAGES) > 0, "Must have at least one joke"
+        for i, msg in enumerate(MESSAGES):
+            assert isinstance(msg, str), f"Joke message {i} must be a string"
+            assert len(msg) > 0, f"Joke message {i} cannot be empty"
 
 
 class TestLoadContentFile(unittest.TestCase):
