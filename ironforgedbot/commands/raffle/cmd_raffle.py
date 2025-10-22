@@ -19,7 +19,7 @@ from ironforgedbot.database.database import db
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.MEMBER, ephemeral=True)
+@require_role(ROLE.MEMBER)
 @require_channel([CONFIG.RAFFLE_CHANNEL_ID])
 @log_command_execution(logger)
 async def cmd_raffle(interaction: discord.Interaction):
@@ -37,7 +37,9 @@ async def cmd_raffle(interaction: discord.Interaction):
     menu = RaffleMenuView(
         check_member_has_role(member, ROLE.LEADERSHIP, or_higher=True)
     )
-    menu.message = await interaction.followup.send(embed=embed, view=menu)
+    menu.message = await interaction.followup.send(
+        embed=embed, view=menu, ephemeral=True
+    )
 
 
 async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
