@@ -59,7 +59,7 @@ def require_role(role: ROLE, ephemeral=False):
                 )
 
             await interaction.response.defer(thinking=True, ephemeral=ephemeral)
-            await func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 
@@ -97,7 +97,7 @@ def require_channel(channel_ids: list[int]):
                     interaction, message, report_to_channel=False
                 )
 
-            await func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 
@@ -191,7 +191,7 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
             command_limits[user_id] = timestamps
             STATE.state["rate_limit"][command_name] = command_limits
 
-            await func(*args, **kwargs)
+            return await func(*args, **kwargs)
 
         return wrapper
 
