@@ -12,6 +12,15 @@ from ironforgedbot.state import STATE
 logger = logging.getLogger(__name__)
 
 
+async def safe_defer(interaction: discord.Interaction, ephemeral: bool = False):
+    """Safely defer an interaction only if it hasn't been responded to yet.
+
+    This prevents errors when multiple decorators try to defer the same interaction.
+    """
+    if not interaction.response.is_done():
+        await interaction.response.defer(thinking=True, ephemeral=ephemeral)
+
+
 def require_role(role: ROLE, ephemeral=False):
     """Makes sure that the interaction user has the required role or higher"""
 
@@ -85,7 +94,7 @@ def require_channel(channel_ids: list[int]):
                     f"Channel restriction: {interaction.user.display_name} tried {func.__name__} "
                     f"in channel {interaction.channel_id}"
                 )
-                await interaction.response.defer(thinking=True, ephemeral=True)
+                await safe_defer(interaction, ephemeral=True)
 
                 message = (
                     "Command cannot be used in this channel.\n\n**Supported channels:**"
@@ -168,7 +177,7 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
             command_limits[user_id] = timestamps
 
             if len(timestamps) >= rate:
-                await interaction.response.defer(thinking=True, ephemeral=True)
+                await safe_defer(interaction, ephemeral=True)
                 retry_after = seconds - (now - timestamps[0])
                 mins = int(retry_after // 60)
                 secs = int(retry_after % 60)

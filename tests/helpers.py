@@ -40,6 +40,7 @@ def create_mock_discord_interaction(
     interaction.response.defer = AsyncMock()
     interaction.response.send_message = AsyncMock()
     interaction.response.edit_message = AsyncMock()
+    interaction.response.is_done = Mock(return_value=False)  # Not async, returns False by default
     interaction.guild = create_mock_discord_guild(members_list)
     interaction.user = user
     interaction.data = data
