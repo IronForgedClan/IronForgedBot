@@ -45,6 +45,9 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
             command_limits[user_id] = timestamps
 
             if len(timestamps) >= rate:
+                if not interaction.response.is_done():
+                    await interaction.response.defer(thinking=True)
+
                 retry_after = seconds - (now - timestamps[0])
                 retry_timestamp = int(now + retry_after)
 

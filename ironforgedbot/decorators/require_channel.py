@@ -21,6 +21,9 @@ def require_channel(channel_ids: list[int]):
                 )
 
             if interaction.channel_id not in channel_ids:
+                if not interaction.response.is_done():
+                    await interaction.response.defer(thinking=True)
+
                 logger.debug(
                     f"Channel restriction: {interaction.user.display_name} tried {func.__name__} "
                     f"in channel {interaction.channel_id}"
