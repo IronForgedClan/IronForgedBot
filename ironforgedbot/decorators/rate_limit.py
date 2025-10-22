@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def rate_limit(rate: int = 1, seconds: int = 3600):
     """Limits how often a command can be called by an individual user"""
 
-    from ironforgedbot.common.responses import send_error_response
+    from ironforgedbot.common.responses import send_ephemeral_error
 
     def decorator(func):
         @functools.wraps(func)
@@ -45,9 +45,6 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
             command_limits[user_id] = timestamps
 
             if len(timestamps) >= rate:
-                if not interaction.response.is_done():
-                    await interaction.response.defer(thinking=True, ephemeral=True)
-
                 retry_after = seconds - (now - timestamps[0])
                 retry_timestamp = int(now + retry_after)
 
@@ -60,9 +57,7 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
                     "**Woah, tiger.** You are using this command too quickly.\n\n"
                     f"Try again <t:{retry_timestamp}:R>."
                 )
-                return await send_error_response(
-                    interaction, message, report_to_channel=False
-                )
+                return await send_ephemeral_error(interaction, message)
 
             timestamps.append(now)
 

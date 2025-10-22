@@ -9,7 +9,7 @@ from ironforgedbot.state import STATE
 logger = logging.getLogger(__name__)
 
 
-def require_role(role: ROLE, ephemeral=False):
+def require_role(role: ROLE):
     """Makes sure that the interaction user has the required role or higher"""
 
     from ironforgedbot.common.helpers import normalize_discord_string
@@ -56,7 +56,7 @@ def require_role(role: ROLE, ephemeral=False):
                 )
 
             if not interaction.response.is_done():
-                await interaction.response.defer(thinking=True, ephemeral=ephemeral)
+                await interaction.response.defer(thinking=True)
 
             return await func(*args, **kwargs)
 

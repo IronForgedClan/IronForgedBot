@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def require_channel(channel_ids: list[int]):
     """Makes sure that the interaction is happening in a whitelisted channel"""
 
-    from ironforgedbot.common.responses import send_error_response
+    from ironforgedbot.common.responses import send_ephemeral_error
 
     def decorator(func):
         @functools.wraps(func)
@@ -26,18 +26,13 @@ def require_channel(channel_ids: list[int]):
                     f"in channel {interaction.channel_id}"
                 )
 
-                if not interaction.response.is_done():
-                    await interaction.response.defer(thinking=True, ephemeral=True)
-
                 message = (
                     "Command cannot be used in this channel.\n\n**Supported channels:**"
                 )
                 for channel in channel_ids:
                     message += f"\n- <#{channel}>"
 
-                return await send_error_response(
-                    interaction, message, report_to_channel=False
-                )
+                return await send_ephemeral_error(interaction, message)
 
             return await func(*args, **kwargs)
 
