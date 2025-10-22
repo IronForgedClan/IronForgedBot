@@ -10,7 +10,7 @@ from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators.require_role import require_role
 
 logger = logging.getLogger(__name__)
 

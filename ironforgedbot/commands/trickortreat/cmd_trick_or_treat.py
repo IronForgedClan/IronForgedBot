@@ -6,7 +6,9 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_handler import get_handl
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.decorators import rate_limit, require_channel, require_role
+from ironforgedbot.decorators.rate_limit import rate_limit
+from ironforgedbot.decorators.require_channel import require_channel
+from ironforgedbot.decorators.require_role import require_role
 
 logger = logging.getLogger(__name__)
 
