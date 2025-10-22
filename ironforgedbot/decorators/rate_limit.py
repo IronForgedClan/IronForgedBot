@@ -49,17 +49,16 @@ def rate_limit(rate: int = 1, seconds: int = 3600):
                     await interaction.response.defer(thinking=True, ephemeral=True)
 
                 retry_after = seconds - (now - timestamps[0])
-                mins = int(retry_after // 60)
-                secs = int(retry_after % 60)
+                retry_timestamp = int(now + retry_after)
 
                 logger.debug(
                     f"Rate limit hit: {interaction.user.display_name} for {func.__name__} "
-                    f"({mins}m {secs}s remaining)"
+                    f"(retry at {retry_timestamp})"
                 )
 
                 message = (
                     "**Woah, tiger.** You are using this command too quickly.\n\n"
-                    f"Try again in **{mins}** minutes and **{secs}** seconds."
+                    f"Try again <t:{retry_timestamp}:R>."
                 )
                 return await send_error_response(
                     interaction, message, report_to_channel=False
