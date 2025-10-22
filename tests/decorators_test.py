@@ -268,3 +268,134 @@ class TestSingletonDecorator(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(instance1.value, 10)
         self.assertEqual(instance1.value, instance2.value)
+
+
+class TestDecoratorReturnValues(unittest.IsolatedAsyncioTestCase):
+    """Test that decorators properly return function results."""
+
+    async def test_require_role_returns_function_result(self):
+        """Test that require_role decorator returns the wrapped function's result."""
+        expected_result = "test_result"
+
+        async def test_func(interaction):
+            return expected_result
+
+        mock_func = AsyncMock(wraps=test_func)
+        mock_member = create_test_member("tester", [ROLE.MEMBER])
+        mock_interaction = create_mock_discord_interaction(user=mock_member)
+        mock_interaction.guild.get_member.return_value = mock_member
+
+        decorated_func = require_role(ROLE.MEMBER)(mock_func)
+        result = await decorated_func(mock_interaction)
+
+        self.assertEqual(result, expected_result)
+        mock_func.assert_awaited_once()
+
+    async def test_require_channel_returns_function_result(self):
+        """Test that require_channel decorator returns the wrapped function's result."""
+        expected_result = "test_result"
+
+        async def test_func(interaction):
+            return expected_result
+
+        mock_func = AsyncMock(wraps=test_func)
+        mock_interaction = create_mock_discord_interaction(channel_id=555)
+
+        decorated_func = require_channel([555, 12345])(mock_func)
+        result = await decorated_func(mock_interaction)
+
+        self.assertEqual(result, expected_result)
+        mock_func.assert_awaited_once()
+
+
+class TestDecoratorStacking(unittest.IsolatedAsyncioTestCase):
+    """Test that decorators work correctly when stacked together."""
+
+    @patch("ironforgedbot.decorators.STATE")
+    async def test_stacked_decorators_execution_order(self, mock_state):
+        """Test that stacked decorators execute in correct order and all pass through."""
+        mock_state.state = {"rate_limit": {}, "is_shutting_down": False}
+
+        execution_order = []
+        expected_result = "final_result"
+
+        async def test_func(interaction):
+            execution_order.append("function")
+            return expected_result
+
+        mock_func = AsyncMock(wraps=test_func)
+        mock_member = create_test_member("tester", [ROLE.MEMBER])
+        mock_interaction = create_mock_discord_interaction(
+            user=mock_member, channel_id=555
+        )
+        mock_interaction.guild.get_member.return_value = mock_member
+        mock_interaction.command = Mock()
+        mock_interaction.command.name = "test_command"
+
+        # Stack decorators: role -> channel
+        decorated_func = require_role(ROLE.MEMBER)(
+            require_channel([555, 12345])(mock_func)
+        )
+
+        result = await decorated_func(mock_interaction)
+
+        # Verify return value propagates through decorator stack
+        self.assertEqual(result, expected_result)
+        mock_func.assert_awaited_once()
+        self.assertIn("function", execution_order)
+
+    @patch("ironforgedbot.decorators.STATE")
+    async def test_stacked_decorators_with_rate_limit(self, mock_state):
+        """Test that role -> channel -> rate_limit decorator stack works correctly."""
+        mock_state.state = {"rate_limit": {}, "is_shutting_down": False}
+
+        expected_result = {"status": "success", "data": 123}
+
+        async def test_func(interaction):
+            return expected_result
+
+        mock_func = AsyncMock(wraps=test_func)
+        mock_member = create_test_member("tester", [ROLE.MEMBER])
+        mock_interaction = create_mock_discord_interaction(
+            user=mock_member, channel_id=555
+        )
+        mock_interaction.guild.get_member.return_value = mock_member
+        mock_interaction.command = Mock()
+        mock_interaction.command.name = "test_command"
+
+        from ironforgedbot.decorators import rate_limit
+
+        # Stack decorators in recommended order: role -> channel -> rate_limit
+        decorated_func = require_role(ROLE.MEMBER)(
+            require_channel([555, 12345])(rate_limit(1, 3600)(mock_func))
+        )
+
+        result = await decorated_func(mock_interaction)
+
+        # Verify return value propagates through entire decorator stack
+        self.assertEqual(result, expected_result)
+        mock_func.assert_awaited_once()
+
+    async def test_stacked_decorators_role_check_fails_first(self):
+        """Test that when role check fails, it prevents subsequent decorators from executing."""
+        async def test_func(interaction):
+            return "should_not_execute"
+
+        mock_func = AsyncMock(wraps=test_func)
+        mock_member = create_test_member("tester", [ROLE.MEMBER])  # Only MEMBER role
+        mock_interaction = create_mock_discord_interaction(
+            user=mock_member, channel_id=555
+        )
+        mock_interaction.guild.get_member.return_value = mock_member
+
+        # Stack decorators: require LEADERSHIP role -> channel
+        decorated_func = require_role(ROLE.LEADERSHIP)(
+            require_channel([555, 12345])(mock_func)
+        )
+
+        # Role check should fail and raise CheckFailure
+        with self.assertRaises(discord.app_commands.CheckFailure):
+            await decorated_func(mock_interaction)
+
+        # Function should never execute
+        mock_func.assert_not_awaited()
