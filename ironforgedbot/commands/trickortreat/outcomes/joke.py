@@ -1,4 +1,3 @@
-import random
 from typing import TYPE_CHECKING
 
 import discord
@@ -18,7 +17,9 @@ async def result_joke(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction context.
     """
-    joke = random.choice(handler.JOKES)
+    joke = handler._get_random_from_list(
+        handler.joke["messages"], handler.history["joke"]
+    )
     content = f"🤡 **Joke**\n\n{joke}"
 
     await interaction.followup.send(embed=handler._build_embed(content))

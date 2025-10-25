@@ -25,7 +25,7 @@ async def result_jackpot(
     """
     assert interaction.guild
     if STATE.state["trick_or_treat_jackpot_claimed"]:
-        embed = handler._build_embed(handler.JACKPOT_CLAIMED_MESSAGE)
+        embed = handler._build_embed(handler.jackpot["claimed_message"])
         return await interaction.followup.send(embed=embed)
 
     user_new_total = await handler._adjust_ingots(
@@ -39,7 +39,7 @@ async def result_jackpot(
 
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
-    message = handler.JACKPOT_SUCCESS_PREFIX.format(
+    message = handler.jackpot["success_prefix"].format(
         mention=interaction.user.mention,
         ingot_icon=handler.ingot_icon,
         amount=JACKPOT_VALUE,

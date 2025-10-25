@@ -9,7 +9,9 @@ from tests.helpers import create_mock_discord_interaction, create_test_member
 
 class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_require_role_patcher = patch("ironforgedbot.decorators.require_role")
+        self.mock_require_role_patcher = patch(
+            "ironforgedbot.decorators.require_role.require_role"
+        )
         self.mock_require_role = self.mock_require_role_patcher.start()
         self.mock_require_role.side_effect = lambda *args, **kwargs: lambda func: func
 
@@ -41,7 +43,7 @@ class TestCmdAdmin(unittest.IsolatedAsyncioTestCase):
         mock_get_text_channel.assert_called_once()
         mock_admin_menu_view.assert_called_once_with(report_channel=mock_channel)
         self.mock_interaction.followup.send.assert_called_once_with(
-            content="## 🤓 Administration Menu", view=mock_menu
+            content="## 🤓 Administration Menu", view=mock_menu, ephemeral=True
         )
         self.assertEqual(mock_menu.message, mock_message)
 

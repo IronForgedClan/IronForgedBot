@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 import io
 import logging
 import os
-from unicodedata import name
 import discord
 
 from ironforgedbot.common.helpers import find_emoji, get_text_channel
@@ -21,15 +20,36 @@ logger = logging.getLogger(__name__)
 async def send_error_response(
     interaction: discord.Interaction, message: str, report_to_channel: bool = True
 ):
+    """Send an error response embed to the user via followup."""
     embed = discord.Embed(
         title=":exclamation: Error", description=message, color=discord.Colour.red()
     )
 
     await interaction.followup.send(embed=embed)
 
-    # Report error to admin channel if enabled
     if report_to_channel:
         await _send_error_report(interaction, message)
+
+
+async def send_ephemeral_error(interaction: discord.Interaction, message: str):
+    """Send an ephemeral error message, cleaning up any public defer if needed.
+
+    If the interaction has been deferred publicly, this will delete the
+    "Bot is thinking..." message and send an ephemeral followup instead.
+    """
+    embed = discord.Embed(
+        title=":exclamation: Error", description=message, color=discord.Colour.red()
+    )
+
+    if not interaction.response.is_done():
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    else:
+        try:
+            await interaction.delete_original_response()
+        except Exception:
+            pass  # Ignore if already deleted or doesn't exist
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 async def _send_error_report(interaction: discord.Interaction, error_message: str):

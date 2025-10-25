@@ -1,17 +1,25 @@
-"""Handler for the trick-or-treat Halloween event minigame."""
-
 import json
 import logging
 import random
-from typing import List, Optional
+from collections import deque
+from typing import List, Optional, TypeVar
 
 import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
-    NEGATIVE_MESSAGE_HISTORY_LIMIT,
-    POSITIVE_MESSAGE_HISTORY_LIMIT,
-    THUMBNAIL_HISTORY_LIMIT,
+    CONTENT_FILE,
     TrickOrTreat,
+)
+from ironforgedbot.commands.trickortreat.types import (
+    BackroomsData,
+    DoubleOrNothingData,
+    GeneralData,
+    HistoryDict,
+    JackpotData,
+    JokeData,
+    QuizData,
+    StealData,
+    TrickData,
 )
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
@@ -20,6 +28,8 @@ from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class TrickOrTreatHandler:
@@ -30,135 +40,108 @@ class TrickOrTreatHandler:
     """
 
     def __init__(self) -> None:
-        """Initialize the TrickOrTreatHandler with weighted outcomes and message history."""
-        self.weights: List[float] = [item.value for item in TrickOrTreat]
+        """Initialize the TrickOrTreatHandler with message history and content."""
         self.ingot_icon: str = find_emoji("Ingot")
-        self.gif_history: List[str] = []
-        self.thumbnail_history: List[str] = []
-        self.positive_message_history: List[str] = []
-        self.negative_message_history: List[str] = []
-        self.quiz_question_history: List[str] = []
 
-        # Data loaded from JSON
-        self.GIFS: List[str]
-        self.THUMBNAILS: List[str]
-        self.POSITIVE_MESSAGES: List[str]
-        self.NEGATIVE_MESSAGES: List[str]
-        self.JOKES: List[str]
-        self.NO_INGOTS_MESSAGE: str
-        self.JACKPOT_SUCCESS_PREFIX: str
-        self.JACKPOT_CLAIMED_MESSAGE: str
-        self.REMOVE_ALL_TRICK_MESSAGE: str
-        self.DOUBLE_OR_NOTHING_OFFER: str
-        self.DOUBLE_OR_NOTHING_WIN: str
-        self.DOUBLE_OR_NOTHING_LOSE: str
-        self.DOUBLE_OR_NOTHING_KEEP: str
-        self.DOUBLE_OR_NOTHING_EXPIRED: str
-        self.STEAL_OFFER: str
-        self.STEAL_SUCCESS: str
-        self.STEAL_FAILURE: str
-        self.STEAL_WALK_AWAY: str
-        self.STEAL_EXPIRED: str
-        self.STEAL_NO_TARGETS: str
-        self.STEAL_TARGET_NO_INGOTS: str
-        self.STEAL_USER_NO_INGOTS: str
-        self.BACKROOMS_INTRO: str
-        self.BACKROOMS_DOOR_LABELS: list[str]
-        self.BACKROOMS_TREASURE_MESSAGES: list[str]
-        self.BACKROOMS_MONSTER_MESSAGES: list[str]
-        self.BACKROOMS_ESCAPE_MESSAGES: list[str]
-        self.BACKROOMS_LUCKY_ESCAPE_MESSAGES: list[str]
-        self.BACKROOMS_OPENING_DOOR: str
-        self.BACKROOMS_EXPIRED_MESSAGE: str
-        self.BACKROOMS_THUMBNAILS: list[str]
-        self.QUIZ_INTRO: str
-        self.QUIZ_QUESTIONS: list[dict]
-        self.QUIZ_CORRECT_MESSAGE: str
-        self.QUIZ_WRONG_LUCKY_MESSAGE: str
-        self.QUIZ_WRONG_PENALTY_MESSAGE: str
-        self.QUIZ_EXPIRED_MESSAGE: str
+        self.history: HistoryDict = {
+            "gif": deque(maxlen=150),
+            "thumbnail": deque(maxlen=30),
+            "backrooms_thumbnail": deque(maxlen=30),
+            "positive_message": deque(maxlen=20),
+            "negative_message": deque(maxlen=20),
+            "quiz_question": deque(maxlen=20),
+            "joke": deque(maxlen=20),
+        }
 
-        with open("data/trick_or_treat.json") as f:
-            logger.debug("Loading trick or treat data...")
-            data = json.load(f)
+        data = self._load_content_file()
 
-            self.GIFS = data["MEDIA"]["GIFS"]
-            self.THUMBNAILS = data["MEDIA"]["THUMBNAILS"]
-            self.POSITIVE_MESSAGES = data["GENERAL"]["POSITIVE_MESSAGES"]
-            self.NEGATIVE_MESSAGES = data["GENERAL"]["NEGATIVE_MESSAGES"]
-            self.JOKES = data["JOKE"]["MESSAGES"]
-            self.NO_INGOTS_MESSAGE = data["GENERAL"]["NO_INGOTS_MESSAGE"]
-            self.JACKPOT_SUCCESS_PREFIX = data["JACKPOT"]["SUCCESS_PREFIX"]
-            self.JACKPOT_CLAIMED_MESSAGE = data["JACKPOT"]["CLAIMED_MESSAGE"]
-            self.REMOVE_ALL_TRICK_MESSAGE = data["REMOVE_ALL_TRICK"]["MESSAGE"]
-            self.DOUBLE_OR_NOTHING_OFFER = data["DOUBLE_OR_NOTHING"]["OFFER"]
-            self.DOUBLE_OR_NOTHING_WIN = data["DOUBLE_OR_NOTHING"]["WIN"]
-            self.DOUBLE_OR_NOTHING_LOSE = data["DOUBLE_OR_NOTHING"]["LOSE"]
-            self.DOUBLE_OR_NOTHING_KEEP = data["DOUBLE_OR_NOTHING"]["KEEP"]
-            self.DOUBLE_OR_NOTHING_EXPIRED = data["DOUBLE_OR_NOTHING"]["EXPIRED"]
-            self.STEAL_OFFER = data["STEAL"]["OFFER"]
-            self.STEAL_SUCCESS = data["STEAL"]["SUCCESS"]
-            self.STEAL_FAILURE = data["STEAL"]["FAILURE"]
-            self.STEAL_WALK_AWAY = data["STEAL"]["WALK_AWAY"]
-            self.STEAL_EXPIRED = data["STEAL"]["EXPIRED"]
-            self.STEAL_NO_TARGETS = data["STEAL"]["NO_TARGETS"]
-            self.STEAL_TARGET_NO_INGOTS = data["STEAL"]["TARGET_NO_INGOTS"]
-            self.STEAL_USER_NO_INGOTS = data["STEAL"]["USER_NO_INGOTS"]
-            self.BACKROOMS_INTRO = data["BACKROOMS"]["INTRO"]
-            self.BACKROOMS_DOOR_LABELS = data["BACKROOMS"]["DOOR_LABELS"]
-            self.BACKROOMS_TREASURE_MESSAGES = data["BACKROOMS"]["TREASURE_MESSAGES"]
-            self.BACKROOMS_MONSTER_MESSAGES = data["BACKROOMS"]["MONSTER_MESSAGES"]
-            self.BACKROOMS_ESCAPE_MESSAGES = data["BACKROOMS"]["ESCAPE_MESSAGES"]
-            self.BACKROOMS_LUCKY_ESCAPE_MESSAGES = data["BACKROOMS"][
-                "LUCKY_ESCAPE_MESSAGES"
-            ]
-            self.BACKROOMS_OPENING_DOOR = data["BACKROOMS"]["OPENING_DOOR"]
-            self.BACKROOMS_EXPIRED_MESSAGE = data["BACKROOMS"]["EXPIRED"]
-            self.BACKROOMS_THUMBNAILS = data["BACKROOMS"]["THUMBNAILS"]
-            self.QUIZ_INTRO = data["QUIZ_MASTER"]["INTRO"]
-            self.QUIZ_QUESTIONS = data["QUIZ_MASTER"]["QUESTIONS"]
-            self.QUIZ_CORRECT_MESSAGE = data["QUIZ_MASTER"]["CORRECT_MESSAGE"]
-            self.QUIZ_WRONG_LUCKY_MESSAGE = data["QUIZ_MASTER"]["WRONG_LUCKY_MESSAGE"]
-            self.QUIZ_WRONG_PENALTY_MESSAGE = data["QUIZ_MASTER"][
-                "WRONG_PENALTY_MESSAGE"
-            ]
-            self.QUIZ_EXPIRED_MESSAGE = data["QUIZ_MASTER"]["EXPIRED_MESSAGE"]
+        self.jackpot: JackpotData = data["jackpot"]
+        self.double_or_nothing: DoubleOrNothingData = data["double_or_nothing"]
+        self.steal: StealData = data["steal"]
+        self.backrooms: BackroomsData = data["backrooms"]
+        self.quiz: QuizData = data["quiz_master"]
+        self.joke: JokeData = data["joke"]
+        self.trick: TrickData = data["remove_all_trick"]
 
-    def _get_random_positive_message(self) -> str:
-        """Get a random positive message for when player wins ingots.
+        self.gifs: List[str] = data["media"]["gifs"]
+        self.thumbnails: List[str] = data["media"]["thumbnails"]
+        self.general: GeneralData = data["general"]
+        self.positive_messages: List[str] = self.general["positive_messages"]
+        self.negative_messages: List[str] = self.general["negative_messages"]
+
+    @staticmethod
+    def _load_content_file(file_path: str = CONTENT_FILE) -> dict:
+        """Load and parse the trick-or-treat content JSON file.
+
+        Args:
+            file_path: Path to the content JSON file. Defaults to CONTENT_FILE.
 
         Returns:
-            A message template string with {ingots} placeholder.
-        """
-        chosen = random.choice(
-            [
-                s
-                for s in self.POSITIVE_MESSAGES
-                if s not in self.positive_message_history
-            ]
-        )
-        self._add_to_history(
-            chosen, self.positive_message_history, POSITIVE_MESSAGE_HISTORY_LIMIT
-        )
-        return chosen
+            Parsed JSON data as a dictionary.
 
-    def _get_random_negative_message(self) -> str:
-        """Get a random negative message for when player loses ingots.
+        Raises:
+            FileNotFoundError: If the content file doesn't exist.
+            ValueError: If the JSON syntax is invalid.
+            KeyError: If required keys are missing from the JSON.
+            RuntimeError: For unexpected errors during loading.
+        """
+        try:
+            with open(file_path) as f:
+                logger.debug("Loading trick or treat data...")
+                data = json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"Trick-or-treat content file not found: {e.filename}. "
+                f"Expected file at: {file_path}"
+            ) from e
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Invalid JSON syntax in trick-or-treat content file: {e}"
+            ) from e
+        except Exception as e:
+            raise RuntimeError(
+                f"Unexpected error loading trick-or-treat content: {e}"
+            ) from e
+
+        required_keys = [
+            "jackpot",
+            "double_or_nothing",
+            "steal",
+            "backrooms",
+            "quiz_master",
+            "joke",
+            "remove_all_trick",
+            "media",
+            "general",
+        ]
+        missing_keys = [key for key in required_keys if key not in data]
+        if missing_keys:
+            raise KeyError(
+                f"Missing required keys in content file: {missing_keys}. "
+                f"File: {file_path}"
+            )
+
+        return data
+
+    def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
+        """Get a random item from a list, avoiding recently used items.
+
+        Args:
+            items: The full list of items to choose from.
+            history: Index-based deque tracking recently used item indices.
 
         Returns:
-            A message template string with {ingots} placeholder.
+            A randomly chosen item that hasn't been used recently.
         """
-        chosen = random.choice(
-            [
-                s
-                for s in self.NEGATIVE_MESSAGES
-                if s not in self.negative_message_history
-            ]
-        )
-        self._add_to_history(
-            chosen, self.negative_message_history, NEGATIVE_MESSAGE_HISTORY_LIMIT
-        )
-        return chosen
+        available_indices = [i for i in range(len(items)) if i not in history]
+
+        if not available_indices:
+            history.clear()
+            available_indices = list(range(len(items)))
+
+        chosen_idx = random.choice(available_indices)
+        history.append(chosen_idx)
+        return items[chosen_idx]
 
     def _get_balance_message(self, username: str, balance: int) -> str:
         """Generate a formatted message showing the user's new ingot balance.
@@ -173,7 +156,10 @@ class TrickOrTreatHandler:
         return f"\n\n**{username}** now has **{self.ingot_icon}{balance:,}** ingots."
 
     def _build_embed(
-        self, content: str, thumbnail_list: Optional[List[str]] = None
+        self,
+        content: str,
+        thumbnail_list: Optional[List[str]] = None,
+        thumbnail_history: Optional[deque[int]] = None,
     ) -> discord.Embed:
         """Build a Discord embed with Halloween-themed styling.
 
@@ -181,25 +167,23 @@ class TrickOrTreatHandler:
             content: The message content to display in the embed.
             thumbnail_list: Optional list of thumbnails to choose from.
                            If None, uses default THUMBNAILS.
+            thumbnail_history: Optional index-based history for thumbnail selection.
+                              If None, uses self.history["thumbnail"].
 
         Returns:
             A Discord embed with orange color and random thumbnail.
         """
-        thumbnails = thumbnail_list if thumbnail_list is not None else self.THUMBNAILS
-        available = [s for s in thumbnails if s not in self.thumbnail_history]
-
-        # If all thumbnails have been used recently, reset history for this thumbnail list
-        if not available:
-            # Clear only items from the current thumbnail list from history
-            self.thumbnail_history = [
-                h for h in self.thumbnail_history if h not in thumbnails
-            ]
-            available = thumbnails
-
-        chosen_thumbnail = random.choice(available)
-        self._add_to_history(
-            chosen_thumbnail, self.thumbnail_history, THUMBNAIL_HISTORY_LIMIT
+        thumbnails = thumbnail_list if thumbnail_list is not None else self.thumbnails
+        history = (
+            thumbnail_history
+            if thumbnail_history is not None
+            else self.history["thumbnail"]
         )
+
+        if len(thumbnails) == 1:
+            chosen_thumbnail = thumbnails[0]
+        else:
+            chosen_thumbnail = self._get_random_from_list(thumbnails, history)
 
         embed = build_response_embed("", content, discord.Color.orange())
         embed.set_thumbnail(url=chosen_thumbnail)
@@ -215,7 +199,7 @@ class TrickOrTreatHandler:
             A Discord embed with a humorous error message.
         """
         return self._build_embed(
-            self.NO_INGOTS_MESSAGE + self._get_balance_message(username, 0)
+            self.general["no_ingots_message"] + self._get_balance_message(username, 0)
         )
 
     def _add_to_history(
@@ -356,17 +340,18 @@ class TrickOrTreatHandler:
             )
             return
 
-        message_getter = (
-            self._get_random_positive_message
-            if is_positive
-            else self._get_random_negative_message
-        )
+        if is_positive:
+            message_text = self._get_random_from_list(
+                self.positive_messages, self.history["positive_message"]
+            )
+        else:
+            message_text = self._get_random_from_list(
+                self.negative_messages, self.history["negative_message"]
+            )
 
         prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"
         formatted_quantity = f"-{abs(quantity):,}" if quantity < 0 else f"{quantity:,}"
-        message = message_getter().format(
-            ingots=f"{self.ingot_icon}{formatted_quantity}"
-        )
+        message = message_text.format(ingots=f"{self.ingot_icon}{formatted_quantity}")
 
         embed = self._build_embed(
             prefix + message + self._get_balance_message(user_nickname, ingot_total)
@@ -392,7 +377,9 @@ class TrickOrTreatHandler:
             trick,
         )
 
-        match random.choices(list(TrickOrTreat), weights=self.weights)[0]:
+        match random.choices(
+            list(TrickOrTreat), weights=[item.value for item in TrickOrTreat]
+        )[0]:
             case TrickOrTreat.JACKPOT_INGOTS:
                 return await jackpot.result_jackpot(self, interaction)
             case TrickOrTreat.REMOVE_ALL_INGOTS_TRICK:
@@ -421,7 +408,6 @@ class TrickOrTreatHandler:
                 return await gif.result_gif(self, interaction)
 
 
-# Module-level handler instance cache
 _handler_instance: Optional[TrickOrTreatHandler] = None
 
 

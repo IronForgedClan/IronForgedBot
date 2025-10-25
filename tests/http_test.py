@@ -423,7 +423,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
     # JSON fallback test removed - functionality not needed
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_server_error_500_raises_http_exception(self, mock_sleep):
         """Test that server error (500) raises HttpException."""
         mock_response = AsyncMock()
@@ -447,7 +447,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("A remote server error occurred: 500", str(context.exception))
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_server_error_502_raises_http_exception(self, mock_sleep):
         """Test that server error (502) raises HttpException."""
         mock_response = AsyncMock()
@@ -471,7 +471,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("A remote server error occurred: 502", str(context.exception))
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_timeout_408_raises_http_exception(self, mock_sleep):
         """Test that timeout (408) raises HttpException."""
         mock_response = AsyncMock()
@@ -494,7 +494,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("No response from remote server: 408", str(context.exception))
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_rate_limit_429_raises_http_exception(self, mock_sleep):
         """Test that rate limit (429) raises HttpException."""
         mock_response = AsyncMock()
@@ -519,7 +519,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
                 "Rate limited or timed out response: 429", str(context.exception)
             )
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_connection_error_raises_http_exception(self, mock_sleep):
         """Test that connection error raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -535,7 +535,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 self.assertIn("Connection failed", str(context.exception))
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_client_timeout_raises_http_exception(self, mock_sleep):
         """Test that client timeout raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -549,7 +549,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(aiohttp.ServerTimeoutError):
                     await self.client.get(self.test_url)
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_generic_client_error_raises_http_exception(self, mock_sleep):
         """Test that generic client error raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -565,7 +565,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 self.assertIn("Generic client error", str(context.exception))
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_unexpected_error_raises_http_exception(self, mock_sleep):
         """Test that unexpected error raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -579,7 +579,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 self.assertIn("Unexpected error", str(context.exception))
 
-    @patch("ironforgedbot.decorators.asyncio.sleep")
+    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
     async def test_get_response_body_read_error_raises_http_exception(self, mock_sleep):
         """Test that response body read error raises HttpException."""
         mock_response = AsyncMock()

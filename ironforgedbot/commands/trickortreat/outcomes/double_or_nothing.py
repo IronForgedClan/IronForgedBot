@@ -116,7 +116,7 @@ class DoubleOrNothingView(discord.ui.View):
             interaction.user.id
         )
 
-        message = self.handler.DOUBLE_OR_NOTHING_KEEP.format(
+        message = self.handler.double_or_nothing["keep"].format(
             ingot_icon=self.handler.ingot_icon, amount=self.amount
         )
         message += self.handler._get_balance_message(user_nickname, ingot_total)
@@ -143,7 +143,7 @@ class DoubleOrNothingView(discord.ui.View):
 
         user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
 
-        message = self.handler.DOUBLE_OR_NOTHING_EXPIRED.format(
+        message = self.handler.double_or_nothing["expired"].format(
             ingot_icon=self.handler.ingot_icon, amount=self.amount
         )
         if ingot_total is not None:
@@ -190,7 +190,7 @@ async def result_double_or_nothing(
     expire_timestamp = int(time.time() + 30)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    offer_message = handler.DOUBLE_OR_NOTHING_OFFER.format(
+    offer_message = handler.double_or_nothing["offer"].format(
         ingot_icon=handler.ingot_icon, amount=quantity, expires=expires_formatted
     )
     offer_message += handler._get_balance_message(user_nickname, ingot_total)
@@ -242,7 +242,7 @@ async def process_double_or_nothing(
             )
             return
 
-        message = handler.DOUBLE_OR_NOTHING_WIN.format(
+        message = handler.double_or_nothing["win"].format(
             ingot_icon=handler.ingot_icon, total_amount=amount * 2
         )
         message += handler._get_balance_message(user_nickname, ingot_total)
@@ -263,7 +263,7 @@ async def process_double_or_nothing(
             return
 
         formatted_amount = f"-{amount:,}"
-        message = handler.DOUBLE_OR_NOTHING_LOSE.format(
+        message = handler.double_or_nothing["lose"].format(
             ingot_icon=handler.ingot_icon, amount=formatted_amount
         )
         message += handler._get_balance_message(user_nickname, ingot_total)

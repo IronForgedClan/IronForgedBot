@@ -1,4 +1,5 @@
 import unittest
+from collections import deque
 
 from ironforgedbot.commands.trickortreat.outcomes import gif
 from ironforgedbot.common.roles import ROLE
@@ -20,7 +21,7 @@ class TestGifOutcome(unittest.IsolatedAsyncioTestCase):
     async def test_gif_outcome(self):
         """Test that GIF outcome sends a GIF."""
         handler = create_test_trick_or_treat_handler()
-        handler.GIFS = ["http://test.com/gif1.gif", "http://test.com/gif2.gif"]
+        handler.gifs = ["http://test.com/gif1.gif", "http://test.com/gif2.gif"]
 
         await gif.result_gif(handler, self.interaction)
 
@@ -31,13 +32,14 @@ class TestGifOutcome(unittest.IsolatedAsyncioTestCase):
     async def test_gif_history_tracking(self):
         """Test that GIF history prevents recent repeats."""
         handler = create_test_trick_or_treat_handler()
-        handler.GIFS = [f"http://test.com/gif{i}.gif" for i in range(10)]
-        handler.gif_history = []
+        handler.gifs = [f"http://test.com/gif{i}.gif" for i in range(10)]
+        handler.history["gif"] = deque()
 
         for _ in range(3):
             self.interaction.followup.send.reset_mock()
             await gif.result_gif(handler, self.interaction)
             sent_gif = self.interaction.followup.send.call_args[0][0]
-            self.assertIn(sent_gif, handler.gif_history)
+            sent_gif_index = handler.gifs.index(sent_gif)
+            self.assertIn(sent_gif_index, handler.history["gif"])
 
-        self.assertEqual(len(handler.gif_history), 3)
+        self.assertEqual(len(handler.history["gif"]), 3)

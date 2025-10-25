@@ -10,7 +10,8 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.config import CONFIG
-from ironforgedbot.decorators import require_channel, require_role
+from ironforgedbot.decorators.require_channel import require_channel
+from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db
@@ -18,8 +19,8 @@ from ironforgedbot.database.database import db
 logger = logging.getLogger(__name__)
 
 
+@require_role(ROLE.MEMBER)
 @require_channel([CONFIG.RAFFLE_CHANNEL_ID])
-@require_role(ROLE.MEMBER, ephemeral=True)
 @log_command_execution(logger)
 async def cmd_raffle(interaction: discord.Interaction):
     """Play or control the raffle"""
@@ -36,7 +37,9 @@ async def cmd_raffle(interaction: discord.Interaction):
     menu = RaffleMenuView(
         check_member_has_role(member, ROLE.LEADERSHIP, or_higher=True)
     )
-    menu.message = await interaction.followup.send(embed=embed, view=menu)
+    menu.message = await interaction.followup.send(
+        embed=embed, view=menu, ephemeral=True
+    )
 
 
 async def build_embed(interaction: discord.Interaction) -> discord.Embed | None:
