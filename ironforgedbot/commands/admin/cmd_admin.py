@@ -21,7 +21,7 @@ from ironforgedbot.decorators.require_role import require_role
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.LEADERSHIP)
+@require_role(ROLE.LEADERSHIP, ephemeral=True)
 @log_command_execution(logger)
 async def cmd_admin(interaction: discord.Interaction):
     """Allows access to various administrative commands.

@@ -6,8 +6,13 @@ import discord
 logger = logging.getLogger(__name__)
 
 
-def require_channel(channel_ids: list[int]):
-    """Makes sure that the interaction is happening in a whitelisted channel"""
+def require_channel(channel_ids: list[int], ephemeral: bool = False):
+    """Makes sure that the interaction is happening in a whitelisted channel
+
+    Args:
+        channel_ids: List of allowed channel IDs
+        ephemeral: Whether to defer the interaction ephemerally (default: False)
+    """
 
     from ironforgedbot.common.responses import send_ephemeral_error
 
@@ -22,7 +27,7 @@ def require_channel(channel_ids: list[int]):
 
             if interaction.channel_id not in channel_ids:
                 if not interaction.response.is_done():
-                    await interaction.response.defer(thinking=True)
+                    await interaction.response.defer(ephemeral=ephemeral)
 
                 logger.debug(
                     f"Channel restriction: {interaction.user.display_name} tried {func.__name__} "

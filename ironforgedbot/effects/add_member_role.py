@@ -16,7 +16,6 @@ from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.database.database import db
 from ironforgedbot.services.member_service import (
     MemberService,
-    UniqueDiscordIdVolation,
     UniqueNicknameViolation,
 )
 
@@ -51,16 +50,14 @@ async def add_member_role(
         reactivate_response = None
 
         try:
-            member = await service.create_member(
-                discord_member.id, discord_member.display_name, RANK(rank)
-            )
-        except (UniqueDiscordIdVolation, UniqueNicknameViolation):
-            member = await service.get_member_by_discord_id(discord_member.id)
-            if member and not member.active:
+            existing_member = await service.get_member_by_discord_id(discord_member.id)
+
+            if existing_member and not existing_member.active:
                 try:
                     reactivate_response = await service.reactivate_member(
-                        member.id, discord_member.display_name, RANK(rank)
+                        existing_member.id, discord_member.display_name, RANK(rank)
                     )
+                    member = reactivate_response.new_member
                 except UniqueNicknameViolation:
                     conflicting_discord_member = report_channel.guild.get_member_named(
                         discord_member.display_name
@@ -87,6 +84,49 @@ async def add_member_role(
                         )
                         + f" Processed in **{format_duration(start_time, end_time)}**.",
                     )
+            elif existing_member and existing_member.active:
+                logger.warning(
+                    f"Member {discord_member.display_name} (ID: {discord_member.id}) "
+                    "already exists and is active in database"
+                )
+                await _rollback(report_channel, discord_member)
+
+                end_time = time.perf_counter()
+                return await report_channel.send(
+                    f":warning: {discord_member.mention} was given the "
+                    f"{text_bold(ROLE.MEMBER)} role, but they are already registered "
+                    f"as an active member. Processed in **{format_duration(start_time, end_time)}**.",
+                )
+            else:
+                member = await service.create_member(
+                    discord_member.id, discord_member.display_name, RANK(rank)
+                )
+        except UniqueNicknameViolation:
+            conflicting_discord_member = report_channel.guild.get_member_named(
+                discord_member.display_name
+            )
+            conflicting_db_member = await service.get_member_by_nickname(
+                discord_member.display_name
+            )
+            conflicting_id = (
+                conflicting_db_member.id if conflicting_db_member else "unknown"
+            )
+            await _rollback(report_channel, discord_member)
+
+            end_time = time.perf_counter()
+            return await report_channel.send(
+                f":warning: {discord_member.mention} was given the "
+                f"{text_bold(ROLE.MEMBER)} role. But was unable to be saved "
+                f"due to a **nickname conflict**"
+                + (
+                    f" with this user: {conflicting_discord_member.mention} "
+                    f"\n\n**ID:** {conflicting_id}\n"
+                    f"**D_ID:** {conflicting_discord_member.id}"
+                    if conflicting_discord_member
+                    else "."
+                )
+                + f" Processed in **{format_duration(start_time, end_time)}**.",
+            )
         except Exception as e:
             logger.error(e)
             await _rollback(report_channel, discord_member)
