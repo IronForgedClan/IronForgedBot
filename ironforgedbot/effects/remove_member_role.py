@@ -31,17 +31,15 @@ async def remove_member_role(
 
             roles_removed.append(role)
 
-    if len(roles_removed) < 1:
-        return
-
-    try:
-        await member.remove_roles(
-            *roles_removed, reason="Member removed. Cleaning up roles."
-        )
-    except Forbidden:
-        return await report_channel.send(
-            f":warning: The bot lacks permission to manage {member.mention}'s roles."
-        )
+    if len(roles_removed) > 0:
+        try:
+            await member.remove_roles(
+                *roles_removed, reason="Member removed. Cleaning up roles."
+            )
+        except Forbidden:
+            return await report_channel.send(
+                f":warning: The bot lacks permission to manage {member.mention}'s roles."
+            )
 
     async with db.get_session() as session:
         service = MemberService(session)
@@ -57,18 +55,22 @@ async def remove_member_role(
 
         end_time = time.perf_counter()
 
+        roles_message = (
+            f" Removed the following **discord roles** from this user:\n{text_ul([r.name for r in roles_removed])}"
+            if len(roles_removed) > 0
+            else ""
+        )
+
         if is_banned:
             await report_channel.send(
                 f":x: **Member banned:** {member.mention} has been removed. "
-                "Disabled member in database. Removed the following **discord roles** "
-                f"from this user:\n{text_ul([r.name for r in roles_removed])}"
+                f"Disabled member in database.{roles_message}"
                 f"Processed in **{format_duration(start_time, end_time)}**.",
             )
             return
 
         await report_channel.send(
             f":x: **Member disabled:** {member.mention} has been removed. "
-            "Disabled member in database. Removed the following **discord roles** "
-            f"from this user:\n{text_ul([r.name for r in roles_removed])}"
+            f"Disabled member in database.{roles_message}"
             f"Processed in **{format_duration(start_time, end_time)}**.",
         )

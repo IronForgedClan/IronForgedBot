@@ -88,20 +88,39 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
         call_args = self.mock_report_channel.send.call_args[0][0]
         self.assertIn("Member banned", call_args)
 
+    @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
     @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
-    async def test_returns_early_when_no_roles_to_remove(
-        self, mock_is_banned, mock_get_role
+    @patch("ironforgedbot.effects.remove_member_role.db")
+    async def test_disables_member_even_when_no_additional_roles_to_remove(
+        self, mock_db, mock_is_banned, mock_get_role, mock_time
     ):
+        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_is_banned.return_value = False
         member_no_roles = create_test_member("TestUser", [], "TestUser")
         member_no_roles.id = 123456789
+        member_no_roles.mention = "<@123456789>"
         member_no_roles.remove_roles = AsyncMock()
 
-        await remove_member_role(self.mock_report_channel, member_no_roles)
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+        mock_service = Mock()
+        mock_db_member = Mock()
+        mock_db_member.id = 1
+        mock_service.get_member_by_discord_id = AsyncMock(return_value=mock_db_member)
+        mock_service.disable_member = AsyncMock()
+
+        with patch(
+            "ironforgedbot.effects.remove_member_role.MemberService",
+            return_value=mock_service,
+        ):
+            await remove_member_role(self.mock_report_channel, member_no_roles)
 
         member_no_roles.remove_roles.assert_not_called()
-        self.mock_report_channel.send.assert_not_called()
+        mock_service.disable_member.assert_called_once_with(1)
+        self.mock_report_channel.send.assert_called_once()
+        call_args = self.mock_report_channel.send.call_args[0][0]
+        self.assertIn("Member disabled", call_args)
 
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
     @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
