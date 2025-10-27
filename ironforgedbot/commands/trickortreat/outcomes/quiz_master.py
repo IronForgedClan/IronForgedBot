@@ -125,9 +125,8 @@ class QuizMasterView(discord.ui.View):
                 )
                 return
 
-            self.has_interacted = True
-
             await interaction.response.defer()
+            self.has_interacted = True
             if self.message:
                 await self.message.delete()
 
