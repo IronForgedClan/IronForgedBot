@@ -100,6 +100,11 @@ class QuizMasterView(discord.ui.View):
             button.callback = self._create_answer_callback(i)
             self.add_item(button)
 
+    def _cleanup(self) -> None:
+        """Clean up references."""
+        self.handler = None
+        self.question = None
+
     def _create_answer_callback(
         self, option_index: int
     ) -> Callable[[discord.Interaction], None]:
@@ -138,12 +143,14 @@ class QuizMasterView(discord.ui.View):
             )
 
             self.stop()
+            self._cleanup()
 
         return callback
 
     async def on_timeout(self):
         """Handle the view timing out."""
         if self.has_interacted or not self.message:
+            self._cleanup()
             return
 
         self.clear_items()
@@ -164,6 +171,8 @@ class QuizMasterView(discord.ui.View):
             await self.message.edit(embed=embed, view=self)
         except discord.NotFound:
             pass
+
+        self._cleanup()
 
 
 async def result_quiz_master(

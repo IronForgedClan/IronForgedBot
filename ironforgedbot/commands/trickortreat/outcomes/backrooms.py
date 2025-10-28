@@ -73,6 +73,12 @@ class BackroomsView(discord.ui.View):
             button.callback = self._create_door_callback(i)
             self.add_item(button)
 
+    def _cleanup(self) -> None:
+        """Clean up references."""
+        self.handler = None
+        self.door_outcomes = None
+        self.door_labels = None
+
     def _create_door_callback(self, door_index: int):
         """Create a callback function for a specific door button.
 
@@ -128,12 +134,14 @@ class BackroomsView(discord.ui.View):
             )
 
             self.stop()
+            self._cleanup()
 
         return callback
 
     async def on_timeout(self):
         """Handle view timeout."""
         if self.has_interacted:
+            self._cleanup()
             return
 
         if self.message:
@@ -146,6 +154,8 @@ class BackroomsView(discord.ui.View):
                 await self.message.edit(embed=embed, view=None)
             except discord.HTTPException:
                 pass
+
+        self._cleanup()
 
 
 async def process_door_choice(

@@ -108,6 +108,10 @@ class StealTargetView(discord.ui.View):
         walk_away_button.callback = self._walk_away_callback
         self.add_item(walk_away_button)
 
+    def _cleanup(self) -> None:
+        """Clean up references."""
+        self.handler = None
+
     def _create_steal_callback(self, target: discord.Member):
         """Create a callback function for a specific target button.
 
@@ -140,6 +144,7 @@ class StealTargetView(discord.ui.View):
             await process_steal(self.handler, interaction, self.amount, target)
 
             self.stop()
+            self._cleanup()
 
         return callback
 
@@ -171,10 +176,12 @@ class StealTargetView(discord.ui.View):
         await interaction.followup.send(embed=embed)
 
         self.stop()
+        self._cleanup()
 
     async def on_timeout(self):
         """Handle the view timing out after 45 seconds."""
         if self.has_interacted or not self.message:
+            self._cleanup()
             return
 
         # Remove all buttons
@@ -185,6 +192,8 @@ class StealTargetView(discord.ui.View):
             await self.message.edit(embed=embed, view=self)
         except discord.HTTPException:
             pass
+
+        self._cleanup()
 
 
 async def result_steal(
