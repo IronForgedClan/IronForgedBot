@@ -12,6 +12,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     BACKROOMS_TREASURE_MAX,
     BACKROOMS_TREASURE_MIN,
 )
+from ironforgedbot.common.responses import build_response_embed
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
@@ -110,10 +111,11 @@ class BackroomsView(discord.ui.View):
             suspense_message = self.handler.backrooms["opening_door"].format(
                 door=door_label
             )
-            suspense_embed = self.handler._build_embed(
-                suspense_message,
-                self.handler.backrooms["thumbnails"],
-                self.handler.history["backrooms_thumbnail"],
+            suspense_embed = build_response_embed(
+                "", suspense_message, discord.Color.darker_grey()
+            )
+            suspense_embed.set_thumbnail(
+                url=self.handler.backrooms["suspense_thumbnail"]
             )
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
