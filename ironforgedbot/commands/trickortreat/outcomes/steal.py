@@ -138,10 +138,12 @@ class StealTargetView(discord.ui.View):
             self.has_interacted = True
 
             await interaction.response.defer()
-            if self.message:
-                await self.message.delete()
 
-            await process_steal(self.handler, interaction, self.amount, target)
+            self.clear_items()
+            embed = await process_steal(self.handler, interaction, self.amount, target)
+
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
 
             self.stop()
             self._cleanup()
@@ -169,11 +171,13 @@ class StealTargetView(discord.ui.View):
         self.has_interacted = True
 
         await interaction.response.defer()
-        if self.message:
-            await self.message.delete()
+
+        self.clear_items()
 
         embed = self.handler._build_embed(self.handler.steal["walk_away"])
-        await interaction.followup.send(embed=embed)
+
+        if self.message:
+            await self.message.edit(embed=embed, view=self)
 
         self.stop()
         self._cleanup()
@@ -260,7 +264,7 @@ async def process_steal(
     interaction: discord.Interaction,
     amount: int,
     target: discord.Member,
-) -> None:
+) -> discord.Embed:
     """Process the result of a steal attempt.
 
     Success rate scales based on target's ingot balance.
@@ -272,6 +276,9 @@ async def process_steal(
         interaction: The Discord interaction context.
         amount: The amount of ingots to attempt to steal.
         target: The target member to steal from.
+
+    Returns:
+        The embed containing the result message.
     """
     assert interaction.guild
 
@@ -283,8 +290,7 @@ async def process_steal(
             message = handler.steal["target_no_ingots"].format(
                 target_mention=target.mention
             )
-            embed = handler._build_embed(message)
-            return await interaction.followup.send(embed=embed)
+            return handler._build_embed(message)
 
         success_rate = _get_steal_success_rate(target_member.ingots)
 
@@ -311,7 +317,7 @@ async def process_steal(
 
         if user_new_total is None:
             logger.error("Error adding stolen ingots to user")
-            return
+            return handler._build_embed("An error occurred processing the steal.")
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
@@ -334,7 +340,7 @@ async def process_steal(
 
         if user_new_total is None:
             logger.error("Error removing penalty from user")
-            return
+            return handler._build_embed("An error occurred processing the steal.")
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
@@ -347,5 +353,4 @@ async def process_steal(
         )
         message += handler._get_balance_message(user_nickname, user_new_total)
 
-    embed = handler._build_embed(message)
-    await interaction.followup.send(embed=embed)
+    return handler._build_embed(message)
