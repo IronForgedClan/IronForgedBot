@@ -82,10 +82,14 @@ class DoubleOrNothingView(discord.ui.View):
 
         try:
             await interaction.response.defer()
-            if self.message:
-                await self.message.delete()
 
-            await process_double_or_nothing(self.handler, interaction, self.amount)
+            self.clear_items()
+            embed = await process_double_or_nothing(
+                self.handler, interaction, self.amount
+            )
+
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
         finally:
             user_id_str = str(self.user_id)
             if user_id_str in STATE.state["double_or_nothing_offers"]:
@@ -116,8 +120,8 @@ class DoubleOrNothingView(discord.ui.View):
 
         try:
             await interaction.response.defer()
-            if self.message:
-                await self.message.delete()
+
+            self.clear_items()
 
             user_nickname, ingot_total = await self.handler._get_user_info(
                 interaction.user.id
@@ -129,7 +133,9 @@ class DoubleOrNothingView(discord.ui.View):
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
             embed = self.handler._build_embed(message)
-            await interaction.followup.send(embed=embed)
+
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
         finally:
             user_id_str = str(self.user_id)
             if user_id_str in STATE.state["double_or_nothing_offers"]:
@@ -221,7 +227,7 @@ async def result_double_or_nothing(
 
 async def process_double_or_nothing(
     handler: "TrickOrTreatHandler", interaction: discord.Interaction, amount: int
-) -> None:
+) -> discord.Embed:
     """Process the result of a double-or-nothing gamble.
 
     50% chance to win (double the amount) or lose (remove the amount).
@@ -230,6 +236,9 @@ async def process_double_or_nothing(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction context.
         amount: The amount of ingots at stake.
+
+    Returns:
+        The embed containing the result message.
     """
     assert interaction.guild
 
@@ -246,12 +255,9 @@ async def process_double_or_nothing(
         )
 
         if ingot_total is None:
-            await interaction.followup.send(
-                embed=handler._build_no_ingots_error_response(
-                    interaction.user.display_name
-                )
+            return handler._build_no_ingots_error_response(
+                interaction.user.display_name
             )
-            return
 
         message = handler.double_or_nothing["win"].format(
             ingot_icon=handler.ingot_icon, total_amount=amount * 2
@@ -266,12 +272,9 @@ async def process_double_or_nothing(
         )
 
         if ingot_total is None:
-            await interaction.followup.send(
-                embed=handler._build_no_ingots_error_response(
-                    interaction.user.display_name
-                )
+            return handler._build_no_ingots_error_response(
+                interaction.user.display_name
             )
-            return
 
         formatted_amount = f"-{amount:,}"
         message = handler.double_or_nothing["lose"].format(
@@ -279,5 +282,4 @@ async def process_double_or_nothing(
         )
         message += handler._get_balance_message(user_nickname, ingot_total)
 
-    embed = handler._build_embed(message)
-    await interaction.followup.send(embed=embed)
+    return handler._build_embed(message)
