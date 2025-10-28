@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+import discord
+
 from ironforgedbot.commands.trickortreat.outcomes import steal
 from ironforgedbot.commands.trickortreat.outcomes.steal import (
     StealTargetView,
@@ -148,10 +150,14 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
             return_value=success_rate - 0.1,
         ):
-            await steal.process_steal(handler, self.interaction, 1000, target_member)
+            result = await steal.process_steal(
+                handler, self.interaction, 1000, target_member
+            )
 
         self.assertEqual(handler._adjust_ingots.call_count, 2)
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
+        self.assertIn("success", result.description.lower())
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
@@ -197,12 +203,16 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
             return_value=success_rate + 0.1,
         ):
-            await steal.process_steal(handler, self.interaction, 1000, target_member)
+            result = await steal.process_steal(
+                handler, self.interaction, 1000, target_member
+            )
 
         handler._adjust_ingots.assert_called_once()
         call_args = handler._adjust_ingots.call_args[0]
         self.assertEqual(call_args[1], -800)
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
+        self.assertIn("fail", result.description.lower())
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
@@ -233,11 +243,13 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
             return_value=success_rate - 0.1,
         ):
-            await steal.process_steal(handler, self.interaction, 1000, target_member)
+            result = await steal.process_steal(
+                handler, self.interaction, 1000, target_member
+            )
 
-        self.interaction.followup.send.assert_called_once()
-        embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("no ingots", embed.description.lower())
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
+        self.assertIn("no ingots", result.description.lower())
 
     async def test_steal_success_rate_increases_with_wealth(self):
         """Test that success rate increases as target wealth increases."""
@@ -329,8 +341,9 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         await view._walk_away_callback(self.interaction)
 
         self.interaction.response.defer.assert_called_once()
-        view.message.delete.assert_called_once()
+        view.message.edit.assert_called_once()
 
-        self.interaction.followup.send.assert_called_once()
-        embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("walked", embed.description.lower())
+        edit_call_kwargs = view.message.edit.call_args.kwargs
+        self.assertIn("embed", edit_call_kwargs)
+        embed = edit_call_kwargs["embed"]
+        self.assertIn("walk", embed.description.lower())
