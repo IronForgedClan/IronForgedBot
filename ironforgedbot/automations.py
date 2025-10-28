@@ -188,11 +188,30 @@ class IronForgedAutomations:
             raise
 
     async def _clear_caches(self):
-        """Clear expired cache entries."""
+        """Clear expired cache entries and STATE dictionaries."""
         try:
             score_cache_output = await SCORE_CACHE.clean()
             if score_cache_output:
                 logger.info(score_cache_output)
+
+            from ironforgedbot.state import STATE
+            import time
+
+            expired_count = 0
+            current_time = time.time()
+
+            expired_keys = [
+                user_id for user_id, offer in STATE.state["double_or_nothing_offers"].items()
+                if offer.get("expires_at", 0) < current_time
+            ]
+
+            for user_id in expired_keys:
+                del STATE.state["double_or_nothing_offers"][user_id]
+                expired_count += 1
+
+            if expired_count > 0:
+                logger.info(f"Cleared {expired_count} expired double-or-nothing offer(s)")
+
         except Exception as e:
             logger.error(f"Error clearing caches: {e}")
             raise
