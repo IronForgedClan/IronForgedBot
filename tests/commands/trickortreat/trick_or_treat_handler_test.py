@@ -318,12 +318,15 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with open(CONTENT_FILE) as f:
             data = json.load(f)
             BACKROOMS_THUMBNAILS = data["backrooms"]["thumbnails"]
+            SUSPENSE_THUMBNAIL = data["backrooms"]["suspense_thumbnail"]
+
+        all_urls = BACKROOMS_THUMBNAILS + [SUSPENSE_THUMBNAIL]
 
         async with aiohttp.ClientSession() as session:
-            tasks = [get_url_status_code(session, url) for url in BACKROOMS_THUMBNAILS]
+            tasks = [get_url_status_code(session, url) for url in all_urls]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for url, result in zip(BACKROOMS_THUMBNAILS, results):
+            for url, result in zip(all_urls, results):
                 assert result == 200, f"{url} returned status code {result}"
 
     async def test_quiz_questions_structure(self):
