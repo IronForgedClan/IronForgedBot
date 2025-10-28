@@ -120,7 +120,7 @@ class BackroomsView(discord.ui.View):
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(8)
 
             self.clear_items()
 
