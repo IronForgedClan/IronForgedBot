@@ -120,11 +120,10 @@ class BackroomsView(discord.ui.View):
 
             await asyncio.sleep(2)
 
-            if self.message:
-                await self.message.delete()
+            self.clear_items()
 
             outcome = self.door_outcomes[door_index]
-            await process_door_choice(
+            result_embed = await process_door_choice(
                 self.handler,
                 interaction,
                 outcome,
@@ -132,6 +131,9 @@ class BackroomsView(discord.ui.View):
                 self.door_outcomes,
                 self.door_labels,
             )
+
+            if self.message:
+                await self.message.edit(embed=result_embed, view=self)
 
             self.stop()
             self._cleanup()
@@ -165,7 +167,7 @@ async def process_door_choice(
     chosen_index: int,
     door_outcomes: list[DoorOutcome],
     door_labels: list[str],
-) -> None:
+) -> discord.Embed:
     """Process the user's door choice and apply the outcome.
 
     Args:
@@ -175,6 +177,9 @@ async def process_door_choice(
         chosen_index: The index of the door chosen.
         door_outcomes: List of all door outcomes.
         door_labels: List of all door labels.
+
+    Returns:
+        The embed containing the result message.
     """
     assert interaction.guild
 
@@ -199,12 +204,17 @@ async def process_door_choice(
                 formatted_message += handler._get_balance_message(
                     user_nickname, ingot_total
                 )
-                embed = handler._build_embed(
+                return handler._build_embed(
                     formatted_message,
                     handler.backrooms["thumbnails"],
                     handler.history["backrooms_thumbnail"],
                 )
-                await interaction.followup.send(embed=embed)
+            else:
+                return handler._build_embed(
+                    "An error occurred processing the treasure.",
+                    handler.backrooms["thumbnails"],
+                    handler.history["backrooms_thumbnail"],
+                )
 
         case DoorOutcome.MONSTER:
             amount = random.randint(BACKROOMS_MONSTER_MIN, BACKROOMS_MONSTER_MAX)
@@ -222,12 +232,11 @@ async def process_door_choice(
                     handler.backrooms["lucky_escape_messages"]
                 )
                 lucky_message += handler._get_balance_message(user_nickname, 0)
-                embed = handler._build_embed(
+                return handler._build_embed(
                     lucky_message,
                     handler.backrooms["thumbnails"],
                     handler.history["backrooms_thumbnail"],
                 )
-                await interaction.followup.send(embed=embed)
             else:
                 formatted_message = message.format(
                     ingots=f"{handler.ingot_icon}-{amount:,}"
@@ -235,21 +244,19 @@ async def process_door_choice(
                 formatted_message += handler._get_balance_message(
                     user_nickname, ingot_total
                 )
-                embed = handler._build_embed(
+                return handler._build_embed(
                     formatted_message,
                     handler.backrooms["thumbnails"],
                     handler.history["backrooms_thumbnail"],
                 )
-                await interaction.followup.send(embed=embed)
 
         case DoorOutcome.ESCAPE:
             message = random.choice(handler.backrooms["escape_messages"])
-            embed = handler._build_embed(
+            return handler._build_embed(
                 message,
                 handler.backrooms["thumbnails"],
                 handler.history["backrooms_thumbnail"],
             )
-            await interaction.followup.send(embed=embed)
 
 
 async def result_backrooms(
