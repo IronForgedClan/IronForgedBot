@@ -201,7 +201,8 @@ class IronForgedAutomations:
             current_time = time.time()
 
             expired_keys = [
-                user_id for user_id, offer in STATE.state["double_or_nothing_offers"].items()
+                user_id
+                for user_id, offer in STATE.state["double_or_nothing_offers"].items()
                 if offer.get("expires_at", 0) < current_time
             ]
 
@@ -210,7 +211,9 @@ class IronForgedAutomations:
                 expired_count += 1
 
             if expired_count > 0:
-                logger.info(f"Cleared {expired_count} expired double-or-nothing offer(s)")
+                logger.info(
+                    f"Cleared {expired_count} expired double-or-nothing offer(s)"
+                )
 
         except Exception as e:
             logger.error(f"Error clearing caches: {e}")
