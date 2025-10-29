@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import discord
+
 from ironforgedbot.commands.trickortreat.outcomes import backrooms
 from ironforgedbot.commands.trickortreat.outcomes.backrooms import (
     BackroomsView,
@@ -64,7 +66,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await backrooms.process_door_choice(
+        result = await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.TREASURE, 0, outcomes, labels
         )
 
@@ -75,7 +77,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             call_args.kwargs["reason"], "Trick or treat: backrooms treasure"
         )
 
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
     async def test_process_door_choice_monster(self, mock_randint):
@@ -90,7 +93,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await backrooms.process_door_choice(
+        result = await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
@@ -99,7 +102,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[0][1], -2000)
         self.assertEqual(call_args.kwargs["reason"], "Trick or treat: backrooms entity")
 
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
 
     async def test_process_door_choice_escape(self):
         """Test escape door outcome (no ingot change)."""
@@ -111,13 +115,14 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await backrooms.process_door_choice(
+        result = await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.ESCAPE, 2, outcomes, labels
         )
 
         handler._adjust_ingots.assert_not_called()
 
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
@@ -136,7 +141,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
         labels = ["🚪 Door 1", "🕸️ Door 2", "💀 Door 3"]
 
-        await backrooms.process_door_choice(
+        result = await backrooms.process_door_choice(
             handler, self.interaction, DoorOutcome.MONSTER, 1, outcomes, labels
         )
 
@@ -144,7 +149,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         mock_choice.assert_called()
 
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
 
     async def test_backrooms_view_timeout(self):
         """Test that view timeout sends expired message."""

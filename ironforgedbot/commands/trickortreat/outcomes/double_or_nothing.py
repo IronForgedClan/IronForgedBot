@@ -56,6 +56,10 @@ class DoubleOrNothingView(discord.ui.View):
         keep_button.callback = self._keep_callback
         self.add_item(keep_button)
 
+    def _cleanup(self) -> None:
+        """Clean up references."""
+        self.handler = None
+
     async def _double_callback(self, interaction: discord.Interaction):
         """Handle the double-or-nothing button click.
 
@@ -76,17 +80,23 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
-        await interaction.response.defer()
-        if self.message:
-            await self.message.delete()
+        try:
+            await interaction.response.defer()
 
-        await process_double_or_nothing(self.handler, interaction, self.amount)
+            self.clear_items()
+            embed = await process_double_or_nothing(
+                self.handler, interaction, self.amount
+            )
 
-        user_id_str = str(self.user_id)
-        if user_id_str in STATE.state["double_or_nothing_offers"]:
-            del STATE.state["double_or_nothing_offers"][user_id_str]
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
+        finally:
+            user_id_str = str(self.user_id)
+            if user_id_str in STATE.state["double_or_nothing_offers"]:
+                del STATE.state["double_or_nothing_offers"][user_id_str]
 
-        self.stop()
+            self.stop()
+            self._cleanup()
 
     async def _keep_callback(self, interaction: discord.Interaction):
         """Handle the keep winnings button click.
@@ -108,27 +118,31 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
-        await interaction.response.defer()
-        if self.message:
-            await self.message.delete()
+        try:
+            await interaction.response.defer()
 
-        user_nickname, ingot_total = await self.handler._get_user_info(
-            interaction.user.id
-        )
+            self.clear_items()
 
-        message = self.handler.double_or_nothing["keep"].format(
-            ingot_icon=self.handler.ingot_icon, amount=self.amount
-        )
-        message += self.handler._get_balance_message(user_nickname, ingot_total)
+            user_nickname, ingot_total = await self.handler._get_user_info(
+                interaction.user.id
+            )
 
-        embed = self.handler._build_embed(message)
-        await interaction.followup.send(embed=embed)
+            message = self.handler.double_or_nothing["keep"].format(
+                ingot_icon=self.handler.ingot_icon, amount=self.amount
+            )
+            message += self.handler._get_balance_message(user_nickname, ingot_total)
 
-        user_id_str = str(self.user_id)
-        if user_id_str in STATE.state["double_or_nothing_offers"]:
-            del STATE.state["double_or_nothing_offers"][user_id_str]
+            embed = self.handler._build_embed(message)
 
-        self.stop()
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
+        finally:
+            user_id_str = str(self.user_id)
+            if user_id_str in STATE.state["double_or_nothing_offers"]:
+                del STATE.state["double_or_nothing_offers"][user_id_str]
+
+            self.stop()
+            self._cleanup()
 
     async def on_timeout(self):
         """Handle the view timing out after 30 seconds."""
@@ -137,6 +151,7 @@ class DoubleOrNothingView(discord.ui.View):
             del STATE.state["double_or_nothing_offers"][user_id_str]
 
         if self.has_interacted or not self.message:
+            self._cleanup()
             return
 
         self.clear_items()
@@ -154,6 +169,8 @@ class DoubleOrNothingView(discord.ui.View):
             await self.message.edit(embed=embed, view=self)
         except discord.HTTPException:
             pass  # Message may have been deleted
+
+        self._cleanup()
 
 
 async def result_double_or_nothing(
@@ -210,7 +227,7 @@ async def result_double_or_nothing(
 
 async def process_double_or_nothing(
     handler: "TrickOrTreatHandler", interaction: discord.Interaction, amount: int
-) -> None:
+) -> discord.Embed:
     """Process the result of a double-or-nothing gamble.
 
     50% chance to win (double the amount) or lose (remove the amount).
@@ -219,6 +236,9 @@ async def process_double_or_nothing(
         handler: The TrickOrTreatHandler instance.
         interaction: The Discord interaction context.
         amount: The amount of ingots at stake.
+
+    Returns:
+        The embed containing the result message.
     """
     assert interaction.guild
 
@@ -235,12 +255,9 @@ async def process_double_or_nothing(
         )
 
         if ingot_total is None:
-            await interaction.followup.send(
-                embed=handler._build_no_ingots_error_response(
-                    interaction.user.display_name
-                )
+            return handler._build_no_ingots_error_response(
+                interaction.user.display_name
             )
-            return
 
         message = handler.double_or_nothing["win"].format(
             ingot_icon=handler.ingot_icon, total_amount=amount * 2
@@ -255,12 +272,9 @@ async def process_double_or_nothing(
         )
 
         if ingot_total is None:
-            await interaction.followup.send(
-                embed=handler._build_no_ingots_error_response(
-                    interaction.user.display_name
-                )
+            return handler._build_no_ingots_error_response(
+                interaction.user.display_name
             )
-            return
 
         formatted_amount = f"-{amount:,}"
         message = handler.double_or_nothing["lose"].format(
@@ -268,5 +282,4 @@ async def process_double_or_nothing(
         )
         message += handler._get_balance_message(user_nickname, ingot_total)
 
-    embed = handler._build_embed(message)
-    await interaction.followup.send(embed=embed)
+    return handler._build_embed(message)

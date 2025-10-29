@@ -509,6 +509,7 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "escape_messages": ["Test escape"],
         "lucky_escape_messages": ["Test lucky escape"],
         "opening_door": "Opening {door}",
+        "suspense_thumbnail": "http://test.com/door-opening.gif",
         "expired": "Test expired",
         "thumbnails": ["http://test.com/backrooms.png"]
     },

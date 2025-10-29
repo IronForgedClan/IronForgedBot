@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+import discord
+
 from ironforgedbot.commands.trickortreat.outcomes import double_or_nothing
 from ironforgedbot.commands.trickortreat.outcomes.double_or_nothing import (
     DoubleOrNothingView,
@@ -95,12 +97,14 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.random.random",
             return_value=0.3,
         ):
-            await double_or_nothing.process_double_or_nothing(
+            result = await double_or_nothing.process_double_or_nothing(
                 handler, self.interaction, 500
             )
 
         handler._adjust_ingots.assert_called_once()
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
+        self.assertIn("won", result.description.lower())
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
@@ -131,12 +135,14 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.random.random",
             return_value=0.7,
         ):
-            await double_or_nothing.process_double_or_nothing(
+            result = await double_or_nothing.process_double_or_nothing(
                 handler, self.interaction, 500
             )
 
         handler._adjust_ingots.assert_called_once()
-        self.interaction.followup.send.assert_called_once()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, discord.Embed)
+        self.assertIn("lost", result.description.lower())
 
     @patch("ironforgedbot.database.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
@@ -168,10 +174,11 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         await view._keep_callback(self.interaction)
 
         self.interaction.response.defer.assert_called_once()
-        view.message.delete.assert_called_once()
+        view.message.edit.assert_called_once()
 
-        self.interaction.followup.send.assert_called_once()
-        embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        edit_call_kwargs = view.message.edit.call_args.kwargs
+        self.assertIn("embed", edit_call_kwargs)
+        embed = edit_call_kwargs["embed"]
         self.assertIn("kept", embed.description.lower())
 
     @patch("ironforgedbot.database.database.db")

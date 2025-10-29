@@ -100,6 +100,11 @@ class QuizMasterView(discord.ui.View):
             button.callback = self._create_answer_callback(i)
             self.add_item(button)
 
+    def _cleanup(self) -> None:
+        """Clean up references."""
+        self.handler = None
+        self.question = None
+
     def _create_answer_callback(
         self, option_index: int
     ) -> Callable[[discord.Interaction], None]:
@@ -128,23 +133,28 @@ class QuizMasterView(discord.ui.View):
             self.has_interacted = True
 
             await interaction.response.defer()
-            if self.message:
-                await self.message.delete()
 
-            await process_quiz_answer(
+            self.clear_items()
+
+            embed = await process_quiz_answer(
                 self.handler,
                 interaction,
                 option_index,
                 self.question["correct_index"],
             )
 
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
+
             self.stop()
+            self._cleanup()
 
         return callback
 
     async def on_timeout(self):
         """Handle the view timing out."""
         if self.has_interacted or not self.message:
+            self._cleanup()
             return
 
         self.clear_items()
@@ -165,6 +175,8 @@ class QuizMasterView(discord.ui.View):
             await self.message.edit(embed=embed, view=self)
         except discord.NotFound:
             pass
+
+        self._cleanup()
 
 
 async def result_quiz_master(
@@ -253,9 +265,6 @@ async def _handle_correct_answer(
     )
 
     if ingot_total is None:
-        await interaction.followup.send(
-            embed=handler._build_no_ingots_error_response(interaction.user.display_name)
-        )
         return None
 
     message = handler.quiz["correct_message"].format(
@@ -316,7 +325,7 @@ async def process_quiz_answer(
     interaction: discord.Interaction,
     chosen_index: int,
     correct_index: int,
-) -> None:
+) -> discord.Embed:
     """Process the result of a quiz answer.
 
     If correct, award high amount of ingots.
@@ -327,6 +336,9 @@ async def process_quiz_answer(
         interaction: The Discord interaction context.
         chosen_index: The index of the answer the user chose.
         correct_index: The index of the correct answer.
+
+    Returns:
+        The embed containing the result message.
     """
     assert interaction.guild
 
@@ -337,9 +349,10 @@ async def process_quiz_answer(
         message = await _handle_correct_answer(handler, interaction, user_nickname)
         thumbnail = "https://oldschool.runescape.wiki/images/Mystery_box_detail.png"
         if message is None:
-            return
+            return handler._build_no_ingots_error_response(
+                interaction.user.display_name
+            )
     else:
         message = await _handle_wrong_answer(handler, interaction)
 
-    embed = handler._build_embed(message, [thumbnail])
-    await interaction.followup.send(embed=embed)
+    return handler._build_embed(message, [thumbnail])
