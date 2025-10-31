@@ -17,6 +17,8 @@ services:
             retries: 5
         volumes:
             - mariadb_data:/var/lib/mysql
+        networks:
+            - ironforged-network
 
     bot:
         # When testing prod image remember
@@ -36,7 +38,14 @@ services:
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
         volumes:
             - .:/app
+        networks:
+            - ironforged-network
 
 volumes:
     mariadb_data:
+
+networks:
+    ironforged-network:
+        name: ironforged-network
+        driver: bridge
 
