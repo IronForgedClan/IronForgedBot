@@ -7,13 +7,13 @@ import discord
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.decorators.cost_ingots import cost_ingots
+from ironforgedbot.decorators.command_price import command_price
 from ironforgedbot.decorators.require_role import require_role
 
 logger = logging.getLogger(__name__)
 
 
-@cost_ingots(998)
+@command_price(998)
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
 async def cmd_rng_reset(interaction: discord.Interaction):

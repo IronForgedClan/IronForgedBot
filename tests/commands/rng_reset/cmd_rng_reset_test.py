@@ -11,8 +11,8 @@ from tests.helpers import (
 )
 
 
-def mock_cost_ingots(amount: int, ephemeral: bool = True):
-    """Mock cost_ingots decorator that just calls the wrapped function."""
+def mock_command_price(amount: int, ephemeral: bool = True):
+    """Mock command_price decorator that just calls the wrapped function."""
 
     def decorator(func):
         return func
@@ -21,7 +21,7 @@ def mock_cost_ingots(amount: int, ephemeral: bool = True):
 
 
 with patch("ironforgedbot.decorators.require_role.require_role", mock_require_role):
-    with patch("ironforgedbot.decorators.cost_ingots.cost_ingots", mock_cost_ingots):
+    with patch("ironforgedbot.decorators.command_price.command_price", mock_command_price):
         from ironforgedbot.commands.rng_reset.cmd_rng_reset import cmd_rng_reset
 
 

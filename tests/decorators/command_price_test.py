@@ -6,17 +6,17 @@ import discord
 from ironforgedbot.common.roles import ROLE
 
 
-class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
+class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
     @patch(
         "ironforgedbot.decorators.views.ingot_cost_confirmation_view.IngotCostConfirmationView"
     )
     @patch("ironforgedbot.common.responses.build_response_embed")
     @patch("ironforgedbot.common.helpers.find_emoji")
-    async def test_cost_ingots_shows_confirmation_embed(
+    async def test_command_price_shows_confirmation_embed(
         self, mock_find_emoji, mock_build_embed, mock_view_class
     ):
-        """Test that cost_ingots decorator shows confirmation embed."""
-        from ironforgedbot.decorators.cost_ingots import cost_ingots
+        """Test that command_price decorator shows confirmation embed."""
+        from ironforgedbot.decorators.command_price import command_price
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
@@ -24,7 +24,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         mock_view = Mock()
         mock_view_class.return_value = mock_view
 
-        @cost_ingots(100)
+        @command_price(100)
         async def test_command(interaction):
             pass
 
@@ -49,11 +49,11 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
     )
     @patch("ironforgedbot.common.responses.build_response_embed")
     @patch("ironforgedbot.common.helpers.find_emoji")
-    async def test_cost_ingots_with_non_ephemeral(
+    async def test_command_price_with_non_ephemeral(
         self, mock_find_emoji, mock_build_embed, mock_view_class
     ):
-        """Test that cost_ingots decorator respects ephemeral parameter."""
-        from ironforgedbot.decorators.cost_ingots import cost_ingots
+        """Test that command_price decorator respects ephemeral parameter."""
+        from ironforgedbot.decorators.command_price import command_price
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
@@ -61,7 +61,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         mock_view = Mock()
         mock_view_class.return_value = mock_view
 
-        @cost_ingots(100, ephemeral=False)
+        @command_price(100, ephemeral=False)
         async def test_command(interaction):
             pass
 
@@ -79,11 +79,11 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
     )
     @patch("ironforgedbot.common.responses.build_response_embed")
     @patch("ironforgedbot.common.helpers.find_emoji")
-    async def test_cost_ingots_creates_view_with_correct_parameters(
+    async def test_command_price_creates_view_with_correct_parameters(
         self, mock_find_emoji, mock_build_embed, mock_view_class
     ):
-        """Test that cost_ingots creates IngotCostConfirmationView with correct parameters."""
-        from ironforgedbot.decorators.cost_ingots import cost_ingots
+        """Test that command_price creates IngotCostConfirmationView with correct parameters."""
+        from ironforgedbot.decorators.command_price import command_price
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
@@ -91,7 +91,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         mock_view = Mock()
         mock_view_class.return_value = mock_view
 
-        @cost_ingots(250)
+        @command_price(250)
         async def my_expensive_command(interaction):
             pass
 
@@ -106,11 +106,11 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_kwargs["original_args"], (mock_interaction,))
         self.assertEqual(call_kwargs["original_kwargs"], {})
 
-    async def test_cost_ingots_raises_error_for_non_interaction(self):
-        """Test that cost_ingots raises error if first argument is not an Interaction."""
-        from ironforgedbot.decorators.cost_ingots import cost_ingots
+    async def test_command_price_raises_error_for_non_interaction(self):
+        """Test that command_price raises error if first argument is not an Interaction."""
+        from ironforgedbot.decorators.command_price import command_price
 
-        @cost_ingots(100)
+        @command_price(100)
         async def test_command(interaction):
             pass
 

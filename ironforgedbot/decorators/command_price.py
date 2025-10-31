@@ -3,7 +3,7 @@ import functools
 import discord
 
 
-def cost_ingots(amount: int, ephemeral: bool = True):
+def command_price(amount: int, ephemeral: bool = True):
     """Charges ingots before executing command. Shows confirmation prompt.
 
     This decorator works alongside @require_role by passing the button interaction down the chain.
@@ -13,7 +13,7 @@ def cost_ingots(amount: int, ephemeral: bool = True):
         ephemeral: Whether confirmation prompt is ephemeral (default: True)
 
     Usage:
-        @cost_ingots(100)
+        @command_price(100)
         @require_role(ROLE.MEMBER)
         @log_command_execution(logger)
         async def cmd_rng_reset(interaction):
