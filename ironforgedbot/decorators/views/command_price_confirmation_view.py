@@ -11,7 +11,7 @@ from ironforgedbot.services.ingot_service import IngotService
 logger = logging.getLogger(__name__)
 
 
-class IngotCostConfirmationView(View):
+class CommandPriceConfirmationView(View):
     def __init__(
         self,
         cost: int,
@@ -19,6 +19,7 @@ class IngotCostConfirmationView(View):
         original_args: tuple,
         original_kwargs: dict,
         command_name: str,
+        user_id: int,
     ):
         super().__init__(timeout=60)
         self.cost = cost
@@ -27,6 +28,8 @@ class IngotCostConfirmationView(View):
         self.original_kwargs = original_kwargs
         self.command_name = command_name
         self.original_interaction = original_args[0]
+        self.user_id = user_id
+        self.confirmation_message = None
 
         confirm_button = Button(
             label="Confirm", style=discord.ButtonStyle.green, custom_id="confirm"
@@ -41,8 +44,13 @@ class IngotCostConfirmationView(View):
         self.add_item(cancel_button)
 
     async def on_confirm(self, button_interaction: discord.Interaction):
+        if button_interaction.user.id != self.user_id:
+            await button_interaction.response.send_message(
+                "This confirmation is not for you.", ephemeral=True
+            )
+            return
+
         self.stop()
-        await button_interaction.response.defer(ephemeral=True)
 
         async with db.get_session() as session:
             ingot_service = IngotService(session)
@@ -58,36 +66,33 @@ class IngotCostConfirmationView(View):
         ingot_icon = find_emoji("Ingot")
 
         if not result.status:
+            await button_interaction.response.defer(ephemeral=True)
             error_embed = build_response_embed(
                 title="❌ Insufficient Ingots",
                 description=f"You need {ingot_icon} **{self.cost:,}** but only have {ingot_icon} **{result.new_total:,}**",
                 color=discord.Colour.red(),
             )
-            await self.original_interaction.edit_original_response(
-                embed=error_embed, view=self
+            await self.confirmation_message.edit(embed=error_embed, view=self)
+            return
+
+        await button_interaction.response.defer(ephemeral=True)
+        await self.confirmation_message.delete()
+
+        await self.wrapped_function(*self.original_args, **self.original_kwargs)
+
+    async def on_cancel(self, button_interaction: discord.Interaction):
+        if button_interaction.user.id != self.user_id:
+            await button_interaction.response.send_message(
+                "This confirmation is not for you.", ephemeral=True
             )
             return
 
-        success_embed = build_response_embed(
-            title="💳 Payment Confirmed",
-            description="",
-            color=discord.Colour.gold(),
-        )
-        success_embed.add_field(name="Charged", value=f"{ingot_icon} {self.cost:,}")
-        success_embed.add_field(
-            name="New Balance", value=f"{ingot_icon} {result.new_total:,}"
-        )
-        await self.original_interaction.edit_original_response(
-            embed=success_embed, view=self
-        )
-
-        new_args = (button_interaction,) + self.original_args[1:]
-        await self.wrapped_function(*new_args, **self.original_kwargs)
-
-    async def on_cancel(self, button_interaction: discord.Interaction):
         self.stop()
         await button_interaction.response.defer(ephemeral=True)
+
+        await self.confirmation_message.delete()
         await self.original_interaction.delete_original_response()
 
     async def on_timeout(self):
+        await self.confirmation_message.delete()
         await self.original_interaction.delete_original_response()

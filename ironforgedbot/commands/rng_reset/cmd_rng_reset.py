@@ -13,8 +13,8 @@ from ironforgedbot.decorators.require_role import require_role
 logger = logging.getLogger(__name__)
 
 
-@command_price(499)
 @require_role(ROLE.MEMBER)
+@command_price(999)
 @log_command_execution(logger)
 async def cmd_rng_reset(interaction: discord.Interaction):
     """Reset your RNG with a 50/50 success rate.

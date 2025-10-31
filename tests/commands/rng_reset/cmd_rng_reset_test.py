@@ -11,7 +11,7 @@ from tests.helpers import (
 )
 
 
-def mock_command_price(amount: int, ephemeral: bool = True):
+def mock_command_price(amount: int):
     """Mock command_price decorator that just calls the wrapped function."""
 
     def decorator(func):
