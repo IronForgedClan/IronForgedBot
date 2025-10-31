@@ -30,7 +30,7 @@ from ironforgedbot.common.responses import (
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import text_bold, text_italic
-from ironforgedbot.decorators.decorators import require_role
+from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.http import HTTP, HttpException
 from ironforgedbot.services.score_service import (
     HiscoresError,

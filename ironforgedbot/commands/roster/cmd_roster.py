@@ -13,7 +13,7 @@ from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role
 from ironforgedbot.database.database import db
-from ironforgedbot.decorators.decorators import require_role
+from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.http import HTTP
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import MemberService

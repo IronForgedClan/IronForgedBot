@@ -1,4 +1,4 @@
-.PHONY: up down test format shell migrate revision downgrade update-deps clean
+.PHONY: up down test format shell migrate revision downgrade update-deps update-data clean
 
 up:
 	docker compose up
@@ -27,6 +27,10 @@ downgrade:
 update-deps:
 	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
 	docker compose build bot
+
+update-data:
+	git submodule update --remote data
+	@echo "Data submodule updated to latest commit"
 
 clean:
 	@echo "Stopping containers..."

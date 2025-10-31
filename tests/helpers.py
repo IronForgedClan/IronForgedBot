@@ -40,6 +40,9 @@ def create_mock_discord_interaction(
     interaction.response.defer = AsyncMock()
     interaction.response.send_message = AsyncMock()
     interaction.response.edit_message = AsyncMock()
+    interaction.response.is_done = Mock(
+        return_value=False
+    )  # Not async, returns False by default
     interaction.guild = create_mock_discord_guild(members_list)
     interaction.user = user
     interaction.data = data
@@ -57,6 +60,11 @@ def create_mock_discord_interaction(
         interaction.channel_id = next(_id_counter)
         interaction.channel = Mock()
         interaction.channel.id = interaction.channel_id
+
+    # Mock created_at with timestamp method for backrooms tests
+    created_at_mock = Mock()
+    created_at_mock.timestamp = Mock(return_value=1600000000.0)
+    interaction.created_at = created_at_mock
 
     return interaction
 
@@ -458,3 +466,99 @@ def create_test_score_breakdown(skills_count=2, activities_count=2):
         bosses.append(boss)
 
     return ScoreBreakdown(skills=skills, clues=clues, raids=raids, bosses=bosses)
+
+
+# Trick-or-Treat Test Helpers
+
+MOCK_TRICK_OR_TREAT_DATA = """
+{
+    "general": {
+        "positive_messages": ["Test positive {ingots}"],
+        "negative_messages": ["Test negative {ingots}"],
+        "no_ingots_message": "No ingots test message"
+    },
+    "jackpot": {
+        "success_prefix": "Jackpot {mention} {ingot_icon}{amount:,}",
+        "claimed_message": "Already claimed"
+    },
+    "remove_all_trick": {
+        "message": "Removed {ingot_icon}-{amount:,}"
+    },
+    "double_or_nothing": {
+        "offer": "Double or nothing {ingot_icon}{amount:,} expires {expires}",
+        "win": "You won {ingot_icon}{total_amount:,}",
+        "lose": "You lost {ingot_icon}{amount}",
+        "keep": "You kept {ingot_icon}{amount:,}",
+        "expired": "Expired {ingot_icon}{amount:,}"
+    },
+    "steal": {
+        "offer": "Steal {ingot_icon}{amount:,} penalty {ingot_icon}{penalty:,} expires {expires}",
+        "success": "Success {ingot_icon}{amount:,} from {target_mention}",
+        "failure": "Failed {ingot_icon}{amount:,} {target_mention} penalty {ingot_icon}{penalty}",
+        "walk_away": "Walked away",
+        "expired": "Time's up",
+        "no_targets": "No targets",
+        "target_no_ingots": "{target_mention} has no ingots",
+        "user_no_ingots": "Need {ingot_icon}{penalty:,}"
+    },
+    "backrooms": {
+        "intro": "Backrooms test intro {expires}",
+        "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
+        "treasure_messages": ["Test treasure {ingots}"],
+        "monster_messages": ["Test monster {ingots}"],
+        "escape_messages": ["Test escape"],
+        "lucky_escape_messages": ["Test lucky escape"],
+        "opening_door": "Opening {door}",
+        "suspense_thumbnail": "http://test.com/door-opening.gif",
+        "expired": "Test expired",
+        "thumbnails": ["http://test.com/backrooms.png"]
+    },
+    "joke": {
+        "messages": ["Test joke"]
+    },
+    "quiz_master": {
+        "intro": "Quiz Master test intro {expires}",
+        "questions": [
+            {
+                "question": "Test question?",
+                "options": [
+                    {"text": "A", "emoji": "Ingot"},
+                    {"text": "B"},
+                    {"text": "C", "emoji": "Attack"},
+                    {"text": "D"}
+                ],
+                "correct_index": 2
+            }
+        ],
+        "correct_message": "Correct {ingot_icon}{amount:,}",
+        "wrong_lucky_message": "Wrong but lucky",
+        "wrong_penalty_message": "Wrong penalty {ingot_icon}{penalty}",
+        "expired_message": "Expired"
+    },
+    "media": {
+        "gifs": [],
+        "thumbnails": ["http://test.com/img.png"]
+    }
+}
+"""
+
+
+def create_test_trick_or_treat_handler():
+    """Create a TrickOrTreatHandler instance with mocked data.
+
+    Returns:
+        A TrickOrTreatHandler instance with MOCK_TRICK_OR_TREAT_DATA loaded.
+    """
+    import unittest.mock
+    from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
+        TrickOrTreatHandler,
+    )
+
+    with unittest.mock.patch(
+        "builtins.open", unittest.mock.mock_open(read_data=MOCK_TRICK_OR_TREAT_DATA)
+    ):
+        handler = TrickOrTreatHandler()
+        handler.ingot_icon = (
+            "🪙"  # Mock ingot_icon as string to avoid AsyncMock formatting issues
+        )
+        return handler

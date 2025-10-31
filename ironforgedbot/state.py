@@ -15,6 +15,7 @@ class BotStateDict(TypedDict):
     is_shutting_down: bool
     rate_limit: dict
     trick_or_treat_jackpot_claimed: bool
+    double_or_nothing_offers: dict
     raffle_on: bool
     raffle_price: int
 
@@ -33,6 +34,7 @@ class BotState:
             "is_shutting_down": False,
             "rate_limit": dict(),
             "trick_or_treat_jackpot_claimed": False,
+            "double_or_nothing_offers": dict(),
             "raffle_on": False,
             "raffle_price": 5_000,
         }

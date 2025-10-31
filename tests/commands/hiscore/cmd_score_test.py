@@ -15,7 +15,7 @@ from tests.helpers import (
     mock_require_role,
 )
 
-with patch("ironforgedbot.decorators.decorators.require_role", mock_require_role):
+with patch("ironforgedbot.decorators.require_role.require_role", mock_require_role):
     with patch("ironforgedbot.common.helpers.find_emoji", return_value="<:emoji:123>"):
         from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 

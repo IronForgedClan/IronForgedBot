@@ -13,7 +13,7 @@ from ironforgedbot.common.responses import (
 )
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.database.database import db
-from ironforgedbot.decorators.decorators import require_role
+from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)

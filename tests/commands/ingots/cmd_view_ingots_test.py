@@ -15,7 +15,7 @@ from tests.helpers import (
     mock_require_role,
 )
 
-with patch("ironforgedbot.decorators.decorators.require_role", mock_require_role):
+with patch("ironforgedbot.decorators.require_role.require_role", mock_require_role):
     from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 
 
