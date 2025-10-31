@@ -16,7 +16,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         self, mock_find_emoji, mock_build_embed, mock_view_class
     ):
         """Test that cost_ingots decorator shows confirmation embed."""
-        from ironforgedbot.decorators.decorators import cost_ingots
+        from ironforgedbot.decorators.cost_ingots import cost_ingots
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
@@ -53,7 +53,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         self, mock_find_emoji, mock_build_embed, mock_view_class
     ):
         """Test that cost_ingots decorator respects ephemeral parameter."""
-        from ironforgedbot.decorators.decorators import cost_ingots
+        from ironforgedbot.decorators.cost_ingots import cost_ingots
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
@@ -83,7 +83,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
         self, mock_find_emoji, mock_build_embed, mock_view_class
     ):
         """Test that cost_ingots creates IngotCostConfirmationView with correct parameters."""
-        from ironforgedbot.decorators.decorators import cost_ingots
+        from ironforgedbot.decorators.cost_ingots import cost_ingots
 
         mock_find_emoji.return_value = "<:Ingot:123>"
         mock_embed = Mock()
@@ -108,7 +108,7 @@ class TestCostIngotsDecorator(unittest.IsolatedAsyncioTestCase):
 
     async def test_cost_ingots_raises_error_for_non_interaction(self):
         """Test that cost_ingots raises error if first argument is not an Interaction."""
-        from ironforgedbot.decorators.decorators import cost_ingots
+        from ironforgedbot.decorators.cost_ingots import cost_ingots
 
         @cost_ingots(100)
         async def test_command(interaction):

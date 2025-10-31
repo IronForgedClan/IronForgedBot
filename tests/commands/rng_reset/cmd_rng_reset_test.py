@@ -20,8 +20,8 @@ def mock_cost_ingots(amount: int, ephemeral: bool = True):
     return decorator
 
 
-with patch("ironforgedbot.decorators.decorators.require_role", mock_require_role):
-    with patch("ironforgedbot.decorators.decorators.cost_ingots", mock_cost_ingots):
+with patch("ironforgedbot.decorators.require_role.require_role", mock_require_role):
+    with patch("ironforgedbot.decorators.cost_ingots.cost_ingots", mock_cost_ingots):
         from ironforgedbot.commands.rng_reset.cmd_rng_reset import cmd_rng_reset
 
 
