@@ -1,6 +1,7 @@
 services:
     db:
         image: mariadb:latest
+        container_name: ironforged_db
         restart: unless-stopped
         environment:
             MARIADB_ROOT_PASSWORD: ${DB_ROOT}
