@@ -2,6 +2,9 @@ import functools
 
 import discord
 
+from ironforgedbot.database.database import db
+from ironforgedbot.services.member_service import MemberService
+
 
 def command_price(amount: int):
     """Charges ingots before executing command. Shows confirmation prompt.
@@ -41,6 +44,12 @@ def command_price(amount: int):
                     f"Expected discord.Interaction as first argument ({func.__name__})"
                 )
 
+            # Fetch user's current ingot balance
+            async with db.get_session() as session:
+                member_service = MemberService(session)
+                member = await member_service.get_member_by_discord_id(interaction.user.id)
+                current_balance = member.ingots if member else 0
+
             ingot_icon = find_emoji("Ingot")
             embed = build_response_embed(
                 title=f"{ingot_icon} Command Price",
@@ -49,6 +58,11 @@ def command_price(amount: int):
             )
             embed.set_thumbnail(
                 url="https://oldschool.runescape.wiki/images/thumb/Shop_keeper_%28Lumbridge%29.png/114px-Shop_keeper_%28Lumbridge%29.png"
+            )
+            embed.add_field(
+                name="Your Balance",
+                value=f"{ingot_icon} {current_balance:,}",
+                inline=True
             )
 
             view = CommandPriceConfirmationView(
