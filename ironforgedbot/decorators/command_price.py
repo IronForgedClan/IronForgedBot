@@ -47,6 +47,9 @@ def command_price(amount: int):
                 description=f"This command costs {ingot_icon} **{amount:,}** ingots to use.\n\nDo you want to continue?",
                 color=discord.Colour.gold(),
             )
+            embed.set_thumbnail(
+                url="https://oldschool.runescape.wiki/images/thumb/Shop_keeper_%28Lumbridge%29.png/114px-Shop_keeper_%28Lumbridge%29.png"
+            )
 
             view = CommandPriceConfirmationView(
                 cost=amount,
