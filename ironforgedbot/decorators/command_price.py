@@ -1,9 +1,53 @@
 import functools
+import json
+import logging
+import random
+import time
 
 import discord
 
 from ironforgedbot.database.database import db
 from ironforgedbot.services.member_service import MemberService
+
+logger = logging.getLogger(__name__)
+COMMAND_PRICE_DATA_FILE = "data/command_price.json"
+
+
+def _load_flavor_text(file_path: str = COMMAND_PRICE_DATA_FILE) -> list[str]:
+    """Load and parse the command price flavor text JSON file.
+
+    Args:
+        file_path: Path to the JSON file. Defaults to COMMAND_PRICE_DATA_FILE.
+
+    Returns:
+        List of flavor text strings.
+
+    Raises:
+        FileNotFoundError: If the data file doesn't exist.
+        ValueError: If the JSON syntax is invalid.
+        KeyError: If the required 'flavor_text' key is missing.
+        RuntimeError: For unexpected errors during loading.
+    """
+    try:
+        with open(file_path) as f:
+            data = json.load(f)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"Command price data file not found: {e.filename}. "
+            f"Expected file at: {file_path}"
+        ) from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON syntax in command price data file: {e}") from e
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error loading command price data: {e}") from e
+
+    if "flavor_text" not in data:
+        raise KeyError(f"Missing required key 'flavor_text' in data file: {file_path}")
+
+    return data["flavor_text"]
+
+
+FLAVOR_TEXT_OPTIONS = _load_flavor_text()
 
 
 def command_price(amount: int):
@@ -44,25 +88,46 @@ def command_price(amount: int):
                     f"Expected discord.Interaction as first argument ({func.__name__})"
                 )
 
-            # Fetch user's current ingot balance
             async with db.get_session() as session:
                 member_service = MemberService(session)
-                member = await member_service.get_member_by_discord_id(interaction.user.id)
+                member = await member_service.get_member_by_discord_id(
+                    interaction.user.id
+                )
                 current_balance = member.ingots if member else 0
 
             ingot_icon = find_emoji("Ingot")
+
+            expire_timestamp = int(time.time() + 30)
+            expires_formatted = f"<t:{expire_timestamp}:R>"
+
+            try:
+                flavor_text = f"*{random.choice(FLAVOR_TEXT_OPTIONS)}*\n"
+            except Exception as e:
+                logger.error(e)
+                flavor_text = ""
+
             embed = build_response_embed(
-                title=f"{ingot_icon} Command Price",
-                description=f"This command costs {ingot_icon} **{amount:,}** ingots to use.\n\nDo you want to continue?",
+                title="💰 Command Price",
+                description=flavor_text,
                 color=discord.Colour.gold(),
             )
             embed.set_thumbnail(
-                url="https://oldschool.runescape.wiki/images/thumb/Shop_keeper_%28Lumbridge%29.png/114px-Shop_keeper_%28Lumbridge%29.png"
+                url="https://oldschool.runescape.wiki/images/thumb/Coins_detail.png/120px-Coins_detail.png"
             )
             embed.add_field(
                 name="Your Balance",
                 value=f"{ingot_icon} {current_balance:,}",
-                inline=True
+                inline=True,
+            )
+            embed.add_field(
+                name="Price",
+                value=f"{ingot_icon} {amount:,}",
+                inline=True,
+            )
+            embed.add_field(
+                name="",
+                value=f"-# This interaction expires {expires_formatted}.",
+                inline=False,
             )
 
             view = CommandPriceConfirmationView(

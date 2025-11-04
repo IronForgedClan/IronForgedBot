@@ -21,7 +21,7 @@ class CommandPriceConfirmationView(View):
         command_name: str,
         user_id: int,
     ):
-        super().__init__(timeout=60)
+        super().__init__(timeout=30)
         self.cost = cost
         self.wrapped_function = wrapped_function
         self.original_args = original_args
@@ -32,7 +32,7 @@ class CommandPriceConfirmationView(View):
         self.confirmation_message = None
 
         confirm_button = Button(
-            label="Confirm", style=discord.ButtonStyle.green, custom_id="confirm"
+            label="Pay", style=discord.ButtonStyle.green, custom_id="confirm"
         )
         confirm_button.callback = self.on_confirm
         self.add_item(confirm_button)
