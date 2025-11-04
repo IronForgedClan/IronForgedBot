@@ -66,9 +66,9 @@ def command_price(amount: int):
 
     Usage:
         @require_role(ROLE.MEMBER)
-        @command_price(100)
+        @command_price(199)
         @log_command_execution(logger)
-        async def cmd_rng_reset(interaction):
+        async def cmd_do_something(interaction):
             # interaction is the original interaction from the command invocation
             ...
     """
