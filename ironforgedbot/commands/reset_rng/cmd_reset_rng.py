@@ -34,11 +34,9 @@ async def cmd_reset_rng(interaction: discord.Interaction):
     )
     dice_embed.set_image(url=dice_image_url)
 
-    dice_message = await interaction.followup.send(embed=dice_embed)
+    message = await interaction.followup.send(embed=dice_embed)
 
     await asyncio.sleep(5)
-
-    await dice_message.delete()
 
     if is_lucky:
         result_embed = build_response_embed(
@@ -59,4 +57,4 @@ async def cmd_reset_rng(interaction: discord.Interaction):
             url="https://oldschool.runescape.wiki/images/thumb/Skull.png/130px-Skull.png"
         )
 
-    await interaction.followup.send(embed=result_embed)
+    await message.edit(embed=result_embed)
