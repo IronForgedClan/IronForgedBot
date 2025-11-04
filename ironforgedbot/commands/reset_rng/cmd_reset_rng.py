@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @require_role(ROLE.MEMBER)
 @command_price(999)
 @log_command_execution(logger)
-async def cmd_rng_reset(interaction: discord.Interaction):
+async def cmd_reset_rng(interaction: discord.Interaction):
     """Reset your RNG with a 50/50 success rate.
 
     Arguments:

@@ -22,19 +22,19 @@ def mock_command_price(amount: int):
 
 with patch("ironforgedbot.decorators.require_role.require_role", mock_require_role):
     with patch("ironforgedbot.decorators.command_price.command_price", mock_command_price):
-        from ironforgedbot.commands.rng_reset.cmd_rng_reset import cmd_rng_reset
+        from ironforgedbot.commands.reset_rng.cmd_reset_rng import cmd_reset_rng
 
 
-class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
+class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         test_member = create_test_member("TestPlayer", [ROLE.MEMBER], "TestPlayer")
         self.mock_interaction = create_mock_discord_interaction(user=test_member)
 
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_success(
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.asyncio.sleep")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.random.random")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.discord.Embed")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.build_response_embed")
+    async def test_cmd_reset_rng_success(
         self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
     ):
         mock_random.return_value = 0.3
@@ -56,7 +56,7 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
             Mock(),
         ]
 
-        await cmd_rng_reset(self.mock_interaction)
+        await cmd_reset_rng(self.mock_interaction)
 
         # Verify dice embed created with correct description and color
         mock_discord_embed.assert_called_once_with(
@@ -85,11 +85,11 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_interaction.followup.send.assert_any_call(embed=result_embed)
 
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_failure(
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.asyncio.sleep")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.random.random")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.discord.Embed")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.build_response_embed")
+    async def test_cmd_reset_rng_failure(
         self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
     ):
         mock_random.return_value = 0.7
@@ -111,7 +111,7 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
             Mock(),
         ]
 
-        await cmd_rng_reset(self.mock_interaction)
+        await cmd_reset_rng(self.mock_interaction)
 
         # Verify dice embed created with correct description and color
         mock_discord_embed.assert_called_once_with(
@@ -140,11 +140,11 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_interaction.followup.send.assert_any_call(embed=result_embed)
 
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_boundary_success(
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.asyncio.sleep")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.random.random")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.discord.Embed")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.build_response_embed")
+    async def test_cmd_reset_rng_boundary_success(
         self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
     ):
         mock_random.return_value = 0.49999
@@ -166,7 +166,7 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
             Mock(),
         ]
 
-        await cmd_rng_reset(self.mock_interaction)
+        await cmd_reset_rng(self.mock_interaction)
 
         # Verify dice embed created with correct description and color
         mock_discord_embed.assert_called_once_with(
@@ -191,11 +191,11 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
             color=discord.Colour.green(),
         )
 
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.asyncio.sleep")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.random.random")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.discord.Embed")
-    @patch("ironforgedbot.commands.rng_reset.cmd_rng_reset.build_response_embed")
-    async def test_cmd_rng_reset_boundary_failure(
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.asyncio.sleep")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.random.random")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.discord.Embed")
+    @patch("ironforgedbot.commands.reset_rng.cmd_reset_rng.build_response_embed")
+    async def test_cmd_reset_rng_boundary_failure(
         self, mock_build_embed, mock_discord_embed, mock_random, mock_sleep
     ):
         mock_random.return_value = 0.5
@@ -217,7 +217,7 @@ class TestCmdRngReset(unittest.IsolatedAsyncioTestCase):
             Mock(),
         ]
 
-        await cmd_rng_reset(self.mock_interaction)
+        await cmd_reset_rng(self.mock_interaction)
 
         # Verify dice embed created with correct description and color
         mock_discord_embed.assert_called_once_with(
