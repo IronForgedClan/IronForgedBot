@@ -3,11 +3,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLE
-
 
 class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
-    @patch("ironforgedbot.decorators.command_price.random.choice")
+    @patch("ironforgedbot.decorators.command_price._load_flavor_text")
     @patch("ironforgedbot.decorators.command_price.time.time")
     @patch("ironforgedbot.decorators.command_price.db.get_session")
     @patch(
@@ -22,22 +20,21 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
         mock_view_class,
         mock_get_session,
         mock_time,
-        mock_random_choice,
+        mock_load_flavor_text,
     ):
         """Test that command_price decorator shows confirmation embed via channel.send."""
         from ironforgedbot.decorators.command_price import command_price
 
-        # Mock flavor text selection
-        mock_random_choice.return_value = "Test flavor text"
+        mock_load_flavor_text.return_value = ["Test flavor text"]
 
-        # Mock time for expiration
         mock_time.return_value = 1000.0
 
-        # Mock database session and member
         mock_member = Mock()
         mock_member.ingots = 500
         mock_member_service = Mock()
-        mock_member_service.get_member_by_discord_id = AsyncMock(return_value=mock_member)
+        mock_member_service.get_member_by_discord_id = AsyncMock(
+            return_value=mock_member
+        )
 
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -70,7 +67,9 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction = AsyncMock(spec=discord.Interaction)
         mock_interaction.user = mock_user
         mock_interaction.channel = mock_channel
-        mock_interaction.original_response = AsyncMock(return_value=mock_original_message)
+        mock_interaction.original_response = AsyncMock(
+            return_value=mock_original_message
+        )
 
         with patch(
             "ironforgedbot.decorators.command_price.MemberService",
@@ -87,7 +86,6 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
         mock_embed.set_thumbnail.assert_called_once_with(
             url="https://oldschool.runescape.wiki/images/thumb/Coins_detail.png/120px-Coins_detail.png"
         )
-        # Verify the fields were added
         self.assertEqual(mock_embed.add_field.call_count, 3)
         mock_interaction.original_response.assert_called_once()
         mock_channel.send.assert_called_once_with(
@@ -97,7 +95,7 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
             reference=mock_original_message,
         )
 
-    @patch("ironforgedbot.decorators.command_price.random.choice")
+    @patch("ironforgedbot.decorators.command_price._load_flavor_text")
     @patch("ironforgedbot.decorators.command_price.time.time")
     @patch("ironforgedbot.decorators.command_price.db.get_session")
     @patch(
@@ -112,22 +110,21 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
         mock_view_class,
         mock_get_session,
         mock_time,
-        mock_random_choice,
+        mock_load_flavor_text,
     ):
         """Test that command_price creates CommandPriceConfirmationView with correct parameters."""
         from ironforgedbot.decorators.command_price import command_price
 
-        # Mock flavor text selection
-        mock_random_choice.return_value = "Test flavor text"
+        mock_load_flavor_text.return_value = ["Test flavor text"]
 
-        # Mock time for expiration
         mock_time.return_value = 1000.0
 
-        # Mock database session and member
         mock_member = Mock()
         mock_member.ingots = 500
         mock_member_service = Mock()
-        mock_member_service.get_member_by_discord_id = AsyncMock(return_value=mock_member)
+        mock_member_service.get_member_by_discord_id = AsyncMock(
+            return_value=mock_member
+        )
 
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -160,7 +157,9 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
         mock_interaction = AsyncMock(spec=discord.Interaction)
         mock_interaction.user = mock_user
         mock_interaction.channel = mock_channel
-        mock_interaction.original_response = AsyncMock(return_value=mock_original_message)
+        mock_interaction.original_response = AsyncMock(
+            return_value=mock_original_message
+        )
 
         with patch(
             "ironforgedbot.decorators.command_price.MemberService",
