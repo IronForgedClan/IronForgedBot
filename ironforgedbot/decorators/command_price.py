@@ -47,9 +47,6 @@ def _load_flavor_text(file_path: str = COMMAND_PRICE_DATA_FILE) -> list[str]:
     return data["flavor_text"]
 
 
-FLAVOR_TEXT_OPTIONS = _load_flavor_text()
-
-
 def command_price(amount: int):
     """Charges ingots before executing command. Shows confirmation prompt.
 
@@ -101,7 +98,8 @@ def command_price(amount: int):
             expires_formatted = f"<t:{expire_timestamp}:R>"
 
             try:
-                flavor_text = f"*{random.choice(FLAVOR_TEXT_OPTIONS)}*\n"
+                flavor_text_options = _load_flavor_text()
+                flavor_text = f"*{random.choice(flavor_text_options)}*\n"
             except Exception as e:
                 logger.error(e)
                 flavor_text = ""
