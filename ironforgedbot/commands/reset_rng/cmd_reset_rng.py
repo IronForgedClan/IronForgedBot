@@ -1,16 +1,56 @@
 import asyncio
+import json
 import logging
 import random
 
 import discord
 
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.decorators.command_price import command_price
 from ironforgedbot.decorators.require_role import require_role
 
 logger = logging.getLogger(__name__)
+RESET_RNG_DATA_FILE = "data/reset_rng.json"
+
+
+def _load_reset_rng_data(file_path: str = RESET_RNG_DATA_FILE) -> dict:
+    """Load and parse the reset RNG messages JSON file.
+
+    Args:
+        file_path: Path to the JSON file. Defaults to RESET_RNG_DATA_FILE.
+
+    Returns:
+        Dictionary containing message data.
+
+    Raises:
+        FileNotFoundError: If the data file doesn't exist.
+        ValueError: If the JSON syntax is invalid.
+        KeyError: If required keys are missing.
+        RuntimeError: For unexpected errors during loading.
+    """
+    try:
+        with open(file_path) as f:
+            data = json.load(f)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            f"Reset RNG data file not found: {e.filename}. "
+            f"Expected file at: {file_path}"
+        ) from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON syntax in reset RNG data file: {e}") from e
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error loading reset RNG data: {e}") from e
+
+    required_keys = ["dice_rolling", "success", "failure", "dice_thumbnail_url"]
+    missing_keys = [key for key in required_keys if key not in data]
+    if missing_keys:
+        raise KeyError(
+            f"Missing required keys in data file: {missing_keys}. File: {file_path}"
+        )
+
+    return data
 
 
 @require_role(ROLE.MEMBER)
@@ -22,39 +62,38 @@ async def cmd_reset_rng(interaction: discord.Interaction):
     Arguments:
         interaction: Discord Interaction from CommandTree.
     """
+    try:
+        data = _load_reset_rng_data()
+    except Exception as e:
+        logger.error(f"Failed to load reset RNG data: {e}")
+        return await send_error_response(
+            interaction,
+            "An error occurred after payment was taken. Please contact staff for a refund, sorry!",
+        )
+
     is_lucky = random.random() < 0.5
 
-    dice_image_url = (
-        "https://oldschool.runescape.wiki/images/thumb/Dice_(6).png/245px-Dice_(6).png"
-    )
+    dice_message_data = random.choice(data["dice_rolling"])
 
-    dice_embed = discord.Embed(
-        description=f"### {interaction.user.mention} is rolling for an RNG reset...",
+    dice_embed = build_response_embed(
+        title=dice_message_data["title"],
+        description=dice_message_data["description"],
         color=discord.Colour.blurple(),
     )
-    dice_embed.set_image(url=dice_image_url)
+
+    dice_embed.set_thumbnail(url=data["dice_thumbnail_url"])
 
     message = await interaction.followup.send(embed=dice_embed)
 
-    await asyncio.sleep(5)
+    await asyncio.sleep(7)
 
-    if is_lucky:
-        result_embed = build_response_embed(
-            title="RNG Reset Successful!",
-            description="Your RNG has been restored. That pet is definitely dropping on your next kill. Probably.",
-            color=discord.Colour.green(),
-        )
-        result_embed.set_thumbnail(
-            url="https://oldschool.runescape.wiki/images/thumb/Reward_casket_%28master%29.png/150px-Reward_casket_%28master%29.png"
-        )
-    else:
-        result_embed = build_response_embed(
-            title="You rolled a 0!",
-            description="The RNG gods have denied your request. Enjoy staying dry for another 10,000 kills.",
-            color=discord.Colour.red(),
-        )
-        result_embed.set_thumbnail(
-            url="https://oldschool.runescape.wiki/images/thumb/Skull.png/130px-Skull.png"
-        )
+    result_data = random.choice(data["success"] if is_lucky else data["failure"])
+
+    result_embed = build_response_embed(
+        title=result_data["title"],
+        description=result_data["description"],
+        color=discord.Colour.green() if is_lucky else discord.Colour.red(),
+    )
+    result_embed.set_thumbnail(url=result_data["thumbnail_url"])
 
     await message.edit(embed=result_embed)
