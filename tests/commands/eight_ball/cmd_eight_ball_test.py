@@ -82,24 +82,18 @@ class TestCmdEightBall(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.assert_any_call(
             title="🎱 Test Loading Title",
             description="Test loading description",
-            color=discord.Colour.purple(),
+            color=discord.Colour.from_rgb(255, 255, 255),
         )
 
         mock_build_embed.assert_any_call(
             title="🎱 Test Response",
             description=f"*Test response desc*\n\n-# **{self.mock_interaction.user.display_name}** asked:\n-# _\"{test_question}\"_",
-            color=discord.Colour.purple(),
+            color=discord.Colour.from_rgb(0, 0, 0),
         )
 
         self.assertEqual(embed.set_thumbnail.call_count, 2)
         embed.set_thumbnail.assert_any_call(url="http://loading.gif")
         embed.set_thumbnail.assert_any_call(url="http://response.png")
-
-        # Only the loading embed has the add_field call now
-        self.assertEqual(embed.add_field.call_count, 1)
-        embed.add_field.assert_called_with(
-            name="Your Question", value=test_question, inline=False
-        )
 
         self.mock_interaction.followup.send.assert_called_once()
         mock_message.edit.assert_called_once_with(embed=embed)
@@ -133,7 +127,6 @@ class TestCmdEightBall(unittest.IsolatedAsyncioTestCase):
 
         embed = Mock()
         embed.set_thumbnail = Mock()
-        embed.add_field = Mock()
         mock_build_embed.return_value = embed
 
         mock_message = Mock()
@@ -145,8 +138,11 @@ class TestCmdEightBall(unittest.IsolatedAsyncioTestCase):
 
         await cmd_eight_ball(self.mock_interaction, test_question)
 
-        embed.add_field.assert_any_call(
-            name="Your Question", value=test_question, inline=False
+        # Verify the question is embedded in the result description
+        mock_build_embed.assert_any_call(
+            title="🎱 Yes, definitely.",
+            description=f"*The answer is clear!*\n\n-# **{self.mock_interaction.user.display_name}** asked:\n-# _\"{test_question}\"_",
+            color=discord.Colour.from_rgb(0, 0, 0),
         )
 
     @patch("ironforgedbot.commands.eight_ball.cmd_eight_ball._load_eight_ball_data")
@@ -225,14 +221,14 @@ class TestCmdEightBall(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.assert_any_call(
             title="🎱 Loading 2",
             description="Desc 2",
-            color=discord.Colour.purple(),
+            color=discord.Colour.from_rgb(255, 255, 255),
         )
 
         # Verify the third response was used
         mock_build_embed.assert_any_call(
             title="🎱 Response 3",
             description='*Desc 3*\n\n-# **TestPlayer** asked:\n-# _"Test question?"_',
-            color=discord.Colour.purple(),
+            color=discord.Colour.from_rgb(0, 0, 0),
         )
 
         embed.set_thumbnail.assert_any_call(url="http://r3.png")
