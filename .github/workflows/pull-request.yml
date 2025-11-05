@@ -12,9 +12,11 @@ on:
 jobs:
     unit-test:
         uses: ./.github/workflows/unit-test.yml
+        secrets: inherit
 
     formatting:
         uses: ./.github/workflows/formatting.yml
+        secrets: inherit
 
     version-check:
         runs-on: ubuntu-latest

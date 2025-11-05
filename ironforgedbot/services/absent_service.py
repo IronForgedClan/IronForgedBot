@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.logging_utils import log_database_operation
-from ironforgedbot.decorators import retry_on_exception
+from ironforgedbot.decorators.retry_on_exception import retry_on_exception
 from ironforgedbot.models.absent_member import AbsentMember
 from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.storage.sheets import Sheets

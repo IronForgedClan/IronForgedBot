@@ -10,12 +10,12 @@ from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators.require_role import require_role
 
 logger = logging.getLogger(__name__)
 
 
-@require_role(ROLE.LEADERSHIP, ephemeral=True)
+@require_role(ROLE.LEADERSHIP)
 @log_command_execution(logger)
 @app_commands.describe(
     role="Discord role name to get members list for (type to search)"
@@ -56,4 +56,5 @@ async def cmd_get_role_members(
             f"Found {text_bold(str(count))} members with the role '{text_bold(role)}'."
         ),
         file=discord_file,
+        ephemeral=True,
     )

@@ -16,7 +16,7 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.decorators import require_role
+from ironforgedbot.decorators.require_role import require_role
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ async def cmd_admin(interaction: discord.Interaction):
 
     menu = AdminMenuView(report_channel=report_channel)
     menu.message = await interaction.followup.send(
-        content="## 🤓 Administration Menu", view=menu
+        content="## 🤓 Administration Menu", view=menu, ephemeral=True
     )
 
 
