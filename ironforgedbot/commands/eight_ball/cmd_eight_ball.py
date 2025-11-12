@@ -94,10 +94,11 @@ async def cmd_eight_ball(interaction: discord.Interaction, question: str) -> Non
 
         response = random.choice(data["responses"])
 
-        # Truncate question if it would exceed Discord's 4096 character embed description limit
         MAX_DESCRIPTION_LENGTH = 4096
-        description_overhead = len(f"**{interaction.user.display_name}** asked:\n__")
-        max_question_length = MAX_DESCRIPTION_LENGTH - description_overhead - 3
+        description_title = f"**{interaction.user.display_name}** asked:"
+        max_question_length = (
+            MAX_DESCRIPTION_LENGTH - len(interaction.user.display_name) - 20
+        )
 
         if len(question) > max_question_length:
             truncated_question = question[:max_question_length] + "..."
@@ -106,7 +107,7 @@ async def cmd_eight_ball(interaction: discord.Interaction, question: str) -> Non
 
         result_embed = build_response_embed(
             title=f"🎱 {response['title']}",
-            description=f"**{interaction.user.display_name}** asked:\n_{truncated_question}_",
+            description=f'{description_title}\n_"{truncated_question}"_',
             color=discord.Colour.from_rgb(0, 0, 0),
         )
         result_embed.set_thumbnail(url=response["thumbnail_url"])
