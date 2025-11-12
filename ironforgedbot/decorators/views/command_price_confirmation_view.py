@@ -77,7 +77,8 @@ class CommandPriceConfirmationView(View):
                 description=f"This command costs {ingot_icon} **{self.cost:,}**.\n\n{you_have_string}",
                 color=discord.Colour.red(),
             )
-            await self.confirmation_message.edit(embed=error_embed, view=self)
+            await self.original_interaction.followup.send(embed=error_embed)
+            await self.confirmation_message.delete()
             return
 
         await button_interaction.response.defer(ephemeral=True)
