@@ -67,9 +67,14 @@ class CommandPriceConfirmationView(View):
 
         if not result.status:
             await button_interaction.response.defer(ephemeral=True)
+            you_have_string = (
+                f"And you only have {ingot_icon} **{result.new_total:,}**."
+                if result.new_total > 0
+                else "You're skint mate 🤷‍♂️"
+            )
             error_embed = build_response_embed(
-                title="❌ Insufficient Ingots",
-                description=f"You need {ingot_icon} **{self.cost:,}** but only have {ingot_icon} **{result.new_total:,}**",
+                title="❌ Insufficient Funds",
+                description=f"This command costs {ingot_icon} **{self.cost:,}**.\n\n{you_have_string}",
                 color=discord.Colour.red(),
             )
             await self.confirmation_message.edit(embed=error_embed, view=self)
