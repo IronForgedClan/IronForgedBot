@@ -48,16 +48,16 @@ class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
                 {
                     "title": "Test Success",
                     "description": "Test success desc",
-                    "thumbnail_url": "http://success.png",
                 }
             ],
             "failure": [
                 {
                     "title": "Test Failure",
                     "description": "Test failure desc",
-                    "thumbnail_url": "http://failure.png",
                 }
             ],
+            "success_thumbnail_urls": ["http://success.png"],
+            "failure_thumbnail_urls": ["http://failure.png"],
             "dice_thumbnail_url": "http://dice.gif",
         }
         mock_load_data.return_value = test_data
@@ -116,16 +116,16 @@ class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
                 {
                     "title": "Test Success",
                     "description": "Test success desc",
-                    "thumbnail_url": "http://success.png",
                 }
             ],
             "failure": [
                 {
                     "title": "Test Failure",
                     "description": "Test failure desc",
-                    "thumbnail_url": "http://failure.png",
                 }
             ],
+            "success_thumbnail_urls": ["http://success.png"],
+            "failure_thumbnail_urls": ["http://failure.png"],
             "dice_thumbnail_url": "http://dice.gif",
         }
         mock_load_data.return_value = test_data
@@ -182,16 +182,16 @@ class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
                 {
                     "title": "Success!",
                     "description": "You won!",
-                    "thumbnail_url": "http://success.png",
                 }
             ],
             "failure": [
                 {
                     "title": "Failure!",
                     "description": "You lost!",
-                    "thumbnail_url": "http://failure.png",
                 }
             ],
+            "success_thumbnail_urls": ["http://success.png"],
+            "failure_thumbnail_urls": ["http://failure.png"],
             "dice_thumbnail_url": "http://dice.gif",
         }
         mock_load_data.return_value = test_data
@@ -238,16 +238,16 @@ class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
                 {
                     "title": "Success!",
                     "description": "You won!",
-                    "thumbnail_url": "http://success.png",
                 }
             ],
             "failure": [
                 {
                     "title": "Failure!",
                     "description": "You lost!",
-                    "thumbnail_url": "http://failure.png",
                 }
             ],
+            "success_thumbnail_urls": ["http://success.png"],
+            "failure_thumbnail_urls": ["http://failure.png"],
             "dice_thumbnail_url": "http://dice.gif",
         }
         mock_load_data.return_value = test_data

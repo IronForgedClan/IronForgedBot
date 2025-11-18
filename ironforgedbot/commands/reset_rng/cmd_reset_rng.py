@@ -43,7 +43,14 @@ def _load_reset_rng_data(file_path: str = RESET_RNG_DATA_FILE) -> dict:
     except Exception as e:
         raise RuntimeError(f"Unexpected error loading reset RNG data: {e}") from e
 
-    required_keys = ["dice_rolling", "success", "failure", "dice_thumbnail_url"]
+    required_keys = [
+        "dice_rolling",
+        "success",
+        "failure",
+        "success_thumbnail_urls",
+        "failure_thumbnail_urls",
+        "dice_thumbnail_url",
+    ]
     missing_keys = [key for key in required_keys if key not in data]
     if missing_keys:
         raise KeyError(
@@ -78,7 +85,7 @@ async def cmd_reset_rng(interaction: discord.Interaction):
     dice_embed = build_response_embed(
         title=dice_message_data["title"],
         description=dice_message_data["description"],
-        color=discord.Colour.blurple(),
+        color=discord.Colour.from_rgb(255, 255, 255),
     )
 
     dice_embed.set_thumbnail(url=data["dice_thumbnail_url"])
@@ -88,12 +95,15 @@ async def cmd_reset_rng(interaction: discord.Interaction):
     await asyncio.sleep(7)
 
     result_data = random.choice(data["success"] if is_lucky else data["failure"])
+    thumbnail_url = random.choice(
+        data["success_thumbnail_urls"] if is_lucky else data["failure_thumbnail_urls"]
+    )
 
     result_embed = build_response_embed(
         title=result_data["title"],
         description=result_data["description"],
         color=discord.Colour.green() if is_lucky else discord.Colour.red(),
     )
-    result_embed.set_thumbnail(url=result_data["thumbnail_url"])
+    result_embed.set_thumbnail(url=thumbnail_url)
 
     await message.edit(embed=result_embed)
