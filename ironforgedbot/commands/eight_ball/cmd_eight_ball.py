@@ -7,6 +7,7 @@ from typing import Any
 
 import discord
 
+from ironforgedbot.common.constants import MAX_EMBED_DESCRIPTION_LENGTH
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
@@ -94,11 +95,16 @@ async def cmd_eight_ball(interaction: discord.Interaction, question: str) -> Non
 
         response = random.choice(data["responses"])
 
-        MAX_DESCRIPTION_LENGTH = 4096
-        description_title = f"**{interaction.user.display_name}** asked:"
-        max_question_length = (
-            MAX_DESCRIPTION_LENGTH - len(interaction.user.display_name) - 20
+        display_name = interaction.user.display_name
+        eight_ball_response = response["title"]
+
+        format_overhead = (
+            len(display_name)
+            + len("### asked:\n")
+            + len("\n### 8-ball answered:\n")
+            + len(eight_ball_response)
         )
+        max_question_length = MAX_EMBED_DESCRIPTION_LENGTH - format_overhead - 10
 
         if len(question) > max_question_length:
             truncated_question = question[:max_question_length] + "..."
@@ -106,8 +112,8 @@ async def cmd_eight_ball(interaction: discord.Interaction, question: str) -> Non
             truncated_question = question
 
         result_embed = build_response_embed(
-            title=f"🎱 {response['title']}",
-            description=f'{description_title}\n_"{truncated_question}"_',
+            title="",
+            description=f"### {display_name} asked:\n{truncated_question}\n### 🎱 8-ball answered:\n{eight_ball_response}",
             color=discord.Colour.from_rgb(0, 0, 0),
         )
         result_embed.set_thumbnail(url=response["thumbnail_url"])
