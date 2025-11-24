@@ -70,6 +70,7 @@ def _load_eight_ball_data(file_path: str = DATA_FILE) -> dict[str, Any]:
 @require_role(ROLE.MEMBER)
 @command_price(1999)
 @log_command_execution(logger)
+@discord.app_commands.describe(question="A yes or no question to ask the 8-ball.")
 async def cmd_eight_ball(interaction: discord.Interaction, question: str) -> None:
     """Ask the Magic 8-Ball a question and receive mystical wisdom.
 
