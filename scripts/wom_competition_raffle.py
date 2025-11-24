@@ -19,16 +19,16 @@ dotenv_path = os.path.join(project_root, ".env")
 load_dotenv(dotenv_path)
 
 
-async def run_raffle(competition_id: int, min_xp_per_ticket: int):
+async def run_raffle(competition_id: int, xp_per_ticket: int):
     """This script loads participants from a Wise Old Man competition, awards tickets
-    based on XP gained, and runs a raffle to select a winner.
+    based on XP gained and runs a raffle to select a winner.
 
     Args:
         competition_id: WOM competition ID
-        min_xp_per_ticket: Minimum XP required to earn one ticket
+        xp_per_ticket: XP required to earn one ticket
     """
     print(f"Loading competition data for competition ID: {competition_id}")
-    print(f"Minimum XP per ticket: {min_xp_per_ticket:,}\n")
+    print(f"XP per ticket: {xp_per_ticket:,}\n")
 
     async with WomService() as wom_service:
         try:
@@ -54,7 +54,7 @@ async def run_raffle(competition_id: int, min_xp_per_ticket: int):
             for participation in competition.participations:
                 player_name = participation.player.display_name
                 gained_xp = participation.progress.gained
-                tickets = gained_xp // min_xp_per_ticket if gained_xp > 0 else 0
+                tickets = gained_xp // xp_per_ticket if gained_xp > 0 else 0
 
                 if player_name not in participants:
                     participants[player_name] = {
@@ -73,8 +73,6 @@ async def run_raffle(competition_id: int, min_xp_per_ticket: int):
                 key=lambda x: (x["tickets"], x["xp"]),
                 reverse=True,
             )
-
-            print("RAFFLE PARTICIPANTS")
 
             table_data = [
                 [i + 1, p["player"], f"{p['xp']:,}", p["tickets"]]
@@ -153,18 +151,18 @@ def main():
         "competition_id", type=int, help="WOM competition ID to load participants from"
     )
     parser.add_argument(
-        "min_xp_per_ticket",
+        "xp_per_ticket",
         type=int,
-        help="Minimum XP required to earn one raffle ticket",
+        help="XP required to earn one raffle ticket",
     )
 
     args = parser.parse_args()
 
-    if args.min_xp_per_ticket <= 0:
-        print("Error: min_xp_per_ticket must be greater than 0")
+    if args.xp_per_ticket <= 0:
+        print("Error: xp_per_ticket must be greater than 0")
         sys.exit(1)
 
-    asyncio.run(run_raffle(args.competition_id, args.min_xp_per_ticket))
+    asyncio.run(run_raffle(args.competition_id, args.xp_per_ticket))
 
 
 if __name__ == "__main__":
