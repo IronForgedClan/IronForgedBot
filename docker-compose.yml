@@ -1,12 +1,15 @@
 services:
     db:
         image: mariadb:latest
+        container_name: ironforged_db
         restart: unless-stopped
         environment:
             MARIADB_ROOT_PASSWORD: ${DB_ROOT}
             MARIADB_DATABASE: ${DB_NAME}
             MARIADB_USER: ${DB_USER}
             MARIADB_PASSWORD: ${DB_PASS}
+        ports:
+            - "3306:3306"
         healthcheck:
             test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
             start_period: 10s
@@ -15,6 +18,9 @@ services:
             retries: 5
         volumes:
             - mariadb_data:/var/lib/mysql
+            - ./init-db:/docker-entrypoint-initdb.d:ro
+        networks:
+            - ironforged-network
 
     bot:
         # When testing prod image remember
@@ -34,7 +40,14 @@ services:
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
         volumes:
             - .:/app
+        networks:
+            - ironforged-network
 
 volumes:
     mariadb_data:
+
+networks:
+    ironforged-network:
+        name: ironforged-network
+        driver: bridge
 

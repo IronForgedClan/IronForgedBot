@@ -16,7 +16,9 @@ from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_i
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
+from ironforgedbot.commands.reset_rng.cmd_reset_rng import cmd_reset_rng
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
+from ironforgedbot.commands.eight_ball.cmd_eight_ball import cmd_eight_ball
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.config import CONFIG, ENVIRONMENT
@@ -112,6 +114,20 @@ class IronForgedCommands:
                 name="raffle",
                 description="Play or control the raffle.",
                 callback=cmd_raffle,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="reset_rng",
+                description="Attempt to reset your RNG. 50% of the time it works every time.",
+                callback=cmd_reset_rng,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="eight_ball",
+                description="Ask the Magic 8-Ball a question and receive mystical wisdom.",
+                callback=cmd_eight_ball,
             )
         )
         self._tree.add_command(
