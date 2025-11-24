@@ -86,7 +86,7 @@ class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.assert_any_call(
             title="Test Dice Title",
             description="Test dice description",
-            color=discord.Colour.blurple(),
+            color=discord.Colour.from_rgb(255, 255, 255),
         )
 
         mock_build_embed.assert_any_call(
@@ -154,7 +154,7 @@ class TestCmdResetRng(unittest.IsolatedAsyncioTestCase):
         mock_build_embed.assert_any_call(
             title="Test Dice Title",
             description="Test dice description",
-            color=discord.Colour.blurple(),
+            color=discord.Colour.from_rgb(255, 255, 255),
         )
 
         mock_build_embed.assert_any_call(

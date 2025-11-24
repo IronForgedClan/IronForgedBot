@@ -16,6 +16,7 @@ class TestCommandPriceConfirmationView(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction.user = Mock()
         self.mock_interaction.user.id = 12345
         self.mock_interaction.delete_original_response = AsyncMock()
+        self.mock_interaction.followup.send = AsyncMock()
 
         self.mock_confirmation_message = AsyncMock()
         self.mock_confirmation_message.edit = AsyncMock()
@@ -63,16 +64,9 @@ class TestCommandPriceConfirmationView(unittest.IsolatedAsyncioTestCase):
             12345, -100, None, "Command usage: test_command"
         )
 
-        # Verify buttons are removed
         self.assertEqual(len(self.view.children), 0)
-
-        # Verify confirmation message is deleted
         self.mock_confirmation_message.delete.assert_called_once()
-
-        # Verify original response is NOT deleted
         self.mock_interaction.delete_original_response.assert_not_called()
-
-        # Verify wrapped function is called with original interaction
         self.mock_wrapped_function.assert_called_once_with(self.mock_interaction)
 
     async def test_on_confirm_wrong_user(self):
@@ -128,21 +122,16 @@ class TestCommandPriceConfirmationView(unittest.IsolatedAsyncioTestCase):
             12345, -100, None, "Command usage: test_command"
         )
 
-        # Verify buttons are removed
         self.assertEqual(len(self.view.children), 0)
 
-        # Verify error embed is built
         mock_build_embed.assert_called_once_with(
-            title="❌ Insufficient Ingots",
-            description="You need <:Ingot:123> **100** but only have <:Ingot:123> **25**",
+            title="❌ Insufficient Funds",
+            description="This command costs <:Ingot:123> **100**.\n\nAnd you only have <:Ingot:123> **25**.",
             color=discord.Colour.red(),
         )
 
-        # Verify confirmation message is edited with error
-        self.mock_confirmation_message.edit.assert_called_once_with(
-            embed=mock_embed, view=self.view
-        )
-
+        self.mock_interaction.followup.send.assert_called_once_with(embed=mock_embed)
+        self.mock_confirmation_message.delete.assert_called_once()
         self.mock_wrapped_function.assert_not_called()
 
     async def test_on_cancel(self):
@@ -155,12 +144,8 @@ class TestCommandPriceConfirmationView(unittest.IsolatedAsyncioTestCase):
 
         mock_button_interaction.response.defer.assert_called_once_with(ephemeral=True)
 
-        # Verify confirmation message is deleted
         self.mock_confirmation_message.delete.assert_called_once()
-
-        # Verify original response is deleted
         self.mock_interaction.delete_original_response.assert_called_once()
-
         self.mock_wrapped_function.assert_not_called()
 
     async def test_on_cancel_wrong_user(self):
@@ -180,8 +165,5 @@ class TestCommandPriceConfirmationView(unittest.IsolatedAsyncioTestCase):
         """Test timeout deletes both messages."""
         await self.view.on_timeout()
 
-        # Verify confirmation message is deleted
         self.mock_confirmation_message.delete.assert_called_once()
-
-        # Verify original response is deleted
         self.mock_interaction.delete_original_response.assert_called_once()
