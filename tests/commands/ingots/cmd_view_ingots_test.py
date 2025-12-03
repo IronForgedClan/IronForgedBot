@@ -396,3 +396,175 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("Display Name With Spaces", sent_embed.title)
+
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
+    async def test_cmd_view_ingots_with_transactions(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_changelog_service_class,
+        mock_member_service_class,
+        mock_db,
+    ):
+        """Test that transactions are displayed when available."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+
+        mock_transactions = [
+            Changelog(
+                id=1,
+                member_id="test-member-id",
+                admin_id="admin-id",
+                change_type=ChangeType.ADD_INGOTS,
+                previous_value="1000",
+                new_value="1100",
+                comment="Adding ingots",
+                timestamp=datetime.now(timezone.utc),
+            ),
+            Changelog(
+                id=2,
+                member_id="test-member-id",
+                admin_id="admin-id",
+                change_type=ChangeType.REMOVE_INGOTS,
+                previous_value="1100",
+                new_value="1050",
+                comment="Purchase raffle tickets",
+                timestamp=datetime.now(timezone.utc),
+            ),
+        ]
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = (
+            mock_transactions
+        )
+        mock_changelog_service_class.return_value = mock_changelog_service
+
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
+
+        mock_member_service.get_member_by_nickname.return_value = self.sample_member
+
+        await cmd_view_ingots(self.interaction, "TestUser")
+
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+
+        self.assertEqual(len(sent_embed.fields), 3)
+        self.assertEqual(sent_embed.fields[2].name, "Recent Transactions")
+
+        transaction_field_value = sent_embed.fields[2].value
+        self.assertIn("Change", transaction_field_value)
+        self.assertIn("Reason", transaction_field_value)
+        self.assertIn("+100", transaction_field_value)
+        self.assertIn("Adding ingots", transaction_field_value)
+        self.assertIn("-50", transaction_field_value)
+        self.assertIn("Purchase raffle tickets", transaction_field_value)
+
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
+    async def test_cmd_view_ingots_no_transactions(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_changelog_service_class,
+        mock_member_service_class,
+        mock_db,
+    ):
+        """Test that no transaction field is added when there are no transactions."""
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
+
+        mock_member_service.get_member_by_nickname.return_value = self.sample_member
+
+        await cmd_view_ingots(self.interaction, "TestUser")
+
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+
+        self.assertEqual(len(sent_embed.fields), 2)
+        self.assertEqual(sent_embed.fields[0].name, "Account ID")
+        self.assertEqual(sent_embed.fields[1].name, "Balance")
+
+    def test_format_transaction_add_ingots(self):
+        """Test format_transaction with ADD_INGOTS."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id="admin-id",
+            change_type=ChangeType.ADD_INGOTS,
+            previous_value="1000",
+            new_value="1500",
+            comment="Adding ingots",
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["+500", "Adding ingots"])
+
+    def test_format_transaction_remove_ingots(self):
+        """Test format_transaction with REMOVE_INGOTS."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id="admin-id",
+            change_type=ChangeType.REMOVE_INGOTS,
+            previous_value="1000",
+            new_value="750",
+            comment="Purchase raffle tickets",
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["-250", "Purchase raffle tickets"])
+
+    def test_format_transaction_with_none_values(self):
+        """Test format_transaction handles None values correctly."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id="admin-id",
+            change_type=ChangeType.ADD_INGOTS,
+            previous_value=None,
+            new_value="100",
+            comment="Adding ingots",
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["+100", "Adding ingots"])
