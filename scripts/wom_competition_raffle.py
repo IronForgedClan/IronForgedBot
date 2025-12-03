@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import random
 
+import aiohttp
 from dotenv import load_dotenv
 from tabulate import tabulate
 
@@ -17,6 +18,82 @@ from ironforgedbot.services.wom_service import WomService, WomServiceError
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 dotenv_path = os.path.join(project_root, ".env")
 load_dotenv(dotenv_path)
+
+
+async def _fetch_competition_raw(
+    competition_id: int, api_key: str
+) -> dict:
+    """Fetch competition data directly from WOM API using raw HTTP calls.
+
+    This is a fallback for when the wom-py library doesn't support a metric yet.
+
+    Args:
+        competition_id: WOM competition ID
+        api_key: WOM API key
+
+    Returns:
+        Raw JSON response as a dictionary
+
+    Raises:
+        Exception: If the API request fails
+    """
+    url = f"https://api.wiseoldman.net/v2/competitions/{competition_id}"
+    headers = {
+        "x-api-key": api_key,
+        "x-user-agent": "IronForged",
+        "User-Agent": "IronForged",
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                raise Exception(
+                    f"WOM API returned {response.status}: {error_text}"
+                )
+
+            return await response.json()
+
+
+async def get_competition_with_fallback(
+    wom_service: WomService, competition_id: int
+):
+    """Get competition details, falling back to raw HTTP if library fails.
+
+    Args:
+        wom_service: WomService instance
+        competition_id: WOM competition ID
+
+    Returns:
+        Competition data (either from library or raw API)
+    """
+    try:
+        client = await wom_service._get_client()
+        result = await client.competitions.get_details(competition_id)
+
+        if result.is_ok:
+            return {"source": "library", "data": result.unwrap()}
+        else:
+            # Library returned error, try fallback
+            print(
+                f"Library returned error: {result.unwrap_err()}, "
+                "falling back to raw HTTP API...\n"
+            )
+            raw_data = await _fetch_competition_raw(
+                competition_id, wom_service.api_key
+            )
+            return {"source": "raw", "data": raw_data}
+
+    except Exception as e:
+        # Library call failed (possibly serialization error), use fallback
+        print(
+            f"Library call failed ({type(e).__name__}: {e}), "
+            "falling back to raw HTTP API...\n"
+        )
+        raw_data = await _fetch_competition_raw(
+            competition_id, wom_service.api_key
+        )
+        return {"source": "raw", "data": raw_data}
 
 
 async def run_raffle(competition_id: int, xp_per_ticket: int):
@@ -32,28 +109,42 @@ async def run_raffle(competition_id: int, xp_per_ticket: int):
 
     async with WomService() as wom_service:
         try:
-            client = await wom_service._get_client()
+            competition_result = await get_competition_with_fallback(
+                wom_service, competition_id
+            )
 
-            result = await client.competitions.get_details(competition_id)
+            source = competition_result["source"]
+            competition_data = competition_result["data"]
 
-            if result.is_err:
-                error_details = result.unwrap_err()
-                print(f"Error fetching competition: {error_details}")
-                return
+            # Normalize data based on source
+            if source == "library":
+                title = competition_data.title
+                metric = competition_data.metric.name
+                comp_type = competition_data.type.name
+                participations = competition_data.participations
+            else:  # raw API response
+                title = competition_data["title"]
+                metric = competition_data["metric"]
+                comp_type = competition_data["type"]
+                participations = competition_data["participations"]
 
-            competition = result.unwrap()
-
-            print(f"Competition: {competition.title}")
-            print(f"Metric: {competition.metric.name}")
-            print(f"Type: {competition.type.name}")
-            print(f"Participants: {len(competition.participations)}\n")
+            print(f"Competition: {title}")
+            print(f"Metric: {metric}")
+            print(f"Type: {comp_type}")
+            print(f"Participants: {len(participations)}\n")
 
             participants = {}
             all_tickets = []
 
-            for participation in competition.participations:
-                player_name = participation.player.display_name
-                gained_xp = participation.progress.gained
+            for participation in participations:
+                # Handle both library objects and raw dicts
+                if source == "library":
+                    player_name = participation.player.display_name
+                    gained_xp = participation.progress.gained
+                else:
+                    player_name = participation["player"]["displayName"]
+                    gained_xp = participation["progress"]["gained"]
+
                 tickets = gained_xp // xp_per_ticket if gained_xp > 0 else 0
 
                 if player_name not in participants:
