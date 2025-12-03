@@ -14,9 +14,10 @@ from ironforgedbot.common.responses import (
 )
 from ironforgedbot.common.text_formatters import text_code_block
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.config import CONFIG
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.models.changelog import Changelog, ChangeType
+from ironforgedbot.models.changelog import Changelog
 from ironforgedbot.services.changelog_service import ChangelogService
 from ironforgedbot.services.member_service import MemberService
 
@@ -106,12 +107,12 @@ async def cmd_view_ingots(
             embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_detail.png/120px-Platinum_token_detail.png"
 
         embed = build_ingot_response_embed(
-            title=f"{rank_icon} {display_name} | Ingots",
-            description="",
+            title=f"{ingot_icon} Ingot Account",
+            description=f"Ingots are our clan currency. Learn how to earn or spend them in <#{CONFIG.INGOT_SHOP_CHANNEL_ID}>.",
         )
 
         embed.set_thumbnail(url=embed_thumbnail)
-        embed.add_field(name="Account ID", value=member.id[-10:])
+        embed.add_field(name="Member", value=f"{rank_icon} {display_name}")
         embed.add_field(name="Balance", value=f"{ingot_icon} {member.ingots:,}")
 
         if transactions:
