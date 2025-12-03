@@ -20,9 +20,7 @@ dotenv_path = os.path.join(project_root, ".env")
 load_dotenv(dotenv_path)
 
 
-async def _fetch_competition_raw(
-    competition_id: int, api_key: str
-) -> dict:
+async def _fetch_competition_raw(competition_id: int, api_key: str) -> dict:
     """Fetch competition data directly from WOM API using raw HTTP calls.
 
     This is a fallback for when the wom-py library doesn't support a metric yet.
@@ -48,16 +46,12 @@ async def _fetch_competition_raw(
         async with session.get(url, headers=headers) as response:
             if response.status != 200:
                 error_text = await response.text()
-                raise Exception(
-                    f"WOM API returned {response.status}: {error_text}"
-                )
+                raise Exception(f"WOM API returned {response.status}: {error_text}")
 
             return await response.json()
 
 
-async def get_competition_with_fallback(
-    wom_service: WomService, competition_id: int
-):
+async def get_competition_with_fallback(wom_service: WomService, competition_id: int):
     """Get competition details, falling back to raw HTTP if library fails.
 
     Args:
@@ -79,9 +73,7 @@ async def get_competition_with_fallback(
                 f"Library returned error: {result.unwrap_err()}, "
                 "falling back to raw HTTP API...\n"
             )
-            raw_data = await _fetch_competition_raw(
-                competition_id, wom_service.api_key
-            )
+            raw_data = await _fetch_competition_raw(competition_id, wom_service.api_key)
             return {"source": "raw", "data": raw_data}
 
     except Exception as e:
@@ -90,9 +82,7 @@ async def get_competition_with_fallback(
             f"Library call failed ({type(e).__name__}: {e}), "
             "falling back to raw HTTP API...\n"
         )
-        raw_data = await _fetch_competition_raw(
-            competition_id, wom_service.api_key
-        )
+        raw_data = await _fetch_competition_raw(competition_id, wom_service.api_key)
         return {"source": "raw", "data": raw_data}
 
 
