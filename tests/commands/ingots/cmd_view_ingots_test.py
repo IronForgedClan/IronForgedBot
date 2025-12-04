@@ -64,8 +64,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_nickname.assert_called_once_with("TestUser")
 
         embed = assert_embed_structure(self, self.interaction)
-        self.assertIn("TestUser", embed.title)
-        self.assertIn("Ingots", embed.title)
+        self.assertIn("Ingot Account", embed.title)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
@@ -106,7 +105,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_nickname.assert_called_once_with("OtherUser")
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("OtherUser", sent_embed.title)
+        self.assertIn("Ingot Account", sent_embed.title)
         self.assertEqual(len(sent_embed.fields), 2)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
@@ -173,8 +172,8 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
 
         self.assertEqual(len(sent_embed.fields), 2)
-        self.assertEqual(sent_embed.fields[0].name, "Account ID")
-        self.assertEqual(sent_embed.fields[0].value, "-member-id")
+        self.assertEqual(sent_embed.fields[0].name, "Member")
+        self.assertIn("TestUser", sent_embed.fields[0].value)
         self.assertEqual(sent_embed.fields[1].name, "Balance")
         self.assertEqual(sent_embed.fields[1].value, ":Ingot: 1,000")
 
@@ -395,7 +394,9 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         )
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("Display Name With Spaces", sent_embed.title)
+        member_field = sent_embed.fields[0]
+        self.assertEqual(member_field.name, "Member")
+        self.assertIn("Display Name With Spaces", member_field.value)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
@@ -503,7 +504,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
 
         self.assertEqual(len(sent_embed.fields), 2)
-        self.assertEqual(sent_embed.fields[0].name, "Account ID")
+        self.assertEqual(sent_embed.fields[0].name, "Member")
         self.assertEqual(sent_embed.fields[1].name, "Balance")
 
     def test_format_transaction_add_ingots(self):
