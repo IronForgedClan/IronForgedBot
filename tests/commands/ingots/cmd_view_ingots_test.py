@@ -1,7 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import discord
+from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
@@ -34,6 +32,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -42,12 +41,17 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -59,13 +63,12 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_validate.assert_called_once_with(self.interaction.guild, "TestUser")
         mock_member_service.get_member_by_nickname.assert_called_once_with("TestUser")
 
-        # Use helper to validate embed structure
         embed = assert_embed_structure(self, self.interaction)
-        self.assertIn("TestUser", embed.title)
-        self.assertIn("Ingots", embed.title)
+        self.assertIn("Ingot Account", embed.title)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -74,6 +77,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
@@ -85,6 +89,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (other_user, "OtherUser")
         mock_get_rank.return_value = RANK.MITHRIL
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -97,7 +105,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_nickname.assert_called_once_with("OtherUser")
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("OtherUser", sent_embed.title)
+        self.assertIn("Ingot Account", sent_embed.title)
         self.assertEqual(len(sent_embed.fields), 2)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
@@ -133,6 +141,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -141,12 +150,17 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -158,13 +172,14 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
 
         self.assertEqual(len(sent_embed.fields), 2)
-        self.assertEqual(sent_embed.fields[0].name, "Account ID")
-        self.assertEqual(sent_embed.fields[0].value, "-member-id")
+        self.assertEqual(sent_embed.fields[0].name, "Member")
+        self.assertIn("TestUser", sent_embed.fields[0].value)
         self.assertEqual(sent_embed.fields[1].name, "Balance")
         self.assertEqual(sent_embed.fields[1].value, ":Ingot: 1,000")
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -173,6 +188,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
@@ -183,6 +199,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (self.test_user, "ZeroUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -196,6 +216,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -204,6 +225,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
@@ -214,6 +236,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (self.test_user, "RichUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -227,6 +253,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -235,6 +262,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
@@ -262,6 +290,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
                 mock_db_session, mock_member_service = setup_database_service_mocks(
                     mock_db, mock_member_service_class
                 )
+                mock_changelog_service = AsyncMock()
+                mock_changelog_service.latest_ingot_transactions.return_value = []
+                mock_changelog_service_class.return_value = mock_changelog_service
+
                 mock_validate.return_value = (self.test_user, "TestUser")
                 mock_get_rank.return_value = RANK.IRON
                 mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -275,6 +307,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -283,6 +316,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
@@ -298,6 +332,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (self.test_user, "LargeUser")
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -312,6 +350,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
@@ -320,11 +359,11 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
         mock_get_rank,
         mock_validate,
+        mock_changelog_service_class,
         mock_member_service_class,
         mock_db,
     ):
         """Test that the validated player name is used for DB lookup, not display name."""
-        # Create a discord member with a different display name than their validated player name
         discord_member = create_test_member("Display Name With Spaces", [ROLE.MEMBER])
         validated_player_name = "ValidatedName"
 
@@ -338,7 +377,10 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_db_session, mock_member_service = setup_database_service_mocks(
             mock_db, mock_member_service_class
         )
-        # validate_playername returns the validated player name, not the display name
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
         mock_validate.return_value = (discord_member, validated_player_name)
         mock_get_rank.return_value = RANK.IRON
         mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
@@ -347,11 +389,183 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
 
         await cmd_view_ingots(self.interaction, "some input")
 
-        # Assert that the DB service was called with the validated player name, not display name
         mock_member_service.get_member_by_nickname.assert_called_once_with(
             validated_player_name
         )
 
-        # Verify the display name is still used in the embed title
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("Display Name With Spaces", sent_embed.title)
+        member_field = sent_embed.fields[0]
+        self.assertEqual(member_field.name, "Member")
+        self.assertIn("Display Name With Spaces", member_field.value)
+
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
+    async def test_cmd_view_ingots_with_transactions(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_changelog_service_class,
+        mock_member_service_class,
+        mock_db,
+    ):
+        """Test that transactions are displayed when available."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+
+        mock_transactions = [
+            Changelog(
+                id=1,
+                member_id="test-member-id",
+                admin_id="admin-id",
+                change_type=ChangeType.ADD_INGOTS,
+                previous_value="1000",
+                new_value="1100",
+                comment="Adding ingots",
+                timestamp=datetime.now(timezone.utc),
+            ),
+            Changelog(
+                id=2,
+                member_id="test-member-id",
+                admin_id="admin-id",
+                change_type=ChangeType.REMOVE_INGOTS,
+                previous_value="1100",
+                new_value="1050",
+                comment="Purchase raffle tickets",
+                timestamp=datetime.now(timezone.utc),
+            ),
+        ]
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = (
+            mock_transactions
+        )
+        mock_changelog_service_class.return_value = mock_changelog_service
+
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
+
+        mock_member_service.get_member_by_nickname.return_value = self.sample_member
+
+        await cmd_view_ingots(self.interaction, "TestUser")
+
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+
+        self.assertEqual(len(sent_embed.fields), 3)
+        self.assertEqual(sent_embed.fields[2].name, "Recent Transactions")
+
+        transaction_field_value = sent_embed.fields[2].value
+        self.assertIn("Change", transaction_field_value)
+        self.assertIn("Reason", transaction_field_value)
+        self.assertIn("+100", transaction_field_value)
+        self.assertIn("Adding ingots", transaction_field_value)
+        self.assertIn("-50", transaction_field_value)
+        self.assertIn("Purchase raffle tickets", transaction_field_value)
+
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
+    async def test_cmd_view_ingots_no_transactions(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_changelog_service_class,
+        mock_member_service_class,
+        mock_db,
+    ):
+        """Test that no transaction field is added when there are no transactions."""
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
+
+        mock_member_service.get_member_by_nickname.return_value = self.sample_member
+
+        await cmd_view_ingots(self.interaction, "TestUser")
+
+        sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+
+        self.assertEqual(len(sent_embed.fields), 2)
+        self.assertEqual(sent_embed.fields[0].name, "Member")
+        self.assertEqual(sent_embed.fields[1].name, "Balance")
+
+    def test_format_transaction_add_ingots(self):
+        """Test format_transaction with ADD_INGOTS."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id="admin-id",
+            change_type=ChangeType.ADD_INGOTS,
+            previous_value="1000",
+            new_value="1500",
+            comment="Adding ingots",
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["+500", "Adding ingots"])
+
+    def test_format_transaction_remove_ingots(self):
+        """Test format_transaction with REMOVE_INGOTS."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id="admin-id",
+            change_type=ChangeType.REMOVE_INGOTS,
+            previous_value="1000",
+            new_value="750",
+            comment="Purchase raffle tickets",
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["-250", "Purchase raffle tickets"])
+
+    def test_format_transaction_with_none_values(self):
+        """Test format_transaction handles None values correctly."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id="admin-id",
+            change_type=ChangeType.ADD_INGOTS,
+            previous_value=None,
+            new_value="100",
+            comment="Adding ingots",
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["+100", "Adding ingots"])
