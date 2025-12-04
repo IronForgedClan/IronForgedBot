@@ -2,13 +2,12 @@ import io
 import logging
 from datetime import datetime
 import time
-from typing import Any, Dict, List, Optional
+from typing import List
 
 import discord
 from tabulate import tabulate
-from wom import GroupRole
-from wom.models import GroupDetail, GroupMembership
 
+from ironforgedbot.common.activity_check import check_bulk_activity
 from ironforgedbot.common.helpers import (
     format_duration,
     render_relative_time,
@@ -24,12 +23,6 @@ from ironforgedbot.services.wom_service import (
     WomRateLimitError,
     WomTimeoutError,
 )
-from ironforgedbot.common.wom_role_mapping import (
-    get_threshold_for_wom_role,
-    get_display_name_for_wom_role,
-    get_discord_role_for_wom_role,
-)
-from ironforgedbot.common.roles import is_exempt_from_activity_check
 
 logger = logging.getLogger(__name__)
 
@@ -66,22 +59,45 @@ async def job_check_activity(
 
             logger.debug(known_absentees)
 
-            results = await _find_inactive_users(
+            check_results = await _find_inactive_users(
                 report_channel,
                 known_absentees,
                 wom_limit,
             )
 
-            logger.debug(results)
+            logger.debug(check_results)
 
-            if not results:
+            if not check_results:
                 logger.warning(f"Activity check {execution_id} returned no results")
                 await report_channel.send(
                     "ℹ️ No inactive members found meeting the criteria."
                 )
                 return
 
-            sorted_results = _sort_results_safely(results)
+            inactive_results = [
+                r for r in check_results if not r.is_active and r.skip_reason is None
+            ]
+
+            if not inactive_results:
+                logger.info(f"Activity check {execution_id} - all members are active")
+                await report_channel.send("✅ All members meet activity requirements!")
+                return
+
+            table_rows = [
+                [
+                    result.username,
+                    result.discord_role,
+                    f"{result.xp_gained:,}",
+                    (
+                        render_relative_time(result.last_changed_at)
+                        if result.last_changed_at
+                        else "unknown"
+                    ),
+                ]
+                for result in inactive_results
+            ]
+
+            sorted_results = _sort_results_safely(table_rows)
             result_table = tabulate(
                 sorted_results,
                 headers=["Member", "Role", "Gained", "Last Updated"],
@@ -96,12 +112,12 @@ async def job_check_activity(
 
             end_time = time.perf_counter()
             logger.info(
-                f"Activity check {execution_id} completed successfully - found {len(results)} inactive members"
+                f"Activity check {execution_id} completed successfully - found {len(inactive_results)} inactive members"
             )
             await report_channel.send(
                 "## 🧗 Activity check\n"
                 f"Ignoring **{len(known_absentees)}** absent members.\n"
-                f"Found **{len(results)}** members that do not meet requirements.\n"
+                f"Found **{len(inactive_results)}** members that do not meet requirements.\n"
                 f"Processed in **{format_duration(start_time, end_time)}**.",
                 file=discord_file,
             )
@@ -134,37 +150,11 @@ def _sort_results_safely(results: List[List[str]]) -> List[List[str]]:
     return sorted(results, key=safe_int_extract)
 
 
-def _get_role_display_name(role: Optional[GroupRole]) -> str:
-    """
-    Get display name for a WOM group role.
-
-    Args:
-        role: WOM GroupRole enum value
-
-    Returns:
-        Clan relevant role name
-    """
-    return get_display_name_for_wom_role(role)
-
-
-def _get_threshold_for_role(role: Optional[GroupRole]) -> int:
-    """
-    Get XP threshold for a given role using the new rank-based system.
-
-    Args:
-        role: WOM GroupRole enum value
-
-    Returns:
-        XP threshold for the role based on Discord rank mapping
-    """
-    return get_threshold_for_wom_role(role)
-
-
 async def _find_inactive_users(
     report_channel: discord.TextChannel,
     absentees: List[str],
     wom_limit: int,
-) -> Optional[List[List[str]]]:
+):
     """
     Find inactive users based on WOM data and rank-based thresholds.
     Uses role-based exemptions to exclude certain roles from checks.
@@ -175,7 +165,7 @@ async def _find_inactive_users(
         wom_limit: Number of records to fetch per API call
 
     Returns:
-        List of inactive user data or None if error occurred
+        List of ActivityCheckResult objects or None if error occurred
     """
     try:
         async with get_wom_service() as wom_service:
@@ -201,19 +191,7 @@ async def _find_inactive_users(
                 )
                 return None
 
-            results = []
-            for member_gains in all_member_gains:
-                try:
-                    inactive_member_data = _process_member_gains(
-                        member_gains, wom_group, absentees
-                    )
-                    if inactive_member_data:
-                        results.append(inactive_member_data)
-                except Exception as process_error:
-                    logger.warning(
-                        f"Error processing member gains for {getattr(member_gains.player, 'username', 'unknown')}: {process_error}"
-                    )
-
+            results = check_bulk_activity(wom_group, all_member_gains, absentees)
             return results
 
     except Exception as e:
@@ -222,64 +200,3 @@ async def _find_inactive_users(
             "❌ Unexpected error processing WOM data. Please try again later."
         )
         return None
-
-
-def _process_member_gains(
-    member_gains,
-    wom_group: GroupDetail,
-    absentees: List[str],
-) -> Optional[List[str]]:
-    """
-    Process individual member gains data to determine if they're inactive.
-    Uses rank-based thresholds and role-based exemptions.
-
-    Args:
-        member_gains: WOM member gains data
-        wom_group: WOM group details
-        absentees: List of known absent member usernames (lowercase)
-
-    Returns:
-        List of member data if inactive, None otherwise
-    """
-    wom_member = _find_wom_member(wom_group, member_gains.player.id)
-
-    if wom_member is None:
-        return None
-
-    if wom_member.player.username.lower() in absentees:
-        return None
-
-    # Check if member's Discord role is exempt from activity checks
-    discord_role = get_discord_role_for_wom_role(wom_member.role)
-    if discord_role and is_exempt_from_activity_check(discord_role):
-        return None
-
-    # Skip prospects
-    if wom_member.role == GroupRole.Dogsbody:
-        return None
-
-    xp_threshold = _get_threshold_for_role(wom_member.role)
-
-    if member_gains.data.gained >= xp_threshold:
-        return None
-
-    role_display = _get_role_display_name(wom_member.role)
-
-    days_since_progression = "unknown"
-    if wom_member.player.last_changed_at:
-        days_since_progression = render_relative_time(wom_member.player.last_changed_at)
-
-    return [
-        member_gains.player.username,
-        role_display,
-        f"{int(member_gains.data.gained):,}",
-        days_since_progression,
-    ]
-
-
-def _find_wom_member(group: GroupDetail, player_id: int) -> GroupMembership | None:
-    for member in group.memberships:
-        if member.player.id == player_id:
-            return member
-
-    return None
