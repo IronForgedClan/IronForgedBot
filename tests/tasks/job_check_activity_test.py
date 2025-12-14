@@ -10,15 +10,8 @@ from wom import GroupRole
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
     _find_inactive_users,
-    _find_wom_member,
-    _process_member_gains,
-    _get_role_display_name,
-    _get_threshold_for_role,
     _sort_results_safely,
     DEFAULT_WOM_LIMIT,
-)
-from ironforgedbot.common.wom_role_mapping import (
-    get_threshold_for_wom_role,
 )
 from ironforgedbot.common.roles import ROLE
 
@@ -426,66 +419,12 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(result[0][1], expected_role)
 
 
-class TestFindWomMember(unittest.TestCase):
-    def test_find_wom_member_found(self):
-        mock_member1 = Mock()
-        mock_member1.player.id = 123
-
-        mock_member2 = Mock()
-        mock_member2.player.id = 456
-
-        mock_group = Mock()
-        mock_group.memberships = [mock_member1, mock_member2]
-
-        result = _find_wom_member(mock_group, 456)
-        self.assertEqual(result, mock_member2)
-
-    def test_find_wom_member_not_found(self):
-        mock_member1 = Mock()
-        mock_member1.player.id = 123
-
-        mock_group = Mock()
-        mock_group.memberships = [mock_member1]
-
-        result = _find_wom_member(mock_group, 999)
-        self.assertIsNone(result)
-
-    def test_find_wom_member_empty_memberships(self):
-        mock_group = Mock()
-        mock_group.memberships = []
-
-        result = _find_wom_member(mock_group, 123)
-        self.assertIsNone(result)
-
-
 class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_report_channel = Mock(spec=discord.TextChannel)
         self.mock_report_channel.send = AsyncMock()
         self.wom_api_key = "test_api_key"
         self.wom_group_id = 12345
-
-    def test_get_role_display_name(self):
-        """Test role display name mapping"""
-        self.assertEqual(_get_role_display_name(GroupRole.Helper), "Staff")
-        self.assertEqual(_get_role_display_name(GroupRole.Collector), "Staff")
-        self.assertEqual(_get_role_display_name(GroupRole.Administrator), "Leadership")
-        self.assertEqual(_get_role_display_name(GroupRole.Colonel), "Staff")
-        self.assertEqual(_get_role_display_name(GroupRole.Deputy_owner), "Leadership")
-        self.assertEqual(_get_role_display_name(GroupRole.Iron), "Member")
-        self.assertEqual(_get_role_display_name(None), "Unknown")
-
-    def test_get_threshold_for_role(self):
-        """Test threshold calculation for roles"""
-        # Test that the new system uses rank-based thresholds
-        # GroupRole.Iron maps to RANK.IRON (150k threshold)
-        self.assertEqual(_get_threshold_for_role(GroupRole.Iron), 150_000)
-        # GroupRole.Mithril maps to RANK.MITHRIL (150k threshold)
-        self.assertEqual(_get_threshold_for_role(GroupRole.Mithril), 150_000)
-
-        # Test that None returns max threshold (GOD rank)
-        # Should be 500k for GOD rank
-        self.assertEqual(_get_threshold_for_role(None), 500_000)
 
     def test_sort_results_safely(self):
         """Test safe sorting with malformed data"""
@@ -507,80 +446,6 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     def test_sort_results_safely_empty_list(self):
         """Test safe sorting with empty list"""
         self.assertEqual(_sort_results_safely([]), [])
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    @patch("ironforgedbot.tasks.job_check_activity.render_relative_time")
-    def test_process_member_gains_inactive_member(
-        self, mock_render_time, mock_find_member
-    ):
-        """Test processing of inactive member"""
-        mock_member_gains = Mock()
-        mock_member_gains.player.id = 123
-        mock_member_gains.player.username = "TestPlayer"
-        mock_member_gains.data.gained = 50000
-
-        mock_wom_member = Mock()
-        mock_wom_member.role = GroupRole.Iron
-        mock_wom_member.player.username = "TestPlayer"
-        mock_wom_member.player.last_changed_at = datetime(2024, 1, 10)
-        mock_find_member.return_value = mock_wom_member
-
-        mock_render_time.return_value = "5 days ago"
-        mock_group = Mock()
-
-        result = _process_member_gains(mock_member_gains, mock_group, [])
-
-        self.assertEqual(result, ["TestPlayer", "Member", "50,000", "5 days ago"])
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    def test_process_member_gains_active_member(self, mock_find_member):
-        """Test processing of active member (above threshold)"""
-        mock_member_gains = Mock()
-        mock_member_gains.player.id = 123
-        mock_member_gains.data.gained = 200000  # Above Iron threshold
-
-        mock_wom_member = Mock()
-        mock_wom_member.role = GroupRole.Iron
-        mock_find_member.return_value = mock_wom_member
-
-        mock_group = Mock()
-
-        result = _process_member_gains(mock_member_gains, mock_group, [])
-
-        self.assertIsNone(result)  # Should return None for active members
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    def test_process_member_gains_absentee(self, mock_find_member):
-        """Test processing of absent member"""
-        mock_member_gains = Mock()
-        mock_member_gains.player.id = 123
-
-        mock_wom_member = Mock()
-        mock_wom_member.player.username = "AbsentPlayer"
-        mock_find_member.return_value = mock_wom_member
-
-        mock_group = Mock()
-        absentees = ["absentplayer"]  # lowercase
-
-        result = _process_member_gains(mock_member_gains, mock_group, absentees)
-
-        self.assertIsNone(result)  # Should return None for absent members
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    def test_process_member_gains_dogsbody(self, mock_find_member):
-        """Test processing of dogsbody member"""
-        mock_member_gains = Mock()
-        mock_member_gains.player.id = 123
-
-        mock_wom_member = Mock()
-        mock_wom_member.role = GroupRole.Dogsbody
-        mock_find_member.return_value = mock_wom_member
-
-        mock_group = Mock()
-
-        result = _process_member_gains(mock_member_gains, mock_group, [])
-
-        self.assertIsNone(result)  # Should return None for dogsbody members
 
     @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
     async def test_find_inactive_users_json_decode_error(self, mock_get_wom_service):
@@ -636,26 +501,3 @@ class TestThresholds(unittest.TestCase):
         """Test default threshold values"""
         # Test that default constants are available
         self.assertEqual(DEFAULT_WOM_LIMIT, 50)
-
-    def test_wom_role_thresholds(self):
-        """Test WOM role threshold mapping"""
-        # Test that WOM roles map correctly to rank-based thresholds
-        # GroupRole.Iron maps to RANK.IRON (150k threshold)
-        self.assertEqual(get_threshold_for_wom_role(GroupRole.Iron), 150_000)
-        # GroupRole.Mithril maps to RANK.MITHRIL (150k threshold)
-        self.assertEqual(get_threshold_for_wom_role(GroupRole.Mithril), 150_000)
-        # GroupRole.Adamant maps to RANK.ADAMANT (200k threshold)
-        self.assertEqual(get_threshold_for_wom_role(GroupRole.Adamant), 200_000)
-        # GroupRole.Helper has no rank mapping, should get GOD threshold (500k)
-        self.assertEqual(get_threshold_for_wom_role(GroupRole.Helper), 500_000)
-        # GroupRole.Administrator has no rank mapping, should get GOD threshold (500k)
-        self.assertEqual(get_threshold_for_wom_role(GroupRole.Administrator), 500_000)
-
-    def test_role_display_mapping(self):
-        """Test role display mapping using new system"""
-        # Test that role display names work correctly
-        self.assertEqual(_get_role_display_name(GroupRole.Helper), "Staff")
-        self.assertEqual(_get_role_display_name(GroupRole.Collector), "Staff")
-        self.assertEqual(_get_role_display_name(GroupRole.Administrator), "Leadership")
-        self.assertEqual(_get_role_display_name(GroupRole.Iron), "Member")
-        self.assertEqual(_get_role_display_name(None), "Unknown")

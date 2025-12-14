@@ -8,7 +8,6 @@ from ironforgedbot.common.wom_role_mapping import (
     WOM_TO_DISCORD_RANK_MAPPING,
     get_discord_role_for_wom_role,
     get_discord_rank_for_wom_role,
-    get_threshold_for_wom_role,
     get_display_name_for_wom_role,
 )
 from tests.helpers import (
@@ -61,37 +60,6 @@ class TestWomRoleMapping(unittest.TestCase):
         """Test getting Discord rank for None."""
         result = get_discord_rank_for_wom_role(None)
         self.assertIsNone(result)
-
-    def test_get_threshold_for_wom_role_mapped(self):
-        """Test getting threshold for mapped WOM role."""
-        # Test rank-based role
-        result = get_threshold_for_wom_role(GroupRole.Iron)
-        # Should use IRON rank threshold
-        self.assertGreater(result, 0)
-
-        # Test god rank role
-        result = get_threshold_for_wom_role(GroupRole.Sage)
-        # Should use GOD_GUTHIX rank threshold
-        self.assertGreater(result, 0)
-
-    def test_get_threshold_for_wom_role_unmapped(self):
-        """Test getting threshold for unmapped WOM role."""
-        # Unmapped roles should get the highest threshold
-        result = get_threshold_for_wom_role(GroupRole.Wizard)
-        # Should be GOD rank threshold (highest)
-        expected_god_threshold = get_threshold_for_wom_role(
-            GroupRole.Sage
-        )  # GOD_GUTHIX
-        self.assertGreaterEqual(result, expected_god_threshold)
-
-    def test_get_threshold_for_wom_role_none(self):
-        """Test getting threshold for None role."""
-        result = get_threshold_for_wom_role(None)
-        # Should be GOD rank threshold (highest)
-        expected_god_threshold = get_threshold_for_wom_role(
-            GroupRole.Sage
-        )  # GOD_GUTHIX
-        self.assertGreaterEqual(result, expected_god_threshold)
 
     def test_get_display_name_for_wom_role_mapped(self):
         """Test getting display name for mapped WOM role."""
@@ -147,14 +115,6 @@ class TestWomRoleMapping(unittest.TestCase):
         for role in critical_roles:
             with self.subTest(role=role):
                 self.assertIn(role, WOM_TO_DISCORD_ROLE_MAPPING)
-
-    def test_rank_mapping_consistency(self):
-        """Test that rank mappings are consistent with role system."""
-        # Achievement ranks should have valid thresholds
-        for wom_role, rank in WOM_TO_DISCORD_RANK_MAPPING.items():
-            with self.subTest(wom_role=wom_role, rank=rank):
-                threshold = get_threshold_for_wom_role(wom_role)
-                self.assertGreater(threshold, 0)
 
 
 if __name__ == "__main__":
