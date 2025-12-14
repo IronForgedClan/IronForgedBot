@@ -4,6 +4,7 @@ from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
 import discord
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
 
 VALID_CONFIG = {
     "TEMP_DIR": "/tmp",
@@ -563,3 +564,85 @@ def create_test_trick_or_treat_handler():
             "🪙"  # Mock ingot_icon as string to avoid AsyncMock formatting issues
         )
         return handler
+
+
+def validate_role_mappings() -> list[str]:
+    """
+    Validate the role mapping configuration for consistency.
+
+    Returns:
+        List of validation error messages (empty if valid)
+    """
+    from ironforgedbot.common.wom_role_mapping import (
+        WOM_TO_DISCORD_RANK_MAPPING,
+        WOM_TO_DISCORD_ROLE_MAPPING,
+    )
+
+    errors = []
+
+    # Validate that WOM roles map to valid ranks
+    mapped_discord_ranks = set(WOM_TO_DISCORD_RANK_MAPPING.values())
+    valid_ranks = set(RANK)
+
+    invalid_ranks = mapped_discord_ranks - valid_ranks
+    if invalid_ranks:
+        errors.append(f"Invalid ranks in mapping: {invalid_ranks}")
+
+    # Validate that WOM roles map to valid roles
+    mapped_discord_roles = set(WOM_TO_DISCORD_ROLE_MAPPING.values())
+    valid_roles = set(ROLE)
+
+    invalid_roles = mapped_discord_roles - valid_roles
+    if invalid_roles:
+        errors.append(f"Invalid roles in mapping: {invalid_roles}")
+
+    # Check that achievement ranks have valid thresholds
+    for rank in mapped_discord_ranks:
+        try:
+            threshold = get_activity_threshold_for_rank(rank)
+            if threshold < 0:
+                errors.append(f"Negative threshold for rank {rank}: {threshold}")
+        except Exception as e:
+            errors.append(f"Error getting threshold for rank {rank}: {e}")
+
+    return errors
+
+
+def get_all_wom_roles_for_discord_role(discord_role: ROLE) -> list:
+    """
+    Get all WOM roles that map to a specific Discord role.
+
+    Args:
+        discord_role: Discord ROLE enum value
+
+    Returns:
+        List of WOM GroupRole values that map to the Discord role
+    """
+    from wom import GroupRole
+    from ironforgedbot.common.wom_role_mapping import WOM_TO_DISCORD_ROLE_MAPPING
+
+    return [
+        wom_role
+        for wom_role, mapped_role in WOM_TO_DISCORD_ROLE_MAPPING.items()
+        if mapped_role == discord_role
+    ]
+
+
+def get_all_wom_roles_for_discord_rank(discord_rank: RANK) -> list:
+    """
+    Get all WOM roles that map to a specific Discord rank.
+
+    Args:
+        discord_rank: Discord RANK enum value
+
+    Returns:
+        List of WOM GroupRole values that map to the Discord rank
+    """
+    from wom import GroupRole
+    from ironforgedbot.common.wom_role_mapping import WOM_TO_DISCORD_RANK_MAPPING
+
+    return [
+        wom_role
+        for wom_role, mapped_rank in WOM_TO_DISCORD_RANK_MAPPING.items()
+        if mapped_rank == discord_rank
+    ]

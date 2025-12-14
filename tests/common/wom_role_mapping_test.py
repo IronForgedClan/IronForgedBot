@@ -10,9 +10,11 @@ from ironforgedbot.common.wom_role_mapping import (
     get_discord_rank_for_wom_role,
     get_threshold_for_wom_role,
     get_display_name_for_wom_role,
+)
+from tests.helpers import (
+    validate_role_mappings,
     get_all_wom_roles_for_discord_role,
     get_all_wom_roles_for_discord_rank,
-    validate_role_mappings,
 )
 
 
