@@ -82,27 +82,6 @@ def get_discord_role_for_wom_role(wom_role: Optional[GroupRole]) -> Optional[ROL
     return WOM_TO_DISCORD_ROLE_MAPPING.get(wom_role)
 
 
-def get_threshold_for_wom_role(wom_role: Optional[GroupRole]) -> int:
-    """
-    Get the activity threshold for a WOM role based on its Discord rank mapping.
-
-    Args:
-        wom_role: WiseOldMan GroupRole enum value
-
-    Returns:
-        XP threshold for the role. Returns highest threshold if role not mapped.
-    """
-    if wom_role is None:
-        return 0
-
-    discord_rank = get_discord_rank_for_wom_role(wom_role)
-    if discord_rank is None:
-        print("unknown discord rank")
-        return 0
-
-    return get_activity_threshold_for_rank(discord_rank)
-
-
 def get_display_name_for_wom_role(wom_role: Optional[GroupRole]) -> str:
     """
     Get display name for a WOM role based on its Discord role mapping.

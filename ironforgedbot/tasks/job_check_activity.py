@@ -191,7 +191,7 @@ async def _find_inactive_users(
                 )
                 return None
 
-            results = check_bulk_activity(wom_group, all_member_gains, absentees)
+            results = await check_bulk_activity(wom_group, all_member_gains, absentees)
             return results
 
     except Exception as e:

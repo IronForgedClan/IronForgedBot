@@ -6,11 +6,11 @@ from typing import List, Optional, Union
 from wom import GroupRole
 from wom.models import GroupDetail, GroupMembership, GroupMemberGains, PlayerGains
 
+from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
 from ironforgedbot.common.roles import is_exempt_from_activity_check
 from ironforgedbot.common.wom_role_mapping import (
     get_discord_role_for_wom_role,
     get_display_name_for_wom_role,
-    get_threshold_for_wom_role,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,7 @@ def check_member_activity(
     wom_group: GroupDetail,
     monthly_gains: Union[GroupMemberGains, PlayerGains],
     absentees: List[str],
+    member_rank: RANK,
 ) -> ActivityCheckResult:
     """Check a single member's activity against requirements.
 
@@ -103,6 +104,7 @@ def check_member_activity(
         wom_group: WOM group details containing membership info
         monthly_gains: Monthly gains data (from bulk or individual API)
         absentees: List of absent member usernames (lowercase)
+        member_rank: Member's rank
 
     Returns:
         ActivityCheckResult with all check details
@@ -160,7 +162,7 @@ def check_member_activity(
     discord_role = get_discord_role_for_wom_role(wom_member.role)
     is_exempt = discord_role is not None and is_exempt_from_activity_check(discord_role)
 
-    xp_threshold = get_threshold_for_wom_role(wom_member.role)
+    xp_threshold = get_activity_threshold_for_rank(member_rank)
     xp_gained = extract_overall_xp_gained(monthly_gains)
 
     is_active = xp_gained >= xp_threshold
@@ -191,7 +193,7 @@ def check_member_activity(
     )
 
 
-def check_bulk_activity(
+async def check_bulk_activity(
     wom_group: GroupDetail,
     all_member_gains: List[GroupMemberGains],
     absentees: List[str],
@@ -206,20 +208,39 @@ def check_bulk_activity(
     Returns:
         List of ActivityCheckResult for all members
     """
+    from ironforgedbot.common.helpers import normalize_discord_string
+    from ironforgedbot.database.database import db
+    from ironforgedbot.services.service_factory import create_member_service
+
     results = []
 
-    for member_gains in all_member_gains:
-        try:
-            result = check_member_activity(
-                wom_username=member_gains.player.username,
-                wom_group=wom_group,
-                monthly_gains=member_gains,
-                absentees=absentees,
-            )
-            results.append(result)
-        except Exception as e:
-            logger.warning(
-                f"Error checking activity for {getattr(member_gains.player, 'username', 'unknown')}: {e}"
-            )
+    async with db.get_session() as session:
+        member_service = create_member_service(session)
+
+        for member_gains in all_member_gains:
+            try:
+                # Fetch member from database to get their rank
+                db_member = await member_service.get_member_by_nickname(
+                    normalize_discord_string(member_gains.player.username)
+                )
+
+                if not db_member:
+                    logger.warning(
+                        f"Member {member_gains.player.username} not found in database, skipping"
+                    )
+                    continue
+
+                result = check_member_activity(
+                    wom_username=member_gains.player.username,
+                    wom_group=wom_group,
+                    monthly_gains=member_gains,
+                    absentees=absentees,
+                    member_rank=db_member.rank,
+                )
+                results.append(result)
+            except Exception as e:
+                logger.warning(
+                    f"Error checking activity for {getattr(member_gains.player, 'username', 'unknown')}: {e}"
+                )
 
     return results

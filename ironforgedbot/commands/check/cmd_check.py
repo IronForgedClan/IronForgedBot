@@ -126,6 +126,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
             wom_group=wom_group,
             monthly_gains=player_gains,
             absentees=known_absentees,
+            member_rank=db_member.rank,
         )
     except Exception as e:
         logger.error(f"Error checking activity for {player}: {e}")
@@ -146,7 +147,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         prospect_emoji = find_emoji("Prospect")
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = f"This member is a {prospect_emoji} **Prospect** and immune from activity purges for the duration of their probation."
+        note_text = f"This member is a {prospect_emoji} **Prospect** making them exempt from purges for the duration of their probation."
     elif result.is_exempt:
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
