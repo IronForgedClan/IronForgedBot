@@ -536,3 +536,128 @@ class TestResponses(unittest.IsolatedAsyncioTestCase):
         for color in colors:
             embed = build_response_embed("Test", "Description", color)
             self.assertEqual(embed.color, color)
+
+    @patch("ironforgedbot.common.responses.find_emoji")
+    @patch("ironforgedbot.common.responses.text_bold")
+    @patch("ironforgedbot.common.responses.build_response_embed")
+    @patch("ironforgedbot.common.responses.db")
+    @patch("ironforgedbot.common.responses.create_member_service")
+    async def test_send_prospect_response_timer_expired(
+        self,
+        mock_create_member_service,
+        mock_db,
+        mock_build_embed,
+        mock_text_bold,
+        mock_find_emoji,
+    ):
+        """Test prospect response when timer has expired"""
+        mock_find_emoji.return_value = "🔸"
+        mock_text_bold.side_effect = lambda x: f"**{x}**"
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_discord_id.return_value = self.mock_db_member
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_embed = Mock()
+        mock_build_embed.return_value = mock_embed
+
+        with patch("ironforgedbot.common.responses.datetime") as mock_datetime:
+            # Set current time to 29 days after joined date (1 day past 28-day probation)
+            mock_datetime.now.return_value = datetime(2024, 1, 30, tzinfo=timezone.utc)
+            mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+            await send_prospect_response(
+                self.mock_interaction, "Iron", "⚪", self.mock_member
+            )
+
+        call_args = mock_build_embed.call_args
+        description = call_args[0][1]
+
+        self.assertIn("⏳ _soon™_", description)
+
+    @patch("ironforgedbot.common.responses.find_emoji")
+    @patch("ironforgedbot.common.responses.text_bold")
+    @patch("ironforgedbot.common.responses.build_response_embed")
+    @patch("ironforgedbot.common.responses.db")
+    @patch("ironforgedbot.common.responses.create_member_service")
+    async def test_send_prospect_response_less_than_a_day(
+        self,
+        mock_create_member_service,
+        mock_db,
+        mock_build_embed,
+        mock_text_bold,
+        mock_find_emoji,
+    ):
+        """Test prospect response when less than a day remains (0 < remaining_time < 1 day)"""
+        mock_find_emoji.return_value = "🔸"
+        mock_text_bold.side_effect = lambda x: f"**{x}**"
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_discord_id.return_value = self.mock_db_member
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_embed = Mock()
+        mock_build_embed.return_value = mock_embed
+
+        with patch("ironforgedbot.common.responses.datetime") as mock_datetime:
+            # Set current time to 27 days 12 hours after joined date (12 hours before probation ends)
+            mock_datetime.now.return_value = datetime(
+                2024, 1, 28, 12, 0, 0, tzinfo=timezone.utc
+            )
+            mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+            await send_prospect_response(
+                self.mock_interaction, "Iron", "⚪", self.mock_member
+            )
+
+        call_args = mock_build_embed.call_args
+        description = call_args[0][1]
+
+        self.assertIn("⏳ _A few hours remaining..._", description)
+
+    @patch("ironforgedbot.common.responses.find_emoji")
+    @patch("ironforgedbot.common.responses.text_bold")
+    @patch("ironforgedbot.common.responses.build_response_embed")
+    @patch("ironforgedbot.common.responses.db")
+    @patch("ironforgedbot.common.responses.create_member_service")
+    async def test_send_prospect_response_multiple_days_remaining(
+        self,
+        mock_create_member_service,
+        mock_db,
+        mock_build_embed,
+        mock_text_bold,
+        mock_find_emoji,
+    ):
+        """Test prospect response when one or more days remain (remaining_time >= 1 day)"""
+        mock_find_emoji.return_value = "🔸"
+        mock_text_bold.side_effect = lambda x: f"**{x}**"
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_discord_id.return_value = self.mock_db_member
+        mock_create_member_service.return_value = mock_member_service
+
+        mock_embed = Mock()
+        mock_build_embed.return_value = mock_embed
+
+        with patch("ironforgedbot.common.responses.datetime") as mock_datetime:
+            # Set current time to 10 days after joined date (18 days remain)
+            mock_datetime.now.return_value = datetime(2024, 1, 11, tzinfo=timezone.utc)
+            mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+            await send_prospect_response(
+                self.mock_interaction, "Iron", "⚪", self.mock_member
+            )
+
+        call_args = mock_build_embed.call_args
+        description = call_args[0][1]
+
+        self.assertIn("⏳ Approximately **18 days** remaining", description)
