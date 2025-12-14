@@ -129,6 +129,12 @@ class MemberService:
         )
         return result.scalars().first()
 
+    async def get_member_rank(self, nickname: str) -> RANK | None:
+        result = await self.db.execute(
+            select(Member.rank).where(Member.nickname == nickname)
+        )
+        return result.scalar_one_or_none()
+
     @log_database_operation(logger)
     async def reactivate_member(
         self, id: str, new_nickname: str, rank: RANK | None = RANK.IRON
