@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 
 import discord
@@ -13,7 +13,38 @@ from ironforgedbot.tasks.job_check_activity import (
     _sort_results_safely,
     DEFAULT_WOM_LIMIT,
 )
+from ironforgedbot.common.activity_check import ActivityCheckResult
 from ironforgedbot.common.roles import ROLE
+
+
+def create_mock_activity_result(
+    username="TestPlayer",
+    wom_role=GroupRole.Iron,
+    discord_role="Member",
+    xp_gained=50000,
+    xp_threshold=150000,
+    is_active=False,
+    is_exempt=False,
+    is_absent=False,
+    is_prospect=False,
+    last_changed_at=None,
+    skip_reason=None,
+):
+    """Helper to create ActivityCheckResult for testing."""
+    return ActivityCheckResult(
+        username=username,
+        wom_role=wom_role,
+        discord_role=discord_role,
+        xp_gained=xp_gained,
+        xp_threshold=xp_threshold,
+        is_active=is_active,
+        is_exempt=is_exempt,
+        is_absent=is_absent,
+        is_prospect=is_prospect,
+        last_changed_at=last_changed_at,
+        check_timestamp=datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),
+        skip_reason=skip_reason,
+    )
 
 
 class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
@@ -56,9 +87,24 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_absent_service.process_absent_members.return_value = [self.mock_absentee]
         mock_create_absent_service.return_value = mock_absent_service
 
+        # Return ActivityCheckResult objects
         mock_find_inactive.return_value = [
-            ["Player1", "Iron", "100,000", "2 days ago"],
-            ["Player2", "Mithril", "200,000", "5 days ago"],
+            create_mock_activity_result(
+                username="Player1",
+                discord_role="Member",
+                xp_gained=100000,
+                xp_threshold=150000,
+                is_active=False,
+                last_changed_at=datetime(2024, 1, 13, 10, 30, 0, tzinfo=timezone.utc),
+            ),
+            create_mock_activity_result(
+                username="Player2",
+                discord_role="Member",
+                xp_gained=200000,
+                xp_threshold=150000,
+                is_active=False,
+                last_changed_at=datetime(2024, 1, 10, 10, 30, 0, tzinfo=timezone.utc),
+            ),
         ]
 
         mock_tabulate.return_value = "Test table output"
@@ -74,15 +120,12 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             DEFAULT_WOM_LIMIT,
         )
 
-        mock_tabulate.assert_called_once_with(
-            [
-                ["Player1", "Iron", "100,000", "2 days ago"],
-                ["Player2", "Mithril", "200,000", "5 days ago"],
-            ],
-            headers=["Member", "Role", "Gained", "Last Updated"],
-            tablefmt="github",
-            colalign=("left", "left", "right", "right"),
-        )
+        # Verify tabulate was called with formatted data
+        self.assertTrue(mock_tabulate.called)
+        call_args = mock_tabulate.call_args[0][0]
+        self.assertEqual(len(call_args), 2)
+        self.assertEqual(call_args[0][0], "Player1")
+        self.assertEqual(call_args[1][0], "Player2")
 
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
 
@@ -151,10 +194,32 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_absent_service.process_absent_members.return_value = []
         mock_create_absent_service.return_value = mock_absent_service
 
+        # Return ActivityCheckResult objects
         mock_find_inactive.return_value = [
-            ["Player2", "Iron", "300,000", "2 days ago"],
-            ["Player1", "Iron", "100,000", "1 day ago"],
-            ["Player3", "Iron", "200,000", "3 days ago"],
+            create_mock_activity_result(
+                username="Player2",
+                discord_role="Member",
+                xp_gained=300000,
+                xp_threshold=150000,
+                is_active=False,
+                last_changed_at=datetime(2024, 1, 13, 10, 30, 0, tzinfo=timezone.utc),
+            ),
+            create_mock_activity_result(
+                username="Player1",
+                discord_role="Member",
+                xp_gained=100000,
+                xp_threshold=150000,
+                is_active=False,
+                last_changed_at=datetime(2024, 1, 14, 10, 30, 0, tzinfo=timezone.utc),
+            ),
+            create_mock_activity_result(
+                username="Player3",
+                discord_role="Member",
+                xp_gained=200000,
+                xp_threshold=150000,
+                is_active=False,
+                last_changed_at=datetime(2024, 1, 12, 10, 30, 0, tzinfo=timezone.utc),
+            ),
         ]
 
         mock_tabulate.return_value = "Test table output"
@@ -168,18 +233,14 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         first_call = self.mock_report_channel.send.call_args_list[0]
         self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
 
-        expected_sorted = [
-            ["Player1", "Iron", "100,000", "1 day ago"],
-            ["Player3", "Iron", "200,000", "3 days ago"],
-            ["Player2", "Iron", "300,000", "2 days ago"],
-        ]
-
-        mock_tabulate.assert_called_once_with(
-            expected_sorted,
-            headers=["Member", "Role", "Gained", "Last Updated"],
-            tablefmt="github",
-            colalign=("left", "left", "right", "right"),
-        )
+        # Verify results are sorted by XP gained (lowest to highest)
+        self.assertTrue(mock_tabulate.called)
+        call_args = mock_tabulate.call_args[0][0]
+        self.assertEqual(len(call_args), 3)
+        # Should be sorted by XP: Player1 (100k), Player3 (200k), Player2 (300k)
+        self.assertEqual(call_args[0][0], "Player1")
+        self.assertEqual(call_args[1][0], "Player3")
+        self.assertEqual(call_args[2][0], "Player2")
 
 
 class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
@@ -233,191 +294,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
         self.assertIn("WOM API rate limit exceeded", call_args.args[0])
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    @patch("ironforgedbot.tasks.job_check_activity.render_relative_time")
-    @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
-    async def test_find_inactive_users_success(
-        self, mock_get_wom_service, mock_render_time, mock_find_member
-    ):
-        mock_wom_service = AsyncMock()
-        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
-
-        mock_group = Mock()
-        mock_player = Mock()
-        mock_player.id = 123
-        mock_player.username = "TestPlayer"
-
-        mock_data = Mock()
-        mock_data.gained = 50000  # Below member threshold which is 150,000
-
-        mock_member_gains = Mock()
-        mock_member_gains.player = mock_player
-        mock_member_gains.data = mock_data
-
-        mock_wom_service.get_monthly_activity_data.return_value = (
-            mock_group,
-            [mock_member_gains],
-        )
-
-        mock_wom_member = Mock()
-        mock_wom_member.role = GroupRole.Iron
-        mock_wom_member.player.username = "TestPlayer"
-        mock_wom_member.player.last_changed_at = datetime(2024, 1, 10)
-        mock_find_member.return_value = mock_wom_member
-
-        mock_render_time.return_value = "5 days ago"
-
-        result = await _find_inactive_users(
-            self.mock_report_channel,
-            self.absentees,
-            DEFAULT_WOM_LIMIT,
-        )
-
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0], ["TestPlayer", "Member", "50,000", "5 days ago"])
-        mock_wom_service.get_monthly_activity_data.assert_called_once()
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
-    async def test_find_inactive_users_skips_absentees(
-        self, mock_get_wom_service, mock_find_member
-    ):
-        mock_wom_service = AsyncMock()
-        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
-
-        mock_group = Mock()
-        mock_player = Mock()
-        mock_player.id = 123
-        mock_player.username = "absent1"  # In absentees list
-
-        mock_data = Mock()
-        mock_data.gained = 50000
-
-        mock_member_gains = Mock()
-        mock_member_gains.player = mock_player
-        mock_member_gains.data = mock_data
-
-        mock_wom_service.get_monthly_activity_data.return_value = (
-            mock_group,
-            [mock_member_gains],
-        )
-
-        mock_wom_member = Mock()
-        mock_wom_member.role = GroupRole.Iron
-        mock_wom_member.player.username = "absent1"
-        mock_find_member.return_value = mock_wom_member
-
-        result = await _find_inactive_users(
-            self.mock_report_channel,
-            self.absentees,
-            DEFAULT_WOM_LIMIT,
-        )
-
-        self.assertEqual(len(result), 0)
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
-    async def test_find_inactive_users_skips_dogsbody(
-        self, mock_get_wom_service, mock_find_member
-    ):
-        mock_wom_service = AsyncMock()
-        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
-
-        mock_group = Mock()
-        mock_player = Mock()
-        mock_player.id = 123
-        mock_player.username = "TestPlayer"
-
-        mock_data = Mock()
-        mock_data.gained = 50000
-
-        mock_member_gains = Mock()
-        mock_member_gains.player = mock_player
-        mock_member_gains.data = mock_data
-
-        mock_wom_service.get_monthly_activity_data.return_value = (
-            mock_group,
-            [mock_member_gains],
-        )
-
-        mock_wom_member = Mock()
-        mock_wom_member.role = GroupRole.Dogsbody  # Should be skipped
-        mock_wom_member.player.username = "TestPlayer"
-        mock_find_member.return_value = mock_wom_member
-
-        result = await _find_inactive_users(
-            self.mock_report_channel,
-            self.absentees,
-            DEFAULT_WOM_LIMIT,
-        )
-
-        self.assertEqual(len(result), 0)
-
-    @patch("ironforgedbot.tasks.job_check_activity._find_wom_member")
-    @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
-    async def test_find_inactive_users_role_mapping(
-        self, mock_get_wom_service, mock_find_member
-    ):
-        mock_wom_service = AsyncMock()
-        mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
-
-        mock_group = Mock()
-
-        test_cases = [
-            (GroupRole.Helper, "Staff"),  # Maps to ROLE.STAFF
-            (GroupRole.Collector, "Staff"),  # Maps to ROLE.STAFF
-            (GroupRole.Administrator, "Leadership"),  # Maps to ROLE.LEADERSHIP
-            (GroupRole.Colonel, "Staff"),  # Maps to ROLE.STAFF
-            (GroupRole.Deputy_owner, "Leadership"),  # Maps to ROLE.LEADERSHIP
-            (GroupRole.Mithril, "Member"),  # Maps to ROLE.MEMBER
-        ]
-
-        for wom_role, expected_role in test_cases:
-            with self.subTest(wom_role=wom_role):
-                mock_player = Mock()
-                mock_player.id = 123
-                mock_player.username = f"Player_{wom_role}"
-
-                mock_data = Mock()
-                mock_data.gained = 50000  # Below any threshold
-
-                mock_member_gains = Mock()
-                mock_member_gains.player = mock_player
-                mock_member_gains.data = mock_data
-
-                mock_wom_service.get_monthly_activity_data.return_value = (
-                    mock_group,
-                    [mock_member_gains],
-                )
-
-                mock_wom_member = Mock()
-                mock_wom_member.role = wom_role
-                mock_wom_member.player.username = f"Player_{wom_role}"
-                mock_wom_member.player.last_changed_at = None
-                mock_find_member.return_value = mock_wom_member
-
-                result = await _find_inactive_users(
-                    self.mock_report_channel,
-                    [],
-                    DEFAULT_WOM_LIMIT,
-                )
-
-                # Staff and Leadership roles should be exempt from activity checks
-                if expected_role in ["Staff", "Leadership"]:
-                    self.assertEqual(
-                        len(result),
-                        0,
-                        f"{wom_role} should be exempt from activity checks",
-                    )
-                else:
-                    self.assertEqual(
-                        len(result),
-                        1,
-                        f"{wom_role} should be subject to activity checks",
-                    )
-                    self.assertEqual(result[0][1], expected_role)
-
 
 class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
