@@ -49,12 +49,12 @@ class RANK_ACTIVITY_THRESHOLDS(IntEnum):
     GOD_GUTHIX = 500_000
     GOD_SARADOMIN = 500_000
     GOD = 500_000
-    MYTH = 400_000
-    LEGEND = 350_000
-    DRAGON = 300_000
-    RUNE = 250_000
-    ADAMANT = 200_000
-    MITHRIL = 150_000
+    MYTH = 500_000
+    LEGEND = 500_000
+    DRAGON = 500_000
+    RUNE = 500_000
+    ADAMANT = 300_000
+    MITHRIL = 300_000
     IRON = 150_000
 
 
@@ -191,9 +191,8 @@ def get_activity_threshold_for_rank(rank: RANK) -> int:
     Returns:
         Monthly XP threshold for activity checks
     """
-    # Try to get the threshold using the rank name
     try:
         return RANK_ACTIVITY_THRESHOLDS[rank.name]
     except KeyError:
-        # Default to Iron threshold for unknown ranks
-        return RANK_ACTIVITY_THRESHOLDS.IRON
+        # Default to God for unknown ranks
+        return RANK_ACTIVITY_THRESHOLDS.GOD
