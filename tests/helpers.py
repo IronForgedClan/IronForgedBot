@@ -18,6 +18,7 @@ VALID_CONFIG = {
     "TRICK_OR_TREAT_CHANNEL_ID": "",
     "RAFFLE_CHANNEL_ID": "123456",
     "INGOT_SHOP_CHANNEL_ID": "123456",
+    "RULES_CHANNEL_ID": "123456",
 }
 
 _id_counter = itertools.count(100000)

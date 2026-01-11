@@ -210,6 +210,7 @@ Now you can modify the example `.env` file with your values.
 | TRICK_OR_TREAT_COOLDOWN_SECONDS | The number of seconds allowed between command executions. Default 3600.               |                                                                      |
 | RAFFLE_CHANNEL_ID               | The unique ID of the channel that will house the raffle.                              | Your own Discord server channel: right click, "Copy Channel ID".     |
 | INGOT_SHOP_CHANNEL_ID           | The unique ID of the ingot shop channel.                                              | Your own Discord server channel: right click, "Copy Channel ID".     |
+| RULES_CHANNEL_ID                | The unique ID of the rules channel.                                                   | Your own Discord server channel: right click, "Copy Channel ID".     |
 | DB_ROOT                         | The password used by the root database account.                                       | Generate a secure password.                                          |
 | DB_USER                         | The name of the user account the bot will use to access the database.                 | Any value. Eg: test_user                                             |
 | DB_PASS                         | The password of the account the bot will use to access the database.                  | Generate a secure password.                                          |
