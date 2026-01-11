@@ -127,11 +127,12 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
 
         rank_breakdown_embed = build_response_embed(
             f"{rank_icon} {display_name} | Rank Ladder",
-            f"The {text_bold('Iron Forged')} player rank ladder.",
+            "Gain xp, earn points, climb the ladder!",
             rank_color,
         )
 
-        for rank in RANK:
+        display_ranks = [r for r in RANK if not r.lower().startswith("god_")]
+        for rank in display_ranks:
             icon = find_emoji(rank)
             point_threshold = RANK_POINTS[rank.upper()]
             rank_breakdown_embed.add_field(
