@@ -159,6 +159,58 @@ class WomService:
             logger.error(f"Error getting membership data for group {group_id}: {e}")
             self._handle_wom_error(e)
 
+    async def get_player_monthly_gains(self, username: str):
+        """Get monthly gains for a single player.
+
+        Args:
+            username: Player's RuneScape username
+
+        Returns:
+            PlayerGains object with monthly gains data
+
+        Raises:
+            WomServiceError: If the API call fails
+            WomRateLimitError: If rate limit is exceeded
+            WomTimeoutError: If request times out
+        """
+        client = await self._get_client()
+
+        try:
+            logger.debug(f"Fetching monthly gains for player {username}")
+            result = await asyncio.wait_for(
+                client.players.get_gains(username, period=Period.Month), timeout=30.0
+            )
+
+            if result.is_err:
+                error_details = result.unwrap_err()
+                logger.error(
+                    f"WOM API error getting monthly gains for {username}: {error_details}"
+                )
+                raise WomServiceError(f"Failed to get player gains: {error_details}")
+
+            player_gains = result.unwrap()
+            logger.info(f"Retrieved monthly gains for {username}")
+            return player_gains
+
+        except asyncio.TimeoutError as e:
+            logger.error(f"Timeout getting monthly gains for {username}: {e}")
+            raise WomTimeoutError("WOM API request timed out")
+        except (WomServiceError, WomRateLimitError, WomTimeoutError):
+            raise
+        except Exception as e:
+            error_str = str(e).lower()
+            logger.error(
+                f"Error getting monthly gains for {username}: {type(e).__name__}: {e}"
+            )
+            if any(
+                keyword in error_str
+                for keyword in ["json", "decode", "parse", "invalid"]
+            ):
+                logger.error(
+                    f"Detected JSON parsing error for {username}, WOM API may have returned HTML instead of JSON"
+                )
+            self._handle_wom_error(e)
+
     async def get_player_name_history(self, player_name: str) -> List[NameChange]:
         """Get player's RuneScape name change history.
 

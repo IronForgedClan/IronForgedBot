@@ -6,6 +6,7 @@ import discord
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_admin import cmd_admin
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
+from ironforgedbot.commands.check.cmd_check import cmd_check
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
 from ironforgedbot.commands.debug.cmd_debug_error_report import cmd_debug_error_report
 from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
@@ -72,6 +73,13 @@ class IronForgedCommands:
                 name="breakdown",
                 description="Displays player score breakdown.",
                 callback=cmd_breakdown,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="check",
+                description="Check if you meet monthly activity requirements.",
+                callback=cmd_check,
             )
         )
         self._tree.add_command(

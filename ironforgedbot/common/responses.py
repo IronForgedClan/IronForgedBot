@@ -254,9 +254,14 @@ async def send_prospect_response(
         days_remaining = str(days) + " day"
         days_remaining += "s" if days > 1 else ""
 
-        embed_description += (
-            f"\n\n⏳ Approximately {text_bold(days_remaining)} remaining."
-        )
+        if remaining_time <= timedelta(0):
+            embed_description += f"\n\n⏳ _soon™_"
+        elif remaining_time < timedelta(days=1):
+            embed_description += f"\n\n⏳ _A few hours remaining..._"
+        else:
+            embed_description += (
+                f"\n\n⏳ Approximately {text_bold(days_remaining)} remaining."
+            )
 
         embed = build_response_embed(
             "",
