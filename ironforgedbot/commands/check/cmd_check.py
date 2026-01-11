@@ -15,6 +15,7 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.ranks import get_rank_from_member
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.config import CONFIG
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import (
@@ -166,7 +167,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
 
     embed = build_response_embed(
         title=f"📊 Activity Check",
-        description="Inactive members may be removed from the clan to make space for active members. For more information see <#123>.",
+        description=f"Inactive members may be removed from the clan to make space for active members. For more information see <#{CONFIG.RULES_CHANNEL_ID}>.",
         color=embed_color,
     )
 
