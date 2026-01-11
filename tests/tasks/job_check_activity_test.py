@@ -295,6 +295,7 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         call_args = self.mock_report_channel.send.call_args
         self.assertIn("WOM API rate limit exceeded", call_args.args[0])
 
+
 class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_report_channel = Mock(spec=discord.TextChannel)
