@@ -14,6 +14,7 @@ from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
 )
+from ironforgedbot.tasks.job_payroll import job_payroll
 from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
@@ -289,6 +290,18 @@ class IronForgedAutomations:
             CronTrigger(minute="*/10"),
             id="clear_caches",
             name="Cache Cleanup Job",
+        )
+
+        self.scheduler.add_job(
+            self._job_wrapper(
+                job_payroll,
+                self.discord_guild,
+                self.report_channel,
+            ),
+            # CronTrigger(minute="*"),
+            CronTrigger(day=1, hour=6, second=offset, timezone="UTC"),
+            id="job_payroll",
+            name="Monthly Payroll Job",
         )
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")
