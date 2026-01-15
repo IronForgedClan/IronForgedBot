@@ -10,6 +10,7 @@ class ROLE(StrEnum):
     APPLICANT = "Applicant"
     PROSPECT = "Prospect"
     MEMBER = "Member"
+    BOOSTER = "Server Booster"
     STAFF = "Staff"
     EVENTS_TEAM = "Events Team"
     RECRUITMENT_TEAM = "Recruitment Team"
