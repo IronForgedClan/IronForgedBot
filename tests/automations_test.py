@@ -462,7 +462,7 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
 
         await automation.setup_automations()
 
-        self.assertEqual(automation.scheduler.add_job.call_count, 5)
+        self.assertEqual(automation.scheduler.add_job.call_count, 6)
         expected_calls = [
             call
             for call in self.mock_channel.send.call_args_list
@@ -501,16 +501,16 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         async def mock_job_func(delay):
             pass
 
-        mock_tasks = [Mock() for _ in range(5)]
+        mock_tasks = [Mock() for _ in range(6)]
 
         with patch(
             "ironforgedbot.automations.asyncio.create_task", side_effect=mock_tasks
         ):
             tasks = []
-            for i in range(5):
+            for i in range(6):
                 task = await automation.track_job(mock_job_func, 0.01)
                 tasks.append(task)
 
-        self.assertEqual(len(tasks), 5)
+        self.assertEqual(len(tasks), 6)
         for mock_task in mock_tasks:
             self.assertIn(mock_task, automation._running_jobs)

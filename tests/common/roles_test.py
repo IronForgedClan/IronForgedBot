@@ -34,6 +34,7 @@ class TestRoles(unittest.TestCase):
             "Applicant",
             "Prospect",
             "Member",
+            "Server Booster",
             "Staff",
             "Events Team",
             "Recruitment Team",
@@ -46,7 +47,7 @@ class TestRoles(unittest.TestCase):
 
     def test_role_any(self):
         result = ROLE.any()
-        self.assertEqual(len(result), 11)
+        self.assertEqual(len(result), 12)
         self.assertIn(ROLE.MEMBER, result)
         self.assertIn(ROLE.LEADERSHIP, result)
 
