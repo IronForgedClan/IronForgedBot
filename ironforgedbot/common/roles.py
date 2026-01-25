@@ -45,7 +45,8 @@ class ROLE(StrEnum):
 
 
 def get_highest_privilage_role_from_member(member: discord.Member) -> Optional[ROLE]:
-    matching_roles = [role for role in ROLE if ROLE.value in member.roles]
+    member_role_names = {r.name.lower().strip() for r in member.roles}
+    matching_roles = [role for role in ROLE if role.value.lower().strip() in member_role_names]
     return max(matching_roles, default=None, key=lambda r: list(ROLE).index(r))
 
 
