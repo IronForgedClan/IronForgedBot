@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.common.ranks import RANK
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 
@@ -335,6 +336,40 @@ class MemberService:
         )
 
         member.rank = new_rank
+        member.last_changed_date = now
+
+        try:
+            self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise e
+
+        return member
+
+    async def change_role(
+        self, id: str, new_role: ROLE, admin_id: str | None = None
+    ) -> Member:
+        member = await self.get_member_by_id(id)
+
+        if not member:
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
+
+        now = datetime.now(timezone.utc)
+
+        changelog_entry = Changelog(
+            member_id=member.id,
+            admin_id=admin_id,
+            change_type=ChangeType.ROLE_CHANGE,
+            previous_value=member.role,
+            new_value=new_role,
+            comment="Updated role",
+            timestamp=now,
+        )
+
+        member.role = new_role
         member.last_changed_date = now
 
         try:
