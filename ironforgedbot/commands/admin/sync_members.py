@@ -6,7 +6,11 @@ import discord
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.roles import (
+    ROLE,
+    check_member_has_role,
+    get_highest_privilage_role_from_member,
+)
 from ironforgedbot.database.database import db
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import (
@@ -69,6 +73,12 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                         if member.rank != discord_rank:
                             await service.change_rank(member.id, RANK(discord_rank))
                             change_text += "Rank changed"
+
+                    discord_role = get_highest_privilage_role_from_member(discord_member)
+                    if discord_role:
+                        if member.role != discord_role:
+                            await service.change_role(member.id, ROLE(discord_role), admin_id=None)
+                            change_text += " Role changed"
 
                     if len(change_text) > 0:
                         output.append([safe_nick, "Updated", change_text])
