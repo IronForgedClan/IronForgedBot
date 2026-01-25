@@ -35,13 +35,13 @@ async def update_member_role(
         if not member:
             await report_channel.send(
                 f"**Error:** Role changed for {discord_member.mention}, "
-                f"but database member not found. Role: {rank}."
+                f"but database member not found. Role: {role}."
             )
             return
 
         if member.role != role:
-            await service.change_role(member.id, ROLE(role))
+            await service.change_role(member.id, ROLE(role), admin_id=None)
             await report_channel.send(
                 f"**ℹ️ Role changed:** {discord_member.mention}'s role was changed to "
-                f"**{RANK(rank)}**. Database updated."
+                f"**{role}**. Database updated."
             )
