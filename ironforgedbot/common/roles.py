@@ -11,12 +11,14 @@ class ROLE(StrEnum):
     PROSPECT = "Prospect"
     MEMBER = "Member"
     BOOSTER = "Server Booster"
+    BLACKLISTED = "Blacklisted"  # Clan member but not allowed in primary events
+    MODERATOR = "Moderator"
     STAFF = "Staff"
-    EVENTS_TEAM = "Events Team"
-    RECRUITMENT_TEAM = "Recruitment Team"
-    DISCORD_TEAM = "Discord Team"
-    BOT_TEAM = "Bot Team"
-    LEADERSHIP = "Leadership"
+    BRIGADIER = "Brigadier"
+    ADMIRAL = "Admiral"
+    LEADERSHIP = "Leadership"  # Deprecated
+    MARSHAL = "Marshal"
+    OWNER = "Owners"
 
     def or_higher(self):
         """Returns all roles at this level or higher"""
