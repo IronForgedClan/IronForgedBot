@@ -1,4 +1,8 @@
 {pkgs, ...}: {
+  packages = [
+    pkgs.pyright
+  ];
+
   languages.python = {
     enable = true;
     package = pkgs.python313;
