@@ -33,3 +33,7 @@ class Member(Base):
     last_changed_date: Mapped[datetime] = mapped_column(
         UTCDateTime, default=lambda: datetime.now(tz=timezone.utc)
     )
+    is_booster: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_prospect: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_blacklisted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
