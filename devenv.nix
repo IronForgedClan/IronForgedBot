@@ -1,6 +1,7 @@
 {pkgs, ...}: {
   packages = [
     pkgs.pyright
+    pkgs.python313Packages.debugpy
   ];
 
   languages.python = {
