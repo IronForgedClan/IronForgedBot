@@ -11,7 +11,7 @@ from ironforgedbot.common.helpers import (
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.ranks import RANK, get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.http import HTTP
@@ -212,7 +212,7 @@ async def _get_signups(
             res.add_unknowns(member)
             continue
 
-        if check_member_has_role(guild_member, ROLE.PROSPECT):
+        if has_prospect_role(guild_member):
             await res.add_prospect(member, members)
             continue
 

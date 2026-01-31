@@ -4,7 +4,7 @@ import time
 from discord.errors import Forbidden
 from ironforgedbot.common.helpers import format_duration, get_discord_role
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE, is_member_banned
+from ironforgedbot.common.roles import ROLE, BANNED_ROLE_NAME, is_member_banned_by_role
 from ironforgedbot.common.text_formatters import text_ul
 from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.database.database import db
@@ -16,11 +16,11 @@ async def remove_member_role(
     start_time = time.perf_counter()
     member_roles = set(role.name for role in member.roles)
     roles_to_remove = RANK.list() + ROLE.list() + GOD_ALIGNMENT.list()
-    is_banned = is_member_banned(member)
+    is_banned = is_member_banned_by_role(member)
 
     roles_removed = []
     for role_name in roles_to_remove:
-        if role_name == ROLE.BANNED:
+        if role_name == BANNED_ROLE_NAME:
             continue
 
         if role_name in member_roles:

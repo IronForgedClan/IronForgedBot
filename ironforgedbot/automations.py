@@ -295,7 +295,6 @@ class IronForgedAutomations:
         self.scheduler.add_job(
             self._job_wrapper(
                 job_payroll,
-                self.discord_guild,
                 self.report_channel,
             ),
             # CronTrigger(minute="*"),

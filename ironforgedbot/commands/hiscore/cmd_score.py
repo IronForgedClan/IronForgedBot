@@ -27,7 +27,7 @@ from ironforgedbot.common.responses import (
     send_not_clan_member,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
@@ -106,7 +106,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         next_rank_icon = find_emoji(next_rank_name)
 
     if member and member.roles:
-        if check_member_has_role(member, ROLE.PROSPECT):
+        if has_prospect_role(member):
             return await send_prospect_response(
                 interaction, rank_name, rank_icon, member
             )

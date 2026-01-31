@@ -6,8 +6,10 @@ from ironforgedbot.common.helpers import (
     find_emoji,
     get_discord_role,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold
+from ironforgedbot.database.database import db
+from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +20,23 @@ async def add_prospect_role(
     logger.debug(f"Processing Prospect role addition for {member.display_name}")
 
     report_content = (
-        f"{find_emoji(ROLE.PROSPECT)} {member.mention} has been "
-        f"given the {text_bold(ROLE.PROSPECT)} role."
+        f"{find_emoji('Prospect')} {member.mention} has been "
+        f"given the {text_bold(PROSPECT_ROLE_NAME)} role."
     )
     report_message = await report_channel.send(report_content + " Fixing roles...")
     roles_removed = ""
     roles_added = ""
 
-    prospect_role = get_discord_role(report_channel.guild, ROLE.PROSPECT)
+    prospect_role = get_discord_role(report_channel.guild, PROSPECT_ROLE_NAME)
     if prospect_role is None:
         raise ValueError("Unable to access Prospect role value")
+
+    async with db.get_session() as session:
+        service = MemberService(session)
+        db_member = await service.get_member_by_discord_id(member.id)
+        if db_member:
+            await service.update_member_flags(db_member.id, is_prospect=True)
+            logger.debug(f"Set is_prospect=True for {member.display_name}")
 
     if check_member_has_role(member, ROLE.APPLICANT):
         applicant_role = get_discord_role(report_channel.guild, ROLE.APPLICANT)

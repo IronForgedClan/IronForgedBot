@@ -114,6 +114,41 @@ class MemberService:
         result = await self.db.execute(select(Member).where(Member.active.is_(True)))
         return list(result.scalars().all())
 
+    async def get_active_members_by_role(self, role: ROLE) -> list[Member]:
+        """Get all active members with a specific role."""
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.role == role)
+        )
+        return list(result.scalars().all())
+
+    async def get_active_boosters(self) -> list[Member]:
+        """Get all active members who are server boosters."""
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.is_booster.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def get_active_prospects(self) -> list[Member]:
+        """Get all active members who are prospects."""
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.is_prospect.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def get_blacklisted_members(self) -> list[Member]:
+        """Get all active members who are blacklisted."""
+        result = await self.db.execute(
+            select(Member).where(
+                Member.active.is_(True), Member.is_blacklisted.is_(True)
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_banned_members(self) -> list[Member]:
+        """Get all members who are banned."""
+        result = await self.db.execute(select(Member).where(Member.is_banned.is_(True)))
+        return list(result.scalars().all())
+
     async def get_member_by_id(self, id: str) -> Member | None:
         result = await self.db.execute(select(Member).where(Member.id == id))
         return result.scalars().first()
@@ -371,6 +406,87 @@ class MemberService:
 
         member.role = new_role
         member.last_changed_date = now
+
+        try:
+            self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise e
+
+        return member
+
+    async def update_member_flags(
+        self,
+        id: str,
+        is_booster: bool | None = None,
+        is_prospect: bool | None = None,
+        is_blacklisted: bool | None = None,
+        is_banned: bool | None = None,
+    ) -> Member:
+        """Update boolean flags on a member.
+
+        Only provided flags are updated. None values are ignored.
+        """
+        now = datetime.now(timezone.utc)
+        member = await self.get_member_by_id(id)
+        changelog_entry = None
+
+        if not member:
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
+
+        if is_booster is not None:
+            changelog_entry = Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.FLAG_CHANGE,
+                previous_value=member.is_booster,
+                new_value=is_booster,
+                comment="Updated booster flag",
+                timestamp=now,
+            )
+            member.is_booster = is_booster
+        if is_prospect is not None:
+            changelog_entry = Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.FLAG_CHANGE,
+                previous_value=member.is_prospect,
+                new_value=is_prospect,
+                comment="Updated prospect flag",
+                timestamp=now,
+            )
+            member.is_prospect = is_prospect
+        if is_blacklisted is not None:
+            changelog_entry = Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.FLAG_CHANGE,
+                previous_value=member.is_blacklisted,
+                new_value=is_blacklisted,
+                comment="Updated blacklisted flag",
+                timestamp=now,
+            )
+            member.is_blacklisted = is_blacklisted
+        if is_banned is not None:
+            changelog_entry = Changelog(
+                member_id=member.id,
+                admin_id=None,
+                change_type=ChangeType.FLAG_CHANGE,
+                previous_value=member.is_banned,
+                new_value=is_banned,
+                comment="Updated banned flag",
+                timestamp=now,
+            )
+            member.is_banned = is_banned
+
+        if not changelog_entry:
+            logger.warn(f"No change made")
+            return member
+
+        member.last_changed_date = datetime.now(timezone.utc)
 
         try:
             self.db.add(changelog_entry)

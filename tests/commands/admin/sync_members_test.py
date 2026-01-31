@@ -34,13 +34,28 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.test_member3.id = 1003
 
         self.db_member1 = create_test_db_member(
-            nickname="testuser1", discord_id=1001, rank=RANK.IRON, ingots=100, id=1
+            nickname="testuser1",
+            discord_id=1001,
+            rank=RANK.IRON,
+            ingots=100,
+            id=1,
+            role=ROLE.MEMBER,
         )
         self.db_member2 = create_test_db_member(
-            nickname="oldnick", discord_id=1002, rank=RANK.IRON, ingots=200, id=2
+            nickname="oldnick",
+            discord_id=1002,
+            rank=RANK.IRON,
+            ingots=200,
+            id=2,
+            role=ROLE.MEMBER,
         )
         self.db_member3 = create_test_db_member(
-            nickname="leftuser", discord_id=9999, rank=RANK.IRON, ingots=300, id=3
+            nickname="leftuser",
+            discord_id=9999,
+            rank=RANK.IRON,
+            ingots=300,
+            id=3,
+            role=ROLE.MEMBER,
         )
 
     @patch("ironforgedbot.commands.admin.sync_members.db")
@@ -72,12 +87,16 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
     @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
     async def test_sync_members_nickname_change(
-        self, mock_get_rank, mock_check_role, mock_db
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
     ):
         self.guild.members = [self.test_member2]
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
 
         with patch(
             "ironforgedbot.commands.admin.sync_members.MemberService"
@@ -119,12 +138,16 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
     @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
     async def test_sync_members_rank_change(
-        self, mock_get_rank, mock_check_role, mock_db
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
     ):
         self.guild.members = [self.test_member1]
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.MITHRIL
+        mock_get_role.return_value = ROLE.MEMBER
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -385,7 +408,7 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     async def test_sync_members_skip_non_members(
         self, mock_get_rank, mock_check_role, mock_db
     ):
-        non_member = create_test_member("NonMember", [ROLE.PROSPECT], "nonmember")
+        non_member = create_test_member("NonMember", [ROLE.GUEST], "nonmember")
         non_member.id = 1005
 
         self.guild.members = [self.test_member1, non_member]
@@ -410,12 +433,16 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
     @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
     async def test_sync_members_nickname_and_rank_change_combined(
-        self, mock_get_rank, mock_check_role, mock_db
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
     ):
         self.guild.members = [self.test_member2]
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.MITHRIL
+        mock_get_role.return_value = ROLE.MEMBER
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session

@@ -5,7 +5,7 @@ import discord
 from discord.errors import Forbidden
 
 from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, BANNED_ROLE_NAME
 from ironforgedbot.effects.remove_member_role import remove_member_role
 from tests.helpers import create_test_member
 
@@ -26,7 +26,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     @patch("ironforgedbot.effects.remove_member_role.db")
     async def test_removes_roles_and_disables_member(
         self, mock_db, mock_is_banned, mock_get_role, mock_time
@@ -58,7 +58,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     @patch("ironforgedbot.effects.remove_member_role.db")
     async def test_handles_banned_member_differently(
         self, mock_db, mock_is_banned, mock_get_role, mock_time
@@ -90,7 +90,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     @patch("ironforgedbot.effects.remove_member_role.db")
     async def test_disables_member_even_when_no_additional_roles_to_remove(
         self, mock_db, mock_is_banned, mock_get_role, mock_time
@@ -123,7 +123,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Member disabled", call_args)
 
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     async def test_handles_forbidden_error_on_role_removal(
         self, mock_is_banned, mock_get_role
     ):
@@ -141,7 +141,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     @patch("ironforgedbot.effects.remove_member_role.db")
     async def test_handles_member_not_found_in_database(
         self, mock_db, mock_is_banned, mock_get_role, mock_time
@@ -168,7 +168,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("cannot be found in the database", call_args)
 
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     async def test_raises_error_when_role_not_found(
         self, mock_is_banned, mock_get_role
     ):
@@ -182,7 +182,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     @patch("ironforgedbot.effects.remove_member_role.text_ul")
     @patch("ironforgedbot.effects.remove_member_role.db")
     async def test_removes_multiple_roles(
@@ -226,7 +226,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.effects.remove_member_role.time")
     @patch("ironforgedbot.effects.remove_member_role.get_discord_role")
-    @patch("ironforgedbot.effects.remove_member_role.is_member_banned")
+    @patch("ironforgedbot.effects.remove_member_role.is_member_banned_by_role")
     @patch("ironforgedbot.effects.remove_member_role.db")
     async def test_skips_banned_role_during_removal(
         self, mock_db, mock_is_banned, mock_get_role, mock_time
@@ -234,7 +234,7 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
         mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_is_banned.return_value = False
         member_with_banned = create_test_member(
-            "TestUser", [ROLE.MEMBER, ROLE.BANNED], "TestUser"
+            "TestUser", [ROLE.MEMBER, BANNED_ROLE_NAME], "TestUser"
         )
         member_with_banned.id = 123456789
         member_with_banned.mention = "<@123456789>"
@@ -242,10 +242,10 @@ class RemoveMemberRoleTest(unittest.IsolatedAsyncioTestCase):
         mock_member_role = Mock()
         mock_member_role.name = ROLE.MEMBER
         mock_banned_role = Mock()
-        mock_banned_role.name = ROLE.BANNED
+        mock_banned_role.name = BANNED_ROLE_NAME
         mock_get_role.side_effect = lambda guild, role: {
             ROLE.MEMBER: mock_member_role,
-            ROLE.BANNED: mock_banned_role,
+            BANNED_ROLE_NAME: mock_banned_role,
         }.get(role)
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session

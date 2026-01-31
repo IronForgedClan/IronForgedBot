@@ -7,7 +7,6 @@ from wom import GroupRole
 from wom.models import GroupDetail, GroupMembership, GroupMemberGains, PlayerGains
 
 from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
-from ironforgedbot.common.roles import is_exempt_from_activity_check
 from ironforgedbot.common.wom_role_mapping import (
     get_discord_role_for_wom_role,
     get_display_name_for_wom_role,
@@ -159,8 +158,8 @@ def check_member_activity(
     is_absent = wom_member.player.username.lower() in absentees
     is_prospect = wom_member.role == GroupRole.Dogsbody
 
-    discord_role = get_discord_role_for_wom_role(wom_member.role)
-    is_exempt = discord_role is not None and is_exempt_from_activity_check(discord_role)
+    # TODO: remove flag, prospects are now handled by is_prospect flag
+    is_exempt = False
 
     xp_threshold = get_activity_threshold_for_rank(member_rank)
     xp_gained = extract_overall_xp_gained(monthly_gains)

@@ -5,10 +5,14 @@ import discord
 
 from ironforgedbot.common.roles import (
     ROLE,
+    BANNED_ROLE_NAME,
     check_member_has_role,
     get_highest_privilage_role_from_member,
     member_has_any_roles,
-    is_member_banned,
+    is_member_banned_by_role,
+    has_prospect_role,
+    has_booster_role,
+    has_blacklisted_role,
 )
 from tests.helpers import create_test_member, create_mock_discord_role
 
@@ -18,36 +22,34 @@ class TestRoles(unittest.TestCase):
         self.mock_member = Mock(spec=discord.Member)
 
     def test_role_or_higher(self):
-        expected = ["Discord Team", "Bot Team", "Leadership"]
-        result = ROLE.DISCORD_TEAM.or_higher()
+        expected = ["Leadership", "Marshal", "Owners"]
+        result = ROLE.LEADERSHIP.or_higher()
         self.assertEqual(expected, result)
 
     def test_role_or_lower(self):
-        expected = ["Slag", "Guest", "Applicant", "Prospect", "Member"]
+        expected = ["Guest", "Applicant", "Member"]
         result = ROLE.MEMBER.or_lower()
         self.assertEqual(expected, result)
 
     def test_role_list(self):
         expected = [
-            "Slag",
             "Guest",
             "Applicant",
-            "Prospect",
             "Member",
-            "Server Booster",
+            "Moderator",
             "Staff",
-            "Events Team",
-            "Recruitment Team",
-            "Discord Team",
-            "Bot Team",
+            "Brigadier",
+            "Admiral",
             "Leadership",
+            "Marshal",
+            "Owners",
         ]
         result = ROLE.list()
         self.assertEqual(expected, result)
 
     def test_role_any(self):
         result = ROLE.any()
-        self.assertEqual(len(result), 12)
+        self.assertEqual(len(result), 10)
         self.assertIn(ROLE.MEMBER, result)
         self.assertIn(ROLE.LEADERSHIP, result)
 
@@ -98,8 +100,8 @@ class TestRoles(unittest.TestCase):
 
     def test_get_highest_privilage_role_from_member_single_role(self):
         self.mock_member.roles = [create_mock_discord_role("Member")]
-        with self.assertRaises(AttributeError):
-            get_highest_privilage_role_from_member(self.mock_member)
+        result = get_highest_privilage_role_from_member(self.mock_member)
+        self.assertEqual(result, ROLE.MEMBER)
 
     def test_member_has_any_roles_success(self):
         self.mock_member.roles = [
@@ -124,19 +126,49 @@ class TestRoles(unittest.TestCase):
         result = member_has_any_roles(self.mock_member, [])
         self.assertFalse(result)
 
-    def test_is_member_banned_true(self):
+    def test_is_member_banned_by_role_true(self):
         self.mock_member.roles = [create_mock_discord_role("Slag")]
-        result = is_member_banned(self.mock_member)
+        result = is_member_banned_by_role(self.mock_member)
         self.assertTrue(result)
 
-    def test_is_member_banned_false(self):
+    def test_is_member_banned_by_role_false(self):
         self.mock_member.roles = [create_mock_discord_role("Member")]
-        result = is_member_banned(self.mock_member)
+        result = is_member_banned_by_role(self.mock_member)
         self.assertFalse(result)
 
-    def test_is_member_banned_none_member_raises_exception(self):
+    def test_is_member_banned_by_role_none_member_raises_exception(self):
         with self.assertRaises(Exception):
-            is_member_banned(None)
+            is_member_banned_by_role(None)
+
+    def test_has_prospect_role_true(self):
+        self.mock_member.roles = [create_mock_discord_role("Prospect")]
+        result = has_prospect_role(self.mock_member)
+        self.assertTrue(result)
+
+    def test_has_prospect_role_false(self):
+        self.mock_member.roles = [create_mock_discord_role("Member")]
+        result = has_prospect_role(self.mock_member)
+        self.assertFalse(result)
+
+    def test_has_booster_role_true(self):
+        self.mock_member.roles = [create_mock_discord_role("Server Booster")]
+        result = has_booster_role(self.mock_member)
+        self.assertTrue(result)
+
+    def test_has_booster_role_false(self):
+        self.mock_member.roles = [create_mock_discord_role("Member")]
+        result = has_booster_role(self.mock_member)
+        self.assertFalse(result)
+
+    def test_has_blacklisted_role_true(self):
+        self.mock_member.roles = [create_mock_discord_role("Blacklisted")]
+        result = has_blacklisted_role(self.mock_member)
+        self.assertTrue(result)
+
+    def test_has_blacklisted_role_false(self):
+        self.mock_member.roles = [create_mock_discord_role("Member")]
+        result = has_blacklisted_role(self.mock_member)
+        self.assertFalse(result)
 
     def test_check_member_has_role_multiple_roles(self):
         self.mock_member.roles = [
@@ -148,7 +180,9 @@ class TestRoles(unittest.TestCase):
         self.assertTrue(result)
 
     def test_role_enum_values(self):
-        self.assertEqual(ROLE.BANNED, "Slag")
         self.assertEqual(ROLE.GUEST, "Guest")
         self.assertEqual(ROLE.MEMBER, "Member")
         self.assertEqual(ROLE.LEADERSHIP, "Leadership")
+
+    def test_banned_role_name_constant(self):
+        self.assertEqual(BANNED_ROLE_NAME, "Slag")

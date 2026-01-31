@@ -74,10 +74,14 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                             await service.change_rank(member.id, RANK(discord_rank))
                             change_text += "Rank changed"
 
-                    discord_role = get_highest_privilage_role_from_member(discord_member)
+                    discord_role = get_highest_privilage_role_from_member(
+                        discord_member
+                    )
                     if discord_role:
                         if member.role != discord_role:
-                            await service.change_role(member.id, ROLE(discord_role), admin_id=None)
+                            await service.change_role(
+                                member.id, ROLE(discord_role), admin_id=None
+                            )
                             change_text += " Role changed"
 
                     if len(change_text) > 0:

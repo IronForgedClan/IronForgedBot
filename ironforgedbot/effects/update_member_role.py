@@ -5,6 +5,10 @@ from ironforgedbot.common.roles import (
     ROLE,
     check_member_has_role,
     get_highest_privilage_role_from_member,
+    has_booster_role,
+    has_prospect_role,
+    has_blacklisted_role,
+    is_member_banned_by_role,
 )
 from ironforgedbot.database.database import db
 
@@ -44,4 +48,30 @@ async def update_member_role(
             await report_channel.send(
                 f"**ℹ️ Role changed:** {discord_member.mention}'s role was changed to "
                 f"**{role}**. Database updated."
+            )
+
+        is_booster = has_booster_role(discord_member)
+        is_prospect = has_prospect_role(discord_member)
+        is_blacklisted = has_blacklisted_role(discord_member)
+        is_banned = is_member_banned_by_role(discord_member)
+
+        flags_changed = (
+            member.is_booster != is_booster
+            or member.is_prospect != is_prospect
+            or member.is_blacklisted != is_blacklisted
+            or member.is_banned != is_banned
+        )
+
+        if flags_changed:
+            await service.update_member_flags(
+                member.id,
+                is_booster=is_booster,
+                is_prospect=is_prospect,
+                is_blacklisted=is_blacklisted,
+                is_banned=is_banned,
+            )
+            logger.debug(
+                f"Updated flags for {discord_member.display_name}: "
+                f"booster={is_booster}, prospect={is_prospect}, "
+                f"blacklisted={is_blacklisted}, banned={is_banned}"
             )

@@ -6,8 +6,8 @@ from ironforgedbot.common.roles import ROLE
 
 
 WOM_TO_DISCORD_ROLE_MAPPING: Dict[GroupRole, ROLE] = {
-    # Prospect
-    GroupRole.Dogsbody: ROLE.PROSPECT,
+    # Prospect (Dogsbody maps to MEMBER role; is_prospect flag is set separately)
+    GroupRole.Dogsbody: ROLE.MEMBER,
     # Member roles
     GroupRole.Iron: ROLE.MEMBER,
     GroupRole.Mithril: ROLE.MEMBER,

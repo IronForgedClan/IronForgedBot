@@ -6,7 +6,7 @@ import discord
 
 from ironforgedbot.common.helpers import find_emoji, get_text_channel
 from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.config import CONFIG
 from ironforgedbot.logging_config import get_logger_instance
@@ -241,7 +241,7 @@ async def send_prospect_response(
 
         embed_description = (
             f"{text_bold(db_member.nickname)} is currently a {prospect_icon} "
-            f"{text_bold(ROLE.PROSPECT)} and will become eligible for the "
+            f"{text_bold(PROSPECT_ROLE_NAME)} and will become eligible for the "
             f"{eligible_rank_icon} {text_bold(eligible_rank_name)} rank upon "
             f"successful acceptance into the clan after completing the "
             f"{text_bold(f'{PROBATION_DAYS}-day')} probation period."

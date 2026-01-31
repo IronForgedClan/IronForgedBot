@@ -108,20 +108,20 @@ class TestFetchMemberPoints(unittest.IsolatedAsyncioTestCase):
             "TestPlayer", bypass_cache=True
         )
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
-    async def test_hiscores_not_found_for_ranked_member_returns_error(
-        self, mock_check_role
-    ):
+    async def test_hiscores_not_found_for_ranked_member_returns_error(self):
         """Test HiscoresNotFound for ranked members returns error message."""
         mock_discord_member = Mock(spec=discord.Member)
         mock_discord_member.mention = "<@12345>"
-        mock_check_role.return_value = False
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.side_effect = HiscoresNotFound()
 
         points, error = await fetch_member_points(
-            "TestPlayer", mock_discord_member, RANK.DRAGON, mock_score_service
+            "TestPlayer",
+            mock_discord_member,
+            RANK.DRAGON,
+            mock_score_service,
+            is_prospect=False,
         )
 
         self.assertEqual(points, 0)
@@ -129,20 +129,20 @@ class TestFetchMemberPoints(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<@12345>", error)
         self.assertIn("not found on hiscores", error)
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
-    async def test_hiscores_not_found_for_prospect_returns_no_error(
-        self, mock_check_role
-    ):
+    async def test_hiscores_not_found_for_prospect_returns_no_error(self):
         """Test HiscoresNotFound for prospects returns no error (silently skipped)."""
         mock_discord_member = Mock(spec=discord.Member)
         mock_discord_member.mention = "<@12345>"
-        mock_check_role.return_value = True
 
         mock_score_service = AsyncMock()
         mock_score_service.get_player_points_total.side_effect = HiscoresNotFound()
 
         points, error = await fetch_member_points(
-            "TestPlayer", mock_discord_member, RANK.IRON, mock_score_service
+            "TestPlayer",
+            mock_discord_member,
+            RANK.IRON,
+            mock_score_service,
+            is_prospect=True,
         )
 
         self.assertEqual(points, 0)
@@ -209,10 +209,9 @@ class TestProcessMemberRankCheck(unittest.TestCase):
         self.assertIn("👑", issue)
         self.assertIn("God rank but missing alignment", issue)
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
-    def test_prospect_with_invalid_join_date_returns_issue(self, mock_check_role):
+    def test_prospect_with_invalid_join_date_returns_issue(self):
         """Test prospect with invalid join date returns issue message."""
-        mock_check_role.return_value = True
+        self.mock_db_member.is_prospect = True
         self.mock_db_member.joined_date = None
 
         rank_change, probation, issue = process_member_rank_check(
@@ -226,12 +225,11 @@ class TestProcessMemberRankCheck(unittest.TestCase):
 
     @patch("ironforgedbot.tasks.job_refresh_ranks.get_rank_from_points")
     @patch("ironforgedbot.tasks.job_refresh_ranks.find_emoji")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
     def test_prospect_completed_probation_returns_probation_message(
-        self, mock_check_role, mock_find_emoji, mock_get_rank_from_points
+        self, mock_find_emoji, mock_get_rank_from_points
     ):
         """Test prospect who completed probation returns probation message."""
-        mock_check_role.return_value = True
+        self.mock_db_member.is_prospect = True
         mock_find_emoji.return_value = "🥉"
         mock_get_rank_from_points.return_value = RANK.MITHRIL
 
@@ -248,10 +246,9 @@ class TestProcessMemberRankCheck(unittest.TestCase):
         self.assertIn("eligible", probation)
         self.assertIn("🥉", probation)
 
-    @patch("ironforgedbot.tasks.job_refresh_ranks.check_member_has_role")
-    def test_prospect_still_on_probation_returns_none(self, mock_check_role):
+    def test_prospect_still_on_probation_returns_none(self):
         """Test prospect still on probation returns all None."""
-        mock_check_role.return_value = True
+        self.mock_db_member.is_prospect = True
         recent_date = datetime.now(timezone.utc) - timedelta(days=10)
         self.mock_db_member.joined_date = recent_date
 
@@ -430,7 +427,7 @@ class TestJobRefreshRanks(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_score_history_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.create_member_service")
     @patch("ironforgedbot.tasks.job_refresh_ranks.db")
-    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned")
+    @patch("ironforgedbot.tasks.job_refresh_ranks.is_member_banned_by_role")
     async def test_banned_member_skipped_no_score_tracking(
         self,
         mock_is_banned,

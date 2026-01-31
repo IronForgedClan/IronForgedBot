@@ -60,11 +60,7 @@ async def cmd_debug_commands(original_interaction: discord.Interaction):
                 interaction, interaction.user.display_name
             )
         },
-        "run payroll": {
-            "callback": lambda interaction: job_payroll(
-                interaction.guild, report_channel
-            )
-        },
+        "run payroll": {"callback": lambda interaction: job_payroll(report_channel)},
     }
 
     view = View()

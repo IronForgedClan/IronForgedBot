@@ -12,7 +12,7 @@ from ironforgedbot.common.helpers import (
 )
 
 from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, BANNED_ROLE_NAME
 from ironforgedbot.config import CONFIG, ENVIRONMENT
 from ironforgedbot.effects.add_banned_role import add_banned_role
 from ironforgedbot.effects.add_member_role import add_member_role
@@ -204,7 +204,7 @@ class DiscordClient(discord.Client):
             if ROLE.MEMBER in roles_added:
                 await add_member_role(report_channel, after)
 
-            if ROLE.PROSPECT in roles_added:
+            if PROSPECT_ROLE_NAME in roles_added:
                 await add_prospect_role(report_channel, after)
 
             if len(set(RANK.list()) & roles_added) > 0:
@@ -213,5 +213,5 @@ class DiscordClient(discord.Client):
             if ROLE.MEMBER in roles_removed:
                 await remove_member_role(report_channel, after)
 
-            if ROLE.BANNED in roles_added:
+            if BANNED_ROLE_NAME in roles_added:
                 await add_banned_role(report_channel, after)

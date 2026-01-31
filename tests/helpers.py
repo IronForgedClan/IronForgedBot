@@ -257,6 +257,10 @@ def create_test_db_member(
     ingots=1000,
     active=True,
     joined_date=None,
+    is_booster=False,
+    is_prospect=False,
+    is_blacklisted=False,
+    is_banned=False,
     **kwargs,
 ):
     """Creates test Member model instance with common defaults."""
@@ -276,6 +280,10 @@ def create_test_db_member(
     member.ingots = ingots
     member.active = active
     member.joined_date = joined_date or datetime.now(timezone.utc)
+    member.is_booster = is_booster
+    member.is_prospect = is_prospect
+    member.is_blacklisted = is_blacklisted
+    member.is_banned = is_banned
 
     # Apply any additional kwargs
     for key, value in kwargs.items():
