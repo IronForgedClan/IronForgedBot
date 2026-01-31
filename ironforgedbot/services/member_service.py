@@ -427,7 +427,6 @@ class MemberService:
             id: Member ID
             **flags: Flag name/value pairs (is_booster, is_prospect, is_blacklisted, is_banned)
 
-        Only creates changelog entries for flags that actually change.
         Raises ValueError for unknown flag names.
         """
         unknown_flags = set(flags.keys()) - MEMBER_FLAGS

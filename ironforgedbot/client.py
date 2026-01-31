@@ -10,19 +10,15 @@ from ironforgedbot.common.helpers import (
     get_text_channel,
     populate_emoji_cache,
 )
-
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, BANNED_ROLE_NAME
 from ironforgedbot.config import CONFIG, ENVIRONMENT
-from ironforgedbot.effects.add_banned_role import add_banned_role
-from ironforgedbot.effects.add_member_role import add_member_role
-from ironforgedbot.effects.add_prospect_role import add_prospect_role
-from ironforgedbot.effects.nickname_change import nickname_change
-from ironforgedbot.effects.remove_member_role import remove_member_role
-from ironforgedbot.effects.update_member_rank import update_member_rank
 from ironforgedbot.event_emitter import event_emitter
+from ironforgedbot.events.member_events import MemberUpdateContext
+from ironforgedbot.events.member_update_emitter import member_update_emitter
 from ironforgedbot.state import STATE
 from ironforgedbot.database.database import db
+
+# Import handlers to trigger self-registration
+import ironforgedbot.events.handlers  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +58,6 @@ class DiscordClient(discord.Client):
         self.upload = upload
         self.guild = guild
         self.automations = None
-        self.effect_lock = asyncio.Lock()
         self.loop = asyncio.get_event_loop()
         self._emoji_cache_loaded = False
         self._setup_complete = False
@@ -181,37 +176,14 @@ class DiscordClient(discord.Client):
             self.automations = IronForgedAutomations(self.get_guild(CONFIG.GUILD_ID))
 
     async def on_member_update(self, before: discord.Member, after: discord.Member):
-        async with self.effect_lock:
-            report_channel = get_text_channel(
-                before.guild, CONFIG.AUTOMATION_CHANNEL_ID
-            )
-            if not report_channel:
-                logger.error("Unable to select report channel")
-                return
+        report_channel = get_text_channel(before.guild, CONFIG.AUTOMATION_CHANNEL_ID)
+        if not report_channel:
+            logger.error("Unable to select report channel")
+            return
 
-            if before.nick != after.nick:
-                await nickname_change(report_channel, before, after)
-
-            if before.roles == after.roles:
-                return
-
-            before_roles = set(r.name for r in before.roles)
-            after_roles = set(r.name for r in after.roles)
-
-            roles_added = after_roles - before_roles
-            roles_removed = before_roles - after_roles
-
-            if ROLE.MEMBER in roles_added:
-                await add_member_role(report_channel, after)
-
-            if PROSPECT_ROLE_NAME in roles_added:
-                await add_prospect_role(report_channel, after)
-
-            if len(set(RANK.list()) & roles_added) > 0:
-                await update_member_rank(report_channel, after)
-
-            if ROLE.MEMBER in roles_removed:
-                await remove_member_role(report_channel, after)
-
-            if BANNED_ROLE_NAME in roles_added:
-                await add_banned_role(report_channel, after)
+        context = MemberUpdateContext(
+            before=before,
+            after=after,
+            report_channel=report_channel,
+        )
+        await member_update_emitter.emit(context)
