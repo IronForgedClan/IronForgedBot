@@ -12,7 +12,6 @@ from ironforgedbot.common.roles import (
     has_blacklisted_role,
     is_member_banned_by_role,
 )
-from ironforgedbot.common.text_formatters import text_ul
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
@@ -51,34 +50,39 @@ class UpdateMemberRoleHandler(BaseMemberUpdateHandler):
         discord_member = context.after
         logger.debug(f"Processing role change for {discord_member.display_name}")
 
-        response = ""
-
         member = await service.get_member_by_discord_id(discord_member.id)
         if not member:
             return None
 
-        role = get_highest_privilage_role_from_member(discord_member)
+        changes = []
 
+        role = get_highest_privilage_role_from_member(discord_member)
         if role and member.role != role:
-            response += f"- **Role:** {member.role} -> **{role}**"
-            logger.debug(
-                f"Updated role for {discord_member.display_name}: {member.role} -> {role}"
-            )
+            previous_role = member.role
             await service.change_role(member.id, ROLE(role), admin_id=None)
+            changes.append(f"**Role:** {previous_role} → {role}")
+            logger.debug(
+                f"Updated role for {discord_member.display_name}: {previous_role} -> {role}"
+            )
 
         is_booster = has_booster_role(discord_member)
         is_prospect = has_prospect_role(discord_member)
         is_blacklisted = has_blacklisted_role(discord_member)
         is_banned = is_member_banned_by_role(discord_member)
 
-        flags_changed = (
-            member.is_booster != is_booster
-            or member.is_prospect != is_prospect
-            or member.is_blacklisted != is_blacklisted
-            or member.is_banned != is_banned
-        )
+        flag_changes = []
+        if member.is_booster != is_booster:
+            flag_changes.append(f"Booster: {member.is_booster} → {is_booster}")
+        if member.is_prospect != is_prospect:
+            flag_changes.append(f"Prospect: {member.is_prospect} → {is_prospect}")
+        if member.is_blacklisted != is_blacklisted:
+            flag_changes.append(
+                f"Blacklisted: {member.is_blacklisted} → {is_blacklisted}"
+            )
+        if member.is_banned != is_banned:
+            flag_changes.append(f"Banned: {member.is_banned} → {is_banned}")
 
-        if flags_changed:
+        if flag_changes:
             await service.update_member_flags(
                 member.id,
                 is_booster=is_booster,
@@ -86,22 +90,18 @@ class UpdateMemberRoleHandler(BaseMemberUpdateHandler):
                 is_blacklisted=is_blacklisted,
                 is_banned=is_banned,
             )
-            if is_booster:
-                response += f"\n**Booster**: {is_booster}"
-            if is_prospect:
-                response += f"\n**Prospect**: {is_prospect}"
-            if is_blacklisted:
-                response += f"\n**Blacklisted**: {is_blacklisted}"
-            if is_banned:
-                response += f"\n**Banned**: {is_banned}"
+            changes.append("**Flags:** " + ", ".join(flag_changes))
             logger.debug(
                 f"Updated flags for {discord_member.display_name}: "
                 f"booster={is_booster}, prospect={is_prospect}, "
                 f"blacklisted={is_blacklisted}, banned={is_banned}"
             )
 
-        if len(response) > 0:
-            return f"**ℹ️ Member Changed:** {discord_member.mention} has been updated:\n{response}"
+        if changes:
+            return (
+                f":information: **Member updated:** {discord_member.mention}\n"
+                + "\n".join(f"- {change}" for change in changes)
+            )
 
         return None
 

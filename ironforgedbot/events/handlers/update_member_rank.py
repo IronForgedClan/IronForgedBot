@@ -45,7 +45,7 @@ class UpdateMemberRankHandler(BaseMemberUpdateHandler):
 
         if not rank:
             return (
-                f"**Error:** Rank changed for {discord_member.mention}, "
+                f":warning: Rank changed for {discord_member.mention}, "
                 "but rank could not be determined."
             )
 
@@ -56,16 +56,19 @@ class UpdateMemberRankHandler(BaseMemberUpdateHandler):
 
         if not member:
             return (
-                f"**Error:** Rank role changed for {discord_member.mention}, "
+                f":warning: Rank role changed for {discord_member.mention}, "
                 f"but database member not found. Rank: {rank}."
             )
 
         if member.rank != rank:
+            previous_rank = member.rank
+            previous_rank_emoji = find_emoji(previous_rank)
+            new_rank_emoji = find_emoji(rank)
             await service.change_rank(member.id, RANK(rank))
-            rank_emoji = find_emoji(rank)
             return (
-                f"**ℹ️ Rank changed:** {discord_member.mention}'s rank was changed to "
-                f"{rank_emoji} **{RANK(rank)}**. Database updated."
+                f":information: **Rank changed:** {discord_member.mention}'s rank "
+                f"was changed from {previous_rank_emoji} **{previous_rank}** to "
+                f"{new_rank_emoji} **{RANK(rank)}**. Database updated."
             )
 
         return None  # No change needed
