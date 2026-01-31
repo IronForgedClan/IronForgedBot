@@ -47,6 +47,8 @@ class MemberServiceReactivateResponse:
 
 logger: logging.Logger = logging.getLogger(name=__name__)
 
+MEMBER_FLAGS = frozenset({"is_booster", "is_prospect", "is_blacklisted", "is_banned"})
+
 
 class MemberService:
     def __init__(self, db: AsyncSession) -> None:
@@ -418,78 +420,53 @@ class MemberService:
 
         return member
 
-    async def update_member_flags(
-        self,
-        id: str,
-        is_booster: bool | None = None,
-        is_prospect: bool | None = None,
-        is_blacklisted: bool | None = None,
-        is_banned: bool | None = None,
-    ) -> Member:
+    async def update_member_flags(self, id: str, **flags: bool) -> Member:
         """Update boolean flags on a member.
 
-        Only provided flags are updated. None values are ignored.
+        Args:
+            id: Member ID
+            **flags: Flag name/value pairs (is_booster, is_prospect, is_blacklisted, is_banned)
+
+        Only creates changelog entries for flags that actually change.
+        Raises ValueError for unknown flag names.
         """
+        unknown_flags = set(flags.keys()) - MEMBER_FLAGS
+        if unknown_flags:
+            raise ValueError(f"Unknown flag(s): {unknown_flags}")
+
         now = datetime.now(timezone.utc)
         member = await self.get_member_by_id(id)
-        changelog_entry = None
 
         if not member:
             raise MemberNotFoundException(f"Member with id {id} does not exist")
 
-        if is_booster is not None:
-            changelog_entry = Changelog(
-                member_id=member.id,
-                admin_id=None,
-                change_type=ChangeType.FLAG_CHANGE,
-                previous_value=member.is_booster,
-                new_value=is_booster,
-                comment="Updated booster flag",
-                timestamp=now,
-            )
-            member.is_booster = is_booster
-        if is_prospect is not None:
-            changelog_entry = Changelog(
-                member_id=member.id,
-                admin_id=None,
-                change_type=ChangeType.FLAG_CHANGE,
-                previous_value=member.is_prospect,
-                new_value=is_prospect,
-                comment="Updated prospect flag",
-                timestamp=now,
-            )
-            member.is_prospect = is_prospect
-        if is_blacklisted is not None:
-            changelog_entry = Changelog(
-                member_id=member.id,
-                admin_id=None,
-                change_type=ChangeType.FLAG_CHANGE,
-                previous_value=member.is_blacklisted,
-                new_value=is_blacklisted,
-                comment="Updated blacklisted flag",
-                timestamp=now,
-            )
-            member.is_blacklisted = is_blacklisted
-        if is_banned is not None:
-            changelog_entry = Changelog(
-                member_id=member.id,
-                admin_id=None,
-                change_type=ChangeType.FLAG_CHANGE,
-                previous_value=member.is_banned,
-                new_value=is_banned,
-                comment="Updated banned flag",
-                timestamp=now,
-            )
-            member.is_banned = is_banned
+        changelog_entries: list[Changelog] = []
 
-        if not changelog_entry:
-            logger.warn(f"No change made")
+        for flag_name, new_value in flags.items():
+            current_value = getattr(member, flag_name)
+            if new_value != current_value:
+                changelog_entries.append(
+                    Changelog(
+                        member_id=member.id,
+                        admin_id=None,
+                        change_type=ChangeType.FLAG_CHANGE,
+                        previous_value=current_value,
+                        new_value=new_value,
+                        comment=f"Updated {flag_name.replace('is_', '')} flag",
+                        timestamp=now,
+                    )
+                )
+                setattr(member, flag_name, new_value)
+
+        if not changelog_entries:
+            logger.warning("No flag changes detected")
             return member
 
-        member.last_changed_date = datetime.now(timezone.utc)
+        member.last_changed_date = now
 
         try:
-            self.db.add(changelog_entry)
+            for entry in changelog_entries:
+                self.db.add(entry)
             await self.db.commit()
             await self.db.refresh(member)
         except Exception as e:
