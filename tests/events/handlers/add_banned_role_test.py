@@ -107,8 +107,7 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             "test-id", is_banned=True
         )
 
-    @patch("ironforgedbot.events.handlers.add_banned_role.member_update_emitter")
-    async def test_execute_removes_unmonitored_roles(self, mock_emitter):
+    async def test_execute_removes_unmonitored_roles(self):
         """Removes unmonitored roles from member."""
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=None)
 
@@ -119,7 +118,6 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.remove_roles.assert_called()
-        mock_emitter.suppress_next_for.assert_called()
         self.assertIn("banned", result.lower())
 
     @patch("ironforgedbot.events.handlers.add_banned_role.member_update_emitter")

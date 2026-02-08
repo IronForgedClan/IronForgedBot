@@ -62,7 +62,6 @@ class AddBannedRoleHandler(BaseMemberUpdateHandler):
                     *roles_to_remove,
                     reason="Member banned. Removing unmonitored roles.",
                 )
-                member_update_emitter.suppress_next_for(context.discord_id)
             except Forbidden:
                 logger.error(f"Forbidden from modifying {member.display_name}'s roles")
                 return f":warning: The bot lacks permission to manage {member.mention}'s roles."

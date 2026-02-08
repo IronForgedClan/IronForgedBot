@@ -81,9 +81,8 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             before=before, after=after, report_channel=report_channel
         )
 
-    @patch("ironforgedbot.events.handlers.remove_member_role.member_update_emitter")
     @patch("ironforgedbot.events.handlers.remove_member_role.get_discord_role")
-    async def test_execute_removes_monitored_roles(self, mock_get_role, mock_emitter):
+    async def test_execute_removes_monitored_roles(self, mock_get_role):
         """Removes all monitored roles from the member."""
         mock_role = Mock(spec=discord.Role)
         mock_get_role.return_value = mock_role
@@ -99,7 +98,6 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.remove_roles.assert_called_once()
-        mock_emitter.suppress_next_for.assert_called_once()
         self.assertIn("disabled", result.lower())
 
     @patch("ironforgedbot.events.handlers.remove_member_role.get_discord_role")

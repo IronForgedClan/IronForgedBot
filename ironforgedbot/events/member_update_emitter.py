@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING, Dict, List, Set
+from typing import TYPE_CHECKING, Dict, List
 
 from ironforgedbot.events.member_events import HandlerResult, MemberUpdateContext
 
@@ -10,12 +10,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SUPPRESSION_DURATION_MS = 2000
+
 
 class MemberUpdateEmitter:
     def __init__(self):
         self._handlers: List["BaseMemberUpdateHandler"] = []
         self._lock = asyncio.Lock()
-        self._suppressed_ids: Set[int] = set()
+        self._suppressions: Dict[int, float] = {}  # discord_id -> expiry time
         self._sorted = False
 
     def register(self, handler: "BaseMemberUpdateHandler") -> None:
@@ -25,21 +27,33 @@ class MemberUpdateEmitter:
             f"Registered handler: {handler.name} (priority={handler.priority})"
         )
 
-    def suppress_next_for(self, discord_id: int) -> None:
+    def suppress_next_for(
+        self, discord_id: int, duration_ms: int = DEFAULT_SUPPRESSION_DURATION_MS
+    ) -> None:
         """Suppress the next event for a specific Discord user.
 
         Use this when a handler modifies Discord state (e.g., adds/removes roles)
         to prevent the resulting on_member_update from triggering handlers again.
+
+        Args:
+            discord_id: The Discord user ID to suppress events for.
+            duration_ms: How long the suppression lasts (default 2000ms).
         """
-        self._suppressed_ids.add(discord_id)
-        logger.debug(f"Suppressing next event for discord_id={discord_id}")
+        self._suppressions[discord_id] = time.time() + duration_ms / 1000
+        logger.debug(
+            f"Suppressing next event for discord_id={discord_id} "
+            f"(expires in {duration_ms}ms)"
+        )
 
     def _is_suppressed(self, discord_id: int) -> bool:
         """Check if events for this Discord ID are currently suppressed."""
-        if discord_id in self._suppressed_ids:
-            self._suppressed_ids.discard(discord_id)
+        if discord_id not in self._suppressions:
+            return False
+        if time.time() < self._suppressions[discord_id]:
+            del self._suppressions[discord_id]  # Consume the suppression
             logger.debug(f"Event suppressed for discord_id={discord_id}")
             return True
+        del self._suppressions[discord_id]  # Expired, clean up
         return False
 
     def _ensure_sorted(self) -> None:
@@ -48,10 +62,9 @@ class MemberUpdateEmitter:
             self._sorted = True
 
     async def emit(self, context: MemberUpdateContext) -> List[HandlerResult]:
-        if self._is_suppressed(context.discord_id):
-            return []
-
         async with self._lock:
+            if self._is_suppressed(context.discord_id):
+                return []
             self._ensure_sorted()
             results: List[HandlerResult] = []
 

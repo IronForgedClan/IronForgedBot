@@ -1,3 +1,4 @@
+import time
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -16,6 +17,13 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
         self.after.id = self.before.id
         self.report_channel = Mock(spec=discord.TextChannel)
         self.report_channel.guild = Mock(spec=discord.Guild)
+        self.time_patcher = patch("ironforgedbot.events.member_update_emitter.time")
+        self.mock_time = self.time_patcher.start()
+        self.mock_time.time.return_value = 1000.0
+        self.mock_time.perf_counter = time.perf_counter
+
+    def tearDown(self):
+        self.time_patcher.stop()
 
     def _create_context(self):
         return MemberUpdateContext(
@@ -51,23 +59,32 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(self.emitter._sorted)
 
-    def test_suppress_next_for_adds_id_to_suppressed(self):
-        """suppress_next_for() adds discord ID to suppressed set."""
+    def test_suppress_next_for_adds_id_to_suppressions(self):
+        """suppress_next_for() adds discord ID with expiry time."""
         discord_id = 12345
 
         self.emitter.suppress_next_for(discord_id)
 
-        self.assertIn(discord_id, self.emitter._suppressed_ids)
+        self.assertIn(discord_id, self.emitter._suppressions)
+        self.assertEqual(self.emitter._suppressions[discord_id], 1002.0)  # 1000 + 2000ms
+
+    def test_suppress_next_for_custom_duration(self):
+        """suppress_next_for() uses custom duration when specified."""
+        discord_id = 12345
+
+        self.emitter.suppress_next_for(discord_id, duration_ms=5000)
+
+        self.assertEqual(self.emitter._suppressions[discord_id], 1005.0)
 
     def test_is_suppressed_returns_true_and_removes_id(self):
-        """_is_suppressed() returns True and removes ID when suppressed."""
+        """_is_suppressed() returns True and removes ID when suppressed and not expired."""
         discord_id = 12345
-        self.emitter._suppressed_ids.add(discord_id)
+        self.emitter._suppressions[discord_id] = 1002.0  # expires at 1002
 
         result = self.emitter._is_suppressed(discord_id)
 
         self.assertTrue(result)
-        self.assertNotIn(discord_id, self.emitter._suppressed_ids)
+        self.assertNotIn(discord_id, self.emitter._suppressions)
 
     def test_is_suppressed_returns_false_when_not_suppressed(self):
         """_is_suppressed() returns False when ID not suppressed."""
@@ -77,10 +94,20 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(result)
 
+    def test_is_suppressed_returns_false_when_expired(self):
+        """_is_suppressed() returns False and cleans up when suppression expired."""
+        discord_id = 12345
+        self.emitter._suppressions[discord_id] = 999.0  # expired (current time is 1000)
+
+        result = self.emitter._is_suppressed(discord_id)
+
+        self.assertFalse(result)
+        self.assertNotIn(discord_id, self.emitter._suppressions)
+
     def test_is_suppressed_one_shot(self):
         """_is_suppressed() is one-shot - second call returns False."""
         discord_id = 12345
-        self.emitter._suppressed_ids.add(discord_id)
+        self.emitter._suppressions[discord_id] = 1002.0
 
         first_result = self.emitter._is_suppressed(discord_id)
         second_result = self.emitter._is_suppressed(discord_id)

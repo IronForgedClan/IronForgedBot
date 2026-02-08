@@ -58,7 +58,6 @@ class RemoveMemberRoleHandler(BaseMemberUpdateHandler):
                 await member.remove_roles(
                     *roles_removed, reason="Member removed. Removing monitored roles."
                 )
-                member_update_emitter.suppress_next_for(context.discord_id)
             except Forbidden:
                 return f":warning: The bot lacks permission to manage {member.mention}'s roles."
 

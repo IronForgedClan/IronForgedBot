@@ -36,7 +36,6 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
                 nick=previous_nickname,
                 reason="Nickname conflict in database, rolling back nickname",
             )
-            member_update_emitter.suppress_next_for(context.discord_id)
             return True
         except Forbidden:
             await context.report_channel.send(

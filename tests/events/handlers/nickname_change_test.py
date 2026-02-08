@@ -117,11 +117,8 @@ class TestNicknameChangeHandlerExecute(unittest.IsolatedAsyncioTestCase):
         self.mock_service.change_nickname.assert_not_called()
         self.assertIsNone(result)
 
-    @patch("ironforgedbot.events.handlers.nickname_change.member_update_emitter")
     @patch("ironforgedbot.events.handlers.nickname_change.normalize_discord_string")
-    async def test_execute_member_not_found_rollback(
-        self, mock_normalize, mock_emitter
-    ):
+    async def test_execute_member_not_found_rollback(self, mock_normalize):
         """Rolls back nickname when member not found in database."""
         mock_normalize.return_value = "NewNick"
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=None)
@@ -133,15 +130,11 @@ class TestNicknameChangeHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.edit.assert_called_once()
-        mock_emitter.suppress_next_for.assert_called_once()
         self.assertIn("**Name changed:**", result)
         self.assertIn("rolled back", result.lower())
 
-    @patch("ironforgedbot.events.handlers.nickname_change.member_update_emitter")
     @patch("ironforgedbot.events.handlers.nickname_change.normalize_discord_string")
-    async def test_execute_nickname_conflict_rollback(
-        self, mock_normalize, mock_emitter
-    ):
+    async def test_execute_nickname_conflict_rollback(self, mock_normalize):
         """Rolls back nickname on conflict."""
         mock_normalize.return_value = "NewNick"
 
@@ -159,7 +152,6 @@ class TestNicknameChangeHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.edit.assert_called_once()
-        mock_emitter.suppress_next_for.assert_called_once()
         self.assertIn("**Name changed:**", result)
         self.assertIn("conflict", result.lower())
 
@@ -186,8 +178,7 @@ class TestNicknameChangeHandlerRollback(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.handler = NicknameChangeHandler()
 
-    @patch("ironforgedbot.events.handlers.nickname_change.member_update_emitter")
-    async def test_rollback_restores_previous_nickname(self, mock_emitter):
+    async def test_rollback_restores_previous_nickname(self):
         """_rollback restores the previous nickname."""
         before = create_test_member("TestUser", [ROLE.MEMBER], "OldNick")
         after = create_test_member("TestUser", [ROLE.MEMBER], "NewNick")
@@ -205,7 +196,6 @@ class TestNicknameChangeHandlerRollback(unittest.IsolatedAsyncioTestCase):
             nick="OldNick",
             reason="Nickname conflict in database, rolling back nickname",
         )
-        mock_emitter.suppress_next_for.assert_called_once()
 
     async def test_rollback_returns_false_on_forbidden(self):
         """_rollback returns False when permission denied."""
@@ -248,11 +238,8 @@ class TestNicknameChangeHandlerConflict(unittest.IsolatedAsyncioTestCase):
             before=before, after=after, report_channel=report_channel
         )
 
-    @patch("ironforgedbot.events.handlers.nickname_change.member_update_emitter")
     @patch("ironforgedbot.events.handlers.nickname_change.normalize_discord_string")
-    async def test_conflict_with_existing_discord_member(
-        self, mock_normalize, mock_emitter
-    ):
+    async def test_conflict_with_existing_discord_member(self, mock_normalize):
         """Shows conflicting discord member in conflict message."""
         mock_normalize.return_value = "NewNick"
 
