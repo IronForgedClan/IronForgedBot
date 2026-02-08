@@ -101,7 +101,9 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.create_member.assert_called_once()
         self.assertIn("new member", result.lower())
@@ -116,23 +118,33 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         inactive_member = create_test_db_member(
             nickname="TestUser", discord_id=12345, active=False
         )
-        self.mock_service.get_member_by_discord_id = AsyncMock(return_value=inactive_member)
+        self.mock_service.get_member_by_discord_id = AsyncMock(
+            return_value=inactive_member
+        )
 
         reactivate_response = Mock(spec=MemberServiceReactivateResponse)
         reactivate_response.new_member = create_test_db_member(
             nickname="TestUser", discord_id=12345, active=True
         )
         reactivate_response.previous_nick = "OldNick"
-        reactivate_response.previous_join_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
-        reactivate_response.approximate_leave_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        reactivate_response.previous_join_date = datetime(
+            2024, 1, 1, tzinfo=timezone.utc
+        )
+        reactivate_response.approximate_leave_date = datetime(
+            2024, 6, 1, tzinfo=timezone.utc
+        )
         reactivate_response.previous_rank = RANK.IRON
         reactivate_response.previous_ingot_qty = 1000
         reactivate_response.ingots_reset = False
-        self.mock_service.reactivate_member = AsyncMock(return_value=reactivate_response)
+        self.mock_service.reactivate_member = AsyncMock(
+            return_value=reactivate_response
+        )
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.reactivate_member.assert_called_once()
         # Result is None because embed is sent directly
@@ -150,14 +162,18 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         active_member = create_test_db_member(
             nickname="TestUser", discord_id=12345, active=True
         )
-        self.mock_service.get_member_by_discord_id = AsyncMock(return_value=active_member)
+        self.mock_service.get_member_by_discord_id = AsyncMock(
+            return_value=active_member
+        )
 
         mock_role = Mock(spec=discord.Role)
         mock_get_role.return_value = mock_role
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_called_once()
         mock_emitter.suppress_next_for.assert_called_once()
@@ -183,7 +199,9 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_called_once()
         mock_emitter.suppress_next_for.assert_called_once()
@@ -201,7 +219,9 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         inactive_member = create_test_db_member(
             nickname="TestUser", discord_id=12345, active=False
         )
-        self.mock_service.get_member_by_discord_id = AsyncMock(return_value=inactive_member)
+        self.mock_service.get_member_by_discord_id = AsyncMock(
+            return_value=inactive_member
+        )
         self.mock_service.reactivate_member = AsyncMock(
             side_effect=UniqueNicknameViolation("nickname")
         )
@@ -212,7 +232,9 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_called_once()
         mock_emitter.suppress_next_for.assert_called_once()
@@ -234,7 +256,9 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_called_once()
         self.assertIn("error", result.lower())

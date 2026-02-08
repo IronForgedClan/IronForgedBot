@@ -24,7 +24,9 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
             report_channel=self.report_channel,
         )
 
-    def _create_mock_handler(self, name: str, priority: int = 50, should_handle: bool = True):
+    def _create_mock_handler(
+        self, name: str, priority: int = 50, should_handle: bool = True
+    ):
         handler = Mock()
         handler.name = name
         handler.priority = priority
@@ -166,13 +168,19 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
         execution_order = []
 
         handler1 = self._create_mock_handler("Handler1", priority=50)
-        handler1.handle = AsyncMock(side_effect=lambda c: execution_order.append("Handler1"))
+        handler1.handle = AsyncMock(
+            side_effect=lambda c: execution_order.append("Handler1")
+        )
 
         handler2 = self._create_mock_handler("Handler2", priority=10)
-        handler2.handle = AsyncMock(side_effect=lambda c: execution_order.append("Handler2"))
+        handler2.handle = AsyncMock(
+            side_effect=lambda c: execution_order.append("Handler2")
+        )
 
         handler3 = self._create_mock_handler("Handler3", priority=30)
-        handler3.handle = AsyncMock(side_effect=lambda c: execution_order.append("Handler3"))
+        handler3.handle = AsyncMock(
+            side_effect=lambda c: execution_order.append("Handler3")
+        )
 
         self.emitter.register(handler1)
         self.emitter.register(handler2)
@@ -236,6 +244,7 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
 
         async def slow_handle(c):
             import asyncio
+
             await asyncio.sleep(0.01)  # 10ms
 
         handler = self._create_mock_handler("TestHandler")

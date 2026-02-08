@@ -60,7 +60,14 @@ class TestUpdateMemberRankHandlerShouldHandle(unittest.TestCase):
         """should_handle returns True for any rank role addition."""
         handler = UpdateMemberRankHandler()
 
-        for rank in [RANK.IRON, RANK.MITHRIL, RANK.ADAMANT, RANK.RUNE, RANK.DRAGON, RANK.GOD]:
+        for rank in [
+            RANK.IRON,
+            RANK.MITHRIL,
+            RANK.ADAMANT,
+            RANK.RUNE,
+            RANK.DRAGON,
+            RANK.GOD,
+        ]:
             before = create_test_member("TestUser", [ROLE.MEMBER])
             after = create_test_member("TestUser", [ROLE.MEMBER, rank])
             after.id = before.id
@@ -111,7 +118,9 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context(after_roles=[ROLE.MEMBER, RANK.MITHRIL])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.change_rank.assert_called_once_with("test-id", RANK.MITHRIL)
         self.assertIn("rank changed", result.lower())
@@ -128,7 +137,9 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.change_rank.assert_not_called()
         self.assertIsNone(result)
@@ -140,7 +151,9 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("could not be determined", result.lower())
 
@@ -152,7 +165,9 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("not found", result.lower())
 
@@ -169,9 +184,7 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=db_member)
         self.mock_service.change_rank = AsyncMock()
 
-        context = self._create_context(
-            after_roles=[ROLE.MEMBER, GOD_ALIGNMENT.ZAMORAK]
-        )
+        context = self._create_context(after_roles=[ROLE.MEMBER, GOD_ALIGNMENT.ZAMORAK])
 
         await self.handler._execute(context, self.mock_session, self.mock_service)
 
@@ -192,7 +205,9 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context(after_roles=[ROLE.MEMBER, RANK.ADAMANT])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn(RANK.MITHRIL, result)
         self.assertIn(str(RANK.ADAMANT), result)

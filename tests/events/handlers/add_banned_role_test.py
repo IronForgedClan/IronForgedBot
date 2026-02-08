@@ -7,7 +7,11 @@ from discord.errors import Forbidden
 from ironforgedbot.common.roles import ROLE, BANNED_ROLE_NAME
 from ironforgedbot.events.handlers.add_banned_role import AddBannedRoleHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
-from tests.helpers import create_mock_discord_role, create_test_db_member, create_test_member
+from tests.helpers import (
+    create_mock_discord_role,
+    create_test_db_member,
+    create_test_member,
+)
 
 
 class TestAddBannedRoleHandlerShouldHandle(unittest.TestCase):
@@ -110,7 +114,9 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context(extra_roles=["UnmonitoredRole", "AnotherRole"])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_called()
         mock_emitter.suppress_next_for.assert_called()
@@ -120,7 +126,7 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.events.handlers.add_banned_role.get_discord_role")
     async def test_execute_removes_member_role(self, mock_get_role, mock_emitter):
         """Removes Member role to trigger cascade."""
-        mock_member_role = Mock(spec=discord.Role)
+        mock_member_role = create_mock_discord_role(ROLE.MEMBER)
         mock_get_role.return_value = mock_member_role
 
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=None)
@@ -143,7 +149,9 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             side_effect=Forbidden(Mock(), "Missing permissions")
         )
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("permission", result.lower())
 
@@ -156,7 +164,9 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             side_effect=RuntimeError("Unknown error")
         )
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("went wrong", result.lower())
 
@@ -166,7 +176,9 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.update_member_flags.assert_not_called()
         self.assertIn("banned", result.lower())
@@ -177,7 +189,9 @@ class TestAddBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context(extra_roles=["CustomRole"])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("CustomRole", result)
 

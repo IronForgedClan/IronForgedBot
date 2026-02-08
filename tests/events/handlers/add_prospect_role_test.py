@@ -86,12 +86,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_updates_prospect_flag(
-        self, mock_emoji, mock_check_role, mock_get_role
+        self, mock_check_role, mock_get_role
     ):
         """Updates is_prospect flag in database."""
-        mock_emoji.return_value = ""
         mock_check_role.return_value = False
         mock_get_role.return_value = Mock(spec=discord.Role)
 
@@ -112,12 +110,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.events.handlers.add_prospect_role.member_update_emitter")
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_removes_applicant_role(
-        self, mock_emoji, mock_check_role, mock_get_role, mock_emitter
+        self, mock_check_role, mock_get_role, mock_emitter
     ):
         """Removes Applicant role when present."""
-        mock_emoji.return_value = ""
         mock_check_role.side_effect = lambda m, r: r == ROLE.APPLICANT
         mock_role = Mock(spec=discord.Role)
         mock_get_role.return_value = mock_role
@@ -136,12 +132,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.events.handlers.add_prospect_role.member_update_emitter")
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_removes_guest_role(
-        self, mock_emoji, mock_check_role, mock_get_role, mock_emitter
+        self, mock_check_role, mock_get_role, mock_emitter
     ):
         """Removes Guest role when present."""
-        mock_emoji.return_value = ""
         mock_check_role.side_effect = lambda m, r: r == ROLE.GUEST
         mock_role = Mock(spec=discord.Role)
         mock_get_role.return_value = mock_role
@@ -160,12 +154,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.events.handlers.add_prospect_role.member_update_emitter")
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_adds_member_role_if_missing(
-        self, mock_emoji, mock_check_role, mock_get_role, mock_emitter
+        self, mock_check_role, mock_get_role, mock_emitter
     ):
         """Adds Member role if not present."""
-        mock_emoji.return_value = ""
         mock_check_role.side_effect = lambda m, r: r != ROLE.MEMBER
         mock_role = Mock(spec=discord.Role)
         mock_get_role.return_value = mock_role
@@ -181,12 +173,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_sends_initial_message(
-        self, mock_emoji, mock_check_role, mock_get_role
+        self, mock_check_role, mock_get_role
     ):
         """Sends initial message when processing starts."""
-        mock_emoji.return_value = ""
         mock_check_role.return_value = False
         mock_get_role.return_value = Mock(spec=discord.Role)
 
@@ -200,12 +190,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_raises_when_role_not_found(
-        self, mock_emoji, mock_check_role, mock_get_role
+        self, mock_check_role, mock_get_role
     ):
         """Raises ValueError when required role cannot be found."""
-        mock_emoji.return_value = ""
         mock_check_role.side_effect = lambda m, r: r == ROLE.APPLICANT
         mock_get_role.return_value = None
 
@@ -218,12 +206,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    @patch("ironforgedbot.events.handlers.add_prospect_role.find_emoji")
     async def test_execute_no_db_member_still_processes(
-        self, mock_emoji, mock_check_role, mock_get_role
+        self, mock_check_role, mock_get_role
     ):
         """Processes role changes even when no db member found."""
-        mock_emoji.return_value = ""
         mock_check_role.return_value = False
         mock_get_role.return_value = Mock(spec=discord.Role)
 
@@ -231,7 +217,9 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.update_member_flags.assert_not_called()
         self.assertIsNone(result)

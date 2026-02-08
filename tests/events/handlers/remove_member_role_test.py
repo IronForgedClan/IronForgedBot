@@ -92,11 +92,11 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=db_member)
         self.mock_service.disable_member = AsyncMock()
 
-        context = self._create_context(
-            after_roles=[RANK.IRON, ROLE.LEADERSHIP]
-        )
+        context = self._create_context(after_roles=[RANK.IRON, ROLE.LEADERSHIP])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_called_once()
         mock_emitter.suppress_next_for.assert_called_once()
@@ -127,7 +127,9 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("warning", result.lower())
         self.assertIn("cannot be found", result.lower())
@@ -143,7 +145,9 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             side_effect=Forbidden(Mock(), "Missing permissions")
         )
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn("permission", result.lower())
 
@@ -168,7 +172,9 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context(after_roles=[])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         context.after.remove_roles.assert_not_called()
         self.assertIn("disabled", result.lower())
@@ -186,7 +192,9 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context(after_roles=[RANK.IRON])
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIn(RANK.IRON, result)
 

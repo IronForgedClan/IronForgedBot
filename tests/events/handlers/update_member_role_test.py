@@ -79,7 +79,9 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             before=before, after=after, report_channel=report_channel
         )
 
-    @patch("ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member")
+    @patch(
+        "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"
+    )
     @patch("ironforgedbot.events.handlers.update_member_role.has_booster_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_prospect_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_blacklisted_role")
@@ -114,12 +116,16 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.change_role.assert_called_once()
         self.assertIn("role", result.lower())
 
-    @patch("ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member")
+    @patch(
+        "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"
+    )
     @patch("ironforgedbot.events.handlers.update_member_role.has_booster_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_prospect_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_blacklisted_role")
@@ -154,14 +160,18 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.update_member_flags.assert_called_once()
         call_kwargs = self.mock_service.update_member_flags.call_args[1]
         self.assertTrue(call_kwargs["is_booster"])
         self.assertIn("booster", result.lower())
 
-    @patch("ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member")
+    @patch(
+        "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"
+    )
     @patch("ironforgedbot.events.handlers.update_member_role.has_booster_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_prospect_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_blacklisted_role")
@@ -196,14 +206,18 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.update_member_flags.assert_called_once()
         call_kwargs = self.mock_service.update_member_flags.call_args[1]
         self.assertTrue(call_kwargs["is_prospect"])
         self.assertIn("prospect", result.lower())
 
-    @patch("ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member")
+    @patch(
+        "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"
+    )
     @patch("ironforgedbot.events.handlers.update_member_role.has_booster_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_prospect_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_blacklisted_role")
@@ -238,14 +252,18 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.update_member_flags.assert_called_once()
         call_kwargs = self.mock_service.update_member_flags.call_args[1]
         self.assertTrue(call_kwargs["is_blacklisted"])
         self.assertIn("blacklisted", result.lower())
 
-    @patch("ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member")
+    @patch(
+        "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"
+    )
     @patch("ironforgedbot.events.handlers.update_member_role.has_booster_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_prospect_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_blacklisted_role")
@@ -280,14 +298,18 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.update_member_flags.assert_called_once()
         call_kwargs = self.mock_service.update_member_flags.call_args[1]
         self.assertTrue(call_kwargs["is_banned"])
         self.assertIn("banned", result.lower())
 
-    @patch("ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member")
+    @patch(
+        "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"
+    )
     @patch("ironforgedbot.events.handlers.update_member_role.has_booster_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_prospect_role")
     @patch("ironforgedbot.events.handlers.update_member_role.has_blacklisted_role")
@@ -321,7 +343,9 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.mock_service.change_role.assert_not_called()
         self.mock_service.update_member_flags.assert_not_called()
@@ -333,7 +357,9 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         context = self._create_context()
 
-        result = await self.handler._execute(context, self.mock_session, self.mock_service)
+        result = await self.handler._execute(
+            context, self.mock_session, self.mock_service
+        )
 
         self.assertIsNone(result)
 

@@ -14,7 +14,9 @@ from tests.helpers import create_test_member
 class ConcreteHandler(BaseMemberUpdateHandler):
     """Concrete implementation for testing BaseMemberUpdateHandler."""
 
-    def __init__(self, execute_result: Optional[str] = None, execute_error: Exception = None):
+    def __init__(
+        self, execute_result: Optional[str] = None, execute_error: Exception = None
+    ):
         self._execute_result = execute_result
         self._execute_error = execute_error
 
