@@ -10,6 +10,8 @@ from ironforgedbot.common.roles import (
     ROLE,
     check_member_has_role,
     get_highest_privilage_role_from_member,
+    get_member_flags_from_discord,
+    get_flag_changes,
 )
 from ironforgedbot.database.database import db
 from ironforgedbot.models.member import Member
@@ -38,13 +40,13 @@ async def sync_members(guild: discord.Guild) -> list[list]:
         for member in db_members:
             existing_members[member.discord_id] = member
 
-        # disable members in db if no longer in Discord
+        # Disable members in db if no longer in Discord
         for member in existing_members.values():
             if member.discord_id not in discord_members.keys():
                 await service.disable_member(member.id)
                 output.append([member.nickname, "Disabled", "No longer a member"])
 
-        # update nickname and rank
+        # Update nickname and rank
         for discord_member in discord_members.values():
             for member in existing_members.values():
                 if discord_member.id == member.discord_id:
@@ -84,10 +86,17 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                             )
                             change_text += " Role changed"
 
+                    # Sync member flags
+                    discord_flags = get_member_flags_from_discord(discord_member)
+                    flag_changes = get_flag_changes(member, discord_flags)
+                    if flag_changes:
+                        await service.update_member_flags(member.id, **discord_flags)
+                        change_text += " Flags: " + ", ".join(flag_changes)
+
                     if len(change_text) > 0:
                         output.append([safe_nick, "Updated", change_text])
 
-        # add new members or reactivate returning members
+        # Add new members or reactivate returning members
         for discord_member in discord_members.values():
             if discord_member.id not in existing_members.keys():
                 safe_nick = normalize_discord_string(discord_member.nick or "")
@@ -103,8 +112,11 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                     continue
 
                 try:
-                    await service.create_member(
+                    new_member = await service.create_member(
                         discord_member.id, safe_nick, RANK(rank)
+                    )
+                    await service.update_member_flags(
+                        new_member.id, **get_member_flags_from_discord(discord_member)
                     )
                 except (UniqueDiscordIdVolation, UniqueNicknameViolation):
                     disabled_member = await service.get_member_by_discord_id(
@@ -125,6 +137,11 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                             )
                             continue
 
+                        await service.update_member_flags(
+                            disabled_member.id,
+                            **get_member_flags_from_discord(discord_member),
+                        )
+
                         output.append([safe_nick, "Enabled", "Returning member"])
                         continue
                     else:
@@ -135,6 +152,21 @@ async def sync_members(guild: discord.Guild) -> list[list]:
                     continue
 
                 output.append([safe_nick, "Added", "New member created"])
+
+        # Sync flags for inactive members still in guild
+        inactive_members = await service.get_all_inactive_members()
+        for member in inactive_members:
+            discord_member = guild.get_member(member.discord_id)
+            if not discord_member:
+                continue
+
+            discord_flags = get_member_flags_from_discord(discord_member)
+            flag_changes = get_flag_changes(member, discord_flags)
+            if flag_changes:
+                await service.update_member_flags(member.id, **discord_flags)
+                output.append(
+                    [member.nickname, "Inactive Updated", ", ".join(flag_changes)]
+                )
 
         output = sorted(output, key=lambda x: x[0])
     return output
