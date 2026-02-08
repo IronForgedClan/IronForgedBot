@@ -116,6 +116,11 @@ class MemberService:
         result = await self.db.execute(select(Member).where(Member.active.is_(True)))
         return list(result.scalars().all())
 
+    async def get_all_inactive_members(self) -> list[Member]:
+        """Get all inactive/disabled members."""
+        result = await self.db.execute(select(Member).where(Member.active.is_(False)))
+        return list(result.scalars().all())
+
     async def get_active_members_by_role(self, role: ROLE) -> list[Member]:
         """Get all active members with a specific role."""
         result = await self.db.execute(
