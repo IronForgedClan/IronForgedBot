@@ -27,9 +27,10 @@ args = parser.parse_args()
 THREAD_ID = args.thread
 AFTER_ID = args.after
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
-    raise RuntimeError("DISCORD_BOT_TOKEN environment variable must be set")
+    print("Error: BOT_TOKEN environment variable must be set", file=sys.stderr)
+    sys.exit(1)
 
 DISPLAY_TOTAL = 20
 
