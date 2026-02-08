@@ -25,12 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 class AddMemberRoleHandler(BaseMemberUpdateHandler):
-    """Handler for when the Member role is added to a Discord user.
-
-    Creates a new member record or reactivates an existing inactive member.
-    Runs early (priority 10) since other handlers may depend on the member existing.
-    """
-
     priority = 10
 
     @property
@@ -41,7 +35,6 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
         return ROLE.MEMBER in context.roles_added
 
     async def _rollback(self, context: MemberUpdateContext) -> None:
-        """Remove the Member role if database operation fails."""
         member_role = get_discord_role(context.report_channel.guild, ROLE.MEMBER)
         if member_role:
             await context.after.remove_roles(
@@ -163,7 +156,7 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
             f"Processed in **{format_duration(start_time, end_time)}**.",
             embed=embed,
         )
-        return None  # Already sent message with embed
+        return None
 
     async def _handle_nickname_conflict(
         self,

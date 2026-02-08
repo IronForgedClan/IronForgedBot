@@ -56,7 +56,6 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             await service.update_member_flags(db_member.id, is_prospect=True)
             logger.debug(f"Set is_prospect=True for {member.display_name}")
 
-        # Remove Applicant role
         if check_member_has_role(member, ROLE.APPLICANT):
             applicant_role = get_discord_role(
                 context.report_channel.guild, ROLE.APPLICANT
@@ -70,7 +69,6 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             )
             member_update_emitter.suppress_next_for(context.discord_id)
 
-        # Remove Guest role
         if check_member_has_role(member, ROLE.GUEST):
             guest_role = get_discord_role(context.report_channel.guild, ROLE.GUEST)
             if guest_role is None:
@@ -80,7 +78,6 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             await member.remove_roles(guest_role, reason="Prospect: remove Guest role")
             member_update_emitter.suppress_next_for(context.discord_id)
 
-        # Add Member role
         if not check_member_has_role(member, ROLE.MEMBER):
             member_role = get_discord_role(context.report_channel.guild, ROLE.MEMBER)
             if member_role is None:
@@ -97,7 +94,7 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             msg += f" Removed roles: {roles_removed[:-1]}."
 
         await report_message.edit(content=report_content + msg)
-        return None  # Already sent/edited message
+        return None
 
 
 member_update_emitter.register(AddProspectRoleHandler())

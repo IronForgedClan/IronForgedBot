@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import format_duration, get_discord_role
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE, BANNED_ROLE_NAME, is_member_banned_by_role
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_ul
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
@@ -42,7 +42,6 @@ class RemoveMemberRoleHandler(BaseMemberUpdateHandler):
         start_time = time.perf_counter()
         member = context.after
 
-        # Remove all monitored roles
         member_roles = set(role.name for role in member.roles)
         roles_to_remove = RANK.list() + ROLE.list() + GOD_ALIGNMENT.list()
 

@@ -17,11 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class NicknameChangeHandler(BaseMemberUpdateHandler):
-    """Handler for when a member's nickname changes.
-
-    Syncs the nickname change to the database.
-    """
-
     priority = 50
 
     @property
@@ -38,7 +33,6 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
         context: MemberUpdateContext,
         previous_nickname: str,
     ) -> bool:
-        """Revert the nickname change on Discord."""
         try:
             await context.after.edit(
                 nick=previous_nickname,
@@ -78,7 +72,7 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             )
 
         if member.nickname == safe_new_nickname:
-            return None  # No actual change
+            return None
 
         try:
             await service.change_nickname(member.id, safe_new_nickname)

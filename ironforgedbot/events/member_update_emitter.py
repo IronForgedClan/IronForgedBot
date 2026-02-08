@@ -12,12 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class MemberUpdateEmitter:
-    """Specialized event emitter for member update events.
-
-    Manages handler registration, execution ordering, and suppression
-    to prevent infinite loops when handlers modify Discord state.
-    """
-
     def __init__(self):
         self._handlers: List["BaseMemberUpdateHandler"] = []
         self._lock = asyncio.Lock()
@@ -25,10 +19,6 @@ class MemberUpdateEmitter:
         self._sorted = False
 
     def register(self, handler: "BaseMemberUpdateHandler") -> None:
-        """Register a handler with the emitter.
-
-        Handlers are sorted by priority before emission (lower priority runs first).
-        """
         self._handlers.append(handler)
         self._sorted = False
         logger.debug(
@@ -53,19 +43,11 @@ class MemberUpdateEmitter:
         return False
 
     def _ensure_sorted(self) -> None:
-        """Sort handlers by priority if needed."""
         if not self._sorted:
             self._handlers.sort(key=lambda h: h.priority)
             self._sorted = True
 
     async def emit(self, context: MemberUpdateContext) -> List[HandlerResult]:
-        """Emit a member update event to all registered handlers.
-
-        Handlers are executed serially in priority order (lowest first).
-        Each handler's should_handle() method is checked before execution.
-
-        Returns a list of HandlerResult for each handler that was executed.
-        """
         if self._is_suppressed(context.discord_id):
             return []
 
@@ -103,5 +85,4 @@ class MemberUpdateEmitter:
             return results
 
 
-# Global singleton instance
 member_update_emitter = MemberUpdateEmitter()

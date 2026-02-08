@@ -71,7 +71,7 @@ class UpdateMemberRankHandler(BaseMemberUpdateHandler):
                 f"{new_rank_emoji} **{RANK(rank)}**. Database updated."
             )
 
-        return None  # No change needed
+        return None
 
 
 member_update_emitter.register(UpdateMemberRankHandler())

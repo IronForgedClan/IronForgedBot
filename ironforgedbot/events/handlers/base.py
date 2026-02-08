@@ -13,21 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseMemberUpdateHandler(ABC):
-    """Base class for member update event handlers.
-
-    Provides:
-    - Automatic timing measurement
-    - Database session management
-    - Standardized error handling with _on_error() hook for rollback
-    - Report channel messaging
-
-    Subclasses must implement:
-    - name: Property returning handler name
-    - should_handle(): Whether this handler should run for the given context
-    - _execute(): The actual handler logic
-    """
-
-    priority: int = 50  # Default priority (lower runs first)
+    priority: int = 50  # Lower runs first
 
     @property
     @abstractmethod
@@ -40,8 +26,7 @@ class BaseMemberUpdateHandler(ABC):
         """Return True if this handler should process the given event.
 
         This is called before _execute() to determine if the handler
-        should run. Use this to filter events based on roles added/removed,
-        nickname changes, etc.
+        should run.
         """
         ...
 
