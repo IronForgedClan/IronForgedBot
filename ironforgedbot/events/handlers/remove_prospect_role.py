@@ -42,10 +42,7 @@ class RemoveProspectRoleHandler(BaseMemberUpdateHandler):
             await service.update_member_flags(db_member.id, is_prospect=False)
             logger.debug(f"Set is_prospect=False for {member.display_name}")
 
-        return (
-            f":outbox_tray: {member.mention} no longer has the "
-            f"**{PROSPECT_ROLE_NAME}** role."
-        )
+        return f":information: **Prospect:** {member.mention} removed."
 
 
 member_update_emitter.register(RemoveProspectRoleHandler())

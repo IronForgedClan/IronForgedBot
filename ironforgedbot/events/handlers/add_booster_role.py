@@ -35,17 +35,16 @@ class AddBoosterRoleHandler(BaseMemberUpdateHandler):
         service: MemberService,
     ) -> Optional[str]:
         member = context.after
-        logger.debug(f"Processing Server Booster role addition for {member.display_name}")
+        logger.debug(
+            f"Processing Server Booster role addition for {member.display_name}"
+        )
 
         db_member = await service.get_member_by_discord_id(member.id)
         if db_member:
             await service.update_member_flags(db_member.id, is_booster=True)
             logger.debug(f"Set is_booster=True for {member.display_name}")
 
-        return (
-            f":star2: {member.mention} is now a "
-            f"**{BOOSTER_ROLE_NAME}**! Thank you for the support!"
-        )
+        return f":information: **Booster:** {member.mention} added."
 
 
 member_update_emitter.register(AddBoosterRoleHandler())

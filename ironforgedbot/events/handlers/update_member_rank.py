@@ -66,9 +66,9 @@ class UpdateMemberRankHandler(BaseMemberUpdateHandler):
             new_rank_emoji = find_emoji(rank)
             await service.change_rank(member.id, RANK(rank))
             return (
-                f":information: **Rank changed:** {discord_member.mention}'s rank "
-                f"was changed from {previous_rank_emoji} **{previous_rank}** to "
-                f"{new_rank_emoji} **{RANK(rank)}**. Database updated."
+                f":information: **Rank changed:** {discord_member.mention} "
+                f"{previous_rank_emoji} **{previous_rank}** → "
+                f"{new_rank_emoji} **{RANK(rank)}**."
             )
 
         return None

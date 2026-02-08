@@ -42,10 +42,7 @@ class RemoveBlacklistedRoleHandler(BaseMemberUpdateHandler):
             await service.update_member_flags(db_member.id, is_blacklisted=False)
             logger.debug(f"Set is_blacklisted=False for {member.display_name}")
 
-        return (
-            f":white_check_mark: {member.mention} no longer has the "
-            f"**{BLACKLISTED_ROLE_NAME}** role."
-        )
+        return f":information: **Blacklisted:** {member.mention} removed."
 
 
 member_update_emitter.register(RemoveBlacklistedRoleHandler())

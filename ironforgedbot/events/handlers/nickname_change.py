@@ -1,13 +1,11 @@
 import logging
-import time
 from typing import Optional
 
 from discord.errors import Forbidden
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.helpers import format_duration, normalize_discord_string
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.roles import ROLE, check_member_has_role
-from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
@@ -53,7 +51,6 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
         session: AsyncSession,
         service: MemberService,
     ) -> Optional[str]:
-        start_time = time.perf_counter()
         before = context.before
         after = context.after
 
@@ -61,14 +58,12 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
         safe_new_nickname = normalize_discord_string(after.display_name)
 
         if not member:
-            end_time = time.perf_counter()
             if not await self._rollback(context, before.display_name):
                 return None
             return (
-                f":warning: Name change detected: {text_bold(before.display_name)} → "
-                f"{text_bold(safe_new_nickname)}. Member not found in database. "
-                f"Unable to save the change, rolling back. "
-                f"Processed in **{format_duration(start_time, end_time)}**."
+                f":warning: **Name changed:** {after.mention} "
+                f"**{before.display_name}** → **{safe_new_nickname}**. "
+                f"Member not found, rolled back."
             )
 
         if member.nickname == safe_new_nickname:
@@ -78,14 +73,12 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             await service.change_nickname(member.id, safe_new_nickname)
         except UniqueNicknameViolation:
             return await self._handle_nickname_conflict(
-                context, service, before.display_name, safe_new_nickname, start_time
+                context, service, before.display_name, safe_new_nickname
             )
 
-        end_time = time.perf_counter()
         return (
-            f":information: Name change detected: {text_bold(before.display_name)} → "
-            f"{text_bold(safe_new_nickname)}. Database updated. "
-            f"Processed in **{format_duration(start_time, end_time)}**."
+            f":information: **Name changed:** {after.mention} "
+            f"**{before.display_name}** → **{safe_new_nickname}**."
         )
 
     async def _handle_nickname_conflict(
@@ -94,7 +87,6 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
         service: MemberService,
         previous_name: str,
         new_name: str,
-        start_time: float,
     ) -> Optional[str]:
         conflicting_db_member = await service.get_member_by_nickname(new_name)
 
@@ -102,10 +94,9 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             if not await self._rollback(context, previous_name):
                 return None
             return (
-                f":warning: Name change detected: {text_bold(previous_name)} → "
-                f"{text_bold(new_name)}. Name change was reverted "
-                "due to a **nickname conflict**. An error occured getting the "
-                "conflicting member's details."
+                f":warning: **Name changed:** {context.after.mention} "
+                f"**{previous_name}** → **{new_name}**. "
+                f"Conflict, rolled back."
             )
 
         conflicting_discord_member = context.report_channel.guild.get_member(
@@ -115,23 +106,14 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
         if not await self._rollback(context, previous_name):
             return None
 
-        end_time = time.perf_counter()
-
         conflict_info = ""
         if conflicting_discord_member:
-            conflict_info = (
-                f" with {conflicting_discord_member.mention}. "
-                f"\n\n**U_ID:** {conflicting_db_member.id}\n"
-                f"**D_ID:** {conflicting_discord_member.id}"
-            )
-        else:
-            conflict_info = "."
+            conflict_info = f" with {conflicting_discord_member.mention}"
 
         return (
-            f":warning: Name change detected: {text_bold(previous_name)} → "
-            f"{text_bold(new_name)}. Name change was reverted "
-            f"due to a **nickname conflict**{conflict_info}"
-            f"\n\nProcessed in **{format_duration(start_time, end_time)}**."
+            f":warning: **Name changed:** {context.after.mention} "
+            f"**{previous_name}** → **{new_name}**. "
+            f"Conflict{conflict_info}, rolled back."
         )
 
 

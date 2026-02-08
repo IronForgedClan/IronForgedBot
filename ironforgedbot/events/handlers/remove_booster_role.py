@@ -35,17 +35,16 @@ class RemoveBoosterRoleHandler(BaseMemberUpdateHandler):
         service: MemberService,
     ) -> Optional[str]:
         member = context.after
-        logger.debug(f"Processing Server Booster role removal for {member.display_name}")
+        logger.debug(
+            f"Processing Server Booster role removal for {member.display_name}"
+        )
 
         db_member = await service.get_member_by_discord_id(member.id)
         if db_member:
             await service.update_member_flags(db_member.id, is_booster=False)
             logger.debug(f"Set is_booster=False for {member.display_name}")
 
-        return (
-            f":wave: {member.mention} is no longer a "
-            f"**{BOOSTER_ROLE_NAME}**."
-        )
+        return f":information: **Booster:** {member.mention} removed."
 
 
 member_update_emitter.register(RemoveBoosterRoleHandler())

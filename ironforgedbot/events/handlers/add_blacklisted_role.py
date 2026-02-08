@@ -43,10 +43,7 @@ class AddBlacklistedRoleHandler(BaseMemberUpdateHandler):
             await service.update_member_flags(db_member.id, is_blacklisted=True)
             logger.debug(f"Set is_blacklisted=True for {member.display_name}")
 
-        return (
-            f":no_entry: {member.mention} has been given the "
-            f"**{BLACKLISTED_ROLE_NAME}** role."
-        )
+        return f":information: **Blacklisted:** {member.mention} added."
 
 
 member_update_emitter.register(AddBlacklistedRoleHandler())

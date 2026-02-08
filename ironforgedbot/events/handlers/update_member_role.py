@@ -98,10 +98,7 @@ class UpdateMemberRoleHandler(BaseMemberUpdateHandler):
             )
 
         if changes:
-            return (
-                f":information: **Member updated:** {discord_member.mention}\n"
-                + "\n".join(f"- {change}" for change in changes)
-            )
+            return f":information: **Member updated:** {discord_member.mention} {', '.join(changes)}."
 
         return None
 

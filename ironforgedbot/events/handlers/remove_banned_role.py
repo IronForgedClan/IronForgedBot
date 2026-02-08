@@ -43,10 +43,7 @@ class RemoveBannedRoleHandler(BaseMemberUpdateHandler):
             await service.update_member_flags(db_member.id, is_banned=False)
             logger.debug(f"Set is_banned=False for {member.display_name}")
 
-        return (
-            f":unlock: {member.mention} no longer has the "
-            f"**{BANNED_ROLE_NAME}** role. Member role must be restored manually."
-        )
+        return f":information: **Banned:** {member.mention} removed. Restore Member role manually."
 
 
 member_update_emitter.register(RemoveBannedRoleHandler())

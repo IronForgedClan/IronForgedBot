@@ -1,14 +1,12 @@
 import logging
-import time
 from typing import Optional
 
 from discord.errors import Forbidden
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.helpers import format_duration, get_discord_role
+from ironforgedbot.common.helpers import get_discord_role
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import BLACKLISTED_ROLE_NAME, ROLE, BANNED_ROLE_NAME
-from ironforgedbot.common.text_formatters import text_ul
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
@@ -39,7 +37,6 @@ class AddBannedRoleHandler(BaseMemberUpdateHandler):
         session: AsyncSession,
         service: MemberService,
     ) -> Optional[str]:
-        start_time = time.perf_counter()
         member = context.after
 
         db_member = await service.get_member_by_discord_id(member.id)
@@ -84,20 +81,12 @@ class AddBannedRoleHandler(BaseMemberUpdateHandler):
             await member.remove_roles(member_role, reason="Member banned.")
             member_update_emitter.suppress_next_for(context.discord_id)
 
-        end_time = time.perf_counter()
-
         roles_message = ""
         if roles_to_remove:
-            roles_message = (
-                "Removed the following unmonitored **discord roles** "
-                f"from this user:\n{text_ul([r.name for r in roles_to_remove])}"
-            )
+            role_list = ", ".join(r.name for r in roles_to_remove)
+            roles_message = f" Removed roles: {role_list}."
 
-        return (
-            f":x: **Member banned:** {member.mention} has been __banned__. "
-            f"{roles_message}"
-            f"Processed in **{format_duration(start_time, end_time)}**."
-        )
+        return f":information: **Banned:** {member.mention} added.{roles_message}"
 
 
 member_update_emitter.register(AddBannedRoleHandler())

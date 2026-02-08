@@ -16,7 +16,9 @@ from ironforgedbot.events.handlers.nickname_change import NicknameChangeHandler
 from ironforgedbot.events.handlers.add_banned_role import AddBannedRoleHandler
 from ironforgedbot.events.handlers.remove_banned_role import RemoveBannedRoleHandler
 from ironforgedbot.events.handlers.add_blacklisted_role import AddBlacklistedRoleHandler
-from ironforgedbot.events.handlers.remove_blacklisted_role import RemoveBlacklistedRoleHandler
+from ironforgedbot.events.handlers.remove_blacklisted_role import (
+    RemoveBlacklistedRoleHandler,
+)
 from ironforgedbot.events.handlers.add_booster_role import AddBoosterRoleHandler
 from ironforgedbot.events.handlers.remove_booster_role import RemoveBoosterRoleHandler
 
