@@ -7,7 +7,6 @@ from google.oauth2 import service_account
 from ironforgedbot.config import CONFIG
 from threading import Lock
 
-
 logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 

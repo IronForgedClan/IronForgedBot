@@ -86,9 +86,7 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    async def test_execute_updates_prospect_flag(
-        self, mock_check_role, mock_get_role
-    ):
+    async def test_execute_updates_prospect_flag(self, mock_check_role, mock_get_role):
         """Updates is_prospect flag in database."""
         mock_check_role.return_value = False
         mock_get_role.return_value = Mock(spec=discord.Role)
@@ -173,9 +171,7 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
-    async def test_execute_sends_initial_message(
-        self, mock_check_role, mock_get_role
-    ):
+    async def test_execute_sends_initial_message(self, mock_check_role, mock_get_role):
         """Sends initial message when processing starts."""
         mock_check_role.return_value = False
         mock_get_role.return_value = Mock(spec=discord.Role)
