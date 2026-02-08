@@ -31,7 +31,6 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("DISCORD_BOT_TOKEN environment variable must be set")
 
-
 DISPLAY_TOTAL = 20
 
 intents = discord.Intents.none()
@@ -82,14 +81,16 @@ class CounterClient(discord.Client):
             stmt = select(Member).where(Member.discord_id.in_(discord_ids))
             result = await session.execute(stmt)
             members_list = list(result.scalars().all())
-            # Ensure type consistency for dictionary keys
             members_by_id = {int(m.discord_id): m for m in members_list}
 
         table_data = []
         for rank, (user_id, count) in enumerate(top_10, 1):
             db_member = members_by_id.get(int(user_id))
+            discord_member = guild.get_member(user_id)
 
-            display_name = db_member.nickname if db_member else f"User {user_id}"
+            display_name = (
+                db_member.nickname if db_member else discord_member.display_name
+            )
             rank_name = db_member.rank if db_member else "N/A"
             active = db_member.active if db_member else "False"
 
