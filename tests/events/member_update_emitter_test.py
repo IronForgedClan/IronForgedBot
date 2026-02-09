@@ -1,4 +1,3 @@
-import time
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -17,10 +16,10 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
         self.after.id = self.before.id
         self.report_channel = Mock(spec=discord.TextChannel)
         self.report_channel.guild = Mock(spec=discord.Guild)
-        self.time_patcher = patch("ironforgedbot.events.member_update_emitter.time")
-        self.mock_time = self.time_patcher.start()
-        self.mock_time.time.return_value = 1000.0
-        self.mock_time.perf_counter = time.perf_counter
+        self.time_patcher = patch(
+            "ironforgedbot.events.member_update_emitter.time.time", return_value=1000.0
+        )
+        self.time_patcher.start()
 
     def tearDown(self):
         self.time_patcher.stop()
