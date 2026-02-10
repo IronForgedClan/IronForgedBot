@@ -90,7 +90,7 @@ def find_member_in_group(
 
 
 def check_member_activity(
-    wom_username: str,
+    username: str,
     wom_group: GroupDetail,
     monthly_gains: Union[GroupMemberGains, PlayerGains],
     absentees: List[str],
@@ -115,13 +115,15 @@ def check_member_activity(
     else:
         player_membership = None
         for member in wom_group.memberships:
-            if member.player.username.lower() == wom_username.lower():
+            # NOTE: WOM treats underscore as space and will fail
+            #       to match a member with one in their rsn
+            if member.player.username.lower() == username.lower().replace("_", " "):
                 player_membership = member
                 break
 
         if not player_membership:
             return ActivityCheckResult(
-                username=wom_username,
+                username=username,
                 wom_role=None,
                 discord_role=None,
                 xp_gained=0,
@@ -141,7 +143,7 @@ def check_member_activity(
 
     if wom_member is None:
         return ActivityCheckResult(
-            username=wom_username,
+            username=username,
             wom_role=None,
             discord_role=None,
             xp_gained=0,
@@ -230,7 +232,7 @@ async def check_bulk_activity(
                     continue
 
                 result = check_member_activity(
-                    wom_username=member_gains.player.username,
+                    username=member_gains.player.username,
                     wom_group=wom_group,
                     monthly_gains=member_gains,
                     absentees=absentees,
