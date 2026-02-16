@@ -31,8 +31,8 @@ class UpdateMemberRoleHandler(BaseMemberUpdateHandler):
 
     def should_handle(self, context: MemberUpdateContext) -> bool:
         role_values = set(ROLE.list())
-        has_role_added = bool(role_values & context.roles_added)
-        return has_role_added and check_member_has_role(context.after, ROLE.MEMBER)
+        has_role_change = bool(role_values & (context.roles_added | context.roles_removed))
+        return has_role_change and check_member_has_role(context.after, ROLE.MEMBER)
 
     async def _execute(
         self,

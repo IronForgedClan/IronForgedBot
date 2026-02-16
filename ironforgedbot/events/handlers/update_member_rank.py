@@ -29,8 +29,8 @@ class UpdateMemberRankHandler(BaseMemberUpdateHandler):
 
     def should_handle(self, context: MemberUpdateContext) -> bool:
         rank_roles = set(RANK.list())
-        has_rank_added = bool(rank_roles & context.roles_added)
-        return has_rank_added and check_member_has_role(context.after, ROLE.MEMBER)
+        has_rank_change = bool(rank_roles & (context.roles_added | context.roles_removed))
+        return has_rank_change and check_member_has_role(context.after, ROLE.MEMBER)
 
     async def _execute(
         self,
