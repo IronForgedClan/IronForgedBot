@@ -1,14 +1,12 @@
 import logging
-import time
 from typing import Optional
 
 from discord.errors import Forbidden
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.helpers import format_duration, get_discord_role
+from ironforgedbot.common.helpers import get_discord_role
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_ul
+from ironforgedbot.common.roles import PROSPECT_ROLE_NAME, ROLE
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
@@ -39,11 +37,12 @@ class RemoveMemberRoleHandler(BaseMemberUpdateHandler):
         session: AsyncSession,
         service: MemberService,
     ) -> Optional[str]:
-        start_time = time.perf_counter()
         member = context.after
 
         member_roles = set(role.name for role in member.roles)
-        roles_to_remove = RANK.list() + ROLE.list() + GOD_ALIGNMENT.list()
+        roles_to_remove = (
+            RANK.list() + ROLE.list() + GOD_ALIGNMENT.list() + [PROSPECT_ROLE_NAME]
+        )
 
         roles_removed = []
         for role_name in roles_to_remove:
@@ -58,32 +57,20 @@ class RemoveMemberRoleHandler(BaseMemberUpdateHandler):
                 await member.remove_roles(
                     *roles_removed, reason="Member removed. Removing monitored roles."
                 )
+                member_update_emitter.suppress_next_for(member.id)
             except Forbidden:
-                return f":warning: The bot lacks permission to manage {member.mention}'s roles."
+                return f":warning: {member.mention} is no longer a **Member**, but the bot lacks permission to manage their roles."
 
         db_member = await service.get_member_by_discord_id(member.id)
         if not db_member:
             return (
-                f":warning: Member {member.mention} has been removed, but "
+                f":warning: {member.mention} is no longer a **Member**, but "
                 "cannot be found in the database."
             )
 
         await service.disable_member(db_member.id)
 
-        end_time = time.perf_counter()
-
-        roles_message = ""
-        if roles_removed:
-            roles_message = (
-                f" Removed the following **discord roles** from this user:\n"
-                f"{text_ul([r.name for r in roles_removed])}"
-            )
-
-        return (
-            f":x: **Member disabled:** {member.mention} has been removed. "
-            f"Disabled member in database.{roles_message}"
-            f"Processed in **{format_duration(start_time, end_time)}**."
-        )
+        return f":wave: {member.mention} is no longer a **Member**."
 
 
 member_update_emitter.register(RemoveMemberRoleHandler())

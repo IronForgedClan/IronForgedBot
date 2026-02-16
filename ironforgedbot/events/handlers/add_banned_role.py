@@ -83,9 +83,9 @@ class AddBannedRoleHandler(BaseMemberUpdateHandler):
         roles_message = ""
         if roles_to_remove:
             role_list = ", ".join(r.name for r in roles_to_remove)
-            roles_message = f" Removed roles: {role_list}."
+            roles_message = f"Removed roles: {role_list}."
 
-        return f":information: **Banned:** {member.mention} added.{roles_message}"
+        return f":x: {member.mention} has been **banned**.\n\n{roles_message}"
 
 
 member_update_emitter.register(AddBannedRoleHandler())

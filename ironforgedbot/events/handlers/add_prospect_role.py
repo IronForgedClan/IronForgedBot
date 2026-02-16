@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.helpers import get_discord_role
+from ironforgedbot.common.helpers import find_emoji, get_discord_role
 from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, check_member_has_role
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
@@ -36,13 +36,10 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
         session: AsyncSession,
         service: MemberService,
     ) -> Optional[str]:
+        prospect_emoji = find_emoji(PROSPECT_ROLE_NAME)
+
         member = context.after
         logger.debug(f"Processing Prospect role addition for {member.display_name}")
-
-        report_content = f":information: **Prospect:** {member.mention} added."
-        report_message = await context.report_channel.send(
-            report_content + " Fixing roles..."
-        )
 
         role_changes = []
 
@@ -58,7 +55,6 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             if applicant_role is None:
                 raise ValueError("Unable to access Applicant role values")
 
-            role_changes.append(f"-{ROLE.APPLICANT}")
             await member.remove_roles(
                 applicant_role, reason="Prospect: remove Applicant role"
             )
@@ -68,7 +64,6 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             if guest_role is None:
                 raise ValueError("Unable to access Guest role values")
 
-            role_changes.append(f"-{ROLE.GUEST}")
             await member.remove_roles(guest_role, reason="Prospect: remove Guest role")
 
         if not check_member_has_role(member, ROLE.MEMBER):
@@ -76,15 +71,12 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
             if member_role is None:
                 raise ValueError("Unable to access Member role value")
 
-            role_changes.append(f"+{ROLE.MEMBER}")
             await member.add_roles(member_role, reason="Prospect: adding Member role")
             member_update_emitter.suppress_next_for(context.discord_id)
 
-        msg = ""
-        if role_changes:
-            msg = f" Roles: {', '.join(role_changes)}."
+        report_content = f"{prospect_emoji} {member.mention} is now a **Prospect**."
+        await context.report_channel.send(report_content)
 
-        await report_message.edit(content=report_content + msg)
         return None
 
 

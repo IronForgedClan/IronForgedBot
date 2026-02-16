@@ -44,7 +44,7 @@ class AddBoosterRoleHandler(BaseMemberUpdateHandler):
             await service.update_member_flags(db_member.id, is_booster=True)
             logger.debug(f"Set is_booster=True for {member.display_name}")
 
-        return f":information: **Booster:** {member.mention} added."
+        return f":zap: {member.mention} now **boosting** the server."
 
 
 member_update_emitter.register(AddBoosterRoleHandler())

@@ -60,9 +60,9 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             if not await self._rollback(context, before.display_name):
                 return None
             return (
-                f":warning: **Name changed:** {after.mention} "
+                f":warning: Nickname changed {after.mention} "
                 f"**{before.display_name}** → **{safe_new_nickname}**. "
-                f"Member not found, rolled back."
+                f"Member not found, rolled back change."
             )
 
         if member.nickname == safe_new_nickname:
@@ -76,8 +76,8 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             )
 
         return (
-            f":information: **Name changed:** {after.mention} "
-            f"**{before.display_name}** → **{safe_new_nickname}**."
+            f":pencil: Nickname changed: "
+            f"**{before.display_name}** → **{after.mention}**."
         )
 
     async def _handle_nickname_conflict(
@@ -93,7 +93,7 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             if not await self._rollback(context, previous_name):
                 return None
             return (
-                f":warning: **Name changed:** {context.after.mention} "
+                f":warning: Nickname changed: {context.after.mention} "
                 f"**{previous_name}** → **{new_name}**. "
                 f"Conflict, rolled back."
             )
@@ -110,7 +110,7 @@ class NicknameChangeHandler(BaseMemberUpdateHandler):
             conflict_info = f" with {conflicting_discord_member.mention}"
 
         return (
-            f":warning: **Name changed:** {context.after.mention} "
+            f":warning: Nickname changed: {context.after.mention} "
             f"**{previous_name}** → **{new_name}**. "
             f"Conflict{conflict_info}, rolled back."
         )
