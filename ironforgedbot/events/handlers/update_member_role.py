@@ -63,7 +63,7 @@ class UpdateMemberRoleHandler(BaseMemberUpdateHandler):
             previous_role = member.role
             await service.change_role(member.id, ROLE(role), admin_id=None)
             return (
-                f":information: **Role changed:** {discord_member.mention} "
+                f":information: {discord_member.mention}'s **role** changed: "
                 f"**{previous_role}** → **{ROLE(role)}**."
             )
 
