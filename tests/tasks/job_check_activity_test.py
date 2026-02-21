@@ -57,7 +57,10 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         self.mock_absentee = Mock()
         self.mock_absentee.nickname = "AbsentPlayer"
 
-    @patch("ironforgedbot.tasks.job_check_activity.time.perf_counter", side_effect=[0.0, 5.0])
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.time.perf_counter",
+        side_effect=[0.0, 5.0],
+    )
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
     @patch("ironforgedbot.tasks.job_check_activity.tabulate")
@@ -163,7 +166,10 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             second_call[0][0], "ℹ️ No inactive members found meeting the criteria."
         )
 
-    @patch("ironforgedbot.tasks.job_check_activity.time.perf_counter", side_effect=[0.0, 5.0])
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.time.perf_counter",
+        side_effect=[0.0, 5.0],
+    )
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
     @patch("ironforgedbot.tasks.job_check_activity.tabulate")

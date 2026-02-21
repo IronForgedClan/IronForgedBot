@@ -65,7 +65,9 @@ class TestMemberUpdateEmitter(unittest.IsolatedAsyncioTestCase):
         self.emitter.suppress_next_for(discord_id)
 
         self.assertIn(discord_id, self.emitter._suppressions)
-        self.assertEqual(self.emitter._suppressions[discord_id], 1002.0)  # 1000 + 2000ms
+        self.assertEqual(
+            self.emitter._suppressions[discord_id], 1002.0
+        )  # 1000 + 2000ms
 
     def test_suppress_next_for_custom_duration(self):
         """suppress_next_for() uses custom duration when specified."""
