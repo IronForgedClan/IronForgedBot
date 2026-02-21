@@ -221,6 +221,16 @@ Now you can modify the example `.env` file with your values.
 | LOG_FILE_MAX_BYTES              | Max size of each log file before rotation. Default: `10000000` (10MB).                | Integer (bytes).                                                     |
 | LOG_FILE_BACKUP_COUNT           | Number of backup log files to keep. Default: `10`.                                    | Integer.                                                             |
 | LOG_JSON_FORMAT                 | Use JSON formatting for logs. Default: `false`.                                       | `true`, `false`                                                      |
+| CRON_SYNC_MEMBERS               | Member sync schedule. Default: `50 3,15 * * *` (3:50 and 15:50 UTC daily)             | Standard cron format: "minute hour day month day_of_week"            |
+| CRON_REFRESH_RANKS              | Rank refresh schedule. Default: `10 4,16 * * *` (4:10 and 16:10 UTC daily)            | Standard cron format                                                 |
+| CRON_CHECK_ACTIVITY             | Activity check schedule. Default: `0 1 * * 1` (Monday 1:00 UTC)                       | Standard cron format                                                 |
+| CRON_CHECK_DISCREPANCIES        | Discrepancy check schedule. Default: `0 0 * * 0` (Sunday 0:00 UTC)                    | Standard cron format                                                 |
+| CRON_CLEAR_CACHES               | Cache cleanup schedule. Default: `*/10 * * * *` (every 10 minutes)                    | Standard cron format                                                 |
+| CRON_PAYROLL                    | Monthly payroll schedule. Default: `0 6 1 * *` (1st of month at 6:00 UTC)             | Standard cron format                                                 |
+
+> [!NOTE]
+> All scheduled jobs run in UTC timezone. Cron schedules use standard cron expression format: "minute hour day_of_month month day_of_week".
+> Day of week: 0=Sunday, 1=Monday, etc. For syntax details, see [Cron format](https://en.wikipedia.org/wiki/Cron).
 
 ### Migrations
 

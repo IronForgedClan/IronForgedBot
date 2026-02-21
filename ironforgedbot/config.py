@@ -42,10 +42,24 @@ class Config:
             os.getenv("TRICK_OR_TREAT_COOLDOWN_SECONDS") or 3600
         )
 
+        # Standard cron format: "minute hour day month day_of_week"
+        # All times are in UTC
+        self.CRON_SYNC_MEMBERS: str = os.getenv("CRON_SYNC_MEMBERS", "50 3,15 * * *")
+        self.CRON_REFRESH_RANKS: str = os.getenv("CRON_REFRESH_RANKS", "10 4,16 * * *")
+        self.CRON_CHECK_ACTIVITY: str = os.getenv("CRON_CHECK_ACTIVITY", "0 1 * * 1")
+        self.CRON_CHECK_DISCREPANCIES: str = os.getenv(
+            "CRON_CHECK_DISCREPANCIES", "0 0 * * 0"
+        )
+        self.CRON_CLEAR_CACHES: str = os.getenv("CRON_CLEAR_CACHES", "*/10 * * * *")
+        self.CRON_PAYROLL: str = os.getenv("CRON_PAYROLL", "0 6 1 * *")
+
         self.validate_config()
 
     def validate_config(self):
         for key, value in vars(self).items():
+            if key.startswith("CRON_"):
+                # Skip validation for CRON_ variables (APScheduler will validate)
+                continue
             if isinstance(value, bool):
                 continue
             if isinstance(value, str) and not value:
