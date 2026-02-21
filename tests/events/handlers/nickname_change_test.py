@@ -98,7 +98,7 @@ class TestNicknameChangeHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         self.mock_service.change_nickname.assert_called_once_with("test-id", "NewNick")
-        self.assertIn("**Name changed:**", result)
+        self.assertIn("nickname changed", result.lower())
 
     @patch("ironforgedbot.events.handlers.nickname_change.normalize_discord_string")
     async def test_execute_no_change_when_already_matches(self, mock_normalize):
@@ -130,7 +130,7 @@ class TestNicknameChangeHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.edit.assert_called_once()
-        self.assertIn("**Name changed:**", result)
+        self.assertIn("nickname changed", result.lower())
         self.assertIn("rolled back", result.lower())
 
     @patch("ironforgedbot.events.handlers.nickname_change.normalize_discord_string")
@@ -152,7 +152,7 @@ class TestNicknameChangeHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.edit.assert_called_once()
-        self.assertIn("**Name changed:**", result)
+        self.assertIn("nickname changed", result.lower())
         self.assertIn("conflict", result.lower())
 
     @patch("ironforgedbot.events.handlers.nickname_change.normalize_discord_string")
@@ -266,7 +266,7 @@ class TestNicknameChangeHandlerConflict(unittest.IsolatedAsyncioTestCase):
             context, self.mock_session, self.mock_service
         )
 
-        self.assertIn("**Name changed:**", result)
+        self.assertIn("nickname changed", result.lower())
         self.assertIn("conflict", result.lower())
         self.assertIn(conflicting_discord_member.mention, result)
 

@@ -106,8 +106,7 @@ class TestAddBoosterRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             context, self.mock_session, self.mock_service
         )
 
-        self.assertIn("**Booster:**", result)
-        self.assertIn("added", result)
+        self.assertIn("boosting", result.lower())
 
     async def test_execute_no_db_member_still_returns_message(self):
         """Returns message even when no db member found."""

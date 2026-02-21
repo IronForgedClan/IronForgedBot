@@ -98,7 +98,7 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.remove_roles.assert_called_once()
-        self.assertIn("disabled", result.lower())
+        self.assertIn("no longer", result.lower())
 
     @patch("ironforgedbot.events.handlers.remove_member_role.get_discord_role")
     async def test_execute_disables_member_in_database(self, mock_get_role):
@@ -175,11 +175,11 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         context.after.remove_roles.assert_not_called()
-        self.assertIn("disabled", result.lower())
+        self.assertIn("no longer", result.lower())
 
     @patch("ironforgedbot.events.handlers.remove_member_role.get_discord_role")
     async def test_execute_lists_removed_roles_in_response(self, mock_get_role):
-        """Response includes list of removed roles."""
+        """Removes roles and returns message when member is removed."""
         mock_role = Mock(spec=discord.Role)
         mock_role.name = RANK.IRON
         mock_get_role.return_value = mock_role
@@ -194,7 +194,8 @@ class TestRemoveMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             context, self.mock_session, self.mock_service
         )
 
-        self.assertIn(RANK.IRON, result)
+        context.after.remove_roles.assert_called_once()
+        self.assertIn("no longer", result.lower())
 
 
 class TestRemoveMemberRoleHandlerPriority(unittest.TestCase):

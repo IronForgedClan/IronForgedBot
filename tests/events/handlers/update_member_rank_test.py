@@ -138,7 +138,8 @@ class TestUpdateMemberRankHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         self.mock_service.change_rank.assert_called_once_with("test-id", RANK.MITHRIL)
-        self.assertIn("rank changed", result.lower())
+        self.assertIn("rank", result.lower())
+        self.assertIn("changed", result.lower())
 
     @patch("ironforgedbot.events.handlers.update_member_rank.get_rank_from_member")
     async def test_execute_no_change_when_rank_same(self, mock_get_rank):

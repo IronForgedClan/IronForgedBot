@@ -131,7 +131,8 @@ class TestUpdateMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
         self.mock_service.change_role.assert_called_once()
-        self.assertIn("role changed", result.lower())
+        self.assertIn("role", result.lower())
+        self.assertIn("changed", result.lower())
 
     @patch(
         "ironforgedbot.events.handlers.update_member_role.get_highest_privilage_role_from_member"

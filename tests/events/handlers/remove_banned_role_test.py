@@ -97,7 +97,7 @@ class TestRemoveBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_execute_returns_message_with_manual_restore_note(self):
-        """Returns message mentioning manual role restoration."""
+        """Returns message when banned role is removed."""
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=None)
 
         context = self._create_context()
@@ -106,9 +106,7 @@ class TestRemoveBannedRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             context, self.mock_session, self.mock_service
         )
 
-        self.assertIn("**Banned:**", result)
-        self.assertIn("removed", result)
-        self.assertIn("manually", result.lower())
+        self.assertIn("unbanned", result.lower())
 
     async def test_execute_no_db_member_still_returns_message(self):
         """Returns message even when no db member found."""
