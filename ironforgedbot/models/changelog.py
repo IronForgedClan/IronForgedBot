@@ -17,6 +17,8 @@ class ChangeType(IntEnum):
     REMOVE_INGOTS = 6
     RANK_CHANGE = 7
     PURCHASE_RAFFLE_TICKETS = 8
+    ROLE_CHANGE = 9
+    FLAG_CHANGE = 10
 
 
 class Changelog(Base):

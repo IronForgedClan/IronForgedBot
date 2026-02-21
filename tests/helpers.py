@@ -257,6 +257,10 @@ def create_test_db_member(
     ingots=1000,
     active=True,
     joined_date=None,
+    is_booster=False,
+    is_prospect=False,
+    is_blacklisted=False,
+    is_banned=False,
     **kwargs,
 ):
     """Creates test Member model instance with common defaults."""
@@ -276,6 +280,10 @@ def create_test_db_member(
     member.ingots = ingots
     member.active = active
     member.joined_date = joined_date or datetime.now(timezone.utc)
+    member.is_booster = is_booster
+    member.is_prospect = is_prospect
+    member.is_blacklisted = is_blacklisted
+    member.is_banned = is_banned
 
     # Apply any additional kwargs
     for key, value in kwargs.items():
@@ -647,3 +655,50 @@ def get_all_wom_roles_for_discord_rank(discord_rank: RANK) -> list:
         for wom_role, mapped_rank in WOM_TO_DISCORD_RANK_MAPPING.items()
         if mapped_rank == discord_rank
     ]
+
+
+def create_mock_member_update_context(
+    before_roles: List[str] = None,
+    after_roles: List[str] = None,
+    before_nick: str = None,
+    after_nick: str = None,
+    discord_id: int = None,
+):
+    """Creates mock MemberUpdateContext for handler testing.
+
+    Args:
+        before_roles: List of role names for the before member state
+        after_roles: List of role names for the after member state
+        before_nick: Nickname for before member (default: None)
+        after_nick: Nickname for after member (default: None)
+        discord_id: Discord ID to use (default: auto-generated)
+
+    Returns:
+        MemberUpdateContext with mocked before/after members and report channel
+    """
+    from ironforgedbot.events.member_events import MemberUpdateContext
+
+    before_roles = before_roles or []
+    after_roles = after_roles or []
+
+    before = create_test_member("TestUser", before_roles, before_nick)
+    after = create_test_member("TestUser", after_roles, after_nick)
+
+    if discord_id:
+        before.id = discord_id
+        after.id = discord_id
+    else:
+        after.id = before.id
+
+    report_channel = AsyncMock(spec=discord.TextChannel)
+    report_channel.send = AsyncMock()
+    report_channel.guild = Mock(spec=discord.Guild)
+    report_channel.guild.get_role = Mock(return_value=None)
+    report_channel.guild.get_member = Mock(return_value=None)
+    report_channel.guild.get_member_named = Mock(return_value=None)
+
+    return MemberUpdateContext(
+        before=before,
+        after=after,
+        report_channel=report_channel,
+    )

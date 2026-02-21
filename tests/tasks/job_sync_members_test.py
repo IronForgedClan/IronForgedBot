@@ -14,10 +14,13 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.mock_report_channel = Mock(spec=discord.TextChannel)
         self.mock_report_channel.send = AsyncMock()
 
-    @patch("ironforgedbot.tasks.job_sync_members.time")
+    @patch(
+        "ironforgedbot.tasks.job_sync_members.time.perf_counter", side_effect=[0.0, 5.0]
+    )
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
-    async def test_job_sync_members_no_changes(self, mock_sync_members, mock_time):
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
+    async def test_job_sync_members_no_changes(
+        self, mock_sync_members, mock_perf_counter
+    ):
         mock_sync_members.return_value = []
 
         await job_sync_members(self.mock_guild, self.mock_report_channel)
@@ -28,7 +31,9 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("No changes", call_args)
         self.assertIn("🔁 **Member Sync**", call_args)
 
-    @patch("ironforgedbot.tasks.job_sync_members.time")
+    @patch(
+        "ironforgedbot.tasks.job_sync_members.time.perf_counter", side_effect=[0.0, 5.0]
+    )
     @patch("ironforgedbot.tasks.job_sync_members.datetime")
     @patch("ironforgedbot.tasks.job_sync_members.text_h2")
     @patch("ironforgedbot.tasks.job_sync_members.datetime_to_discord_relative")
@@ -45,9 +50,8 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_datetime_relative,
         mock_text_h2,
         mock_datetime,
-        mock_time,
+        mock_perf_counter,
     ):
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_datetime.now.return_value = datetime(
             2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc
         )
@@ -82,12 +86,13 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Member Synchronization", send_call_args[0][0])
         self.assertEqual(send_call_args[1]["file"], mock_file)
 
-    @patch("ironforgedbot.tasks.job_sync_members.time")
+    @patch(
+        "ironforgedbot.tasks.job_sync_members.time.perf_counter", side_effect=[0.0, 5.0]
+    )
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
     async def test_job_sync_members_handles_exception(
-        self, mock_sync_members, mock_time
+        self, mock_sync_members, mock_perf_counter
     ):
-        mock_time.perf_counter.side_effect = [0.0, 5.0]
         mock_sync_members.side_effect = Exception("Database error")
 
         await job_sync_members(self.mock_guild, self.mock_report_channel)
@@ -98,7 +103,9 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("🚨 An unhandled error occurred during member sync", call_args)
         self.assertIn("Please check the logs", call_args)
 
-    @patch("ironforgedbot.tasks.job_sync_members.time")
+    @patch(
+        "ironforgedbot.tasks.job_sync_members.time.perf_counter", side_effect=[0.0, 2.5]
+    )
     @patch("ironforgedbot.tasks.job_sync_members.datetime")
     @patch("ironforgedbot.tasks.job_sync_members.text_h2")
     @patch("ironforgedbot.tasks.job_sync_members.datetime_to_discord_relative")
@@ -115,9 +122,8 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_datetime_relative,
         mock_text_h2,
         mock_datetime,
-        mock_time,
+        mock_perf_counter,
     ):
-        mock_time.perf_counter.side_effect = [0.0, 2.5]
         mock_datetime.now.side_effect = [
             datetime(
                 2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc
@@ -152,12 +158,13 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(filename.endswith(".txt"))
         self.assertIn("20240115_103005", filename)
 
-    @patch("ironforgedbot.tasks.job_sync_members.time")
+    @patch(
+        "ironforgedbot.tasks.job_sync_members.time.perf_counter", side_effect=[0.0, 1.0]
+    )
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
     async def test_job_sync_members_empty_changes_list(
-        self, mock_sync_members, mock_time
+        self, mock_sync_members, mock_perf_counter
     ):
-        mock_time.perf_counter.side_effect = [0.0, 1.0]
         mock_sync_members.return_value = []
 
         await job_sync_members(self.mock_guild, self.mock_report_channel)
@@ -167,7 +174,10 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("No changes", call_args)
         self.assertNotIn("file=", str(self.mock_report_channel.send.call_args))
 
-    @patch("ironforgedbot.tasks.job_sync_members.time")
+    @patch(
+        "ironforgedbot.tasks.job_sync_members.time.perf_counter",
+        side_effect=[0.0, 10.0],
+    )
     @patch("ironforgedbot.tasks.job_sync_members.datetime")
     @patch("ironforgedbot.tasks.job_sync_members.text_h2")
     @patch("ironforgedbot.tasks.job_sync_members.datetime_to_discord_relative")
@@ -184,9 +194,8 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_datetime_relative,
         mock_text_h2,
         mock_datetime,
-        mock_time,
+        mock_perf_counter,
     ):
-        mock_time.perf_counter.side_effect = [0.0, 10.0]
         mock_datetime.now.return_value = datetime(
             2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc
         )

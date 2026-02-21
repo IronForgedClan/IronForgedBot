@@ -11,7 +11,6 @@ from tabulate import tabulate
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import TrickOrTreat
 
-
 attempts = 30_000
 outcomes = list(TrickOrTreat)
 weights = [item.value for item in outcomes]

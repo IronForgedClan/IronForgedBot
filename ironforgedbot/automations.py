@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import random
 import sys
 from typing import Optional, Set
 
@@ -10,10 +9,11 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import get_text_channel
-from ironforgedbot.config import CONFIG, ENVIRONMENT
+from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
 )
+from ironforgedbot.tasks.job_payroll import job_payroll
 from ironforgedbot.tasks.job_sync_members import job_sync_members
 from ironforgedbot.tasks.job_membership_discrepancies import (
     job_check_membership_discrepancies,
@@ -225,20 +225,13 @@ class IronForgedAutomations:
             logger.warning("Automation setup already completed, skipping...")
             return
 
-        offset = (
-            0
-            if ENVIRONMENT.PRODUCTION in CONFIG.ENVIRONMENT
-            else random.randint(10, 50)
-        )
-
         self.scheduler.remove_all_jobs()
 
         self.scheduler.add_job(
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
             ),
-            # CronTrigger(minute="*"),
-            CronTrigger(hour="3,15", minute=50, second=offset, timezone="UTC"),
+            CronTrigger.from_crontab(CONFIG.CRON_SYNC_MEMBERS, timezone="UTC"),
             id="sync_members",
             name="Member Sync Job",
         )
@@ -247,8 +240,7 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_refresh_ranks, self.discord_guild, self.report_channel
             ),
-            # CronTrigger(minute="*"),
-            CronTrigger(hour="4,16", minute=10, second=offset, timezone="UTC"),
+            CronTrigger.from_crontab(CONFIG.CRON_REFRESH_RANKS, timezone="UTC"),
             id="refresh_ranks",
             name="Rank Refresh Job",
         )
@@ -260,10 +252,7 @@ class IronForgedAutomations:
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ),
-            # CronTrigger(minute="*"),
-            CronTrigger(
-                day_of_week="mon", hour=1, minute=0, second=offset, timezone="UTC"
-            ),
+            CronTrigger.from_crontab(CONFIG.CRON_CHECK_ACTIVITY, timezone="UTC"),
             id="check_activity",
             name="Activity Check Job",
         )
@@ -276,19 +265,26 @@ class IronForgedAutomations:
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ),
-            # CronTrigger(minute="*"),
-            CronTrigger(
-                day_of_week="sun", hour=0, minute=0, second=offset, timezone="UTC"
-            ),
+            CronTrigger.from_crontab(CONFIG.CRON_CHECK_DISCREPANCIES, timezone="UTC"),
             id="check_membership_discrepancies",
             name="Membership Discrepancy Check Job",
         )
 
         self.scheduler.add_job(
             self._job_wrapper(self._clear_caches),
-            CronTrigger(minute="*/10"),
+            CronTrigger.from_crontab(CONFIG.CRON_CLEAR_CACHES, timezone="UTC"),
             id="clear_caches",
             name="Cache Cleanup Job",
+        )
+
+        self.scheduler.add_job(
+            self._job_wrapper(
+                job_payroll,
+                self.report_channel,
+            ),
+            CronTrigger.from_crontab(CONFIG.CRON_PAYROLL, timezone="UTC"),
+            id="job_payroll",
+            name="Monthly Payroll Job",
         )
 
         await self.report_channel.send(f"### 🟢 **v{CONFIG.BOT_VERSION}** now online")

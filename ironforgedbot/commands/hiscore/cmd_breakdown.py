@@ -27,7 +27,7 @@ from ironforgedbot.common.responses import (
     send_not_clan_member,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import text_bold, text_italic
 from ironforgedbot.decorators.require_role import require_role
@@ -110,7 +110,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: Optional[str] 
             rank_icon = find_emoji(rank_name)
 
         if member and member.roles:
-            if check_member_has_role(member, ROLE.PROSPECT):
+            if has_prospect_role(member):
                 return await send_prospect_response(
                     interaction, rank_name, rank_icon, member
                 )

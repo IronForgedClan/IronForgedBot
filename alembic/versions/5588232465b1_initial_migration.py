@@ -13,7 +13,6 @@ from ironforgedbot.models.decorators import UTCDateTime
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision: str = "5588232465b1"
 down_revision: Union[str, None] = None

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from ironforgedbot.automations import IronForgedAutomations
 from tests.helpers import create_mock_discord_guild
@@ -57,11 +58,7 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         """Create automation with all necessary mocks."""
         with patch("ironforgedbot.automations.CONFIG") as mock_config, patch(
             "ironforgedbot.automations.get_text_channel"
-        ) as mock_get_channel, patch(
-            "ironforgedbot.automations.ENVIRONMENT"
-        ) as mock_env, patch(
-            "asyncio.create_task"
-        ) as mock_create_task, patch(
+        ) as mock_get_channel, patch("asyncio.create_task") as mock_create_task, patch(
             "ironforgedbot.automations.job_sync_members"
         ) as mock_job_sync, patch(
             "ironforgedbot.automations.AsyncIOScheduler"
@@ -75,7 +72,6 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
             mock_config.WOM_API_KEY = "test_key"
             mock_config.WOM_GROUP_ID = "test_group"
             mock_get_channel.return_value = self.mock_channel
-            mock_env.PRODUCTION = "production"
 
             mock_task = Mock()
             mock_task.done.return_value = True
@@ -453,16 +449,13 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(context.exception, test_error)
 
-    @patch("ironforgedbot.automations.random.randint")
-    async def test_setup_automations_adds_all_jobs(self, mock_randint):
-        mock_randint.return_value = 25
-
+    async def test_setup_automations_adds_all_jobs(self):
         automation = self.create_automation_with_mocks()
         automation.scheduler.remove_all_jobs()
 
         await automation.setup_automations()
 
-        self.assertEqual(automation.scheduler.add_job.call_count, 5)
+        self.assertEqual(automation.scheduler.add_job.call_count, 6)
         expected_calls = [
             call
             for call in self.mock_channel.send.call_args_list
@@ -501,16 +494,35 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         async def mock_job_func(delay):
             pass
 
-        mock_tasks = [Mock() for _ in range(5)]
+        mock_tasks = [Mock() for _ in range(6)]
 
         with patch(
             "ironforgedbot.automations.asyncio.create_task", side_effect=mock_tasks
         ):
             tasks = []
-            for i in range(5):
+            for i in range(6):
                 task = await automation.track_job(mock_job_func, 0.01)
                 tasks.append(task)
 
-        self.assertEqual(len(tasks), 5)
+        self.assertEqual(len(tasks), 6)
         for mock_task in mock_tasks:
             self.assertIn(mock_task, automation._running_jobs)
+
+    @patch("ironforgedbot.automations.CONFIG")
+    def test_cron_trigger_from_config(self, mock_config):
+        mock_config.CRON_SYNC_MEMBERS = "50 3,15 * * *"
+
+        # Test that from_crontab works with config value
+        trigger = CronTrigger.from_crontab(
+            mock_config.CRON_SYNC_MEMBERS, timezone="UTC"
+        )
+
+        self.assertIsInstance(trigger, CronTrigger)
+
+    @patch("ironforgedbot.automations.CONFIG")
+    def test_invalid_cron_expression_raises_error(self, mock_config):
+        mock_config.CRON_SYNC_MEMBERS = "invalid cron"
+
+        # APScheduler should raise ValueError for invalid cron expression
+        with self.assertRaises(ValueError):
+            CronTrigger.from_crontab(mock_config.CRON_SYNC_MEMBERS, timezone="UTC")

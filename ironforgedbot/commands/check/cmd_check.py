@@ -123,7 +123,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
 
     try:
         result = check_member_activity(
-            wom_username=db_member.nickname,
+            username=db_member.nickname,
             wom_group=wom_group,
             monthly_gains=player_gains,
             absentees=known_absentees,

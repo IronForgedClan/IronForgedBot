@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.common.ranks import RANK
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 
@@ -45,6 +46,8 @@ class MemberServiceReactivateResponse:
 
 
 logger: logging.Logger = logging.getLogger(name=__name__)
+
+MEMBER_FLAGS = frozenset({"is_booster", "is_prospect", "is_blacklisted", "is_banned"})
 
 
 class MemberService:
@@ -111,6 +114,46 @@ class MemberService:
 
     async def get_all_active_members(self) -> list[Member]:
         result = await self.db.execute(select(Member).where(Member.active.is_(True)))
+        return list(result.scalars().all())
+
+    async def get_all_inactive_members(self) -> list[Member]:
+        """Get all inactive/disabled members."""
+        result = await self.db.execute(select(Member).where(Member.active.is_(False)))
+        return list(result.scalars().all())
+
+    async def get_active_members_by_role(self, role: ROLE) -> list[Member]:
+        """Get all active members with a specific role."""
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.role == role)
+        )
+        return list(result.scalars().all())
+
+    async def get_active_boosters(self) -> list[Member]:
+        """Get all active members who are server boosters."""
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.is_booster.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def get_active_prospects(self) -> list[Member]:
+        """Get all active members who are prospects."""
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.is_prospect.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def get_blacklisted_members(self) -> list[Member]:
+        """Get all active members who are blacklisted."""
+        result = await self.db.execute(
+            select(Member).where(
+                Member.active.is_(True), Member.is_blacklisted.is_(True)
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_banned_members(self) -> list[Member]:
+        """Get all members who are banned."""
+        result = await self.db.execute(select(Member).where(Member.is_banned.is_(True)))
         return list(result.scalars().all())
 
     async def get_member_by_id(self, id: str) -> Member | None:
@@ -339,6 +382,95 @@ class MemberService:
 
         try:
             self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise e
+
+        return member
+
+    async def change_role(
+        self, id: str, new_role: ROLE, admin_id: str | None = None
+    ) -> Member:
+        member = await self.get_member_by_id(id)
+
+        if not member:
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
+
+        now = datetime.now(timezone.utc)
+
+        changelog_entry = Changelog(
+            member_id=member.id,
+            admin_id=admin_id,
+            change_type=ChangeType.ROLE_CHANGE,
+            previous_value=member.role,
+            new_value=new_role,
+            comment="Updated role",
+            timestamp=now,
+        )
+
+        member.role = new_role
+        member.last_changed_date = now
+
+        try:
+            self.db.add(changelog_entry)
+            await self.db.commit()
+            await self.db.refresh(member)
+        except Exception as e:
+            logger.critical(e)
+            await self.db.rollback()
+            raise e
+
+        return member
+
+    async def update_member_flags(self, id: str, **flags: bool) -> Member:
+        """Update boolean flags on a member.
+
+        Args:
+            id: Member ID
+            **flags: Flag name/value pairs (is_booster, is_prospect, is_blacklisted, is_banned)
+
+        Raises ValueError for unknown flag names.
+        """
+        unknown_flags = set(flags.keys()) - MEMBER_FLAGS
+        if unknown_flags:
+            raise ValueError(f"Unknown flag(s): {unknown_flags}")
+
+        now = datetime.now(timezone.utc)
+        member = await self.get_member_by_id(id)
+
+        if not member:
+            raise MemberNotFoundException(f"Member with id {id} does not exist")
+
+        changelog_entries: list[Changelog] = []
+
+        for flag_name, new_value in flags.items():
+            current_value = getattr(member, flag_name)
+            if new_value != current_value:
+                changelog_entries.append(
+                    Changelog(
+                        member_id=member.id,
+                        admin_id=None,
+                        change_type=ChangeType.FLAG_CHANGE,
+                        previous_value=current_value,
+                        new_value=new_value,
+                        comment=f"Updated {flag_name.replace('is_', '')} flag",
+                        timestamp=now,
+                    )
+                )
+                setattr(member, flag_name, new_value)
+
+        if not changelog_entries:
+            logger.warning("No flag changes detected")
+            return member
+
+        member.last_changed_date = now
+
+        try:
+            for entry in changelog_entries:
+                self.db.add(entry)
             await self.db.commit()
             await self.db.refresh(member)
         except Exception as e:

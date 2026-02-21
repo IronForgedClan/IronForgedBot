@@ -8,6 +8,7 @@ from ironforgedbot.common.ranks import RANK
 from ironforgedbot.models.changelog import ChangeType, Changelog
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import (
+    MEMBER_FLAGS,
     MemberNotFoundException,
     MemberService,
     MemberServiceReactivateResponse,
@@ -143,6 +144,29 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, [self.sample_member])
         self.mock_db.execute.assert_awaited_once()
+
+    async def test_get_all_inactive_members(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [self.inactive_member]
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_all_inactive_members()
+
+        self.assertEqual(result, [self.inactive_member])
+        self.mock_db.execute.assert_awaited_once()
+
+    async def test_get_all_inactive_members_empty(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_all_inactive_members()
+
+        self.assertEqual(result, [])
 
     async def test_get_member_by_id_found(self):
         mock_result = MagicMock()
@@ -495,3 +519,167 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertEqual(self.mock_db.add.call_count, 3)
+
+    @patch("ironforgedbot.services.member_service.datetime")
+    async def test_update_member_flags_creates_multiple_changelog_entries(
+        self, mock_datetime
+    ):
+        """Multiple flag changes create multiple changelog entries."""
+        mock_datetime.now.return_value = self.fixed_datetime
+        test_member = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            rank=RANK.IRON,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+
+        with patch.object(
+            self.member_service, "get_member_by_id", return_value=test_member
+        ):
+            result = await self.member_service.update_member_flags(
+                "test-member-id",
+                is_booster=True,
+                is_prospect=True,
+                is_banned=True,
+            )
+
+        self.assertEqual(self.mock_db.add.call_count, 3)
+        self.assertTrue(result.is_booster)
+        self.assertTrue(result.is_prospect)
+        self.assertTrue(result.is_banned)
+
+        changelog_entries = [call[0][0] for call in self.mock_db.add.call_args_list]
+        for entry in changelog_entries:
+            self.assertIsInstance(entry, Changelog)
+            self.assertEqual(entry.change_type, ChangeType.FLAG_CHANGE)
+
+    @patch("ironforgedbot.services.member_service.datetime")
+    async def test_update_member_flags_only_logs_changed_flags(self, mock_datetime):
+        """Changelog entries only created for flags that actually change."""
+        mock_datetime.now.return_value = self.fixed_datetime
+        test_member = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            rank=RANK.IRON,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+            is_booster=True,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+
+        with patch.object(
+            self.member_service, "get_member_by_id", return_value=test_member
+        ):
+            await self.member_service.update_member_flags(
+                "test-member-id",
+                is_booster=True,
+                is_prospect=True,
+            )
+
+        self.assertEqual(self.mock_db.add.call_count, 1)
+        changelog_entry = self.mock_db.add.call_args_list[0][0][0]
+        self.assertIn("prospect", changelog_entry.comment)
+
+    @patch("ironforgedbot.services.member_service.datetime")
+    async def test_update_member_flags_single_flag(self, mock_datetime):
+        """Single flag update works correctly."""
+        mock_datetime.now.return_value = self.fixed_datetime
+        test_member = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            rank=RANK.IRON,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+
+        with patch.object(
+            self.member_service, "get_member_by_id", return_value=test_member
+        ):
+            result = await self.member_service.update_member_flags(
+                "test-member-id",
+                is_blacklisted=True,
+            )
+
+        self.assertEqual(self.mock_db.add.call_count, 1)
+        self.assertTrue(result.is_blacklisted)
+
+        changelog_entry = self.mock_db.add.call_args_list[0][0][0]
+        self.assertEqual(changelog_entry.previous_value, False)
+        self.assertEqual(changelog_entry.new_value, True)
+        self.assertIn("blacklisted", changelog_entry.comment)
+
+    @patch("ironforgedbot.services.member_service.datetime")
+    async def test_update_member_flags_no_changes(self, mock_datetime):
+        """No changes returns early without modifying database."""
+        mock_datetime.now.return_value = self.fixed_datetime
+        test_member = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            rank=RANK.IRON,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+            is_booster=True,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+
+        with patch.object(
+            self.member_service, "get_member_by_id", return_value=test_member
+        ):
+            result = await self.member_service.update_member_flags(
+                "test-member-id",
+                is_booster=True,
+            )
+
+        self.assertEqual(self.mock_db.add.call_count, 0)
+        self.mock_db.commit.assert_not_called()
+        self.assertTrue(result.is_booster)
+
+    async def test_update_member_flags_unknown_flag_raises(self):
+        """Unknown flag names raise ValueError."""
+        with self.assertRaises(ValueError) as context:
+            await self.member_service.update_member_flags(
+                "test-member-id",
+                is_booster=True,
+                unknown_flag=True,
+            )
+
+        self.assertIn("unknown_flag", str(context.exception))
+
+    async def test_update_member_flags_member_not_found(self):
+        """Member not found raises MemberNotFoundException."""
+        with patch.object(self.member_service, "get_member_by_id", return_value=None):
+            with self.assertRaises(MemberNotFoundException):
+                await self.member_service.update_member_flags(
+                    "nonexistent-id",
+                    is_booster=True,
+                )
+
+    def test_member_flags_constant(self):
+        """MEMBER_FLAGS contains the expected flags."""
+        expected_flags = {"is_booster", "is_prospect", "is_blacklisted", "is_banned"}
+        self.assertEqual(MEMBER_FLAGS, expected_flags)

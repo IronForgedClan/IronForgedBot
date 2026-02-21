@@ -24,7 +24,7 @@ from ironforgedbot.services.member_service import MemberService
 logger = logging.getLogger(__name__)
 
 
-def format_transaction(changelog: Changelog) -> list:
+def format_transaction(changelog: Changelog) -> list[str]:
     """Format a changelog entry into a table row.
 
     Args:
@@ -33,6 +33,8 @@ def format_transaction(changelog: Changelog) -> list:
     Returns:
         List containing [change_string, comment] for table display
     """
+    LINE_LIMIT = 38
+
     previous = int(changelog.previous_value) if changelog.previous_value else 0
     new = int(changelog.new_value) if changelog.new_value else 0
     difference = new - previous
@@ -40,7 +42,11 @@ def format_transaction(changelog: Changelog) -> list:
     sign = "+" if difference >= 0 else ""
     change_string = f"{sign}{difference:,}"
 
-    return [change_string, changelog.comment]
+    comment = changelog.comment[:LINE_LIMIT] + (
+        "..." if len(changelog.comment) > LINE_LIMIT else ""
+    )
+
+    return [change_string, comment]
 
 
 @require_role(ROLE.MEMBER)
@@ -86,32 +92,11 @@ async def cmd_view_ingots(
         rank_icon = find_emoji(str(get_rank_from_member(discord_member)))
         ingot_icon = find_emoji("Ingot")
 
-        embed_thumbnail = ""
-        if member.ingots > 0:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_4_detail.png/120px-Coins_4_detail.png"
-        if member.ingots >= 100_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_5_detail.png/120px-Coins_5_detail.png"
-        if member.ingots >= 350_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_25_detail.png/120px-Coins_25_detail.png"
-        if member.ingots >= 750_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_100_detail.png/120px-Coins_100_detail.png"
-        if member.ingots >= 2_500_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_250_detail.png/120px-Coins_250_detail.png"
-        if member.ingots >= 5_000_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Coins_1000_detail.png/120px-Coins_1000_detail.png"
-        if member.ingots >= 10_000_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_3_detail.png/120px-Platinum_token_3_detail.png"
-        if member.ingots >= 15_000_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_4_detail.png/120px-Platinum_token_4_detail.png"
-        if member.ingots >= 20_000_000:
-            embed_thumbnail = "https://oldschool.runescape.wiki/images/thumb/Platinum_token_detail.png/120px-Platinum_token_detail.png"
-
         embed = build_ingot_response_embed(
             title=f"{ingot_icon} Ingot Account",
             description=f"Ingots are our clan currency. Learn how to earn or spend them in <#{CONFIG.INGOT_SHOP_CHANNEL_ID}>.",
         )
 
-        embed.set_thumbnail(url=embed_thumbnail)
         embed.add_field(name="Member", value=f"{rank_icon} {display_name}")
         embed.add_field(name="Balance", value=f"{ingot_icon} {member.ingots:,}")
 
@@ -120,7 +105,7 @@ async def cmd_view_ingots(
             transaction_table = tabulate(
                 transaction_data,
                 headers=["Change", "Reason"],
-                tablefmt="github",
+                tablefmt="simple",
                 colalign=("right", "left"),
             )
             embed.add_field(

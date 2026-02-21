@@ -4,7 +4,11 @@ import random
 from datetime import datetime, timedelta, timezone
 
 import discord
-from ironforgedbot.common.roles import ROLE, check_member_has_role, is_member_banned
+from ironforgedbot.common.roles import (
+    ROLE,
+    PROSPECT_ROLE_NAME,
+    is_member_banned_by_role,
+)
 from ironforgedbot.database.database import db
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
@@ -106,6 +110,7 @@ async def fetch_member_points(
     discord_member: discord.Member,
     current_rank: str,
     score_service: ScoreService,
+    is_prospect: bool = False,
 ) -> tuple[int, str | None]:
     """
     Fetch member points from hiscores API.
@@ -115,6 +120,7 @@ async def fetch_member_points(
         discord_member: Discord member object
         current_rank: Member's current rank
         score_service: Score service instance
+        is_prospect: Whether the member is a prospect
 
     Returns:
         Tuple of (points, error_message)
@@ -127,10 +133,7 @@ async def fetch_member_points(
         )
         return points, None
     except HiscoresNotFound:
-        if (
-            not check_member_has_role(discord_member, ROLE.PROSPECT)
-            and current_rank != RANK.IRON
-        ):
+        if not is_prospect and current_rank != RANK.IRON:
             return 0, build_hiscores_not_found_message(discord_member.mention)
         else:
             return 0, None
@@ -173,13 +176,15 @@ def process_member_rank_check(
 
     correct_rank = get_rank_from_points(current_points)
 
-    if check_member_has_role(discord_member, ROLE.PROSPECT):
+    if member.is_prospect:
         if not isinstance(member.joined_date, datetime):
             logger.debug("...has invalid join date")
             return (
                 None,
                 None,
-                build_invalid_join_date_message(discord_member.mention, ROLE.PROSPECT),
+                build_invalid_join_date_message(
+                    discord_member.mention, PROSPECT_ROLE_NAME
+                ),
             )
 
         if datetime.now(timezone.utc) >= member.joined_date + timedelta(
@@ -304,7 +309,7 @@ async def job_refresh_ranks(
                 issues.append(build_missing_member_message(member.nickname, member.id))
                 continue
 
-            if is_member_banned(discord_member):
+            if member.is_banned or is_member_banned_by_role(discord_member):
                 logger.debug("...banned")
                 continue
 
@@ -312,7 +317,11 @@ async def job_refresh_ranks(
 
             score_service = get_score_service(HTTP)
             current_points, error_message = await fetch_member_points(
-                member.nickname, discord_member, current_rank, score_service
+                member.nickname,
+                discord_member,
+                current_rank,
+                score_service,
+                member.is_prospect,
             )
 
             if error_message:

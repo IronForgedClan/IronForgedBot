@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HttpException
 from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
@@ -23,7 +23,7 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
 class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
-        self.prospect_user = create_test_member("ProspectUser", [ROLE.PROSPECT])
+        self.prospect_user = create_test_member("ProspectUser", [PROSPECT_ROLE_NAME])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
         self.sample_skills = [
@@ -137,7 +137,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_prospect_response")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
     async def test_cmd_score_prospect_response(
@@ -164,7 +164,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_not_clan_member")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
     async def test_cmd_score_not_clan_member_response(
@@ -196,7 +196,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_next_rank_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
     async def test_cmd_score_success_member(
@@ -266,7 +266,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
     async def test_cmd_score_default_player_self(
         self,
@@ -308,7 +308,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_god_alignment_from_member")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
     async def test_cmd_score_god_rank_saradomin(
         self,
@@ -372,7 +372,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
     async def test_cmd_score_empty_score_data(
         self,
@@ -416,7 +416,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
     @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_score.check_member_has_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
     async def test_cmd_score_points_calculation(

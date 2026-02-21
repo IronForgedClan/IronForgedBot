@@ -1,11 +1,9 @@
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
-import discord
 from tests.helpers import (
     create_mock_discord_interaction,
     setup_database_service_mocks,
-    setup_time_mocks,
 )
 
 
@@ -17,7 +15,10 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
 
         self.mock_interaction = create_mock_discord_interaction()
 
-    @patch("ironforgedbot.commands.admin.process_absentees.time")
+    @patch(
+        "ironforgedbot.commands.admin.process_absentees.time.perf_counter",
+        side_effect=[0.0, 1.0],
+    )
     @patch("ironforgedbot.commands.admin.process_absentees.format_duration")
     @patch("ironforgedbot.commands.admin.process_absentees.text_h2")
     @patch("ironforgedbot.commands.admin.process_absentees.discord.File")
@@ -32,9 +33,8 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         mock_discord_file,
         mock_text_h2,
         mock_format_duration,
-        mock_time,
+        mock_perf_counter,
     ):
-        setup_time_mocks(None, mock_time, duration_seconds=1.0)
         mock_format_duration.return_value = "1.0s"
         mock_text_h2.return_value = "## 🚿 Absentee List"
 
@@ -85,7 +85,10 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         self.assertIn("**1.0s**", send_call_args.args[0])
         self.assertEqual(send_call_args.kwargs["file"], mock_file)
 
-    @patch("ironforgedbot.commands.admin.process_absentees.time")
+    @patch(
+        "ironforgedbot.commands.admin.process_absentees.time.perf_counter",
+        side_effect=[0.0, 0.5],
+    )
     @patch("ironforgedbot.commands.admin.process_absentees.format_duration")
     @patch("ironforgedbot.commands.admin.process_absentees.text_h2")
     @patch("ironforgedbot.commands.admin.process_absentees.discord.File")
@@ -100,9 +103,8 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         mock_discord_file,
         mock_text_h2,
         mock_format_duration,
-        mock_time,
+        mock_perf_counter,
     ):
-        setup_time_mocks(None, mock_time, duration_seconds=0.5)
         mock_format_duration.return_value = "0.5s"
         mock_text_h2.return_value = "## 🚿 Absentee List"
 

@@ -1,4 +1,3 @@
-import asyncio
 import signal
 import unittest
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
@@ -6,8 +5,6 @@ from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 import discord
 
 from ironforgedbot.client import DiscordClient
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.ranks import RANK
 
 
 class ClientTest(unittest.IsolatedAsyncioTestCase):
@@ -24,7 +21,6 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.client.guild, self.mock_guild)
         self.assertIsNone(self.client.discord_guild)
         self.assertIsNone(self.client.automations)
-        self.assertIsInstance(self.client.effect_lock, asyncio.Lock)
 
     def test_tree_property_getter_and_setter(self):
         mock_tree = Mock(spec=discord.app_commands.CommandTree)
@@ -217,14 +213,14 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.client.CONFIG")
     @patch("ironforgedbot.client.get_text_channel")
-    @patch("ironforgedbot.client.nickname_change")
-    async def test_on_member_update_handles_nickname_change(
-        self, mock_nickname_change, mock_get_channel, mock_config
+    @patch("ironforgedbot.client.member_update_emitter")
+    async def test_on_member_update_emits_event(
+        self, mock_emitter, mock_get_channel, mock_config
     ):
         mock_config.AUTOMATION_CHANNEL_ID = 555666777
         mock_channel = AsyncMock()
         mock_get_channel.return_value = mock_channel
-        mock_nickname_change.return_value = AsyncMock()
+        mock_emitter.emit = AsyncMock()
 
         mock_before = Mock(spec=discord.Member)
         mock_before.nick = "OldNick"
@@ -237,36 +233,11 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
 
         await self.client.on_member_update(mock_before, mock_after)
 
-        mock_nickname_change.assert_called_once_with(
-            mock_channel, mock_before, mock_after
-        )
-
-    @patch("ironforgedbot.client.CONFIG")
-    @patch("ironforgedbot.client.get_text_channel")
-    @patch("ironforgedbot.client.add_member_role")
-    async def test_on_member_update_handles_member_role_added(
-        self, mock_add_member_role, mock_get_channel, mock_config
-    ):
-        mock_config.AUTOMATION_CHANNEL_ID = 555666777
-        mock_channel = AsyncMock()
-        mock_get_channel.return_value = mock_channel
-        mock_add_member_role.return_value = AsyncMock()
-
-        mock_role = Mock()
-        mock_role.name = ROLE.MEMBER
-
-        mock_before = Mock(spec=discord.Member)
-        mock_before.nick = "TestUser"
-        mock_before.roles = []
-        mock_before.guild = Mock()
-
-        mock_after = Mock(spec=discord.Member)
-        mock_after.nick = "TestUser"
-        mock_after.roles = [mock_role]
-
-        await self.client.on_member_update(mock_before, mock_after)
-
-        mock_add_member_role.assert_called_once_with(mock_channel, mock_after)
+        mock_emitter.emit.assert_called_once()
+        context = mock_emitter.emit.call_args[0][0]
+        self.assertEqual(context.before, mock_before)
+        self.assertEqual(context.after, mock_after)
+        self.assertEqual(context.report_channel, mock_channel)
 
     @patch("ironforgedbot.client.CONFIG")
     @patch("ironforgedbot.client.get_text_channel")

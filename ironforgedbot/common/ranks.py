@@ -90,25 +90,14 @@ def get_rank_from_member(member: discord.Member | None) -> RANK | str | None:
     if not member:
         return None
 
-    for role in member.roles:
-        match role.name:
-            case RANK.IRON:
-                return RANK.IRON
-            case RANK.MITHRIL:
-                return RANK.MITHRIL
-            case RANK.ADAMANT:
-                return RANK.ADAMANT
-            case RANK.RUNE:
-                return RANK.RUNE
-            case RANK.DRAGON:
-                return RANK.DRAGON
-            case RANK.LEGEND:
-                return RANK.LEGEND
-            case RANK.MYTH:
-                return RANK.MYTH
-            case RANK.GOD:
+    member_role_names = {r.name for r in member.roles}
+
+    for rank in RANK:
+        if rank.value in member_role_names:
+            if rank == RANK.GOD:
                 alignment = get_god_alignment_from_member(member)
                 return alignment if alignment else RANK.GOD
+            return rank
 
     return None
 

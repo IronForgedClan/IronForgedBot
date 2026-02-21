@@ -3,9 +3,12 @@
 import functools
 import logging
 import time
-from typing import Callable, Any, Optional
+from typing import Callable, Any, Optional, ParamSpec, TypeVar
 
 import discord
+
+P = ParamSpec("P")
+R = TypeVar("T")
 
 
 def log_command_execution(
@@ -145,9 +148,9 @@ def log_database_operation(logger: Optional[logging.Logger] = None):
         logger: Logger instance to use. If None, creates one from the function module.
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             # Get logger inside wrapper to avoid None issues
             actual_logger = (
                 logger if logger is not None else logging.getLogger(func.__module__)
@@ -176,9 +179,9 @@ def log_service_execution(logger: Optional[logging.Logger] = None):
         logger: Logger instance to use. If None, creates one from the function module.
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             # Get logger inside wrapper to avoid None issues
             actual_logger = (
                 logger if logger is not None else logging.getLogger(func.__module__)

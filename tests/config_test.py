@@ -133,3 +133,30 @@ class ConfigTest(unittest.TestCase):
                 Config()
 
             self.assertIn("BOT_TOKEN", str(context.exception))
+
+    @patch.dict(
+        "os.environ",
+        {
+            **VALID_CONFIG,
+            "CRON_SYNC_MEMBERS": "30 5,17 * * *",
+        },
+    )
+    @patch("ironforgedbot.config.load_dotenv")
+    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
+    def test_loads_custom_cron_schedule(self, mock_file, mock_dotenv):
+        result = Config()
+        self.assertEqual(result.CRON_SYNC_MEMBERS, "30 5,17 * * *")
+
+    @patch.dict("os.environ", VALID_CONFIG)
+    @patch("ironforgedbot.config.load_dotenv")
+    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
+    def test_uses_default_cron_schedule_when_not_specified(
+        self, mock_file, mock_dotenv
+    ):
+        result = Config()
+
+        # Verify defaults match current hard-coded values (converted to cron format)
+        self.assertEqual(result.CRON_SYNC_MEMBERS, "50 3,15 * * *")
+        self.assertEqual(result.CRON_REFRESH_RANKS, "10 4,16 * * *")
+        self.assertEqual(result.CRON_CHECK_ACTIVITY, "0 1 * * 1")
+        self.assertEqual(result.CRON_PAYROLL, "0 6 1 * *")

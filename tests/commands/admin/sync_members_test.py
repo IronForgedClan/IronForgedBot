@@ -4,7 +4,13 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import (
+    ROLE,
+    BOOSTER_ROLE_NAME,
+    PROSPECT_ROLE_NAME,
+    BLACKLISTED_ROLE_NAME,
+    BANNED_ROLE_NAME,
+)
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import (
     UniqueDiscordIdVolation,
@@ -12,6 +18,7 @@ from ironforgedbot.services.member_service import (
 )
 from tests.helpers import (
     create_mock_discord_interaction,
+    create_mock_discord_role,
     create_test_member,
     create_test_db_member,
     setup_database_service_mocks,
@@ -34,13 +41,28 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
         self.test_member3.id = 1003
 
         self.db_member1 = create_test_db_member(
-            nickname="testuser1", discord_id=1001, rank=RANK.IRON, ingots=100, id=1
+            nickname="testuser1",
+            discord_id=1001,
+            rank=RANK.IRON,
+            ingots=100,
+            id=1,
+            role=ROLE.MEMBER,
         )
         self.db_member2 = create_test_db_member(
-            nickname="oldnick", discord_id=1002, rank=RANK.IRON, ingots=200, id=2
+            nickname="oldnick",
+            discord_id=1002,
+            rank=RANK.IRON,
+            ingots=200,
+            id=2,
+            role=ROLE.MEMBER,
         )
         self.db_member3 = create_test_db_member(
-            nickname="leftuser", discord_id=9999, rank=RANK.IRON, ingots=300, id=3
+            nickname="leftuser",
+            discord_id=9999,
+            rank=RANK.IRON,
+            ingots=300,
+            id=3,
+            role=ROLE.MEMBER,
         )
 
     @patch("ironforgedbot.commands.admin.sync_members.db")
@@ -72,12 +94,16 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
     @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
     async def test_sync_members_nickname_change(
-        self, mock_get_rank, mock_check_role, mock_db
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
     ):
         self.guild.members = [self.test_member2]
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
 
         with patch(
             "ironforgedbot.commands.admin.sync_members.MemberService"
@@ -119,12 +145,16 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
     @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
     async def test_sync_members_rank_change(
-        self, mock_get_rank, mock_check_role, mock_db
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
     ):
         self.guild.members = [self.test_member1]
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.MITHRIL
+        mock_get_role.return_value = ROLE.MEMBER
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -385,7 +415,7 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     async def test_sync_members_skip_non_members(
         self, mock_get_rank, mock_check_role, mock_db
     ):
-        non_member = create_test_member("NonMember", [ROLE.PROSPECT], "nonmember")
+        non_member = create_test_member("NonMember", [ROLE.GUEST], "nonmember")
         non_member.id = 1005
 
         self.guild.members = [self.test_member1, non_member]
@@ -410,12 +440,16 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.sync_members.db")
     @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
     @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
     async def test_sync_members_nickname_and_rank_change_combined(
-        self, mock_get_rank, mock_check_role, mock_db
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
     ):
         self.guild.members = [self.test_member2]
         mock_check_role.return_value = True
         mock_get_rank.return_value = RANK.MITHRIL
+        mock_get_role.return_value = ROLE.MEMBER
 
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -462,3 +496,564 @@ class TestSyncMembers(unittest.IsolatedAsyncioTestCase):
 
         nicknames = [r[0] for r in result]
         self.assertEqual(nicknames, sorted(nicknames))
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_flag_change_booster(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that booster flag is synced when Discord role changes."""
+        # Add booster role to Discord member
+        booster_role = create_mock_discord_role(BOOSTER_ROLE_NAME)
+        self.test_member1.roles.append(booster_role)
+        self.guild.members = [self.test_member1]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        # DB member has is_booster=False
+        self.db_member1.is_booster = False
+        self.db_member1.is_prospect = False
+        self.db_member1.is_blacklisted = False
+        self.db_member1.is_banned = False
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = [self.db_member1]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_called_once_with(
+            self.db_member1.id,
+            is_booster=True,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        self.assertTrue(
+            any("Flags: Booster: True" in r[2] for r in result if len(r) > 2)
+        )
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_flag_change_prospect(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that prospect flag is synced when Discord role changes."""
+        prospect_role = create_mock_discord_role(PROSPECT_ROLE_NAME)
+        self.test_member1.roles.append(prospect_role)
+        self.guild.members = [self.test_member1]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        self.db_member1.is_booster = False
+        self.db_member1.is_prospect = False
+        self.db_member1.is_blacklisted = False
+        self.db_member1.is_banned = False
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = [self.db_member1]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_called_once_with(
+            self.db_member1.id,
+            is_booster=False,
+            is_prospect=True,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        self.assertTrue(
+            any("Flags: Prospect: True" in r[2] for r in result if len(r) > 2)
+        )
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_flag_change_blacklisted(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that blacklisted flag is synced when Discord role changes."""
+        blacklisted_role = create_mock_discord_role(BLACKLISTED_ROLE_NAME)
+        self.test_member1.roles.append(blacklisted_role)
+        self.guild.members = [self.test_member1]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        self.db_member1.is_booster = False
+        self.db_member1.is_prospect = False
+        self.db_member1.is_blacklisted = False
+        self.db_member1.is_banned = False
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = [self.db_member1]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_called_once_with(
+            self.db_member1.id,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=True,
+            is_banned=False,
+        )
+        self.assertTrue(
+            any("Flags: Blacklisted: True" in r[2] for r in result if len(r) > 2)
+        )
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_flag_change_banned(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that banned flag is synced when Discord role changes."""
+        banned_role = create_mock_discord_role(BANNED_ROLE_NAME)
+        self.test_member1.roles.append(banned_role)
+        self.guild.members = [self.test_member1]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        self.db_member1.is_booster = False
+        self.db_member1.is_prospect = False
+        self.db_member1.is_blacklisted = False
+        self.db_member1.is_banned = False
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = [self.db_member1]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_called_once_with(
+            self.db_member1.id,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=True,
+        )
+        self.assertTrue(
+            any("Flags: Banned: True" in r[2] for r in result if len(r) > 2)
+        )
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_multiple_flag_changes(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that multiple flags can change at once."""
+        booster_role = create_mock_discord_role(BOOSTER_ROLE_NAME)
+        prospect_role = create_mock_discord_role(PROSPECT_ROLE_NAME)
+        self.test_member1.roles.extend([booster_role, prospect_role])
+        self.guild.members = [self.test_member1]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        self.db_member1.is_booster = False
+        self.db_member1.is_prospect = False
+        self.db_member1.is_blacklisted = False
+        self.db_member1.is_banned = False
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = [self.db_member1]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_called_once_with(
+            self.db_member1.id,
+            is_booster=True,
+            is_prospect=True,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        # Check both flags are mentioned in output
+        matching_results = [r for r in result if len(r) > 2 and "Flags:" in r[2]]
+        self.assertEqual(len(matching_results), 1)
+        self.assertIn("Booster: True", matching_results[0][2])
+        self.assertIn("Prospect: True", matching_results[0][2])
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_flags_no_change(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that no flag update is called when flags already match."""
+        self.guild.members = [self.test_member1]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        # DB member flags match Discord (no flag roles)
+        self.db_member1.is_booster = False
+        self.db_member1.is_prospect = False
+        self.db_member1.is_blacklisted = False
+        self.db_member1.is_banned = False
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = [self.db_member1]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_not_called()
+        # Should not have any output since nothing changed
+        self.assertEqual(len(result), 0)
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    async def test_sync_members_new_member_with_flags(
+        self, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that new members get their flags set on creation."""
+        # Add booster role to new Discord member
+        booster_role = create_mock_discord_role(BOOSTER_ROLE_NAME)
+        self.test_member3.roles.append(booster_role)
+        self.guild.members = [self.test_member3]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_new_member = Mock()
+        mock_new_member.id = "new-member-id"
+
+        mock_service = AsyncMock()
+        mock_service.get_all_active_members.return_value = []
+        mock_service.create_member.return_value = mock_new_member
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService",
+            return_value=mock_service,
+        ):
+            result = await sync_members(self.guild)
+
+        mock_service.create_member.assert_called_once_with(1003, "testuser3", RANK.IRON)
+        mock_service.update_member_flags.assert_called_once_with(
+            "new-member-id",
+            is_booster=True,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        self.assertIn(["testuser3", "Added", "New member created"], result)
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    async def test_sync_members_reactivated_member_with_flags(
+        self, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that reactivated members get their flags synced."""
+        # Add prospect role to returning Discord member
+        prospect_role = create_mock_discord_role(PROSPECT_ROLE_NAME)
+        self.test_member3.roles.append(prospect_role)
+        self.guild.members = [self.test_member3]
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        disabled_member = Member(
+            id=4,
+            discord_id=1003,
+            nickname="testuser3",
+            rank=RANK.IRON,
+            ingots=0,
+            active=False,
+        )
+
+        mock_service = AsyncMock()
+        mock_service.get_all_active_members.return_value = []
+        mock_service.create_member.side_effect = UniqueDiscordIdVolation()
+        mock_service.get_member_by_discord_id.return_value = disabled_member
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService",
+            return_value=mock_service,
+        ):
+            result = await sync_members(self.guild)
+
+        mock_service.reactivate_member.assert_called_once_with(
+            4, "testuser3", RANK.IRON
+        )
+        mock_service.update_member_flags.assert_called_once_with(
+            4,
+            is_booster=False,
+            is_prospect=True,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        self.assertIn(["testuser3", "Enabled", "Returning member"], result)
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_inactive_member_flag_update(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that inactive members in guild get their flags synced."""
+        # Create a non-member Discord user (won't be processed as active member)
+        inactive_discord_member = create_test_member(
+            "InactiveUser", [ROLE.GUEST], "inactiveuser"
+        )
+        inactive_discord_member.id = 9999
+
+        self.guild.members = [inactive_discord_member]
+        # This member doesn't have ROLE.MEMBER, so check_member_has_role returns False
+        mock_check_role.return_value = False
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        # Create inactive DB member with is_banned=True
+        inactive_member = create_test_db_member(
+            nickname="inactiveuser",
+            discord_id=9999,
+            rank=RANK.IRON,
+            ingots=100,
+            id=10,
+            role=ROLE.MEMBER,
+            active=False,
+            is_banned=True,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+        )
+
+        # Set up guild.get_member to return the Discord member for this inactive member
+        self.guild.get_member = Mock(return_value=inactive_discord_member)
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = []
+            mock_service.get_all_inactive_members.return_value = [inactive_member]
+            result = await sync_members(self.guild)
+
+        # Should update flags because is_banned changed from True to False
+        mock_service.update_member_flags.assert_called_once_with(
+            10,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        self.assertIn(["inactiveuser", "Inactive Updated", "Banned: False"], result)
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_inactive_member_not_in_guild_skipped(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that inactive members not in guild are skipped."""
+        self.guild.members = []
+        mock_check_role.return_value = True
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        inactive_member = create_test_db_member(
+            nickname="leftuser",
+            discord_id=9999,
+            rank=RANK.IRON,
+            ingots=100,
+            id=10,
+            role=ROLE.MEMBER,
+            active=False,
+            is_banned=True,
+        )
+
+        # guild.get_member returns None for members not in guild
+        self.guild.get_member = Mock(return_value=None)
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = []
+            mock_service.get_all_inactive_members.return_value = [inactive_member]
+            result = await sync_members(self.guild)
+
+        # Should not update flags for member not in guild
+        mock_service.update_member_flags.assert_not_called()
+        self.assertEqual(len(result), 0)
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_inactive_member_no_flag_changes_skipped(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test that inactive members with matching flags are not updated."""
+        # Create a non-member Discord user (won't be processed as active member)
+        inactive_discord_member = create_test_member(
+            "InactiveUser", [ROLE.GUEST], "inactiveuser"
+        )
+        inactive_discord_member.id = 9999
+
+        self.guild.members = [inactive_discord_member]
+        # This member doesn't have ROLE.MEMBER, so check_member_has_role returns False
+        mock_check_role.return_value = False
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        # DB member flags match Discord (no flag roles on Discord member)
+        inactive_member = create_test_db_member(
+            nickname="inactiveuser",
+            discord_id=9999,
+            rank=RANK.IRON,
+            ingots=100,
+            id=10,
+            role=ROLE.MEMBER,
+            active=False,
+            is_banned=False,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+        )
+
+        self.guild.get_member = Mock(return_value=inactive_discord_member)
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = []
+            mock_service.get_all_inactive_members.return_value = [inactive_member]
+            result = await sync_members(self.guild)
+
+        # Should not update flags when they match
+        mock_service.update_member_flags.assert_not_called()
+        self.assertEqual(len(result), 0)
+
+    @patch("ironforgedbot.commands.admin.sync_members.db")
+    @patch("ironforgedbot.commands.admin.sync_members.check_member_has_role")
+    @patch("ironforgedbot.commands.admin.sync_members.get_rank_from_member")
+    @patch(
+        "ironforgedbot.commands.admin.sync_members.get_highest_privilage_role_from_member"
+    )
+    async def test_sync_members_inactive_member_multiple_flag_changes(
+        self, mock_get_role, mock_get_rank, mock_check_role, mock_db
+    ):
+        """Test inactive member with multiple flag changes."""
+        # Create a non-member Discord user with booster role
+        inactive_discord_member = create_test_member(
+            "InactiveUser", [ROLE.GUEST], "inactiveuser"
+        )
+        inactive_discord_member.id = 9999
+        # Add booster role
+        booster_role = create_mock_discord_role(BOOSTER_ROLE_NAME)
+        inactive_discord_member.roles.append(booster_role)
+
+        self.guild.members = [inactive_discord_member]
+        # This member doesn't have ROLE.MEMBER, so check_member_has_role returns False
+        mock_check_role.return_value = False
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_role.return_value = ROLE.MEMBER
+
+        # DB member has is_banned=True, is_booster=False
+        inactive_member = create_test_db_member(
+            nickname="inactiveuser",
+            discord_id=9999,
+            rank=RANK.IRON,
+            ingots=100,
+            id=10,
+            role=ROLE.MEMBER,
+            active=False,
+            is_banned=True,
+            is_booster=False,
+            is_prospect=False,
+            is_blacklisted=False,
+        )
+
+        self.guild.get_member = Mock(return_value=inactive_discord_member)
+
+        with patch(
+            "ironforgedbot.commands.admin.sync_members.MemberService"
+        ) as mock_member_service_class:
+            mock_session, mock_service = setup_database_service_mocks(
+                mock_db, mock_member_service_class
+            )
+            mock_service.get_all_active_members.return_value = []
+            mock_service.get_all_inactive_members.return_value = [inactive_member]
+            result = await sync_members(self.guild)
+
+        mock_service.update_member_flags.assert_called_once_with(
+            10,
+            is_booster=True,
+            is_prospect=False,
+            is_blacklisted=False,
+            is_banned=False,
+        )
+        # Check both changes are mentioned in output
+        matching_results = [
+            r for r in result if len(r) > 2 and "Inactive Updated" in r[1]
+        ]
+        self.assertEqual(len(matching_results), 1)
+        self.assertIn("Booster: True", matching_results[0][2])
+        self.assertIn("Banned: False", matching_results[0][2])

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 
@@ -42,7 +42,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_get_role_members_success(self, mock_discord_file):
         member1 = self.create_member("member1", [ROLE.MEMBER])
         member2 = self.create_member("member2", [ROLE.MEMBER])
-        member3 = self.create_member("member3", [ROLE.PROSPECT])
+        member3 = self.create_member("member3", [PROSPECT_ROLE_NAME])
 
         self.mock_interaction.guild.members = [member1, member2, member3]
         mock_file = Mock()
@@ -112,11 +112,11 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.cmd_get_role_members.discord.File")
     async def test_cmd_get_role_members_single_member(self, mock_discord_file):
-        member1 = self.create_member("onlyuser", [ROLE.PROSPECT])
+        member1 = self.create_member("onlyuser", [PROSPECT_ROLE_NAME])
 
         self.mock_interaction.guild.members = [member1]
 
-        await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
+        await self.cmd_get_role_members(self.mock_interaction, PROSPECT_ROLE_NAME)
 
         call_args = mock_discord_file.call_args
         fp_arg = call_args.kwargs["fp"]
@@ -133,7 +133,7 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
 
         self.mock_interaction.guild.members = [member1, member2]
 
-        await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
+        await self.cmd_get_role_members(self.mock_interaction, PROSPECT_ROLE_NAME)
 
         self.mock_interaction.followup.send.assert_called_once_with(
             "No members with role '**Prospect**' found."
@@ -170,13 +170,13 @@ class TestGetRoleMembers(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_get_role_members_multiple_roles_per_member(
         self, mock_discord_file
     ):
-        member1 = self.create_member("user1", [ROLE.MEMBER, ROLE.PROSPECT])
-        member2 = self.create_member("user2", [ROLE.PROSPECT, ROLE.DISCORD_TEAM])
-        member3 = self.create_member("user3", [ROLE.DISCORD_TEAM])
+        member1 = self.create_member("user1", [ROLE.MEMBER, PROSPECT_ROLE_NAME])
+        member2 = self.create_member("user2", [PROSPECT_ROLE_NAME, ROLE.STAFF])
+        member3 = self.create_member("user3", [ROLE.STAFF])
 
         self.mock_interaction.guild.members = [member1, member2, member3]
 
-        await self.cmd_get_role_members(self.mock_interaction, ROLE.PROSPECT)
+        await self.cmd_get_role_members(self.mock_interaction, PROSPECT_ROLE_NAME)
 
         call_args = mock_discord_file.call_args
         fp_arg = call_args.kwargs["fp"]

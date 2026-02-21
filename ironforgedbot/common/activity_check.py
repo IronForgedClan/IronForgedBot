@@ -7,7 +7,6 @@ from wom import GroupRole
 from wom.models import GroupDetail, GroupMembership, GroupMemberGains, PlayerGains
 
 from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
-from ironforgedbot.common.roles import is_exempt_from_activity_check
 from ironforgedbot.common.wom_role_mapping import (
     get_discord_role_for_wom_role,
     get_display_name_for_wom_role,
@@ -91,7 +90,7 @@ def find_member_in_group(
 
 
 def check_member_activity(
-    wom_username: str,
+    username: str,
     wom_group: GroupDetail,
     monthly_gains: Union[GroupMemberGains, PlayerGains],
     absentees: List[str],
@@ -116,13 +115,15 @@ def check_member_activity(
     else:
         player_membership = None
         for member in wom_group.memberships:
-            if member.player.username.lower() == wom_username.lower():
+            # NOTE: WOM treats underscore as space and will fail
+            #       to match a member with one in their rsn
+            if member.player.username.lower() == username.lower().replace("_", " "):
                 player_membership = member
                 break
 
         if not player_membership:
             return ActivityCheckResult(
-                username=wom_username,
+                username=username,
                 wom_role=None,
                 discord_role=None,
                 xp_gained=0,
@@ -142,7 +143,7 @@ def check_member_activity(
 
     if wom_member is None:
         return ActivityCheckResult(
-            username=wom_username,
+            username=username,
             wom_role=None,
             discord_role=None,
             xp_gained=0,
@@ -159,8 +160,8 @@ def check_member_activity(
     is_absent = wom_member.player.username.lower() in absentees
     is_prospect = wom_member.role == GroupRole.Dogsbody
 
-    discord_role = get_discord_role_for_wom_role(wom_member.role)
-    is_exempt = discord_role is not None and is_exempt_from_activity_check(discord_role)
+    # TODO: remove flag, prospects are now handled by is_prospect flag
+    is_exempt = False
 
     xp_threshold = get_activity_threshold_for_rank(member_rank)
     xp_gained = extract_overall_xp_gained(monthly_gains)
@@ -231,7 +232,7 @@ async def check_bulk_activity(
                     continue
 
                 result = check_member_activity(
-                    wom_username=member_gains.player.username,
+                    username=member_gains.player.username,
                     wom_group=wom_group,
                     monthly_gains=member_gains,
                     absentees=absentees,
