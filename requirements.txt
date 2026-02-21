@@ -17,7 +17,7 @@ aiomysql==0.3.2
     # via -r requirements.in
 aiosignal==1.4.0
     # via aiohttp
-alembic==1.18.3
+alembic==1.18.4
     # via -r requirements.in
 apscheduler==3.11.2
     # via -r requirements.in
@@ -39,7 +39,7 @@ click==8.3.1
     # via black
 concurrent-log-handler==0.9.28
     # via -r requirements.in
-cryptography==46.0.4
+cryptography==46.0.5
     # via google-auth
 discord-py==2.6.4
     # via
@@ -56,7 +56,7 @@ google-auth==2.48.0
     #   gspread
 google-auth-oauthlib==1.2.4
     # via gspread
-greenlet==3.3.1
+greenlet==3.3.2
     # via sqlalchemy
 gspread==6.2.1
     # via -r requirements.in
@@ -86,9 +86,9 @@ packaging==26.0
     # via black
 pathspec==1.0.4
     # via black
-pillow==12.1.0
+pillow==12.1.1
     # via -r requirements.in
-platformdirs==4.5.1
+platformdirs==4.9.2
     # via black
 portalocker==3.2.0
     # via concurrent-log-handler
