@@ -59,18 +59,18 @@ class RemoveMemberRoleHandler(BaseMemberUpdateHandler):
                 )
                 member_update_emitter.suppress_next_for(member.id)
             except Forbidden:
-                return f":warning: {member.mention} is no longer a **Member**, but the bot lacks permission to manage their roles."
+                return f":warning: {member.mention} is no longer a **member**, but the bot lacks permission to manage their roles."
 
         db_member = await service.get_member_by_discord_id(member.id)
         if not db_member:
             return (
-                f":warning: {member.mention} is no longer a **Member**, but "
+                f":warning: {member.mention} is no longer a **member**, but "
                 "cannot be found in the database."
             )
 
         await service.disable_member(db_member.id)
 
-        return f":wave: {member.mention} is no longer a **Member**."
+        return f":wave: {member.mention} is no longer a **member**."
 
 
 member_update_emitter.register(RemoveMemberRoleHandler())
