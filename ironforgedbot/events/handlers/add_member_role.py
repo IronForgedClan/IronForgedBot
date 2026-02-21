@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
     find_emoji,
-    format_duration,
     get_discord_role,
 )
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
@@ -19,7 +18,6 @@ from ironforgedbot.events.member_update_emitter import member_update_emitter
 from ironforgedbot.services.member_service import MemberService, UniqueNicknameViolation
 
 import discord
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +52,6 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
         session: AsyncSession,
         service: MemberService,
     ) -> Optional[str]:
-        start_time = time.perf_counter()
         discord_member = context.after
 
         rank = get_rank_from_member(discord_member)
@@ -75,52 +72,44 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
                     )
                     member = reactivate_response.new_member
                 except UniqueNicknameViolation:
-                    return await self._handle_nickname_conflict(
-                        context, service, start_time
-                    )
+                    return await self._handle_nickname_conflict(context, service)
             elif existing_member and existing_member.active:
                 logger.warning(
                     f"Member {discord_member.display_name} (ID: {discord_member.id}) "
                     "already exists and is active in database"
                 )
                 await self._rollback(context)
-                end_time = time.perf_counter()
                 return (
                     f":warning: {discord_member.mention} was given the "
                     f"{text_bold(ROLE.MEMBER)} role, but they are already registered "
-                    f"as an active member. Processed in **{format_duration(start_time, end_time)}**."
+                    "as an active member."
                 )
             else:
                 member = await service.create_member(
                     discord_member.id, discord_member.display_name, RANK(rank)
                 )
         except UniqueNicknameViolation:
-            return await self._handle_nickname_conflict(context, service, start_time)
+            return await self._handle_nickname_conflict(context, service)
 
         if not member:
             await self._rollback(context)
-            end_time = time.perf_counter()
             return (
                 f":warning: {discord_member.mention} was given the "
-                f"{text_bold(ROLE.MEMBER)} role, but an error occured. "
-                f"Processed in **{format_duration(start_time, end_time)}**."
+                f"{text_bold(ROLE.MEMBER)} role, but an error occured."
             )
 
         if not reactivate_response:
-            end_time = time.perf_counter()
             return (
                 f":information: {discord_member.mention} has been given the "
                 f"{text_bold(ROLE.MEMBER)} role. Identified as a new member. "
-                f"Join date set to {datetime_to_discord_relative(member.joined_date)}. "
-                f"Processed in **{format_duration(start_time, end_time)}**."
+                f"Join date changed to {datetime_to_discord_relative(member.joined_date)}. "
             )
 
-        # Returning member - send detailed embed
         previous_rank_icon = find_emoji(reactivate_response.previous_rank)
         ingot_icon = find_emoji("Ingot")
         embed = build_response_embed(
             "ℹ️ Returning Member",
-            "The following are the previous details of this returning member.",
+            "The previous details of the returning member.",
             discord.Color.blue(),
         )
         embed.add_field(name="Nickname", value=reactivate_response.previous_nick)
@@ -147,13 +136,11 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
             value=("Yes" if reactivate_response.ingots_reset else "No"),
         )
 
-        end_time = time.perf_counter()
         await context.report_channel.send(
             f":information: {discord_member.mention} has been given the "
             f"{text_bold(ROLE.MEMBER)} role. Identified as a "
-            f"**returning member**. Join date updated to "
-            f"{datetime_to_discord_relative(member.joined_date)}. "
-            f"Processed in **{format_duration(start_time, end_time)}**.",
+            f"**returning member**. Join date changed to "
+            f"{datetime_to_discord_relative(member.joined_date)}.",
             embed=embed,
         )
         return None
@@ -162,7 +149,6 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
         self,
         context: MemberUpdateContext,
         service: MemberService,
-        start_time: float,
     ) -> str:
         discord_member = context.after
         conflicting_discord_member = context.report_channel.guild.get_member_named(
@@ -176,7 +162,6 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
         )
         await self._rollback(context)
 
-        end_time = time.perf_counter()
         conflict_info = ""
         if conflicting_discord_member:
             conflict_info = (
@@ -190,8 +175,7 @@ class AddMemberRoleHandler(BaseMemberUpdateHandler):
         return (
             f":warning: {discord_member.mention} was given the "
             f"{text_bold(ROLE.MEMBER)} role. But was unable to be saved "
-            f"due to a **nickname conflict**{conflict_info} "
-            f"Processed in **{format_duration(start_time, end_time)}**."
+            f"due to a **nickname conflict**{conflict_info}."
         )
 
 
