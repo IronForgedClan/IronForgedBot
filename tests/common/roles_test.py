@@ -112,6 +112,15 @@ class TestRoles(unittest.TestCase):
         result = get_highest_privilage_role_from_member(self.mock_member)
         self.assertEqual(result, ROLE.MEMBER)
 
+    def test_get_highest_privilage_role_from_member_multiple_roles(self):
+        self.mock_member.roles = [
+            create_mock_discord_role("Member"),
+            create_mock_discord_role("Staff"),
+            create_mock_discord_role("Leadership"),
+        ]
+        result = get_highest_privilage_role_from_member(self.mock_member)
+        self.assertEqual(result, ROLE.LEADERSHIP)
+
     def test_member_has_any_roles_success(self):
         self.mock_member.roles = [
             create_mock_discord_role("Member"),

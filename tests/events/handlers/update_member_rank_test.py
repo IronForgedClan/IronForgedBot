@@ -56,6 +56,21 @@ class TestUpdateMemberRankHandlerShouldHandle(unittest.TestCase):
 
         self.assertFalse(handler.should_handle(context))
 
+    def test_should_handle_true_when_rank_role_removed(self):
+        """should_handle returns True when rank role removed and has Member role."""
+        handler = UpdateMemberRankHandler()
+
+        before = create_test_member("TestUser", [ROLE.MEMBER, RANK.MITHRIL])
+        after = create_test_member("TestUser", [ROLE.MEMBER, RANK.IRON])
+        after.id = before.id
+        report_channel = Mock(spec=discord.TextChannel)
+
+        context = MemberUpdateContext(
+            before=before, after=after, report_channel=report_channel
+        )
+
+        self.assertTrue(handler.should_handle(context))
+
     def test_should_handle_true_for_any_rank(self):
         """should_handle returns True for any rank role addition."""
         handler = UpdateMemberRankHandler()
