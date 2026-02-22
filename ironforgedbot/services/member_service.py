@@ -138,10 +138,7 @@ class MemberService:
             List of active members matching any of the specified roles
         """
         result = await self.db.execute(
-            select(Member).where(
-                Member.active.is_(True),
-                Member.role.in_(roles)
-            )
+            select(Member).where(Member.active.is_(True), Member.role.in_(roles))
         )
         return list(result.scalars().all())
 

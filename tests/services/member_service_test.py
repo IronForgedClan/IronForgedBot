@@ -733,7 +733,9 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         mock_result.scalars.return_value = mock_scalars
         self.mock_db.execute.return_value = mock_result
 
-        result = await self.member_service.get_active_members_by_roles([ROLE.STAFF, ROLE.BRIGADIER])
+        result = await self.member_service.get_active_members_by_roles(
+            [ROLE.STAFF, ROLE.BRIGADIER]
+        )
 
         self.assertEqual(len(result), 2)
         self.assertIn(staff_member, result)
