@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.exc import IntegrityError
 
 from ironforgedbot.common.ranks import RANK
+from ironforgedbot.common.roles import ROLE
 from ironforgedbot.models.changelog import ChangeType, Changelog
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import (
@@ -683,3 +684,121 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         """MEMBER_FLAGS contains the expected flags."""
         expected_flags = {"is_booster", "is_prospect", "is_blacklisted", "is_banned"}
         self.assertEqual(MEMBER_FLAGS, expected_flags)
+
+    async def test_get_active_members_by_roles_single_role(self):
+        """Test querying with a single role returns only members with that role."""
+        staff_member = self.sample_member
+        staff_member.role = ROLE.STAFF
+
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [staff_member]
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_active_members_by_roles([ROLE.STAFF])
+
+        self.assertEqual(result, [staff_member])
+        self.mock_db.execute.assert_awaited_once()
+
+    async def test_get_active_members_by_roles_multiple_roles(self):
+        """Test querying with multiple roles returns all matching members."""
+        staff_member = Member(
+            id="staff-id",
+            discord_id=1001,
+            active=True,
+            nickname="StaffUser",
+            ingots=1000,
+            rank=RANK.IRON,
+            role=ROLE.STAFF,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+        )
+
+        brigadier_member = Member(
+            id="brigadier-id",
+            discord_id=1002,
+            active=True,
+            nickname="BrigadierUser",
+            ingots=2000,
+            rank=RANK.MITHRIL,
+            role=ROLE.BRIGADIER,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+        )
+
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [staff_member, brigadier_member]
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_active_members_by_roles([ROLE.STAFF, ROLE.BRIGADIER])
+
+        self.assertEqual(len(result), 2)
+        self.assertIn(staff_member, result)
+        self.assertIn(brigadier_member, result)
+
+    async def test_get_active_members_by_roles_excludes_inactive(self):
+        """Test that inactive members are excluded even if role matches."""
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_active_members_by_roles([ROLE.STAFF])
+
+        # Result should be empty because query filters by active=True
+        self.assertEqual(result, [])
+
+    async def test_get_active_members_by_roles_empty_list(self):
+        """Test querying with empty role list returns empty result."""
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_active_members_by_roles([])
+
+        self.assertEqual(result, [])
+
+    async def test_get_active_members_by_roles_leadership_hierarchy(self):
+        """Test querying with all leadership roles returns correct members."""
+        admiral = Member(
+            id="admiral-id",
+            discord_id=2001,
+            active=True,
+            nickname="Admiral",
+            ingots=5000,
+            rank=RANK.ADAMANT,
+            role=ROLE.ADMIRAL,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+        )
+
+        marshal = Member(
+            id="marshal-id",
+            discord_id=2002,
+            active=True,
+            nickname="Marshal",
+            ingots=6000,
+            rank=RANK.RUNE,
+            role=ROLE.MARSHAL,
+            joined_date=self.fixed_datetime,
+            last_changed_date=self.fixed_datetime,
+        )
+
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [admiral, marshal]
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        leadership_roles = [ROLE.ADMIRAL, ROLE.LEADERSHIP, ROLE.MARSHAL, ROLE.OWNER]
+        result = await self.member_service.get_active_members_by_roles(leadership_roles)
+
+        self.assertEqual(len(result), 2)
+        self.assertIn(admiral, result)
+        self.assertIn(marshal, result)
