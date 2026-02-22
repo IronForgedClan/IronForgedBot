@@ -115,8 +115,13 @@ async def job_payroll(
         member_service = create_member_service(session)
         ingot_service = create_ingot_service(session)
 
-        db_leadership = await member_service.get_active_members_by_role(ROLE.LEADERSHIP)
-        db_staff = await member_service.get_active_members_by_role(ROLE.STAFF)
+        leadership_roles = ROLE.ADMIRAL.or_higher()
+        db_leadership = await member_service.get_active_members_by_roles(
+            [ROLE(r) for r in leadership_roles]
+        )
+
+        staff_roles = [ROLE.STAFF, ROLE.BRIGADIER]
+        db_staff = await member_service.get_active_members_by_roles(staff_roles)
         db_boosters = await member_service.get_active_boosters()
 
         # Exclude leadership members from staff to prevent double payment
