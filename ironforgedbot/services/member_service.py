@@ -128,6 +128,20 @@ class MemberService:
         )
         return list(result.scalars().all())
 
+    async def get_active_members_by_roles(self, roles: list[ROLE]) -> list[Member]:
+        """Get all active members with any of the specified roles.
+
+        Args:
+            roles: List of ROLE enum values to match
+
+        Returns:
+            List of active members matching any of the specified roles
+        """
+        result = await self.db.execute(
+            select(Member).where(Member.active.is_(True), Member.role.in_(roles))
+        )
+        return list(result.scalars().all())
+
     async def get_active_boosters(self) -> list[Member]:
         """Get all active members who are server boosters."""
         result = await self.db.execute(
