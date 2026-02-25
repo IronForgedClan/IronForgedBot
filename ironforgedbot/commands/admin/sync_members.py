@@ -1,4 +1,5 @@
 import logging
+from types import SimpleNamespace
 from typing import Dict
 
 import discord
@@ -14,7 +15,6 @@ from ironforgedbot.common.roles import (
     get_flag_changes,
 )
 from ironforgedbot.database.database import db
-from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import (
     MemberService,
     UniqueDiscordIdVolation,
@@ -36,65 +36,80 @@ async def sync_members(guild: discord.Guild) -> list[list]:
         service = MemberService(session)
         db_members = await service.get_all_active_members()
 
-        existing_members: Dict[int, Member] = {}
-        for member in db_members:
-            existing_members[member.discord_id] = member
+        # Snapshot member data as plain objects immediately to avoid SQLAlchemy
+        # expiry issues after subsequent commits within the same session.
+        existing_members: Dict[int, SimpleNamespace] = {
+            m.discord_id: SimpleNamespace(
+                id=m.id,
+                discord_id=m.discord_id,
+                nickname=m.nickname,
+                rank=m.rank,
+                role=m.role,
+                is_booster=m.is_booster,
+                is_prospect=m.is_prospect,
+                is_blacklisted=m.is_blacklisted,
+                is_banned=m.is_banned,
+            )
+            for m in db_members
+        }
 
         # Disable members in db if no longer in Discord
-        for member in existing_members.values():
-            if member.discord_id not in discord_members.keys():
+        for discord_id, member in existing_members.items():
+            if discord_id not in discord_members:
                 await service.disable_member(member.id)
                 output.append([member.nickname, "Disabled", "No longer a member"])
 
         # Update nickname and rank
         for discord_member in discord_members.values():
-            for member in existing_members.values():
-                if discord_member.id == member.discord_id:
-                    change_text = ""
-                    safe_nick = normalize_discord_string(discord_member.nick or "")
+            member = existing_members.get(discord_member.id)
+            if member is None:
+                continue
 
-                    if safe_nick != member.nickname:
-                        try:
-                            await service.change_nickname(member.id, safe_nick)
-                        except UniqueNicknameViolation:
-                            output.append(
-                                [
-                                    discord_member.name,
-                                    "Error",
-                                    "Unique nickname violation",
-                                ]
-                            )
-                            continue
-                        change_text += "Nickname changed "
+            change_text = ""
+            safe_nick = normalize_discord_string(discord_member.nick or "")
 
-                    discord_rank = get_rank_from_member(discord_member)
-                    if discord_rank in GOD_ALIGNMENT.list():
-                        discord_rank = RANK.GOD
-
-                    if discord_rank:
-                        if member.rank != discord_rank:
-                            await service.change_rank(member.id, RANK(discord_rank))
-                            change_text += "Rank changed"
-
-                    discord_role = get_highest_privilage_role_from_member(
-                        discord_member
+            if safe_nick != member.nickname:
+                try:
+                    await service.change_nickname(member.id, safe_nick)
+                except UniqueNicknameViolation:
+                    output.append(
+                        [
+                            discord_member.name,
+                            "Error",
+                            "Unique nickname violation",
+                        ]
                     )
-                    if discord_role:
-                        if member.role != discord_role:
-                            await service.change_role(
-                                member.id, ROLE(discord_role), admin_id=None
-                            )
-                            change_text += " Role changed"
+                    continue
+                change_text += "Nickname changed "
 
-                    # Sync member flags
-                    discord_flags = get_member_flags_from_discord(discord_member)
-                    flag_changes = get_flag_changes(member, discord_flags)
-                    if flag_changes:
-                        await service.update_member_flags(member.id, **discord_flags)
-                        change_text += " Flags: " + ", ".join(flag_changes)
+            discord_rank = get_rank_from_member(discord_member)
+            if discord_rank in GOD_ALIGNMENT.list():
+                discord_rank = RANK.GOD
 
-                    if len(change_text) > 0:
-                        output.append([safe_nick, "Updated", change_text])
+            if discord_rank:
+                if member.rank != discord_rank:
+                    await service.change_rank(member.id, RANK(discord_rank))
+                    change_text += "Rank changed"
+
+            discord_role = get_highest_privilage_role_from_member(
+                discord_member
+            )
+            if discord_role:
+                if member.role != discord_role:
+                    await service.change_role(
+                        member.id, ROLE(discord_role), admin_id=None
+                    )
+                    change_text += " Role changed"
+
+            # Sync member flags
+            discord_flags = get_member_flags_from_discord(discord_member)
+            flag_changes = get_flag_changes(member, discord_flags)
+            if flag_changes:
+                await service.update_member_flags(member.id, **discord_flags)
+                change_text += " Flags: " + ", ".join(flag_changes)
+
+            if len(change_text) > 0:
+                output.append([safe_nick, "Updated", change_text])
 
         # Add new members or reactivate returning members
         for discord_member in discord_members.values():
@@ -155,7 +170,19 @@ async def sync_members(guild: discord.Guild) -> list[list]:
 
         # Sync flags for inactive members still in guild
         inactive_members = await service.get_all_inactive_members()
-        for member in inactive_members:
+        inactive_snapshots = [
+            SimpleNamespace(
+                id=m.id,
+                discord_id=m.discord_id,
+                nickname=m.nickname,
+                is_booster=m.is_booster,
+                is_prospect=m.is_prospect,
+                is_blacklisted=m.is_blacklisted,
+                is_banned=m.is_banned,
+            )
+            for m in inactive_members
+        ]
+        for member in inactive_snapshots:
             discord_member = guild.get_member(member.discord_id)
             if not discord_member:
                 continue
