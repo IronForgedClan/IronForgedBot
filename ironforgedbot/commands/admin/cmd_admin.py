@@ -12,7 +12,6 @@ from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
 from ironforgedbot.commands.spin.build_spin_webm import build_spin_gif_file
-from ironforgedbot.commands.spin.cmd_spin import cmd_spin
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
@@ -22,6 +21,95 @@ from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.storage.data import BOSSES, SKILLS
 
 logger = logging.getLogger(__name__)
+
+
+class SpinOptionsModal(discord.ui.Modal):
+    """Modal for SOTW/BOTW spins — allows admins to add or exclude options."""
+
+    def __init__(self, title: str, base_options: list[str]):
+        super().__init__(title=title)
+        self._base_options = base_options
+
+        self.additions = discord.ui.TextInput(
+            label="Additions (comma-separated, optional)",
+            required=False,
+            style=discord.TextStyle.short,
+        )
+        self.exclusions = discord.ui.TextInput(
+            label="Exclusions (comma-separated, optional)",
+            required=False,
+            style=discord.TextStyle.short,
+        )
+        self.add_item(self.additions)
+        self.add_item(self.exclusions)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        additions = [o.strip() for o in self.additions.value.split(",") if o.strip()]
+        exclusions_lower = {
+            o.strip().lower() for o in self.exclusions.value.split(",") if o.strip()
+        }
+
+        options = [
+            o for o in self._base_options if o.lower() not in exclusions_lower
+        ] + additions
+
+        if len(options) < 2:
+            await send_error_response(
+                interaction, "At least 2 options are required to spin."
+            )
+            return
+
+        try:
+            file, winner = await build_spin_gif_file(options)
+        except Exception as e:
+            logger.error(f"Error generating spin GIF: {e}")
+            await send_error_response(
+                interaction,
+                "Failed to generate spin animation. Please try again later.",
+            )
+            return
+
+        await interaction.channel.send(file=file, content=f"## {winner}")
+
+
+class SpinCustomModal(discord.ui.Modal):
+    """Modal for a fully custom spin with admin-supplied options."""
+
+    def __init__(self):
+        super().__init__(title="Spin Custom")
+
+        self.options_input = discord.ui.TextInput(
+            label="Options (comma-separated, min 2 required)",
+            required=True,
+            style=discord.TextStyle.short,
+        )
+        self.add_item(self.options_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        options = [o.strip() for o in self.options_input.value.split(",") if o.strip()]
+
+        if len(options) < 2:
+            await send_error_response(
+                interaction,
+                "Please provide at least 2 comma-separated options to spin.",
+            )
+            return
+
+        try:
+            file, winner = await build_spin_gif_file(options)
+        except Exception as e:
+            logger.error(f"Error generating spin GIF: {e}")
+            await send_error_response(
+                interaction,
+                "Failed to generate spin animation. Please try again later.",
+            )
+            return
+
+        await interaction.channel.send(file=file, content=f"## {winner}")
 
 
 @require_role(ROLE.LEADERSHIP, ephemeral=True)
@@ -163,21 +251,10 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        options = ", ".join(s["name"] for s in SKILLS)
+        exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "prayer"]
+        options = [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
 
-        logger.debug(options)
-
-        try:
-            file, winner = await build_spin_gif_file(options)
-        except Exception as e:
-            logger.error(f"Error generating spin GIF: {e}")
-            await send_error_response(
-                interaction,
-                "Failed to generate spin animation. Please try again later.",
-            )
-            return
-
-        await interaction.channel.send(file=file, content=f"## {winner}")
+        await interaction.response.send_modal(SpinOptionsModal("Spin SOTW", options))
 
     @discord.ui.button(
         label="Spin BOTW",
@@ -191,16 +268,20 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        options = ", ".join(b["name"] for b in BOSSES)
+        exclusions = ["rifts closed"]
+        options = [b["name"] for b in BOSSES if b["name"] not in exclusions]
 
-        try:
-            file, winner = await build_spin_gif_file(options)
-        except Exception as e:
-            logger.error(f"Error generating spin GIF: {e}")
-            await send_error_response(
-                interaction,
-                "Failed to generate spin animation. Please try again later.",
-            )
-            return
+        await interaction.response.send_modal(SpinOptionsModal("Spin BOTW", options))
 
-        await interaction.channel.send(file=file, content=f"## {winner}")
+    @discord.ui.button(
+        label="Spin Custom",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_custom",
+        emoji="🎲",
+        row=3,
+    )
+    async def spin_custom_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await interaction.response.send_modal(SpinCustomModal())
