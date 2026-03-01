@@ -11,12 +11,15 @@ from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
+from ironforgedbot.commands.spin.build_spin_webm import build_spin_gif_file
+from ironforgedbot.commands.spin.cmd_spin import cmd_spin
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators.require_role import require_role
+from ironforgedbot.storage.data import BOSSES, SKILLS
 
 logger = logging.getLogger(__name__)
 
@@ -147,3 +150,57 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
         await cmd_process_absentees(interaction)
+
+    @discord.ui.button(
+        label="Spin SOTW",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_sotw",
+        emoji="🌀",
+        row=3,
+    )
+    async def spin_sotw_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+
+        options = ", ".join(s["name"] for s in SKILLS)
+
+        logger.debug(options)
+
+        try:
+            file, winner = await build_spin_gif_file(options)
+        except Exception as e:
+            logger.error(f"Error generating spin GIF: {e}")
+            await send_error_response(
+                interaction,
+                "Failed to generate spin animation. Please try again later.",
+            )
+            return
+
+        await interaction.channel.send(file=file, content=f"## {winner}")
+
+    @discord.ui.button(
+        label="Spin BOTW",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_botw",
+        emoji="🌀",
+        row=3,
+    )
+    async def spin_botw_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+
+        options = ", ".join(b["name"] for b in BOSSES)
+
+        try:
+            file, winner = await build_spin_gif_file(options)
+        except Exception as e:
+            logger.error(f"Error generating spin GIF: {e}")
+            await send_error_response(
+                interaction,
+                "Failed to generate spin animation. Please try again later.",
+            )
+            return
+
+        await interaction.channel.send(file=file, content=f"## {winner}")

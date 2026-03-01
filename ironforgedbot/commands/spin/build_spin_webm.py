@@ -258,12 +258,12 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
     return frames
 
 
-async def build_spin_webm_file(options: list[str]) -> tuple[discord.File, str]:
-    """Returns (discord.File of WebM, winning option string)."""
+async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
+    """Returns (discord.File of GIF, winning option string)."""
     selected_index = random.randint(0, len(options) - 1)
     frames = build_spin_frames(options, selected_index)
     fps = 1000 / FRAME_DURATION_MS  # ≈ 14.93
-    _solid = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 255))
+    _solid = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (43, 45, 49, 255))
 
     with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
         tmp_path = tmp.name
@@ -272,7 +272,7 @@ async def build_spin_webm_file(options: list[str]) -> tuple[discord.File, str]:
         stream = container.add_stream("vp9", rate=round(fps))
         stream.width = GIF_WIDTH
         stream.height = GIF_HEIGHT
-        stream.pix_fmt = "yuv420p"
+        stream.pix_fmt = "yuv444p"
         stream.options = {"crf": "30", "b:v": "0"}
 
         for rgba_frame in frames:
@@ -283,9 +283,41 @@ async def build_spin_webm_file(options: list[str]) -> tuple[discord.File, str]:
         for packet in stream.encode(None):
             container.mux(packet)
 
-    with open(tmp_path, "rb") as f:
-        webm_binary = io.BytesIO(f.read())
+    gif_frames: list[Image.Image] = []
+    with av.open(tmp_path, mode="r") as container:
+        for frame in container.decode(video=0):
+            gif_frames.append(frame.to_image())
     os.unlink(tmp_path)
 
-    webm_binary.seek(0)
-    return discord.File(fp=webm_binary, filename="spin.webm"), options[selected_index]
+    # Build global palette from a composite of all four phases so that
+    # fade-intermediate colours get palette entries alongside background and confetti
+    sample_indices = [
+        SPIN_FRAMES // 2,  # 50  — mid-spin
+        SPIN_FRAMES + FADEOUT_FRAMES // 2,  # 110 — mid-fadeout
+        SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES // 2,  # 157 — mid-confetti
+        SPIN_FRAMES
+        + FADEOUT_FRAMES
+        + CONFETTI_FRAMES
+        + OUTRO_FRAMES // 2,  # 207 — mid-outro (most fade intermediates)
+    ]
+    composite = Image.new("RGB", (GIF_WIDTH * len(sample_indices), GIF_HEIGHT))
+    for i, idx in enumerate(sample_indices):
+        composite.paste(gif_frames[idx], (i * GIF_WIDTH, 0))
+    palette_source = composite.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+
+    # Quantise every frame to the same palette — same colour mapping every frame
+    quantized = [
+        f.quantize(palette=palette_source, dither=Image.Dither.NONE) for f in gif_frames
+    ]
+
+    gif_buffer = io.BytesIO()
+    quantized[0].save(
+        gif_buffer,
+        format="GIF",
+        save_all=True,
+        append_images=quantized[1:],
+        duration=FRAME_DURATION_MS,
+        loop=0,
+    )
+    gif_buffer.seek(0)
+    return discord.File(fp=gif_buffer, filename="spin.gif"), options[selected_index]

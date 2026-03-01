@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.spin.build_spin_webm import build_spin_webm_file
+from ironforgedbot.commands.spin.build_spin_webm import build_spin_gif_file
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
@@ -20,7 +20,9 @@ def _parse_options(options_str: str) -> list[str] | None:
 
 @require_role(ROLE.MEMBER)
 @log_command_execution(logger)
-@discord.app_commands.describe(options="Comma-separated list of options to spin (minimum 2)")
+@discord.app_commands.describe(
+    options="Comma-separated list of options to spin (minimum 2)"
+)
 async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
     parsed = _parse_options(options)
     if parsed is None:
@@ -31,7 +33,7 @@ async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
         return
 
     try:
-        file, _winner = await build_spin_webm_file(parsed)
+        file, _winner = await build_spin_gif_file(parsed)
     except Exception as e:
         logger.error(f"Error generating spin GIF: {e}")
         await send_error_response(
