@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.spin.build_spin_webm import build_spin_gif_file
+from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE

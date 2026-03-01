@@ -2,7 +2,7 @@ import logging
 
 import discord
 
-from ironforgedbot.commands.spin.build_spin_webm import build_spin_gif_file
+from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)

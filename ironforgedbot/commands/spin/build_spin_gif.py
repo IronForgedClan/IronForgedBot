@@ -1,9 +1,6 @@
 import io
-import os
 import random
-import tempfile
 
-import av
 import discord
 from PIL import Image, ImageDraw, ImageFont
 
@@ -39,15 +36,26 @@ FONT_PATH = "fonts/runescape.ttf"
 
 
 def _ease_out_cubic(t: float) -> float:
+    """Cubic ease-out curve: fast at the start, decelerates to a stop at t=1."""
     return 1 - (1 - t) ** 3
 
 
 def _get_text_alpha(distance: float, item_height: int) -> int:
+    """Return 0-255 alpha based on distance from centre slot.
+
+    Items within 1.5 slot-heights of centre are fully visible; beyond that they
+    fade linearly to transparent, creating a depth-of-field illusion.
+    """
     alpha = max(0.0, 1.0 - distance / (item_height * 1.5))
     return int(alpha * 255)
 
 
 def _load_background() -> Image.Image:
+    """Load and resize the background image to GIF dimensions.
+
+    Falls back to a solid dark colour if the image file is missing so that
+    the animation still works in test environments without assets.
+    """
     try:
         img = Image.open(BACKGROUND_IMAGE_PATH).convert("RGBA")
         return img.resize((GIF_WIDTH, GIF_HEIGHT))
@@ -64,6 +72,13 @@ def _draw_text_with_outline_rgba(
     alpha: int,
     outline_width: int = 2,
 ):
+    """Draw text with an 8-direction stroke outline onto an RGBA draw context.
+
+    The outline is rendered first by drawing the text eight times, once in
+    each diagonal and cardinal direction offset by `outline_width` pixels,
+    then the filled text is drawn on top.  This gives crisp edges without
+    requiring a separate mask or blur pass.
+    """
     outline_color = (0, 0, 0, alpha)
     fill_color = (255, 255, 0, alpha)
 
@@ -100,7 +115,7 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
 
     frames: list[Image.Image] = []
 
-    # --- Phase 1: Spin ---
+    # Phase 1: spin
     for i in range(SPIN_FRAMES):
         t = i / (SPIN_FRAMES - 1)
         scroll = total_scroll_px * _ease_out_cubic(t)
@@ -144,7 +159,7 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
         composite = Image.alpha_composite(bg_copy, overlay)
         frames.append(composite)
 
-    # --- Phase 2: Fade-out ---
+    # Phase 2: fade-out
     final_base_index = total_scroll_items  # frac = 0 at final position
 
     for f in range(FADEOUT_FRAMES):
@@ -175,7 +190,9 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
         composite = Image.alpha_composite(bg_copy, overlay)
         frames.append(composite)
 
-    # --- Phase 3: Confetti ---
+    # Phases 3 & 4: confetti then outro
+    # Particle physics and winner text are seeded once; the time index f runs
+    # continuously across both phases so confetti motion is uninterrupted.
     rng = random.Random(selected_index)
     particles = [
         (
@@ -194,16 +211,20 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
     winner_x = (GIF_WIDTH - (w_bbox[2] - w_bbox[0])) // 2
     winner_ty = center_y - (w_bbox[3] - w_bbox[1]) / 2 - w_bbox[1]
 
-    for f in range(CONFETTI_FRAMES):
+    # Phase 3 (f < CONFETTI_FRAMES): winner text + confetti at full opacity.
+    # Phase 4 (f >= CONFETTI_FRAMES): same, but both fade out linearly to 0.
+    for f in range(CONFETTI_FRAMES + OUTRO_FRAMES):
+        outro_f = f - CONFETTI_FRAMES  # negative during phase 3
+        fade = 1.0 if outro_f < 0 else 1.0 - outro_f / (OUTRO_FRAMES - 1)
+        alpha = int(255 * fade)
+
         bg_copy = background.copy()
 
-        # Layer 1: winner text
         text_overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
         _draw_text_with_outline_rgba(
-            ImageDraw.Draw(text_overlay), winner_x, winner_ty, winner_text, font, 255
+            ImageDraw.Draw(text_overlay), winner_x, winner_ty, winner_text, font, alpha
         )
 
-        # Layer 2: confetti squares
         confetti_overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
         cd = ImageDraw.Draw(confetti_overlay)
         for px0, py0, vx, vy, color in particles:
@@ -212,43 +233,7 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
             if 0 <= py < GIF_HEIGHT:
                 cd.rectangle(
                     [px, py, px + CONFETTI_SIZE - 1, py + CONFETTI_SIZE - 1],
-                    fill=(*color, 255),
-                )
-
-        # Composite: background → text → confetti
-        composite = Image.alpha_composite(bg_copy, text_overlay)
-        composite = Image.alpha_composite(composite, confetti_overlay)
-        frames.append(composite)
-
-    # --- Phase 4: Outro (fade everything out to pure background) ---
-    for f in range(OUTRO_FRAMES):
-        progress = f / (OUTRO_FRAMES - 1)  # 0.0 → 1.0
-        fade_alpha = int(255 * (1.0 - progress))  # 255 → 0
-        virtual_f = CONFETTI_FRAMES + f  # continue confetti motion
-
-        bg_copy = background.copy()
-
-        # Winner text (fading out)
-        text_overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
-        _draw_text_with_outline_rgba(
-            ImageDraw.Draw(text_overlay),
-            winner_x,
-            winner_ty,
-            winner_text,
-            font,
-            fade_alpha,
-        )
-
-        # Confetti (continuing motion + fading out)
-        confetti_overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
-        cd = ImageDraw.Draw(confetti_overlay)
-        for px0, py0, vx, vy, color in particles:
-            px = int((px0 + vx * virtual_f) % GIF_WIDTH)
-            py = int(py0 + vy * virtual_f)
-            if 0 <= py < GIF_HEIGHT:
-                cd.rectangle(
-                    [px, py, px + CONFETTI_SIZE - 1, py + CONFETTI_SIZE - 1],
-                    fill=(*color, fade_alpha),
+                    fill=(*color, alpha),
                 )
 
         composite = Image.alpha_composite(bg_copy, text_overlay)
@@ -259,53 +244,48 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
 
 
 async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
-    """Returns (discord.File of GIF, winning option string)."""
+    """Build an animated GIF of the spin animation and return it as a discord.File.
+
+    Returns (discord.File of GIF, winning option string).
+    """
     selected_index = random.randint(0, len(options) - 1)
+
+    # build_spin_frames returns RGBA images so each phase can composite
+    # transparent overlays (text, confetti) onto the background independently.
     frames = build_spin_frames(options, selected_index)
-    fps = 1000 / FRAME_DURATION_MS  # ≈ 14.93
+
+    # GIF does not support true alpha transparency; every pixel must be fully
+    # opaque.  Composite each RGBA frame onto a solid background colour now,
+    # before palette quantization, to flatten the alpha channel into RGB.
     _solid = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (43, 45, 49, 255))
-
-    with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
-        tmp_path = tmp.name
-
-    with av.open(tmp_path, mode="w", format="webm") as container:
-        stream = container.add_stream("vp9", rate=round(fps))
-        stream.width = GIF_WIDTH
-        stream.height = GIF_HEIGHT
-        stream.pix_fmt = "yuv444p"
-        stream.options = {"crf": "30", "b:v": "0"}
-
-        for rgba_frame in frames:
-            rgb = Image.alpha_composite(_solid, rgba_frame).convert("RGB")
-            av_frame = av.VideoFrame.from_image(rgb)
-            for packet in stream.encode(av_frame):
-                container.mux(packet)
-        for packet in stream.encode(None):
-            container.mux(packet)
-
-    gif_frames: list[Image.Image] = []
-    with av.open(tmp_path, mode="r") as container:
-        for frame in container.decode(video=0):
-            gif_frames.append(frame.to_image())
-    os.unlink(tmp_path)
-
-    # Build global palette from a composite of all four phases so that
-    # fade-intermediate colours get palette entries alongside background and confetti
-    sample_indices = [
-        SPIN_FRAMES // 2,  # 50  — mid-spin
-        SPIN_FRAMES + FADEOUT_FRAMES // 2,  # 110 — mid-fadeout
-        SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES // 2,  # 157 — mid-confetti
-        SPIN_FRAMES
-        + FADEOUT_FRAMES
-        + CONFETTI_FRAMES
-        + OUTRO_FRAMES // 2,  # 207 — mid-outro (most fade intermediates)
+    gif_frames = [
+        Image.alpha_composite(_solid, frame).convert("RGB") for frame in frames
     ]
-    composite = Image.new("RGB", (GIF_WIDTH * len(sample_indices), GIF_HEIGHT))
-    for i, idx in enumerate(sample_indices):
-        composite.paste(gif_frames[idx], (i * GIF_WIDTH, 0))
-    palette_source = composite.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
 
-    # Quantise every frame to the same palette — same colour mapping every frame
+    # We sample one frame from each animation phase (spin, fadeout, confetti,
+    # outro) and tile them side-by-side before quantizing.  This ensures palette
+    # entries cover all colour states: spin text, confetti colours, background
+    # variants, and fade intermediates, rather than being dominated by a single frame.
+    sample_indices = [
+        SPIN_FRAMES // 2,  # mid-spin
+        SPIN_FRAMES + FADEOUT_FRAMES // 2,  # mid-fadeout
+        SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES // 2,  # mid-confetti
+        SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES + OUTRO_FRAMES // 2,  # mid-outro
+    ]
+    palette_strip = Image.new("RGB", (GIF_WIDTH * len(sample_indices), GIF_HEIGHT))
+    for i, idx in enumerate(sample_indices):
+        palette_strip.paste(gif_frames[idx], (i * GIF_WIDTH, 0))
+
+    # MEDIANCUT distributes palette entries by colour population, giving the
+    # best coverage within the 256-colour GIF limit without biasing towards any
+    # single hue.
+    palette_source = palette_strip.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
+
+    # All frames are quantized to the same palette so the colour mapping is
+    # identical across every frame.  A per-frame palette would cause visible
+    # colour shifting between frames (palette flicker).  Dither=NONE produces
+    # clean, hard edges on text and confetti squares; ordered or error-diffusion
+    # dithering would add noise patterns that are distracting on flat regions.
     quantized = [
         f.quantize(palette=palette_source, dither=Image.Dither.NONE) for f in gif_frames
     ]
