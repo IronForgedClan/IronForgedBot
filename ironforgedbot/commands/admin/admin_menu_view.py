@@ -8,7 +8,6 @@ from ironforgedbot.commands.admin.check_activity import cmd_check_activity
 from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepancies
 from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
 from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
-from ironforgedbot.commands.admin.spin_custom_modal import SpinCustomModal
 from ironforgedbot.commands.admin.spin_members_view import SpinMembersView
 from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
@@ -157,7 +156,7 @@ class AdminMenuView(View):
         await self.clear_parent()
 
         exclusions = ["rifts closed"]
-        options = [b["name"] for b in BOSSES if b["name"] not in exclusions]
+        options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
 
         await interaction.response.send_modal(SpinOptionsModal("Spin BOTW", options))
 
@@ -172,7 +171,7 @@ class AdminMenuView(View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         await self.clear_parent()
-        await interaction.response.send_modal(SpinCustomModal())
+        await interaction.response.send_modal(SpinOptionsModal("Spin Custom", []))
 
     @discord.ui.button(
         label="Spin Members",
