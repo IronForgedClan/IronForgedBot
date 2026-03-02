@@ -43,7 +43,7 @@ concurrent-log-handler==0.9.29
     # via -r requirements.in
 cryptography==46.0.5
     # via google-auth
-discord-py==2.6.4
+discord-py==2.7.0
     # via
     #   -r requirements.in
     #   reactionmenu
@@ -115,7 +115,7 @@ pyparsing==3.3.2
     # via httplib2
 python-dateutil==2.9.0.post0
     # via -r requirements.in
-python-dotenv==1.2.1
+python-dotenv==1.2.2
     # via -r requirements.in
 pytokens==0.4.1
     # via black
@@ -157,5 +157,5 @@ urllib3==2.6.3
     # via requests
 wom-py==3.0.0
     # via -r requirements.in
-yarl==1.22.0
+yarl==1.23.0
     # via aiohttp
