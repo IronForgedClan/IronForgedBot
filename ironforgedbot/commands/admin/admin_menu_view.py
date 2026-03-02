@@ -141,7 +141,9 @@ class AdminMenuView(View):
         exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "prayer"]
         options = [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
 
-        await interaction.response.send_modal(SpinOptionsModal("Spin SOTW", options))
+        await interaction.response.send_modal(
+            SpinOptionsModal("Spin SOTW", "spinning skill of the week...", options)
+        )
 
     @discord.ui.button(
         label="Spin BOTW",
@@ -158,7 +160,9 @@ class AdminMenuView(View):
         exclusions = ["rifts closed"]
         options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
 
-        await interaction.response.send_modal(SpinOptionsModal("Spin BOTW", options))
+        await interaction.response.send_modal(
+            SpinOptionsModal("Spin BOTW", "spinning boss of the week...", options)
+        )
 
     @discord.ui.button(
         label="Spin Custom",
@@ -171,7 +175,9 @@ class AdminMenuView(View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         await self.clear_parent()
-        await interaction.response.send_modal(SpinOptionsModal("Spin Custom", []))
+        await interaction.response.send_modal(
+            SpinOptionsModal("Spin Custom", "spinning...", [])
+        )
 
     @discord.ui.button(
         label="Spin Members",

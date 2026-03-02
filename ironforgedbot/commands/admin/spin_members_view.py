@@ -4,13 +4,14 @@ from typing import Optional
 import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
+from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
 
 
 class SpinMembersView(discord.ui.View):
-    """Ephemeral view with a RoleSelect dropdown to pick members for a spin."""
+    """Ephemeral view with a RoleSelect dropdown to pick members for spin."""
 
     def __init__(self):
         super().__init__(timeout=120)
@@ -34,10 +35,10 @@ class SpinMembersView(discord.ui.View):
         role = select.values[0]
         members = [m.display_name for m in role.members if not m.bot]
 
-        if len(members) < 2:
+        if len(members) < MINIMUM_SPIN_OPTIONS:
             await send_error_response(
                 interaction,
-                f"The role **{role.name}** has fewer than 2 members to spin.",
+                f"The role **{role.name}** has fewer than {MINIMUM_SPIN_OPTIONS} members to spin.",
             )
             return
 
@@ -50,7 +51,8 @@ class SpinMembersView(discord.ui.View):
         except Exception as e:
             logger.error(f"Error generating spin GIF: {e}")
             await send_error_response(
-                interaction, "Failed to generate spin animation. Please try again later."
+                interaction,
+                "Failed to generate spin animation. Please try again later.",
             )
             return
 

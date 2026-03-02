@@ -3,16 +3,19 @@ import logging
 import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
+from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
 
 
 class SpinOptionsModal(discord.ui.Modal):
-    """Modal for SOTW/BOTW spins — shows the full editable option list."""
+    """Modal for spinning with editable option list."""
 
-    def __init__(self, title: str, base_options: list[str]):
+    def __init__(self, title: str, description: str, base_options: list[str]):
         super().__init__(title=title)
+
+        self.description = description
 
         self.options_input = discord.ui.TextInput(
             label="Options (comma-separated)",
@@ -27,9 +30,10 @@ class SpinOptionsModal(discord.ui.Modal):
 
         options = [o.strip() for o in self.options_input.value.split(",") if o.strip()]
 
-        if len(options) < 2:
+        if len(options) < MINIMUM_SPIN_OPTIONS:
             await send_error_response(
-                interaction, "At least 2 options are required to spin."
+                interaction,
+                f"At least {MINIMUM_SPIN_OPTIONS} options are required to spin.",
             )
             return
 
@@ -43,4 +47,6 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
-        await interaction.channel.send(file=file, content=f"## {winner}")
+        await interaction.channel.send(
+            file=file, content=f"-# {self.description}\n# {winner}"
+        )
