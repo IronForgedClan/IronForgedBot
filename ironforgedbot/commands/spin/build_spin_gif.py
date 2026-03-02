@@ -7,7 +7,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 GIF_WIDTH, GIF_HEIGHT = 500, 200
 FRAME_DURATION_MS = 67
-FIXED_SCROLL_ITEMS = 50  # fixed item count scrolled before landing, keeps speed consistent
+FIXED_SCROLL_ITEMS = (
+    50  # fixed item count scrolled before landing, keeps speed consistent
+)
 FONT_SIZE = 40
 ITEM_HEIGHT = 50
 
@@ -107,7 +109,9 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
     - Phase 3 (CONFETTI_FRAMES): confetti rain while winner stays centred
     - Phase 4 (OUTRO_FRAMES): everything fades out to pure background (loop point)
     """
-    total_scroll_items = math.ceil(FIXED_SCROLL_ITEMS / len(options)) * len(options) + selected_index
+    total_scroll_items = (
+        math.ceil(FIXED_SCROLL_ITEMS / len(options)) * len(options) + selected_index
+    )
     total_scroll_px = total_scroll_items * ITEM_HEIGHT
 
     font = ImageFont.truetype(FONT_PATH, size=FONT_SIZE)
@@ -249,6 +253,7 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
 
     Returns (discord.File of GIF, winning option string).
     """
+    options = random.sample(options, len(options))  # shuffle options
     selected_index = random.randint(0, len(options) - 1)
 
     # build_spin_frames returns RGBA images so each phase can composite
