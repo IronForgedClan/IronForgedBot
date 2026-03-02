@@ -1,4 +1,5 @@
 import io
+import math
 import random
 
 import discord
@@ -6,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 GIF_WIDTH, GIF_HEIGHT = 500, 200
 FRAME_DURATION_MS = 67
-NUM_SPINS = 5
+FIXED_SCROLL_ITEMS = 50  # fixed item count scrolled before landing, keeps speed consistent
 FONT_SIZE = 40
 ITEM_HEIGHT = 50
 
@@ -106,7 +107,7 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
     - Phase 3 (CONFETTI_FRAMES): confetti rain while winner stays centred
     - Phase 4 (OUTRO_FRAMES): everything fades out to pure background (loop point)
     """
-    total_scroll_items = NUM_SPINS * len(options) + selected_index
+    total_scroll_items = math.ceil(FIXED_SCROLL_ITEMS / len(options)) * len(options) + selected_index
     total_scroll_px = total_scroll_items * ITEM_HEIGHT
 
     font = ImageFont.truetype(FONT_PATH, size=FONT_SIZE)
