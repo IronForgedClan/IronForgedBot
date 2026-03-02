@@ -13,6 +13,7 @@ from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.storage.data import BOSSES, SKILLS
 
 logger = logging.getLogger(__name__)
@@ -141,9 +142,17 @@ class AdminMenuView(View):
         exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "prayer"]
         options = [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
 
-        await interaction.response.send_modal(
-            SpinOptionsModal("Spin SOTW", "spinning skill of the week...", options)
-        )
+        async def on_result(interaction, file, winner):
+            skill = next((s for s in SKILLS if s["name"] == winner), None)
+            emoji = find_emoji(skill["emoji_key"]) if skill else ""
+            msg = await interaction.channel.send(
+                file=file,
+                content=f"-# spinning skill of the week...\n# {emoji} {winner}",
+            )
+            await msg.add_reaction("👍")
+            await msg.add_reaction("👎")
+
+        await interaction.response.send_modal(SpinOptionsModal("Spin SOTW", options, on_result))
 
     @discord.ui.button(
         label="Spin BOTW",
@@ -160,9 +169,17 @@ class AdminMenuView(View):
         exclusions = ["rifts closed"]
         options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
 
-        await interaction.response.send_modal(
-            SpinOptionsModal("Spin BOTW", "spinning boss of the week...", options)
-        )
+        async def on_result(interaction, file, winner):
+            boss = next((b for b in BOSSES if b["name"] == winner), None)
+            emoji = find_emoji(boss["emoji_key"]) if boss else ""
+            msg = await interaction.channel.send(
+                file=file,
+                content=f"-# spinning boss of the week...\n# {emoji} {winner}",
+            )
+            await msg.add_reaction("👍")
+            await msg.add_reaction("👎")
+
+        await interaction.response.send_modal(SpinOptionsModal("Spin BOTW", options, on_result))
 
     @discord.ui.button(
         label="Spin Custom",
@@ -175,9 +192,13 @@ class AdminMenuView(View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         await self.clear_parent()
-        await interaction.response.send_modal(
-            SpinOptionsModal("Spin Custom", "spinning...", [])
-        )
+
+        async def on_result(interaction, file, winner):
+            await interaction.channel.send(
+                file=file, content=f"-# spinning...\n# {winner}"
+            )
+
+        await interaction.response.send_modal(SpinOptionsModal("Spin Custom", [], on_result))
 
     @discord.ui.button(
         label="Spin Members",

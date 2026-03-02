@@ -1,4 +1,5 @@
 import logging
+from typing import Callable
 
 import discord
 
@@ -12,10 +13,10 @@ logger = logging.getLogger(__name__)
 class SpinOptionsModal(discord.ui.Modal):
     """Modal for spinning with editable option list."""
 
-    def __init__(self, title: str, description: str, base_options: list[str]):
+    def __init__(self, title: str, base_options: list[str], on_result: Callable):
         super().__init__(title=title)
 
-        self.description = description
+        self.on_result = on_result
 
         self.options_input = discord.ui.TextInput(
             label="Options (comma-separated)",
@@ -47,6 +48,4 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
-        await interaction.channel.send(
-            file=file, content=f"-# {self.description}\n# {winner}"
-        )
+        await self.on_result(interaction, file, winner)
