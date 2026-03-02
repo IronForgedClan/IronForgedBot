@@ -18,6 +18,12 @@ from ironforgedbot.storage.data import BOSSES, SKILLS
 
 logger = logging.getLogger(__name__)
 
+BOTW_GROUPS = [
+    ["Callisto", "Artio"],
+    ["Venenatis", "Spindel"],
+    ["Vet'ion", "Calvar'ion"],
+]
+
 
 class AdminMenuView(View):
     def __init__(
@@ -144,10 +150,10 @@ class AdminMenuView(View):
 
         async def on_result(interaction, file, winner):
             skill = next((s for s in SKILLS if s["name"] == winner), None)
-            emoji = find_emoji(skill["emoji_key"]) if skill else ""
+            emoji = find_emoji(skill["emoji_key"]) if skill else "🎉"
             msg = await interaction.channel.send(
                 file=file,
-                content=f"-# spinning for the next **s**kill **o**f **t**he **w**eek...\n# {emoji} {winner}",
+                content=f"-# spinning for the next **skill** of the week...\n# {emoji} {winner}",
             )
             await msg.add_reaction("👍")
             await msg.add_reaction("👎")
@@ -171,12 +177,21 @@ class AdminMenuView(View):
         exclusions = ["rifts closed"]
         options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
 
+        grouped_names = {name for group in BOTW_GROUPS for name in group}
+        combined_options = [o for o in options if o not in grouped_names]
+        for group in BOTW_GROUPS:
+            present = [name for name in group if name in options]
+            if present:
+                combined_options.append(" or ".join(present))
+        options = combined_options
+
         async def on_result(interaction, file, winner):
-            boss = next((b for b in BOSSES if b["name"] == winner), None)
-            emoji = find_emoji(boss["emoji_key"]) if boss else ""
+            boss_name = winner.split(" or ")[0]
+            boss = next((b for b in BOSSES if b["name"] == boss_name), None)
+            emoji = find_emoji(boss["emoji_key"]) if boss else "🎉"
             msg = await interaction.channel.send(
                 file=file,
-                content=f"-# spinning for the next **b**oss **o**f **t**he **w**eek...\n# {emoji} {winner}",
+                content=f"-# spinning for the next **boss** of the week...\n# {emoji} {winner}",
             )
             await msg.add_reaction("👍")
             await msg.add_reaction("👎")
