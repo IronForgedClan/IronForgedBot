@@ -174,7 +174,7 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        exclusions = ["rifts closed"]
+        exclusions = ["rifts closed", "the gauntlet", "hespori", "mimic"]
         options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
 
         grouped_names = {name for group in BOTW_GROUPS for name in group}
