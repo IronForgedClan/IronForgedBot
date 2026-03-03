@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from collections.abc import Awaitable, Callable
 
 import discord
 
@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
 class SpinOptionsModal(discord.ui.Modal):
     """Modal for spinning with editable option list."""
 
-    def __init__(self, title: str, base_options: list[str], on_result: Callable):
+    def __init__(
+        self,
+        title: str,
+        base_options: list[str],
+        on_result: Callable[[discord.Interaction, discord.File, str], Awaitable[None]],
+    ):
         super().__init__(title=title)
 
         self.on_result = on_result
