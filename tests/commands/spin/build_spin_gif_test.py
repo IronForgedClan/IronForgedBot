@@ -71,7 +71,7 @@ class TestBuildSpinGifFile(unittest.IsolatedAsyncioTestCase):
         file.fp.seek(0)
         data = file.fp.read()
         self.assertGreater(len(data), 1024)  # > 1 KB
-        self.assertLess(len(data), 25 * 1024 * 1024)  # < 25 MB
+        self.assertLess(len(data), 3 * 1024 * 1024)  # < 3 MB
 
     async def test_winner_is_valid_option(self):
         options = ["red", "blue", "green", "yellow"]
