@@ -153,7 +153,7 @@ class AdminMenuView(View):
             emoji = find_emoji(skill["emoji_key"]) if skill else "🎉"
             msg = await interaction.channel.send(
                 file=file,
-                content=f"-# spinning for the next **skill** of the week...\n# {emoji} {winner}",
+                content=f"-# spinning for the next **skill** of the week...\n# ||{emoji} {winner}||",
             )
             await msg.add_reaction("👍")
             await msg.add_reaction("👎")
@@ -191,7 +191,7 @@ class AdminMenuView(View):
             emoji = find_emoji(boss["emoji_key"]) if boss else "🎉"
             msg = await interaction.channel.send(
                 file=file,
-                content=f"-# spinning for the next **boss** of the week...\n# {emoji} {winner}",
+                content=f"-# spinning for the next **boss** of the week...\n# ||{emoji} {winner}||",
             )
             await msg.add_reaction("👍")
             await msg.add_reaction("👎")
