@@ -6,23 +6,23 @@ import discord
 from PIL import Image, ImageDraw, ImageFont
 
 GIF_WIDTH, GIF_HEIGHT = 500, 200
-FRAME_DURATION_MS = 67
+FRAME_DURATION_MS = 67  # ~15 fps, smooth animation without excessive file size
 FIXED_SCROLL_ITEMS = (
     50  # fixed item count scrolled before landing, keeps speed consistent
 )
-FONT_SIZE = 40
-ITEM_HEIGHT = 50
+FONT_SIZE = 40  # Large enough to read clearly at 500px width
+ITEM_HEIGHT = 50  # Provides comfortable vertical spacing between text items
 
-SPIN_FRAMES = 100
-FADEOUT_FRAMES = 20
-CONFETTI_FRAMES = 75
-FADEIN_FRAMES = 15  # first N spin frames where all text fades in (0→1)
-OUTRO_FRAMES = 25  # after confetti: everything fades out (1→0) → pure background
+SPIN_FRAMES = 100  # ~6.7 seconds of spinning at 15fps
+FADEOUT_FRAMES = 20  # ~1.3 seconds for non-winners to fade out
+CONFETTI_FRAMES = 75  # ~5 seconds of confetti celebration
+FADEIN_FRAMES = 15  # first N spin frames where all text fades in (0 -> 1)
+OUTRO_FRAMES = 25  # ~1.7 seconds fade to background for clean loop point
 
 FRAME_COUNT = SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES + OUTRO_FRAMES  # 220
 
-CONFETTI_COUNT = 80
-CONFETTI_SIZE = 6  # px square
+CONFETTI_COUNT = 80  # Dense confetti without overwhelming the winner text
+CONFETTI_SIZE = 6  # Large enough to be visible, small enough to look like confetti
 CONFETTI_COLORS = [
     (220, 50, 50),  # red
     (50, 100, 220),  # blue
@@ -33,6 +33,8 @@ CONFETTI_COLORS = [
     (240, 130, 30),  # orange
     (230, 230, 230),  # white
 ]
+
+MAX_GIF_SIZE = 25 * 1024 * 1024  # 25 MB
 
 BACKGROUND_IMAGE_PATH = "img/spin_background.png"
 FONT_PATH = "fonts/runescape.ttf"
@@ -79,7 +81,7 @@ def _draw_text_with_outline_rgba(
 
     The outline is rendered first by drawing the text eight times, once in
     each diagonal and cardinal direction offset by `outline_width` pixels,
-    then the filled text is drawn on top.  This gives crisp edges without
+    then the filled text is drawn on top. This gives crisp edges without
     requiring a separate mask or blur pass.
     """
     outline_color = (0, 0, 0, alpha)
@@ -168,13 +170,13 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
     final_base_index = total_scroll_items  # frac = 0 at final position
 
     for f in range(FADEOUT_FRAMES):
-        progress = f / (FADEOUT_FRAMES - 1)  # 0.0 → 1.0
+        progress = f / (FADEOUT_FRAMES - 1)  # 0.0 -> 1.0
         bg_copy = background.copy()
         overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
 
         for n in range(-3, 4):
-            item_y = center_y + n * ITEM_HEIGHT  # frac = 0 → exact slot positions
+            item_y = center_y + n * ITEM_HEIGHT  # frac = 0 -> exact slot positions
             item_index = (final_base_index + n) % len(options)
             text = options[item_index]
 
@@ -261,7 +263,7 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     frames = build_spin_frames(options, selected_index)
 
     # GIF does not support true alpha transparency; every pixel must be fully
-    # opaque.  Composite each RGBA frame onto a solid background colour now,
+    # opaque. Composite each RGBA frame onto a solid background colour now,
     # before palette quantization, to flatten the alpha channel into RGB.
     _solid = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (43, 45, 49, 255))
     gif_frames = [
@@ -269,7 +271,7 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     ]
 
     # We sample one frame from each animation phase (spin, fadeout, confetti,
-    # outro) and tile them side-by-side before quantizing.  This ensures palette
+    # outro) and tile them side-by-side before quantizing. This ensures palette
     # entries cover all colour states: spin text, confetti colours, background
     # variants, and fade intermediates, rather than being dominated by a single frame.
     sample_indices = [
@@ -288,8 +290,8 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     palette_source = palette_strip.quantize(colors=256, method=Image.Quantize.MEDIANCUT)
 
     # All frames are quantized to the same palette so the colour mapping is
-    # identical across every frame.  A per-frame palette would cause visible
-    # colour shifting between frames (palette flicker).  Dither=NONE produces
+    # identical across every frame. A per-frame palette would cause visible
+    # colour shifting between frames (palette flicker). Dither=NONE produces
     # clean, hard edges on text and confetti squares; ordered or error-diffusion
     # dithering would add noise patterns that are distracting on flat regions.
     quantized = [
@@ -306,4 +308,13 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
         loop=0,
     )
     gif_buffer.seek(0)
+
+    # Validate file size before returning
+    file_size = gif_buffer.tell()
+    if file_size > MAX_GIF_SIZE:
+        raise ValueError(
+            f"Generated GIF size ({file_size / (1024 * 1024):.1f} MB) "
+            f"exceeds Discord's free tier limit ({MAX_GIF_SIZE / (1024 * 1024):.0f} MB)"
+        )
+
     return discord.File(fp=gif_buffer, filename="spin.gif"), options[selected_index]
