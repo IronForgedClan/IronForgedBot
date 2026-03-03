@@ -30,7 +30,9 @@ class TestParseOptions(unittest.TestCase):
         self.assertIsNone(_parse_options("only_one"))
 
     def test_spaces_trimmed(self):
-        self.assertEqual(_parse_options("  red  ,  blue  ,  green  "), ["red", "blue", "green"])
+        self.assertEqual(
+            _parse_options("  red  ,  blue  ,  green  "), ["red", "blue", "green"]
+        )
 
     def test_commas_only_returns_none(self):
         self.assertIsNone(_parse_options(",,,"))
