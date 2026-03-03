@@ -42,10 +42,6 @@ class SpinMembersView(discord.ui.View):
             )
             return
 
-        if self.message:
-            await self.message.delete()
-            self.message = None
-
         try:
             file, winner = await build_spin_gif_file(members)
         except Exception as e:
@@ -55,5 +51,9 @@ class SpinMembersView(discord.ui.View):
                 "Failed to generate spin animation. Please try again later.",
             )
             return
+
+        if self.message:
+            await self.message.delete()
+            self.message = None
 
         await interaction.channel.send(file=file, content=f"## {winner}")
