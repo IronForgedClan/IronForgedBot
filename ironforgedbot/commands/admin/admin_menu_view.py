@@ -145,7 +145,7 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "prayer"]
+        exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "magic"]
         options = [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
 
         async def on_result(interaction, file, winner):
