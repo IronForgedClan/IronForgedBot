@@ -27,8 +27,6 @@ audioop-lts==0.2.2
     # via
     #   -r requirements.in
     #   discord-py
-av==16.1.0
-    # via -r requirements.in
 black==26.1.0
     # via -r requirements.in
 certifi==2026.2.25
@@ -119,7 +117,7 @@ python-dotenv==1.2.2
     # via -r requirements.in
 pytokens==0.4.1
     # via black
-pytz==2025.2
+pytz==2026.1.post1
     # via -r requirements.in
 pyyaml==6.0.3
     # via -r requirements.in
@@ -139,7 +137,7 @@ six==1.17.0
     # via
     #   oauth2client
     #   python-dateutil
-sqlalchemy[asyncio]==2.0.47
+sqlalchemy[asyncio]==2.0.48
     # via
     #   -r requirements.in
     #   alembic
