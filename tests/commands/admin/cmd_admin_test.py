@@ -68,7 +68,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         self.mock_interaction = create_mock_discord_interaction(user=test_member)
 
         with patch("discord.ui.View.__init__", return_value=None):
-            from ironforgedbot.commands.admin.cmd_admin import AdminMenuView
+            from ironforgedbot.commands.admin.admin_menu_view import AdminMenuView
 
             self.AdminMenuView = AdminMenuView
             self.menu = self.AdminMenuView(report_channel=self.mock_channel)
@@ -105,7 +105,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
 
         self.menu.clear_parent.assert_called_once()
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_sync_members")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_sync_members")
     async def test_member_sync_button(self, mock_cmd_sync_members):
         mock_cmd_sync_members.return_value = None
         self.menu.clear_parent = AsyncMock()
@@ -118,7 +118,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
             self.mock_interaction, self.mock_channel
         )
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_check_discrepancies")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_check_discrepancies")
     async def test_member_discrepancy_check_button(self, mock_cmd_check_discrepancies):
         mock_cmd_check_discrepancies.return_value = None
         self.menu.clear_parent = AsyncMock()
@@ -133,7 +133,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
             self.mock_interaction, self.mock_channel
         )
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_check_activity")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_check_activity")
     async def test_member_activity_check_button(self, mock_cmd_check_activity):
         mock_cmd_check_activity.return_value = None
         self.menu.clear_parent = AsyncMock()
@@ -146,7 +146,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
             self.mock_interaction, self.mock_channel
         )
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_refresh_ranks")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_refresh_ranks")
     async def test_member_rank_check_button(self, mock_cmd_refresh_ranks):
         mock_cmd_refresh_ranks.return_value = None
         self.menu.clear_parent = AsyncMock()
@@ -159,7 +159,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
             self.mock_interaction, self.mock_channel
         )
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_view_logs")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_view_logs")
     async def test_view_logs_button(self, mock_cmd_view_logs):
         mock_cmd_view_logs.return_value = None
         self.menu.clear_parent = AsyncMock()
@@ -170,7 +170,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         self.menu.clear_parent.assert_called_once()
         mock_cmd_view_logs.assert_called_once_with(self.mock_interaction)
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_view_state")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_view_state")
     async def test_view_state_button(self, mock_cmd_view_state):
         mock_cmd_view_state.return_value = None
         self.menu.clear_parent = AsyncMock()
@@ -181,7 +181,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         self.menu.clear_parent.assert_called_once()
         mock_cmd_view_state.assert_called_once_with(self.mock_interaction)
 
-    @patch("ironforgedbot.commands.admin.cmd_admin.cmd_process_absentees")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_process_absentees")
     async def test_process_absentee_list_button(self, mock_cmd_process_absentees):
         mock_cmd_process_absentees.return_value = None
         self.menu.clear_parent = AsyncMock()

@@ -20,6 +20,7 @@ from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
 from ironforgedbot.commands.reset_rng.cmd_reset_rng import cmd_reset_rng
 from ironforgedbot.commands.roster.cmd_roster import cmd_roster
 from ironforgedbot.commands.eight_ball.cmd_eight_ball import cmd_eight_ball
+from ironforgedbot.commands.spin.cmd_spin import cmd_spin
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.config import CONFIG, ENVIRONMENT
@@ -136,6 +137,13 @@ class IronForgedCommands:
                 name="eight_ball",
                 description="Ask the Magic 8-Ball a question and receive mystical wisdom.",
                 callback=cmd_eight_ball,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="spin",
+                description="Spin a slot machine to randomly pick from your options.",
+                callback=cmd_spin,
             )
         )
         self._tree.add_command(
