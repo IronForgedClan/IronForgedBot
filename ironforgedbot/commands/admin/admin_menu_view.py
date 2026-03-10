@@ -4,12 +4,12 @@ from typing import Optional
 import discord
 from discord.ui import View
 
-from ironforgedbot.commands.admin.botw_options import get_botw_options
 from ironforgedbot.commands.admin.check_activity import cmd_check_activity
 from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepancies
 from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
 from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
 from ironforgedbot.commands.admin.spin_members_view import SpinMembersView
+from ironforgedbot.commands.admin.spin_options import get_botw_options, get_sotw_options
 from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
@@ -141,8 +141,7 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "magic"]
-        options = [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
+        options = get_sotw_options()
 
         async def on_result(interaction, file, winner):
             skill = next((s for s in SKILLS if s["name"] == winner), None)
