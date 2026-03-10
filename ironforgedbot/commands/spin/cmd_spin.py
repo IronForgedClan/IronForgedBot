@@ -3,6 +3,7 @@ import logging
 import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
+from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
@@ -28,6 +29,8 @@ def _parse_options(options_str: str) -> list[str] | None:
     options=f"Comma-separated list of options (minimum {MINIMUM_SPIN_OPTIONS})"
 )
 async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
+    await interaction.response.defer(ephemeral=True)
+
     parsed = _parse_options(options)
     if parsed is None:
         await send_error_response(
@@ -37,7 +40,7 @@ async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
         return
 
     try:
-        file, _winner = await build_spin_gif_file(parsed)
+        file, winner = await build_spin_gif_file(parsed)
     except Exception as e:
         logger.error(f"Error generating spin GIF: {e}")
         await send_error_response(
@@ -46,4 +49,12 @@ async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
         )
         return
 
-    await interaction.followup.send(file=file)
+    await send_spin_result(
+        interaction,
+        file,
+        winner,
+        spin_type="user spin",
+        emoji=None,
+        use_padding=False,
+        reactions=None,
+    )

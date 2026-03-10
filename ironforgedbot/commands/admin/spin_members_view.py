@@ -5,6 +5,7 @@ import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
+from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,12 @@ class SpinMembersView(discord.ui.View):
     ):
         await interaction.response.defer(ephemeral=True)
         role = select.values[0]
-        members = [m.display_name for m in role.members if not m.bot]
 
-        if len(members) < MINIMUM_SPIN_OPTIONS:
+        # Keep member objects, extract display names for GIF
+        member_list = [m for m in role.members if not m.bot]
+        display_names = [m.display_name for m in member_list]
+
+        if len(display_names) < MINIMUM_SPIN_OPTIONS:
             await send_error_response(
                 interaction,
                 f"The role **{role.name}** has fewer than {MINIMUM_SPIN_OPTIONS} members to spin.",
@@ -43,7 +47,7 @@ class SpinMembersView(discord.ui.View):
             return
 
         try:
-            file, winner = await build_spin_gif_file(members)
+            file, winner_display_name = await build_spin_gif_file(display_names)
         except Exception as e:
             logger.error(f"Error generating spin GIF: {e}")
             await send_error_response(
@@ -52,8 +56,24 @@ class SpinMembersView(discord.ui.View):
             )
             return
 
+        winning_member = next(
+            (m for m in member_list if m.display_name == winner_display_name),
+            None,
+        )
+        winner_mention = (
+            winning_member.mention if winning_member else winner_display_name
+        )
+
         if self.message:
             await self.message.delete()
             self.message = None
 
-        await interaction.channel.send(file=file, content=f"## {winner}")
+        await send_spin_result(
+            interaction,
+            file,
+            winner_mention,
+            spin_type="member spin",
+            emoji=None,
+            use_padding=False,
+            reactions=None,
+        )
