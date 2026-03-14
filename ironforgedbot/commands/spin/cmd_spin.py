@@ -23,7 +23,7 @@ def _parse_options(options_str: str) -> list[str] | None:
 
 
 @require_role(ROLE.MEMBER)
-@command_price(4999)
+@command_price(3499)
 @log_command_execution(logger)
 @discord.app_commands.describe(
     options=f"Comma-separated list of options (minimum {MINIMUM_SPIN_OPTIONS})"
