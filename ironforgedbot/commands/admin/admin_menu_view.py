@@ -9,20 +9,16 @@ from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepan
 from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
 from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
 from ironforgedbot.commands.admin.spin_members_view import SpinMembersView
+from ironforgedbot.commands.admin.spin_options import get_botw_options, get_sotw_options
 from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
+from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.storage.data import BOSSES, SKILLS
 
 logger = logging.getLogger(__name__)
-
-BOTW_GROUPS = [
-    ["Callisto", "Artio"],
-    ["Venenatis", "Spindel"],
-    ["Vet'ion", "Calvar'ion"],
-]
 
 
 class AdminMenuView(View):
@@ -145,18 +141,22 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "prayer"]
-        options = [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
+        options = get_sotw_options()
 
         async def on_result(interaction, file, winner):
             skill = next((s for s in SKILLS if s["name"] == winner), None)
             emoji = find_emoji(skill["emoji_key"]) if skill else "🎉"
-            msg = await interaction.channel.send(
-                file=file,
-                content=f"-# spinning for the next **skill** of the week...\n# {emoji} {winner}",
+
+            await send_spin_result(
+                interaction,
+                file,
+                winner,
+                spinning_text="_spinning the next **skill of the week**..._",
+                winning_text="_the next **skill of the week** is..._",
+                emoji=emoji,
+                use_padding=True,
+                reactions=["👍", "👎"],
             )
-            await msg.add_reaction("👍")
-            await msg.add_reaction("👎")
 
         await interaction.response.send_modal(
             SpinOptionsModal("Spin SOTW", options, on_result)
@@ -174,27 +174,23 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        exclusions = ["rifts closed", "the gauntlet", "hespori", "mimic"]
-        options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
-
-        grouped_names = {name for group in BOTW_GROUPS for name in group}
-        combined_options = [o for o in options if o not in grouped_names]
-        for group in BOTW_GROUPS:
-            present = [name for name in group if name in options]
-            if present:
-                combined_options.append(" or ".join(present))
-        options = combined_options
+        options = get_botw_options()
 
         async def on_result(interaction, file, winner):
             boss_name = winner.split(" or ")[0]
             boss = next((b for b in BOSSES if b["name"] == boss_name), None)
             emoji = find_emoji(boss["emoji_key"]) if boss else "🎉"
-            msg = await interaction.channel.send(
-                file=file,
-                content=f"-# spinning for the next **boss** of the week...\n# {emoji} {winner}",
+
+            await send_spin_result(
+                interaction,
+                file,
+                winner,
+                spinning_text="_spinning the next **boss of the week**..._",
+                winning_text="_the next **boss of the week** is..._",
+                emoji=emoji,
+                use_padding=True,
+                reactions=["👍", "👎"],
             )
-            await msg.add_reaction("👍")
-            await msg.add_reaction("👎")
 
         await interaction.response.send_modal(
             SpinOptionsModal("Spin BOTW", options, on_result)
@@ -213,8 +209,13 @@ class AdminMenuView(View):
         await self.clear_parent()
 
         async def on_result(interaction, file, winner):
-            await interaction.channel.send(
-                file=file, content=f"-# spinning...\n# {winner}"
+            await send_spin_result(
+                interaction,
+                file,
+                winner,
+                emoji=None,
+                use_padding=False,
+                reactions=None,
             )
 
         await interaction.response.send_modal(

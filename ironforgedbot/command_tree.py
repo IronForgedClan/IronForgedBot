@@ -65,91 +65,91 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="score",
-                description="Displays player score.",
+                description="View the player's score.",
                 callback=cmd_score,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="breakdown",
-                description="Displays player score breakdown.",
+                description="View the player's score breakdown.",
                 callback=cmd_breakdown,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="check",
-                description="Check if you meet monthly activity requirements.",
+                description="Check if player meets monthly activity requirements.",
                 callback=cmd_check,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="ingots",
-                description="Displays ingot total.",
+                description="View player's ingot total.",
                 callback=cmd_view_ingots,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="add_remove_ingots",
-                description="Add or remove ingots to one or multiple member's accounts.",
+                description="🔒 Add or remove ingots.",
                 callback=cmd_add_remove_ingots,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="roster",
-                description="Creates an event roster.",
+                description="🔒 Creates an event roster.",
                 callback=cmd_roster,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="whois",
-                description="Get player's rsn history.",
+                description="View player's rsn history.",
                 callback=cmd_whois,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="get_role_members",
-                description="Generate a list of all members with a certain role.",
+                description="🔒 Generate a list of all members with specified role.",
                 callback=cmd_get_role_members,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="raffle",
-                description="Play or control the raffle.",
+                description="Play the raffle.",
                 callback=cmd_raffle,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="reset_rng",
-                description="Attempt to reset your RNG. 50% of the time it works every time.",
+                description="💰 Attempt to reset your RNG. 50% of the time it works every time.",
                 callback=cmd_reset_rng,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="eight_ball",
-                description="Ask the Magic 8-Ball a question and receive mystical wisdom.",
+                description="💰 Ask the Magic 8-Ball a question and receive mystical wisdom.",
                 callback=cmd_eight_ball,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="spin",
-                description="Spin a slot machine to randomly pick from your options.",
+                description="💰 Spin a wheel to randomly pick from your options.",
                 callback=cmd_spin,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="admin",
-                description="Collection of administrative actions.",
+                description="🔒 Admin actions.",
                 callback=cmd_admin,
             )
         )
@@ -157,7 +157,7 @@ class IronForgedCommands:
             self._tree.add_command(
                 discord.app_commands.Command(
                     name="trick_or_treat",
-                    description="Feeling lucky, punk?",
+                    description="💰 Feeling lucky, punk?",
                     callback=cmd_trick_or_treat,
                 )
             )
