@@ -29,10 +29,9 @@ def _parse_options(options_str: str) -> list[str] | None:
     options=f"Comma-separated list of options (minimum {MINIMUM_SPIN_OPTIONS})"
 )
 async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
-    await interaction.response.defer(ephemeral=True)
-
     parsed = _parse_options(options)
     if parsed is None:
+        logger.debug(f"Invalid options sent to cmd_spin")
         await send_error_response(
             interaction,
             f"Please provide at least {MINIMUM_SPIN_OPTIONS} comma-separated options to spin. No refunds.",
@@ -40,7 +39,7 @@ async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
         return
 
     try:
-        file, winner = await build_spin_gif_file(parsed)
+        file, _ = await build_spin_gif_file(parsed)
     except Exception as e:
         logger.error(f"Error generating spin GIF: {e}")
         await send_error_response(
@@ -49,12 +48,4 @@ async def cmd_spin(interaction: discord.Interaction, options: str) -> None:
         )
         return
 
-    await send_spin_result(
-        interaction,
-        file,
-        winner,
-        spin_type="user spin",
-        emoji=None,
-        use_padding=False,
-        reactions=None,
-    )
+    await interaction.followup.send(file=file)
