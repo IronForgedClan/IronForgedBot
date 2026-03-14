@@ -12,8 +12,8 @@ async def send_spin_result(
     interaction: discord.Interaction,
     file: discord.File,
     winner: str,
-    spinning_text: str,
-    winning_text: str,
+    spinning_text: str | None = None,
+    winning_text: str | None = None,
     emoji: str | None = None,
     use_padding: bool = False,
     reactions: list[str] | None = None,
@@ -42,7 +42,7 @@ async def send_spin_result(
         else:
             winner_text = f"{emoji} {winner}" if emoji else winner
             content = (
-                f"#||{winner_text}||"
+                f"# ||{winner_text}||"
                 if not winning_text
                 else f"-# {winning_text}\n# ||{winner_text}||"
             )
