@@ -4,7 +4,7 @@ from ironforgedbot.storage.data import BOSSES, SKILLS
 def get_sotw_options() -> list[str]:
     """Get filtered SOTW options for spinning"""
     exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "magic"]
-    return [s["name"] for s in SKILLS if s["name"].lower() not in exclusions]
+    return sorted([s["name"] for s in SKILLS if s["name"].lower() not in exclusions])
 
 
 def get_botw_options() -> list[str]:
@@ -25,4 +25,4 @@ def get_botw_options() -> list[str]:
         if present:
             combined_options.append(" or ".join(present))
 
-    return combined_options
+    return sorted(combined_options)
