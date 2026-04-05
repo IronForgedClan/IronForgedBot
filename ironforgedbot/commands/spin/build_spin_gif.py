@@ -265,9 +265,7 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     start_time = time.perf_counter()
     result = await asyncio.to_thread(_build_spin_gif_sync, options)
     elapsed = time.perf_counter() - start_time
-    logger.debug(
-        f"GIF generation completed in {elapsed:.2f}s ({len(options)} options)"
-    )
+    logger.debug(f"GIF generation completed in {elapsed:.2f}s ({len(options)} options)")
     return result
 
 
