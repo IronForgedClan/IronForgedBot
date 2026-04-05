@@ -22,7 +22,7 @@ async def send_spin_result(
     use_padding: bool = False,
     reactions: list[str] | None = None,
 ) -> None:
-    """Send spin result with configurable delayed spoiler reveal (non-blocking)."""
+    """Send spin result with configurable delayed spoiler reveal."""
 
     msg = await interaction.channel.send(
         file=file,
@@ -33,7 +33,6 @@ async def send_spin_result(
         for reaction in reactions:
             await msg.add_reaction(reaction)
 
-    # Spawn background task for delayed edit (fire-and-forget)
     task = asyncio.create_task(
         _delayed_spin_edit(
             interaction=interaction,
@@ -82,12 +81,11 @@ async def _delayed_spin_edit(
 
     except asyncio.CancelledError:
         logger.info(f"Spin edit cancelled for message {msg.id} (likely shutdown)")
-        raise  # Re-raise to properly complete cancellation
+        raise
     except discord.NotFound:
         logger.warning(f"Could not edit spin message {msg.id} - message was deleted")
     except discord.HTTPException as e:
         logger.error(f"Failed to edit spin message {msg.id}: {e}")
-        # Notify admin of failure
         try:
             if interaction.channel:
                 await interaction.followup.send(
