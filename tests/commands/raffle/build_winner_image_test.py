@@ -11,7 +11,7 @@ from ironforgedbot.commands.raffle.build_winner_image import (
 class TestBuildWinnerImage(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls):
-        cls.font = ImageFont.truetype("./fonts/runescape.ttf", size=50)
+        cls.font = ImageFont.truetype("./data/fonts/runescape.ttf", size=50)
 
     def test_centered_position_basic(self):
         text = "123456789012"
