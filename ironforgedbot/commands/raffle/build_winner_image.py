@@ -42,13 +42,13 @@ def _draw_text_with_outline(
 
 
 async def build_winner_image_file(winner_name: str, winnings: int) -> discord.File:
-    image_path = "img/raffle_winner.jpeg"
+    image_path = "data/img/raffle_winner.jpeg"
 
     with Image.open(image_path) as img:
         draw = ImageDraw.Draw(img)
 
         # draw winner name
-        font = ImageFont.truetype("fonts/runescape.ttf", size=85)
+        font = ImageFont.truetype("data/fonts/runescape.ttf", size=85)
         img_height, img_width = img.size
         x, y = _calculate_position(winner_name, font, img_height, img_width)
         y = y - 65  # offset
@@ -59,9 +59,9 @@ async def build_winner_image_file(winner_name: str, winnings: int) -> discord.Fi
         spacing = 10
         offset = 90
         winnings_text = f"{winnings:,}"
-        font = ImageFont.truetype("fonts/runescape.ttf", size=40)
+        font = ImageFont.truetype("data/fonts/runescape.ttf", size=40)
 
-        icon = Image.open("img/ingot_icon.png").convert("RGBA")
+        icon = Image.open("data/img/ingot_icon.png").convert("RGBA")
         icon = icon.resize((35, 35))
         icon_width, icon_height = icon.size
 

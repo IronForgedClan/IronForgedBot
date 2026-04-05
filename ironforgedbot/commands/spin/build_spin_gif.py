@@ -41,8 +41,8 @@ CONFETTI_COLORS = [
 
 MAX_GIF_SIZE = 25 * 1024 * 1024  # 25 MB
 
-BACKGROUND_IMAGE_PATH = "img/spin_background.png"
-FONT_PATH = "fonts/runescape.ttf"
+BACKGROUND_IMAGE_PATH = "data/img/spin_background.png"
+FONT_PATH = "data/fonts/runescape.ttf"
 
 
 def _ease_out_cubic(t: float) -> float:
