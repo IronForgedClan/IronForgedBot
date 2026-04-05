@@ -82,6 +82,6 @@ async def run_all_automations(interaction: discord.Interaction):
         )
     )
 
-    asyncio.gather(*tasks)
+    await asyncio.gather(*tasks)
 
     await interaction.response.send_message(f"Starting {len(tasks)} jobs...")

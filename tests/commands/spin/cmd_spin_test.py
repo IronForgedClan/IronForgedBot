@@ -43,6 +43,25 @@ class TestParseOptions(unittest.TestCase):
     def test_empty_string_returns_none(self):
         self.assertIsNone(_parse_options(""))
 
+    def test_emojis_stripped_from_options(self):
+        self.assertEqual(
+            _parse_options("🔥Fire,💧Water,🌿Grass"), ["Fire", "Water", "Grass"]
+        )
+
+    def test_emoji_only_option_excluded(self):
+        # "🔥" normalizes to "" and is dropped; only 2 valid options remain → None
+        self.assertIsNone(_parse_options("🔥,💧Water,🌿Grass"))
+
+    def test_mixed_special_characters_cleaned(self):
+        result = _parse_options("héllo,wörld,foo")
+        self.assertEqual(result, ["hllo", "wrld", "foo"])
+
+    def test_options_with_leading_emoji_cleaned(self):
+        self.assertEqual(
+            _parse_options("🎯Option A,🎲Option B,🏆Option C"),
+            ["Option A", "Option B", "Option C"],
+        )
+
 
 class TestCmdSpin(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

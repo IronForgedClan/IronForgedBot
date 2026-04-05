@@ -5,6 +5,7 @@ import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,12 @@ class SpinOptionsModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
-        options = [o.strip() for o in self.options_input.value.split(",") if o.strip()]
+        options = [
+            normalize_discord_string(o.strip())
+            for o in self.options_input.value.split(",")
+            if o.strip()
+        ]
+        options = [o for o in options if o]
 
         if len(options) < MINIMUM_SPIN_OPTIONS:
             await send_error_response(
@@ -42,6 +48,12 @@ class SpinOptionsModal(discord.ui.Modal):
                 f"At least {MINIMUM_SPIN_OPTIONS} options are required to spin.",
             )
             return
+
+        generating_msg = await interaction.followup.send(
+            "Generating GIF...",
+            ephemeral=True,
+            wait=True,
+        )
 
         try:
             file, winner = await build_spin_gif_file(options)
@@ -54,3 +66,8 @@ class SpinOptionsModal(discord.ui.Modal):
             return
 
         await self.on_result(interaction, file, winner)
+
+        try:
+            await generating_msg.delete()
+        except discord.HTTPException:
+            pass

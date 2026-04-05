@@ -1,9 +1,14 @@
+import asyncio
 import io
+import logging
 import math
 import random
+import time
 
 import discord
 from PIL import Image, ImageDraw, ImageFont
+
+logger = logging.getLogger(__name__)
 
 GIF_WIDTH, GIF_HEIGHT = 500, 200
 FRAME_DURATION_MS = 67  # ~15 fps, smooth animation without excessive file size
@@ -58,12 +63,13 @@ def _get_text_alpha(distance: float, item_height: int) -> int:
 def _load_background() -> Image.Image:
     """Load and resize the background image to GIF dimensions.
 
-    Falls back to a solid dark colour if the image file is missing so that
-    the animation still works in test environments without assets.
+    Uses context manager to ensure file handle is closed immediately.
+    Falls back to solid color if image file is missing.
     """
     try:
-        img = Image.open(BACKGROUND_IMAGE_PATH).convert("RGBA")
-        return img.resize((GIF_WIDTH, GIF_HEIGHT))
+        with Image.open(BACKGROUND_IMAGE_PATH) as img:
+            # Convert and resize while file is open, returns new image
+            return img.convert("RGBA").resize((GIF_WIDTH, GIF_HEIGHT))
     except FileNotFoundError:
         return Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (20, 20, 40, 255))
 
@@ -251,12 +257,26 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
 
 
 async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
-    """Build an animated GIF of the spin animation and return it as a discord.File.
+    """Build an animated GIF of the spin animation (non-blocking).
 
+    Offloads CPU-intensive image processing to thread pool.
     Returns (discord.File of GIF, winning option string).
     """
-    options = random.sample(options, len(options))  # shuffle options
-    selected_index = random.randint(0, len(options) - 1)
+    start_time = time.perf_counter()
+    result = await asyncio.to_thread(_build_spin_gif_sync, options)
+    elapsed = time.perf_counter() - start_time
+    logger.debug(f"GIF generation completed in {elapsed:.2f}s ({len(options)} options)")
+    return result
+
+
+def _build_spin_gif_sync(options: list[str]) -> tuple[discord.File, str]:
+    """Synchronous GIF generation - runs in thread pool.
+
+    All PIL operations happen here to avoid blocking the event loop.
+    """
+    rng = random.Random()
+    options = rng.sample(options, len(options))  # shuffle options
+    selected_index = rng.randint(0, len(options) - 1)
 
     # build_spin_frames returns RGBA images so each phase can composite
     # transparent overlays (text, confetti) onto the background independently.
@@ -310,7 +330,7 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     gif_buffer.seek(0)
 
     # Validate file size before returning
-    file_size = gif_buffer.tell()
+    file_size = gif_buffer.getbuffer().nbytes
     if file_size > MAX_GIF_SIZE:
         raise ValueError(
             f"Generated GIF size ({file_size / (1024 * 1024):.1f} MB) "

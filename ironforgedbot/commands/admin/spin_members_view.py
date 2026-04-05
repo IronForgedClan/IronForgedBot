@@ -6,6 +6,7 @@ import discord
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
@@ -35,11 +36,16 @@ class SpinMembersView(discord.ui.View):
         await interaction.response.defer(ephemeral=True)
         role = select.values[0]
 
-        # Keep member objects, extract display names for GIF
+        # Keep member objects, extract and clean display names for GIF
         member_list = [m for m in role.members if not m.bot]
-        display_names = [m.display_name for m in member_list]
+        member_name_pairs = [
+            (normalize_discord_string(m.display_name), m)
+            for m in member_list
+            if normalize_discord_string(m.display_name)
+        ]
+        display_names = [name for name, _ in member_name_pairs]
 
-        if len(display_names) < MINIMUM_SPIN_OPTIONS:
+        if len(display_names) < 1:
             await send_error_response(
                 interaction,
                 f"The role **{role.name}** has fewer than {MINIMUM_SPIN_OPTIONS} members to spin.",
@@ -57,7 +63,7 @@ class SpinMembersView(discord.ui.View):
             return
 
         winning_member = next(
-            (m for m in member_list if m.display_name == winner_display_name),
+            (m for name, m in member_name_pairs if name == winner_display_name),
             None,
         )
         winner_mention = (

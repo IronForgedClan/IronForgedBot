@@ -94,6 +94,17 @@ class DiscordClient(discord.Client):
         logger.info("Starting graceful shutdown...")
         STATE.state["is_shutting_down"] = True
 
+        # Stop automations first so scheduled jobs are cleanly wound down
+        # before we do a final drain of the event loop.
+        if self.automations:
+            await self.automations.stop()
+
+        logger.info("Closing database connection...")
+        await db.dispose()
+
+        await event_emitter.emit("shutdown")
+
+        # Final drain: wait for any remaining tasks (e.g. spin delayed-edit tasks).
         pending_tasks = [
             task
             for task in asyncio.all_tasks()
@@ -103,10 +114,8 @@ class DiscordClient(discord.Client):
 
         if pending_tasks:
             logger.info(f"Found {len(pending_tasks)} pending tasks. Waiting...")
+            timeout_seconds = 60 if CONFIG.ENVIRONMENT is ENVIRONMENT.PRODUCTION else 5
             try:
-                timeout_seconds = (
-                    60 if CONFIG.ENVIRONMENT is ENVIRONMENT.PRODUCTION else 5
-                )
                 await asyncio.wait_for(
                     asyncio.gather(*pending_tasks, return_exceptions=True),
                     timeout=timeout_seconds,
@@ -115,15 +124,11 @@ class DiscordClient(discord.Client):
                     f"All outstanding tasks completed within the {timeout_seconds}s timeout."
                 )
             except asyncio.TimeoutError:
-                logger.warning("Timeout occurred while waiting for outstanding tasks.")
-
-        logger.info("Closing database connection...")
-        await db.dispose()
-
-        if self.automations:
-            await self.automations.stop()
-
-        await event_emitter.emit("shutdown")
+                logger.warning("Timeout reached. Cancelling remaining tasks...")
+                for task in pending_tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
 
         logger.info("All services cleaned up. Closing Discord connection.")
         await self.close()
