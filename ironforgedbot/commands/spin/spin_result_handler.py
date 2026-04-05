@@ -7,6 +7,10 @@ from ironforgedbot.common.text_formatting import pad_winner_text
 
 logger = logging.getLogger(__name__)
 
+# Strong references to background tasks to prevent premature GC.
+# Tasks are discarded automatically via done callback when they complete.
+_background_tasks: set[asyncio.Task] = set()
+
 
 async def send_spin_result(
     interaction: discord.Interaction,
@@ -30,7 +34,7 @@ async def send_spin_result(
             await msg.add_reaction(reaction)
 
     # Spawn background task for delayed edit (fire-and-forget)
-    asyncio.create_task(
+    task = asyncio.create_task(
         _delayed_spin_edit(
             interaction=interaction,
             msg=msg,
@@ -41,7 +45,8 @@ async def send_spin_result(
         ),
         name=f"spin_edit_{msg.id}",
     )
-    # Function returns immediately - no blocking!
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
 
 async def _delayed_spin_edit(
