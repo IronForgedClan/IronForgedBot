@@ -4,6 +4,7 @@ import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE
@@ -16,7 +17,12 @@ MINIMUM_SPIN_OPTIONS = 3
 
 
 def _parse_options(options_str: str) -> list[str] | None:
-    parsed = [o.strip() for o in options_str.split(",") if o.strip()]
+    parsed = [
+        normalize_discord_string(o.strip())
+        for o in options_str.split(",")
+        if o.strip()
+    ]
+    parsed = [o for o in parsed if o]
     if len(parsed) < MINIMUM_SPIN_OPTIONS:
         return None
     return parsed

@@ -5,6 +5,7 @@ import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
+from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,12 @@ class SpinOptionsModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
-        options = [o.strip() for o in self.options_input.value.split(",") if o.strip()]
+        options = [
+            normalize_discord_string(o.strip())
+            for o in self.options_input.value.split(",")
+            if o.strip()
+        ]
+        options = [o for o in options if o]
 
         if len(options) < MINIMUM_SPIN_OPTIONS:
             await send_error_response(
