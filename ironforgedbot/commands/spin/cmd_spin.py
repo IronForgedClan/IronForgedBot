@@ -18,9 +18,7 @@ MINIMUM_SPIN_OPTIONS = 3
 
 def _parse_options(options_str: str) -> list[str] | None:
     parsed = [
-        normalize_discord_string(o.strip())
-        for o in options_str.split(",")
-        if o.strip()
+        normalize_discord_string(o.strip()) for o in options_str.split(",") if o.strip()
     ]
     parsed = [o for o in parsed if o]
     if len(parsed) < MINIMUM_SPIN_OPTIONS:
