@@ -43,9 +43,10 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
-        await interaction.followup.send(
-            "_spinning..._",
+        generating_msg = await interaction.followup.send(
+            "Generating GIF...",
             ephemeral=True,
+            wait=True,
         )
 
         try:
@@ -59,3 +60,8 @@ class SpinOptionsModal(discord.ui.Modal):
             return
 
         await self.on_result(interaction, file, winner)
+
+        try:
+            await generating_msg.delete()
+        except discord.HTTPException:
+            pass
