@@ -43,6 +43,11 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
+        await interaction.followup.send(
+            "_spinning..._",
+            ephemeral=True,
+        )
+
         try:
             file, winner = await build_spin_gif_file(options)
         except Exception as e:
