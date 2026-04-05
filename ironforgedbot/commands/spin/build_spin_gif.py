@@ -262,20 +262,13 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     Offloads CPU-intensive image processing to thread pool.
     Returns (discord.File of GIF, winning option string).
     """
-    try:
-        start_time = time.perf_counter()
-        result = await asyncio.to_thread(_build_spin_gif_sync, options)
-        elapsed = time.perf_counter() - start_time
-        logger.debug(
-            f"GIF generation completed in {elapsed:.2f}s ({len(options)} options)"
-        )
-        return result
-    except asyncio.CancelledError:
-        logger.info("GIF generation cancelled (likely shutdown)")
-        raise
-    except Exception as e:
-        logger.error(f"Error in GIF generation: {e}")
-        raise
+    start_time = time.perf_counter()
+    result = await asyncio.to_thread(_build_spin_gif_sync, options)
+    elapsed = time.perf_counter() - start_time
+    logger.debug(
+        f"GIF generation completed in {elapsed:.2f}s ({len(options)} options)"
+    )
+    return result
 
 
 def _build_spin_gif_sync(options: list[str]) -> tuple[discord.File, str]:
@@ -283,8 +276,9 @@ def _build_spin_gif_sync(options: list[str]) -> tuple[discord.File, str]:
 
     All PIL operations happen here to avoid blocking the event loop.
     """
-    options = random.sample(options, len(options))  # shuffle options
-    selected_index = random.randint(0, len(options) - 1)
+    rng = random.Random()
+    options = rng.sample(options, len(options))  # shuffle options
+    selected_index = rng.randint(0, len(options) - 1)
 
     # build_spin_frames returns RGBA images so each phase can composite
     # transparent overlays (text, confetti) onto the background independently.
