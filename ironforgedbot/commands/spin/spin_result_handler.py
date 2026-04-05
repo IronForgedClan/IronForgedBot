@@ -18,7 +18,7 @@ async def send_spin_result(
     use_padding: bool = False,
     reactions: list[str] | None = None,
 ) -> None:
-    """Send spin result with configurable delayed spoiler reveal"""
+    """Send spin result with configurable delayed spoiler reveal (non-blocking)."""
 
     msg = await interaction.channel.send(
         file=file,
@@ -29,9 +29,34 @@ async def send_spin_result(
         for reaction in reactions:
             await msg.add_reaction(reaction)
 
-    await asyncio.sleep(10.5)
+    # Spawn background task for delayed edit (fire-and-forget)
+    asyncio.create_task(
+        _delayed_spin_edit(
+            interaction=interaction,
+            msg=msg,
+            winner=winner,
+            winning_text=winning_text,
+            emoji=emoji,
+            use_padding=use_padding,
+        ),
+        name=f"spin_edit_{msg.id}",
+    )
+    # Function returns immediately - no blocking!
 
+
+async def _delayed_spin_edit(
+    interaction: discord.Interaction,
+    msg: discord.Message,
+    winner: str,
+    winning_text: str | None,
+    emoji: str | None,
+    use_padding: bool,
+) -> None:
+    """Background task: wait 10.5s then edit message with spoiler winner."""
     try:
+        await asyncio.sleep(10.5)
+
+        # Build spoiler content
         if use_padding:
             padded_winner = pad_winner_text(emoji or "", winner)
             content = (
@@ -48,7 +73,23 @@ async def send_spin_result(
             )
 
         await msg.edit(content=content)
+        logger.debug(f"Successfully edited spin message {msg.id}")
+
+    except asyncio.CancelledError:
+        logger.info(f"Spin edit cancelled for message {msg.id} (likely shutdown)")
+        raise  # Re-raise to properly complete cancellation
     except discord.NotFound:
-        logger.warning("Could not edit spin message - message was deleted")
+        logger.warning(f"Could not edit spin message {msg.id} - message was deleted")
     except discord.HTTPException as e:
-        logger.error(f"Failed to edit spin message: {e}")
+        logger.error(f"Failed to edit spin message {msg.id}: {e}")
+        # Notify admin of failure
+        try:
+            if interaction.channel:
+                await interaction.followup.send(
+                    f"⚠️ Failed to update spin result in {interaction.channel.mention}: {e}",
+                    ephemeral=True,
+                )
+        except Exception as notify_error:
+            logger.error(f"Could not send error notification: {notify_error}")
+    except Exception as e:
+        logger.error(f"Unexpected error in delayed spin edit for message {msg.id}: {e}")
