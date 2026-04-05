@@ -1,3 +1,4 @@
+import asyncio
 import signal
 import unittest
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
@@ -93,6 +94,7 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
     ):
         mock_state.state = {}
         mock_current_task.return_value = Mock()
+        # No pending tasks after automations stop
         mock_all_tasks.return_value = [mock_current_task.return_value]
         mock_db.dispose = AsyncMock()
         mock_emitter.emit = AsyncMock()
@@ -103,10 +105,53 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
         await self.client.graceful_shutdown()
 
         self.assertTrue(mock_state.state["is_shutting_down"])
-        mock_db.dispose.assert_called_once()
+        # automations.stop() must be called before db.dispose and event_emitter
         self.client.automations.stop.assert_called_once()
+        mock_db.dispose.assert_called_once()
         mock_emitter.emit.assert_called_once_with("shutdown")
         self.client.close.assert_called_once()
+
+    @patch("ironforgedbot.client.STATE")
+    @patch("ironforgedbot.client.event_emitter")
+    @patch("ironforgedbot.client.db")
+    @patch("ironforgedbot.client.asyncio.all_tasks")
+    @patch("ironforgedbot.client.asyncio.current_task")
+    @patch("ironforgedbot.client.logger")
+    async def test_graceful_shutdown_cancels_tasks_after_timeout(
+        self,
+        mock_logger,
+        mock_current_task,
+        mock_all_tasks,
+        mock_db,
+        mock_emitter,
+        mock_state,
+    ):
+        mock_state.state = {}
+        current = Mock()
+        mock_current_task.return_value = current
+
+        # Simulate a pending task that never finishes
+        pending = Mock()
+        pending.get_coro.return_value = Mock(__qualname__="some_task")
+        pending.done.return_value = False
+        pending.cancel = Mock()
+        mock_all_tasks.return_value = [current, pending]
+
+        mock_db.dispose = AsyncMock()
+        mock_emitter.emit = AsyncMock()
+        self.client.close = AsyncMock()
+        self.client.automations = None
+
+        with patch(
+            "ironforgedbot.client.asyncio.wait_for",
+            side_effect=asyncio.TimeoutError,
+        ), patch(
+            "ironforgedbot.client.asyncio.gather",
+            new_callable=AsyncMock,
+        ):
+            await self.client.graceful_shutdown()
+
+        pending.cancel.assert_called_once()
 
     @patch("ironforgedbot.client.STATE")
     @patch("ironforgedbot.client.populate_emoji_cache")

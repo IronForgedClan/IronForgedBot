@@ -199,6 +199,37 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(len(expected_calls) > 0, "Expected offline message to be sent")
         automation.wait_for_jobs_to_complete.assert_called_once()
 
+    async def test_stop_cancels_setup_task_if_still_running(self):
+        automation = self.create_automation_with_mocks()
+        automation.wait_for_jobs_to_complete = AsyncMock()
+
+        mock_setup_task = Mock(spec=asyncio.Task)
+        mock_setup_task.done.return_value = False
+        mock_setup_task.cancel = Mock()
+
+        async def raise_cancelled():
+            raise asyncio.CancelledError()
+
+        mock_setup_task.__await__ = raise_cancelled().__await__
+        automation._setup_task = mock_setup_task
+
+        await automation.stop()
+
+        mock_setup_task.cancel.assert_called_once()
+
+    async def test_stop_skips_cancel_if_setup_task_done(self):
+        automation = self.create_automation_with_mocks()
+        automation.wait_for_jobs_to_complete = AsyncMock()
+
+        mock_setup_task = Mock(spec=asyncio.Task)
+        mock_setup_task.done.return_value = True
+        mock_setup_task.cancel = Mock()
+        automation._setup_task = mock_setup_task
+
+        await automation.stop()
+
+        mock_setup_task.cancel.assert_not_called()
+
     async def test_stop_handles_errors_gracefully(self):
         automation = self.create_automation_with_mocks()
         test_error = Exception("Test error")
@@ -299,37 +330,23 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
         automation = self.create_automation_with_mocks()
 
         mock_task = Mock()
+        mock_task.cancelled.return_value = False
         mock_task.exception.return_value = None
         automation._running_jobs.add(mock_task)
 
-        mock_cleanup_task = Mock()
-        mock_cleanup_task.done.return_value = True
-        mock_cleanup_task.cancelled.return_value = False
-        mock_cleanup_task.exception.return_value = None
+        automation._job_done_callback(mock_task)
 
-        mock_loop = Mock()
-        mock_loop.is_closed.return_value = False
-        mock_loop.create_task.return_value = mock_cleanup_task
-
-        with patch(
-            "ironforgedbot.automations.asyncio.get_running_loop",
-            return_value=mock_loop,
-        ):
-            automation._job_done_callback(mock_task)
-
-        mock_loop.create_task.assert_called_once()
+        self.assertNotIn(mock_task, automation._running_jobs)
 
     def test_job_done_callback_handles_runtime_error(self):
         automation = self.create_automation_with_mocks()
 
         mock_task = Mock()
+        mock_task.cancelled.return_value = False
         mock_task.exception.return_value = None
 
-        with patch(
-            "ironforgedbot.automations.asyncio.create_task",
-            side_effect=RuntimeError("Event loop is closed"),
-        ):
-            automation._job_done_callback(mock_task)
+        # Should not raise even if the task is not in the set
+        automation._job_done_callback(mock_task)
 
     async def test_job_wrapper_schedules_tracking(self):
         automation = self.create_automation_with_mocks()

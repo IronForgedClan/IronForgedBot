@@ -29,6 +29,7 @@ class IronForgedAutomations:
         self._job_lock = asyncio.Lock()
         self._shutdown_timeout = 30.0
         self._setup_done = False
+        self._setup_task: Optional[asyncio.Task] = None
 
         # Configure scheduler with proper executor for async jobs
         from apscheduler.executors.asyncio import AsyncIOExecutor
@@ -49,7 +50,7 @@ class IronForgedAutomations:
         self.report_channel = report_channel
         self.discord_guild = discord_guild
 
-        asyncio.create_task(self.setup_automations())
+        self._setup_task = asyncio.create_task(self.setup_automations())
 
     async def stop(self):
         """Initiates shutdown and cleanup of scheduled jobs."""
@@ -57,6 +58,15 @@ class IronForgedAutomations:
 
         try:
             self.scheduler.pause()
+
+            # Cancel setup task if it hasn't finished yet
+            if self._setup_task and not self._setup_task.done():
+                logger.info("Cancelling in-progress setup task...")
+                self._setup_task.cancel()
+                try:
+                    await self._setup_task
+                except (asyncio.CancelledError, Exception):
+                    pass
 
             await self.wait_for_jobs_to_complete()
 
@@ -74,29 +84,31 @@ class IronForgedAutomations:
     async def wait_for_jobs_to_complete(self):
         """Waits for all active jobs to complete before completing."""
         async with self._job_lock:
-            active_jobs = len(self._running_jobs)
+            jobs_snapshot = list(self._running_jobs)
 
-            if active_jobs < 1:
-                logger.info("No active jobs to wait for...")
-                return
+        active_jobs = len(jobs_snapshot)
 
-            logger.info(f"Waiting for {active_jobs} job(s) to finish...")
+        if active_jobs < 1:
+            logger.info("No active jobs to wait for...")
+            return
 
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*self._running_jobs, return_exceptions=True),
-                    timeout=self._shutdown_timeout,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"Timeout waiting for jobs to complete after {self._shutdown_timeout}s, forcing shutdown"
-                )
-                for job in self._running_jobs:
-                    if not job.done():
-                        job.cancel()
-                        logger.warning(f"Cancelled job: {job}")
-            except Exception as e:
-                logger.error(f"Error waiting for jobs to complete: {e}")
+        logger.info(f"Waiting for {active_jobs} job(s) to finish...")
+
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*jobs_snapshot, return_exceptions=True),
+                timeout=self._shutdown_timeout,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Timeout waiting for jobs to complete after {self._shutdown_timeout}s, forcing shutdown"
+            )
+            for job in jobs_snapshot:
+                if not job.done():
+                    job.cancel()
+                    logger.warning(f"Cancelled job: {job}")
+        except Exception as e:
+            logger.error(f"Error waiting for jobs to complete: {e}")
 
     async def track_job(self, job_func, *args, **kwargs):
         """Track a running job by wrapping it in a task and storing the reference."""
@@ -118,33 +130,15 @@ class IronForgedAutomations:
 
     def _job_done_callback(self, task: asyncio.Task):
         """Remove the job from the running_jobs set once it is finished."""
+        self._running_jobs.discard(task)
+        active_count = len(self._running_jobs)
 
-        def sync_cleanup():
-            """Synchronous cleanup that schedules async work safely."""
-            try:
-                loop = asyncio.get_running_loop()
-                if loop.is_closed():
-                    logger.warning("Event loop is closed, skipping job cleanup")
-                    return
+        if not task.cancelled():
+            exc = task.exception()
+            if exc:
+                logger.error(f"Job completed with exception: {exc}")
 
-                async def cleanup():
-                    async with self._job_lock:
-                        self._running_jobs.discard(task)
-                        active_count = len(self._running_jobs)
-
-                    if task.exception():
-                        logger.error(
-                            f"Job completed with exception: {task.exception()}"
-                        )
-
-                    logger.debug(f"Job completed. {active_count} job(s) active.")
-
-                loop.create_task(cleanup())
-
-            except RuntimeError as e:
-                logger.warning(f"Could not schedule job cleanup: {e}")
-
-        sync_cleanup()
+        logger.debug(f"Job completed. {active_count} job(s) active.")
 
     def _job_wrapper(self, job_func, *args, **kwargs):
         """Wrapper for tracking active jobs."""
