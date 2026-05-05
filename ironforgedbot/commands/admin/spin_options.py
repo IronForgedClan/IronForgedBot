@@ -2,13 +2,13 @@ from ironforgedbot.storage.data import BOSSES, SKILLS
 
 
 def get_sotw_options() -> list[str]:
-    """Get filtered SOTW options for spinning"""
+    """Get clean list of SOTW options"""
     exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "magic"]
     return sorted([s["name"] for s in SKILLS if s["name"].lower() not in exclusions])
 
 
 def get_botw_options() -> list[str]:
-    """Get filtered and grouped BOTW options for spinning"""
+    """Get clean list of BOTW options"""
     groups = [
         ["Callisto", "Artio"],
         ["Venenatis", "Spindel"],
