@@ -58,6 +58,15 @@ jobs:
                 echo "$PRIVATE_KEY" > ~/.ssh/id_rsa
                 echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
 
+            - name: Sync data to server
+              env:
+                SSH_USER: ${{ secrets.SSH_USER }}
+                SSH_HOST: ${{ secrets.SSH_HOST }}
+                BOT_DIR: ${{ secrets.BOT_DIR }}
+              run: |
+                rsync -a --delete -e ssh ./data/ \
+                  $SSH_USER@$SSH_HOST:$BOT_DIR/data_${{ inputs.environment }}/
+
             - name: Deploy
               env:
                 SSH_USER: ${{ secrets.SSH_USER }}
