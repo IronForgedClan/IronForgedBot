@@ -58,6 +58,9 @@ jobs:
                 echo "$PRIVATE_KEY" > ~/.ssh/id_rsa
                 echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
 
+            - name: Install rsync
+              run: sudo apt-get install -y rsync
+
             - name: Sync data to server
               env:
                 SSH_USER: ${{ secrets.SSH_USER }}
