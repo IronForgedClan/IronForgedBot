@@ -189,7 +189,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     notes = []
     if CONFIG.ltm_enabled:
         notes.append(
-            "LTM (Limited Time Mode) is enabled and tracks activity on a separate seasonal game mode."
+            "LTM (Limited Time Mode) is enabled and tracks activity on a separate game mode."
         )
     if status_note:
         notes.append(status_note)
@@ -236,7 +236,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
 
     if CONFIG.ltm_enabled:
         ltm_value = f"{ltm_xp_gained:,} xp" if ltm_xp_gained is not None else "N/A"
-        embed.add_field(name="LTM", value=ltm_value, inline=True)
+        embed.add_field(name="LTM Gained", value=ltm_value, inline=True)
     else:
         embed.add_field(name="", value="", inline=True)
 
