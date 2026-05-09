@@ -36,7 +36,7 @@ class Config:
         self.TRICK_OR_TREAT_CHANNEL_ID: int = (
             int(os.getenv("TRICK_OR_TREAT_CHANNEL_ID") or 0)
             if self.TRICK_OR_TREAT_ENABLED
-            else 1
+            else 0
         )
         self.TRICK_OR_TREAT_COOLDOWN_SECONDS: int = int(
             os.getenv("TRICK_OR_TREAT_COOLDOWN_SECONDS") or 3600
@@ -64,8 +64,13 @@ class Config:
     def ltm_enabled(self) -> bool:
         return bool(self.WOM_LTM_BASE_URL and self.WOM_LTM_GROUP_ID > 0)
 
-    def validate_config(self):
-        optional_keys = {"WOM_LTM_BASE_URL", "WOM_LTM_GROUP_ID"}
+    def validate_config(self) -> None:
+        optional_keys = {
+            "WOM_LTM_BASE_URL",
+            "WOM_LTM_GROUP_ID",
+            "TRICK_OR_TREAT_CHANNEL_ID",
+            "TRICK_OR_TREAT_COOLDOWN_SECONDS",
+        }
 
         for key, value in vars(self).items():
             if key.startswith("CRON_"):
