@@ -8,7 +8,10 @@ from typing import Dict, List, Optional
 import discord
 from tabulate import tabulate
 
-from ironforgedbot.common.activity_check import check_bulk_activity, extract_overall_xp_gained
+from ironforgedbot.common.activity_check import (
+    check_bulk_activity,
+    extract_overall_xp_gained,
+)
 from ironforgedbot.common.helpers import (
     format_duration,
     render_relative_time,
@@ -66,7 +69,9 @@ async def job_check_activity(
             logger.debug(f"Activity check results: {check_results}")
 
             if check_results is None:
-                logger.warning(f"Activity check {execution_id} failed to fetch WOM data")
+                logger.warning(
+                    f"Activity check {execution_id} failed to fetch WOM data"
+                )
                 return
 
             if not check_results:

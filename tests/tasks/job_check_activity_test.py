@@ -390,7 +390,9 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         self.mock_report_channel.send.assert_not_called()
 
-    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock
+    )
     @patch("ironforgedbot.tasks.job_check_activity.WomService")
     @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
     async def test_all_succeed(self, mock_config, mock_wom_service_class, mock_sleep):
@@ -418,10 +420,14 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
             base_url="https://api.wiseoldman.net/league", group_id=99
         )
 
-    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock
+    )
     @patch("ironforgedbot.tasks.job_check_activity.WomService")
     @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
-    async def test_zero_xp_excluded(self, mock_config, mock_wom_service_class, mock_sleep):
+    async def test_zero_xp_excluded(
+        self, mock_config, mock_wom_service_class, mock_sleep
+    ):
         """Players with 0 XP gained are excluded from the result dict."""
         mock_config.ltm_enabled = True
         mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
@@ -443,7 +449,9 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("player1", result)
         self.assertNotIn("player2", result)
 
-    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock
+    )
     @patch("ironforgedbot.tasks.job_check_activity.WomService")
     @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
     async def test_partial_failure_shows_na(
@@ -470,7 +478,9 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"player1": 500000})
         self.mock_report_channel.send.assert_not_called()
 
-    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock
+    )
     @patch("ironforgedbot.tasks.job_check_activity.WomService")
     @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
     async def test_all_fail_returns_empty_dict(
@@ -634,6 +644,3 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         self.mock_report_channel.send.assert_called_once()
         call_args = self.mock_report_channel.send.call_args
         self.assertIn("WOM API is currently unavailable", call_args[0][0])
-
-
-
