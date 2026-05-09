@@ -1,7 +1,10 @@
-.PHONY: up down test format shell migrate revision downgrade update-deps update-data clean
+.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-prod
 
 up:
-	docker compose up
+	docker compose up db bot
+
+up-prod:
+	docker compose up db bot_prod
 
 down:
 	docker compose down
@@ -23,6 +26,9 @@ revision:
 
 downgrade:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic downgrade -1
+
+build-prod:
+	docker build --target prod -t ironforgedbot:prod .
 
 update-deps:
 	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
