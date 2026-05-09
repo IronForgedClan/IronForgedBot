@@ -9,6 +9,7 @@ from wom import GroupRole
 
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
+    _fetch_ltm_gains_for_members,
     _find_inactive_users,
     _sort_results_safely,
     DEFAULT_WOM_LIMIT,
@@ -65,20 +66,23 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
     @patch("ironforgedbot.tasks.job_check_activity.tabulate")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
+    @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
     @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
-    async def test_job_check_activity_success(
+    async def test_job_check_activity_success_no_ltm(
         self,
         mock_db,
         mock_create_absent_service,
         mock_find_inactive,
+        mock_fetch_ltm,
         mock_discord_file,
         mock_tabulate,
         mock_format_duration,
         mock_datetime,
         mock_perf_counter,
     ):
+        """Test successful activity check with LTM disabled (returns None)."""
         mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0)
         mock_format_duration.return_value = "5.0s"
 
@@ -88,6 +92,8 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_absent_service = AsyncMock()
         mock_absent_service.process_absent_members.return_value = [self.mock_absentee]
         mock_create_absent_service.return_value = mock_absent_service
+
+        mock_fetch_ltm.return_value = None  # LTM disabled
 
         # Return ActivityCheckResult objects
         mock_find_inactive.return_value = [
@@ -122,29 +128,106 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             DEFAULT_WOM_LIMIT,
         )
 
-        # Verify tabulate was called with formatted data
+        # Verify tabulate was called with no LTM column (4-item rows)
         self.assertTrue(mock_tabulate.called)
-        call_args = mock_tabulate.call_args[0][0]
-        self.assertEqual(len(call_args), 2)
-        self.assertEqual(call_args[0][0], "Player1")
-        self.assertEqual(call_args[1][0], "Player2")
+        call_args = mock_tabulate.call_args
+        rows = call_args[0][0]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0][0], "Player1")
+        self.assertEqual(len(rows[0]), 4)  # no LTM column
+        headers = call_args[1]["headers"]
+        self.assertNotIn("LTM", headers)
 
         self.assertEqual(self.mock_report_channel.send.call_count, 2)
-
         first_call = self.mock_report_channel.send.call_args_list[0]
         self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
-
         second_call = self.mock_report_channel.send.call_args_list[1]
         self.assertIn("🧗 Activity check", second_call[0][0])
         self.assertIn("Ignoring **1** absent members", second_call[0][0])
         self.assertIn("Found **2** members", second_call[0][0])
         self.assertEqual(second_call[1]["file"], mock_file)
 
+    @patch(
+        "ironforgedbot.tasks.job_check_activity.time.perf_counter",
+        side_effect=[0.0, 5.0],
+    )
+    @patch("ironforgedbot.tasks.job_check_activity.datetime")
+    @patch("ironforgedbot.tasks.job_check_activity.format_duration")
+    @patch("ironforgedbot.tasks.job_check_activity.tabulate")
+    @patch("ironforgedbot.tasks.job_check_activity.discord.File")
+    @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
+    @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
+    @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
+    @patch("ironforgedbot.tasks.job_check_activity.db")
+    async def test_job_check_activity_with_ltm_column(
+        self,
+        mock_db,
+        mock_create_absent_service,
+        mock_find_inactive,
+        mock_fetch_ltm,
+        mock_discord_file,
+        mock_tabulate,
+        mock_format_duration,
+        mock_datetime,
+        mock_perf_counter,
+    ):
+        """Test activity check includes LTM column when LTM data is available."""
+        mock_datetime.now.return_value = datetime(2024, 1, 15, 10, 30, 0)
+        mock_format_duration.return_value = "5.0s"
+
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_absent_service = AsyncMock()
+        mock_absent_service.process_absent_members.return_value = []
+        mock_create_absent_service.return_value = mock_absent_service
+
+        # LTM has data for player1 but not player2
+        mock_fetch_ltm.return_value = {"player1": 750000}
+
+        mock_find_inactive.return_value = [
+            create_mock_activity_result(
+                username="Player1",
+                discord_role="Member",
+                xp_gained=100000,
+                is_active=False,
+            ),
+            create_mock_activity_result(
+                username="Player2",
+                discord_role="Member",
+                xp_gained=80000,
+                is_active=False,
+            ),
+        ]
+
+        mock_tabulate.return_value = "Test table output"
+        mock_discord_file.return_value = Mock()
+
+        await job_check_activity(self.mock_report_channel)
+
+        self.assertTrue(mock_tabulate.called)
+        call_args = mock_tabulate.call_args
+        rows = call_args[0][0]
+        headers = call_args[1]["headers"]
+
+        # Verify LTM column present
+        self.assertIn("LTM", headers)
+
+        # Rows should have 5 columns (Member, Role, Gained, LTM, Last Updated)
+        # After sort: Player2 (80k), Player1 (100k)
+        player2_row = next(r for r in rows if r[0] == "Player2")
+        player1_row = next(r for r in rows if r[0] == "Player1")
+
+        self.assertEqual(len(player1_row), 5)
+        self.assertEqual(player1_row[3], "750,000")  # LTM column
+        self.assertEqual(player2_row[3], "N/A")  # not in LTM
+
+    @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
     @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
     async def test_job_check_activity_empty_results(
-        self, mock_db, mock_create_absent_service, mock_find_inactive
+        self, mock_db, mock_create_absent_service, mock_find_inactive, mock_fetch_ltm
     ):
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
@@ -154,6 +237,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_create_absent_service.return_value = mock_absent_service
 
         mock_find_inactive.return_value = None
+        mock_fetch_ltm.return_value = None
 
         await job_check_activity(self.mock_report_channel)
 
@@ -174,6 +258,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
     @patch("ironforgedbot.tasks.job_check_activity.tabulate")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
+    @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
     @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
@@ -182,6 +267,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_db,
         mock_create_absent_service,
         mock_find_inactive,
+        mock_fetch_ltm,
         mock_discord_file,
         mock_tabulate,
         mock_format_duration,
@@ -197,6 +283,8 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_absent_service = AsyncMock()
         mock_absent_service.process_absent_members.return_value = []
         mock_create_absent_service.return_value = mock_absent_service
+
+        mock_fetch_ltm.return_value = None  # LTM disabled
 
         # Return ActivityCheckResult objects
         mock_find_inactive.return_value = [
@@ -245,6 +333,162 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(call_args[0][0], "Player1")
         self.assertEqual(call_args[1][0], "Player3")
         self.assertEqual(call_args[2][0], "Player2")
+
+
+class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_report_channel = Mock(spec=discord.TextChannel)
+        self.mock_report_channel.send = AsyncMock()
+        self.inactive = [
+            create_mock_activity_result(username="Player1"),
+            create_mock_activity_result(username="Player2"),
+        ]
+
+    def _make_player_gains(self, xp: int):
+        """Build a minimal PlayerGains-like mock for the given overall XP."""
+        gains = Mock()
+        gains.data.skills = {wom.Metric.Overall: Mock(experience=Mock(gained=xp))}
+        return gains
+
+    @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
+    async def test_ltm_disabled_returns_none(self, mock_config):
+        """Returns None immediately when LTM is not enabled."""
+        mock_config.ltm_enabled = False
+
+        result = await _fetch_ltm_gains_for_members(
+            self.inactive, self.mock_report_channel
+        )
+
+        self.assertIsNone(result)
+        self.mock_report_channel.send.assert_not_called()
+
+    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_check_activity.WomService")
+    @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
+    async def test_all_succeed(self, mock_config, mock_wom_service_class, mock_sleep):
+        """Returns correct dict when all per-player fetches succeed."""
+        mock_config.ltm_enabled = True
+        mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
+        mock_config.WOM_LTM_GROUP_ID = 99
+
+        mock_service = AsyncMock()
+        mock_service.__aenter__.return_value = mock_service
+        mock_service.__aexit__.return_value = None
+        mock_service.get_player_monthly_gains.side_effect = [
+            self._make_player_gains(500000),
+            self._make_player_gains(750000),
+        ]
+        mock_wom_service_class.return_value = mock_service
+
+        result = await _fetch_ltm_gains_for_members(
+            self.inactive, self.mock_report_channel
+        )
+
+        self.assertEqual(result, {"player1": 500000, "player2": 750000})
+        self.mock_report_channel.send.assert_not_called()
+        mock_wom_service_class.assert_called_once_with(
+            base_url="https://api.wiseoldman.net/league", group_id=99
+        )
+
+    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_check_activity.WomService")
+    @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
+    async def test_zero_xp_excluded(self, mock_config, mock_wom_service_class, mock_sleep):
+        """Players with 0 XP gained are excluded from the result dict."""
+        mock_config.ltm_enabled = True
+        mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
+        mock_config.WOM_LTM_GROUP_ID = 99
+
+        mock_service = AsyncMock()
+        mock_service.__aenter__.return_value = mock_service
+        mock_service.__aexit__.return_value = None
+        mock_service.get_player_monthly_gains.side_effect = [
+            self._make_player_gains(500000),
+            self._make_player_gains(0),
+        ]
+        mock_wom_service_class.return_value = mock_service
+
+        result = await _fetch_ltm_gains_for_members(
+            self.inactive, self.mock_report_channel
+        )
+
+        self.assertIn("player1", result)
+        self.assertNotIn("player2", result)
+
+    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_check_activity.WomService")
+    @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
+    async def test_partial_failure_shows_na(
+        self, mock_config, mock_wom_service_class, mock_sleep
+    ):
+        """Partial per-player failures produce N/A (missing key) for that member."""
+        from ironforgedbot.services.wom_service import WomServiceError
+
+        mock_config.ltm_enabled = True
+        mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
+        mock_config.WOM_LTM_GROUP_ID = 99
+
+        mock_service = AsyncMock()
+        mock_service.__aenter__.return_value = mock_service
+        mock_service.__aexit__.return_value = None
+        mock_service.get_player_monthly_gains.side_effect = [
+            self._make_player_gains(500000),
+            WomServiceError("not found"),
+        ]
+        mock_wom_service_class.return_value = mock_service
+
+        result = await _fetch_ltm_gains_for_members(
+            self.inactive, self.mock_report_channel
+        )
+
+        self.assertEqual(result, {"player1": 500000})
+        self.mock_report_channel.send.assert_not_called()
+
+    @patch("ironforgedbot.tasks.job_check_activity.asyncio.sleep", new_callable=AsyncMock)
+    @patch("ironforgedbot.tasks.job_check_activity.WomService")
+    @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
+    async def test_all_fail_returns_empty_dict(
+        self, mock_config, mock_wom_service_class, mock_sleep
+    ):
+        """All per-player failures returns {} — column still shown, all N/A."""
+        from ironforgedbot.services.wom_service import WomServiceError
+
+        mock_config.ltm_enabled = True
+        mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
+        mock_config.WOM_LTM_GROUP_ID = 99
+
+        mock_service = AsyncMock()
+        mock_service.__aenter__.return_value = mock_service
+        mock_service.__aexit__.return_value = None
+        mock_service.get_player_monthly_gains.side_effect = WomServiceError("API down")
+        mock_wom_service_class.return_value = mock_service
+
+        result = await _fetch_ltm_gains_for_members(
+            self.inactive, self.mock_report_channel
+        )
+
+        self.assertEqual(result, {})
+        self.mock_report_channel.send.assert_not_called()
+
+    @patch("ironforgedbot.tasks.job_check_activity.WomService")
+    @patch("ironforgedbot.tasks.job_check_activity.CONFIG")
+    async def test_service_init_failure_returns_empty_dict(
+        self, mock_config, mock_wom_service_class
+    ):
+        """Fatal service init error returns {} and sends warning to channel."""
+        mock_config.ltm_enabled = True
+        mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
+        mock_config.WOM_LTM_GROUP_ID = 99
+
+        mock_wom_service_class.side_effect = Exception("bad config")
+
+        result = await _fetch_ltm_gains_for_members(
+            self.inactive, self.mock_report_channel
+        )
+
+        self.assertEqual(result, {})
+        self.mock_report_channel.send.assert_called_once()
+        self.assertIn("unavailable", self.mock_report_channel.send.call_args[0][0])
 
 
 class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
