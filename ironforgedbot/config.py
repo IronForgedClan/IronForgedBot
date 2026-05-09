@@ -42,6 +42,11 @@ class Config:
             os.getenv("TRICK_OR_TREAT_COOLDOWN_SECONDS") or 3600
         )
 
+        # Limited Time Mode (LTM) tracker (optional)
+        # Both must be set for LTM tracking to be enabled.
+        self.WOM_LTM_BASE_URL: str = os.getenv("WOM_LTM_BASE_URL", "")
+        self.WOM_LTM_GROUP_ID: int = int(os.getenv("WOM_LTM_GROUP_ID") or 0)
+
         # Standard cron format: "minute hour day month day_of_week"
         # All times are in UTC
         self.CRON_SYNC_MEMBERS: str = os.getenv("CRON_SYNC_MEMBERS", "50 3,15 * * *")
@@ -54,6 +59,10 @@ class Config:
         self.CRON_PAYROLL: str = os.getenv("CRON_PAYROLL", "0 6 1 * *")
 
         self.validate_config()
+
+    @property
+    def ltm_enabled(self) -> bool:
+        return bool(self.WOM_LTM_BASE_URL and self.WOM_LTM_GROUP_ID > 0)
 
     def validate_config(self):
         optional_keys = {"WOM_LTM_BASE_URL", "WOM_LTM_GROUP_ID"}
