@@ -39,6 +39,9 @@ services:
             - ironforged-network
 
     bot_prod:
+        build:
+            context: .
+            target: prod
         image: ironforgedbot:prod
         restart: unless-stopped
         depends_on:
