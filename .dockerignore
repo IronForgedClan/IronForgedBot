@@ -1,7 +1,9 @@
 .*/
-__pycache__/
+**/__pycache__/
+**/*.pyc
 tests/
 data/
+init-db/
 
 *.json
 *.live
@@ -15,6 +17,7 @@ Dockerfile
 .dockerignore
 Makefile
 requirements.in
+requirements-dev.in
 
 run_tests.py
 
