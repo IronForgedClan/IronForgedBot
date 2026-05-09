@@ -167,26 +167,36 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         prospect_emoji = find_emoji("Prospect")
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = f"This member is a {prospect_emoji} **Prospect** making them exempt from purges for the duration of their probation."
+        status_note = f"This member is a {prospect_emoji} **Prospect** making them exempt from purges for the duration of their probation."
     elif result.is_exempt:
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = "This member has a role that exempts them from activity checks."
+        status_note = "This member has a role that exempts them from activity checks."
     elif result.is_active:
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = ""
+        status_note = ""
     else:
         if CONFIG.ltm_enabled and ltm_xp_gained is not None and ltm_xp_gained > 0:
             status_text = "🟠 Pending review"
             embed_color = discord.Colour.orange()
-            note_text = "This member has not met the main game activity requirement but has LTM gains. Their case will be reviewed by leadership before any action is taken."
+            status_note = "This member has not met the main game activity requirement but has LTM gains. Their case will be reviewed by leadership before any action is taken."
         else:
             status_text = "❌ In danger"
             embed_color = discord.Colour.red()
+            status_note = ""
 
+    notes = []
+    if CONFIG.ltm_enabled:
+        notes.append(
+            "LTM (Limited Time Mode) is enabled and tracks activity on a separate seasonal game mode."
+        )
+    if status_note:
+        notes.append(status_note)
     if result.is_absent:
-        note_text += f"Member is marked as absent."
+        notes.append("Member is marked as absent.")
+
+    note_text = "\n\n".join(notes)
 
     embed = build_response_embed(
         title=f"📊 Activity Check",
