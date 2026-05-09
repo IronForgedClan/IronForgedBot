@@ -36,13 +36,24 @@ class WomService:
     Follows established service patterns with proper resource management.
     """
 
-    def __init__(self):
-        """Initialize the WOM service with application configuration."""
+    def __init__(
+        self,
+        base_url: Optional[str] = None,
+        group_id: Optional[int] = None,
+    ):
+        """Initialize the WOM service with application configuration.
+
+        Args:
+            base_url: Optional API base URL override (e.g. for LTM trackers).
+                      Defaults to the standard WOM API.
+            group_id: Optional group ID override. Defaults to CONFIG.WOM_GROUP_ID.
+        """
         if not CONFIG.WOM_API_KEY:
             raise WomServiceError("WOM_API_KEY not configured")
 
         self.api_key = CONFIG.WOM_API_KEY
-        self.group_id = CONFIG.WOM_GROUP_ID
+        self.group_id = group_id if group_id is not None else CONFIG.WOM_GROUP_ID
+        self.base_url = base_url
         self._client: Optional[wom.Client] = None
 
     async def __aenter__(self):
@@ -56,7 +67,10 @@ class WomService:
     async def _get_client(self) -> wom.Client:
         """Get or create a WOM client instance."""
         if self._client is None:
-            self._client = wom.Client(api_key=self.api_key, user_agent="IronForged")
+            kwargs = {"api_key": self.api_key, "user_agent": "IronForged"}
+            if self.base_url:
+                kwargs["api_base_url"] = self.base_url
+            self._client = wom.Client(**kwargs)
             await self._client.start()
         return self._client
 
