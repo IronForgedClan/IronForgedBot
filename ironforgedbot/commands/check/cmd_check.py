@@ -208,15 +208,15 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         url="https://oldschool.runescape.wiki/images/Count_Check_chathead.png"
     )
 
-    embed.add_field(name="Member", value=f"{rank_emoji} {display_name}", inline=True)
+    embed.add_field(name="Member", value=normalize_discord_string(display_name), inline=True)
+
+    embed.add_field(name="Rank", value=f"{rank_emoji} {db_member.rank}", inline=True)
 
     embed.add_field(
         name="Status",
         value=status_text,
         inline=True,
     )
-
-    embed.add_field(name="", value="", inline=True)
 
     embed.add_field(
         name="Requirement",
