@@ -11,7 +11,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir --upgrade pip
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
+ && find /install -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
+    find /install -name '*.dist-info' -exec rm -rf {} + 2>/dev/null; \
+    find /install -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
+    rm -rf /install/lib/python3.13/site-packages/pip
 
 # prod: clean image, runtime-only MySQL lib, no compilers
 FROM python:3.13-slim AS prod
