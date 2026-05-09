@@ -16,7 +16,7 @@ format:
 	docker compose run --rm bot python -m black .
 
 shell:
-	docker compose run --rm bot /bin/bash
+	docker compose run --rm bot /bin/sh
 
 migrate:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic upgrade head
