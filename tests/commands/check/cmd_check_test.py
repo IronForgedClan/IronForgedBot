@@ -6,6 +6,11 @@ import discord
 
 from ironforgedbot.common.activity_check import ActivityCheckResult
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.services.wom_service import (
+    WomRateLimitError,
+    WomServiceError,
+    WomTimeoutError,
+)
 from tests.helpers import (
     VALID_CONFIG,
     create_mock_discord_interaction,
@@ -222,8 +227,6 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         mock_config,
     ):
         """WomRateLimitError from WOM fetch returns an error response."""
-        from ironforgedbot.services.wom_service import WomRateLimitError
-
         mock_config.ltm_enabled = False
         mock_config.RULES_CHANNEL_ID = 123456
         mock_find_emoji.return_value = ""
@@ -272,8 +275,6 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         mock_config,
     ):
         """WomTimeoutError from WOM fetch returns an error response."""
-        from ironforgedbot.services.wom_service import WomTimeoutError
-
         mock_config.ltm_enabled = False
         mock_config.RULES_CHANNEL_ID = 123456
         mock_find_emoji.return_value = ""
@@ -322,8 +323,6 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         mock_config,
     ):
         """WomServiceError from WOM fetch returns an error response."""
-        from ironforgedbot.services.wom_service import WomServiceError
-
         mock_config.ltm_enabled = False
         mock_config.RULES_CHANNEL_ID = 123456
         mock_find_emoji.return_value = ""

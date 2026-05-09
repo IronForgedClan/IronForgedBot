@@ -52,7 +52,8 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     if player is None:
         player = interaction.user.display_name
 
-    assert interaction.guild
+    if not interaction.guild:
+        return
 
     try:
         member, player = validate_playername(
@@ -199,7 +200,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     note_text = "\n\n".join(notes)
 
     embed = build_response_embed(
-        title=f"📊 Activity Check",
+        title="📊 Activity Check",
         description=f"Inactive members may be removed from the clan to make space for active members. For more information see <#{CONFIG.RULES_CHANNEL_ID}>.",
         color=embed_color,
     )

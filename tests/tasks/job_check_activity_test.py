@@ -7,12 +7,15 @@ import discord
 import wom
 from wom import GroupRole
 
+from ironforgedbot.services.wom_service import (
+    WomRateLimitError,
+    WomServiceError,
+)
 from ironforgedbot.tasks.job_check_activity import (
     job_check_activity,
     _fetch_ltm_gains_for_members,
     _find_inactive_users,
     _sort_results_safely,
-    DEFAULT_WOM_LIMIT,
 )
 from ironforgedbot.common.activity_check import ActivityCheckResult
 from ironforgedbot.common.roles import ROLE
@@ -125,7 +128,6 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_find_inactive.assert_called_once_with(
             self.mock_report_channel,
             ["absentplayer"],
-            DEFAULT_WOM_LIMIT,
         )
 
         # Verify tabulate was called with no LTM column (4-item rows)
@@ -226,9 +228,10 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
     @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
     @patch("ironforgedbot.tasks.job_check_activity.db")
-    async def test_job_check_activity_empty_results(
+    async def test_job_check_activity_wom_error_returns_early(
         self, mock_db, mock_create_absent_service, mock_find_inactive, mock_fetch_ltm
     ):
+        """When _find_inactive_users returns None (WOM error), job exits without sending a second message."""
         mock_session = AsyncMock()
         mock_db.get_session.return_value.__aenter__.return_value = mock_session
 
@@ -237,6 +240,31 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_create_absent_service.return_value = mock_absent_service
 
         mock_find_inactive.return_value = None
+        mock_fetch_ltm.return_value = None
+
+        await job_check_activity(self.mock_report_channel)
+
+        # Only the starting message — error already reported inside _find_inactive_users
+        self.assertEqual(self.mock_report_channel.send.call_count, 1)
+        first_call = self.mock_report_channel.send.call_args_list[0]
+        self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
+
+    @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
+    @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
+    @patch("ironforgedbot.tasks.job_check_activity.create_absent_service")
+    @patch("ironforgedbot.tasks.job_check_activity.db")
+    async def test_job_check_activity_empty_results(
+        self, mock_db, mock_create_absent_service, mock_find_inactive, mock_fetch_ltm
+    ):
+        """When _find_inactive_users returns [] (no results), an info message is sent."""
+        mock_session = AsyncMock()
+        mock_db.get_session.return_value.__aenter__.return_value = mock_session
+
+        mock_absent_service = AsyncMock()
+        mock_absent_service.process_absent_members.return_value = []
+        mock_create_absent_service.return_value = mock_absent_service
+
+        mock_find_inactive.return_value = []
         mock_fetch_ltm.return_value = None
 
         await job_check_activity(self.mock_report_channel)
@@ -422,8 +450,6 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
         self, mock_config, mock_wom_service_class, mock_sleep
     ):
         """Partial per-player failures produce N/A (missing key) for that member."""
-        from ironforgedbot.services.wom_service import WomServiceError
-
         mock_config.ltm_enabled = True
         mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
         mock_config.WOM_LTM_GROUP_ID = 99
@@ -451,8 +477,6 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
         self, mock_config, mock_wom_service_class, mock_sleep
     ):
         """All per-player failures returns {} — column still shown, all N/A."""
-        from ironforgedbot.services.wom_service import WomServiceError
-
         mock_config.ltm_enabled = True
         mock_config.WOM_LTM_BASE_URL = "https://api.wiseoldman.net/league"
         mock_config.WOM_LTM_GROUP_ID = 99
@@ -488,7 +512,10 @@ class TestFetchLtmGainsForMembers(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, {})
         self.mock_report_channel.send.assert_called_once()
-        self.assertIn("unavailable", self.mock_report_channel.send.call_args[0][0])
+        self.assertEqual(
+            self.mock_report_channel.send.call_args[0][0],
+            "⚠️ LTM tracker unavailable. LTM column will show N/A for all members.",
+        )
 
 
 class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
@@ -501,8 +528,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
     async def test_find_inactive_users_wom_group_error(self, mock_get_wom_service):
-        from ironforgedbot.services.wom_service import WomServiceError
-
         mock_wom_service = AsyncMock()
         mock_wom_service.get_monthly_activity_data.side_effect = WomServiceError(
             "Group not found"
@@ -512,7 +537,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         result = await _find_inactive_users(
             self.mock_report_channel,
             self.absentees,
-            DEFAULT_WOM_LIMIT,
         )
 
         self.assertIsNone(result)
@@ -523,8 +547,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_check_activity.get_wom_service")
     async def test_find_inactive_users_gains_error(self, mock_get_wom_service):
-        from ironforgedbot.services.wom_service import WomRateLimitError
-
         mock_wom_service = AsyncMock()
         mock_wom_service.get_monthly_activity_data.side_effect = WomRateLimitError(
             "API rate limit"
@@ -534,7 +556,6 @@ class TestFindInactiveUsers(unittest.IsolatedAsyncioTestCase):
         result = await _find_inactive_users(
             self.mock_report_channel,
             self.absentees,
-            DEFAULT_WOM_LIMIT,
         )
 
         self.assertIsNone(result)
@@ -579,15 +600,12 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         # Mock JSON decode error when fetching group details
-        from ironforgedbot.services.wom_service import WomServiceError
-
         json_error = WomServiceError("JSON is malformed: invalid character (byte 0)")
         mock_wom_service.get_monthly_activity_data.side_effect = json_error
 
         result = await _find_inactive_users(
             self.mock_report_channel,
             [],
-            DEFAULT_WOM_LIMIT,
         )
 
         self.assertIsNone(result)
@@ -604,15 +622,12 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         mock_get_wom_service.return_value.__aenter__.return_value = mock_wom_service
 
         # Mock JSON decode error when fetching activity data
-        from ironforgedbot.services.wom_service import WomServiceError
-
         json_error = WomServiceError("JSON is malformed: invalid character (byte 0)")
         mock_wom_service.get_monthly_activity_data.side_effect = json_error
 
         result = await _find_inactive_users(
             self.mock_report_channel,
             [],
-            DEFAULT_WOM_LIMIT,
         )
 
         self.assertIsNone(result)
@@ -621,8 +636,4 @@ class TestValidationAndHelpers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("WOM API is currently unavailable", call_args[0][0])
 
 
-class TestThresholds(unittest.TestCase):
-    def test_threshold_constants(self):
-        """Test default threshold values"""
-        # Test that default constants are available
-        self.assertEqual(DEFAULT_WOM_LIMIT, 50)
+
