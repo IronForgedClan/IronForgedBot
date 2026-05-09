@@ -6,10 +6,9 @@ import time
 from typing import Dict, List, Optional
 
 import discord
-import wom
 from tabulate import tabulate
 
-from ironforgedbot.common.activity_check import check_bulk_activity
+from ironforgedbot.common.activity_check import check_bulk_activity, extract_overall_xp_gained
 from ironforgedbot.common.helpers import (
     format_duration,
     render_relative_time,
@@ -30,13 +29,10 @@ from ironforgedbot.services.wom_service import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_WOM_LIMIT = 50
-
 
 @log_task_execution(logger)
 async def job_check_activity(
     report_channel: discord.TextChannel,
-    wom_limit: int = DEFAULT_WOM_LIMIT,
 ) -> None:
     """
     Check member activity against rank-based thresholds and report inactive members.
@@ -44,13 +40,12 @@ async def job_check_activity(
 
     Args:
         report_channel: Discord channel to send reports to
-        wom_limit: Number of records to fetch per API call
     """
     execution_id = f"activity_check_{int(time.time())}"
     logger.info(f"Starting activity check execution: {execution_id}")
 
     start_time = time.perf_counter()
-    logger.info(f"Activity check {execution_id} - Starting with limit {wom_limit}")
+    logger.info(f"Activity check {execution_id} - Starting")
 
     try:
         async with db.get_session() as session:
@@ -61,18 +56,21 @@ async def job_check_activity(
             absentee_list = await absent_service.process_absent_members()
             known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
 
-            logger.debug(known_absentees)
+            logger.debug(f"Known absentees: {known_absentees}")
 
             check_results = await _find_inactive_users(
                 report_channel,
                 known_absentees,
-                wom_limit,
             )
 
-            logger.debug(check_results)
+            logger.debug(f"Activity check results: {check_results}")
+
+            if check_results is None:
+                logger.warning(f"Activity check {execution_id} failed to fetch WOM data")
+                return
 
             if not check_results:
-                logger.warning(f"Activity check {execution_id} returned no results")
+                logger.info(f"Activity check {execution_id} returned no results")
                 await report_channel.send(
                     "ℹ️ No inactive members found meeting the criteria."
                 )
@@ -166,7 +164,10 @@ def _sort_results_safely(results: List[List[str]]) -> List[List[str]]:
     Safely sort results by XP gained, handling malformed data.
 
     Args:
-        results: List of result rows with format [username, role, gained_xp, last_updated]
+        results: List of result rows. The XP gained column is always at index 2,
+                 regardless of whether an LTM column is present.
+                 Formats: [username, role, gained_xp, last_updated]
+                       or [username, role, gained_xp, ltm_xp, last_updated]
 
     Returns:
         Sorted results list
@@ -219,12 +220,12 @@ async def _fetch_ltm_gains_for_members(
         return gains_map
 
     async with ltm_service:
-        for result in inactive_results:
+        for i, result in enumerate(inactive_results):
             try:
                 player_gains = await ltm_service.get_player_monthly_gains(
                     result.username
                 )
-                xp = int(player_gains.data.skills[wom.Metric.Overall].experience.gained)
+                xp = int(extract_overall_xp_gained(player_gains))
                 if xp > 0:
                     gains_map[result.username.lower()] = xp
             except (WomServiceError, WomRateLimitError, WomTimeoutError) as e:
@@ -236,7 +237,8 @@ async def _fetch_ltm_gains_for_members(
                     f"Unexpected error fetching LTM gains for {result.username}: {e}; showing N/A"
                 )
 
-            await asyncio.sleep(0.1)
+            if i < len(inactive_results) - 1:
+                await asyncio.sleep(0.1)
 
     logger.info(
         f"Fetched LTM gains for {len(gains_map)}/{len(inactive_results)} inactive members"
@@ -247,8 +249,7 @@ async def _fetch_ltm_gains_for_members(
 async def _find_inactive_users(
     report_channel: discord.TextChannel,
     absentees: List[str],
-    wom_limit: int,
-):
+) -> Optional[List]:
     """
     Find inactive users based on WOM data and rank-based thresholds.
     Uses role-based exemptions to exclude certain roles from checks.
@@ -256,7 +257,6 @@ async def _find_inactive_users(
     Args:
         report_channel: Discord channel for error reporting
         absentees: List of known absent member usernames (lowercase)
-        wom_limit: Number of records to fetch per API call
 
     Returns:
         List of ActivityCheckResult objects or None if error occurred
