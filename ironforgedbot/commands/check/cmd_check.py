@@ -177,18 +177,16 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         embed_color = discord.Colour.green()
         note_text = ""
     else:
-        status_text = "❌ In danger"
-        embed_color = discord.Colour.red()
-        note_text = ""
+        if CONFIG.ltm_enabled and ltm_xp_gained is not None and ltm_xp_gained > 0:
+            status_text = "🟠 Pending review"
+            embed_color = discord.Colour.orange()
+            note_text = "This member has not met the main game activity requirement but has LTM gains. Their case will be reviewed by leadership before any action is taken."
+        else:
+            status_text = "❌ In danger"
+            embed_color = discord.Colour.red()
 
     if result.is_absent:
         note_text += f"Member is marked as absent."
-
-    if CONFIG.ltm_enabled:
-        note_text += (
-            ("\n" if note_text else "")
-            + "LTM (Limited Time Mode) is enabled. This information will be considered; however, final activity decisions remain at the discretion of leadership."
-        )
 
     embed = build_response_embed(
         title=f"📊 Activity Check",
