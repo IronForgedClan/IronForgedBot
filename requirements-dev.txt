@@ -1,0 +1,37 @@
+black==26.3.1
+    # via -r requirements-dev.in
+build==1.5.0
+    # via pip-tools
+click==8.3.3
+    # via
+    #   black
+    #   pip-tools
+mypy-extensions==1.1.0
+    # via black
+packaging==26.2
+    # via
+    #   black
+    #   build
+    #   wheel
+pathspec==1.1.1
+    # via black
+pip-tools==7.5.3
+    # via -r requirements-dev.in
+platformdirs==4.9.6
+    # via black
+pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
+pytokens==0.4.1
+    # via black
+pyyaml==6.0.3
+    # via watchdog
+watchdog[watchmedo]==6.0.0
+    # via -r requirements-dev.in
+wheel==0.47.0
+    # via pip-tools
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip
+# setuptools
