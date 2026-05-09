@@ -1,12 +1,15 @@
 # builder: compile all prod wheels (needs gcc + mysql headers)
-FROM python:3.13-slim AS builder
+FROM python:3.13-alpine AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    default-libmysqlclient-dev \
-    build-essential \
+RUN apk add --no-cache \
+    mariadb-dev \
     gcc \
-    pkg-config \
- && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    pkgconf \
+    jpeg-dev \
+    zlib-dev \
+    freetype-dev \
+    libffi-dev
 
 RUN pip install --no-cache-dir --upgrade pip
 
@@ -17,14 +20,12 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
     find /install -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
     rm -rf /install/lib/python3.13/site-packages/pip
 
-# prod: clean image, runtime-only MySQL lib, no compilers
-FROM python:3.13-slim AS prod
+# prod: clean Alpine image, runtime-only MySQL lib, no compilers
+FROM python:3.13-alpine AS prod
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmariadb3 \
- && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache mariadb-connector-c
 
-RUN useradd -m botuser
+RUN adduser -D botuser
 RUN mkdir /app && chown botuser:botuser /app
 WORKDIR /app
 
@@ -37,16 +38,16 @@ CMD ["python", "main.py"]
 # dev: builder + dev dependencies + file watcher
 FROM builder AS dev
 
-RUN useradd -m botuser
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+RUN adduser -D botuser
 RUN mkdir /app && chown botuser:botuser /app
 WORKDIR /app
 
+COPY --from=builder /install /usr/local
 COPY --chown=botuser:botuser . .
 
 USER botuser
 
-COPY requirements-dev.txt .
-RUN pip install --no-cache-dir -r requirements-dev.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-CMD ["/home/botuser/.local/bin/watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
+CMD ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
