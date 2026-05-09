@@ -1,10 +1,12 @@
+import asyncio
 import io
 import logging
 from datetime import datetime
 import time
-from typing import List
+from typing import Dict, List, Optional
 
 import discord
+import wom
 from tabulate import tabulate
 
 from ironforgedbot.common.activity_check import check_bulk_activity
@@ -13,11 +15,13 @@ from ironforgedbot.common.helpers import (
     render_relative_time,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
+from ironforgedbot.config import CONFIG
 from ironforgedbot.database.database import db
 from ironforgedbot.services.service_factory import (
     create_absent_service,
 )
 from ironforgedbot.services.wom_service import (
+    WomService,
     get_wom_service,
     WomServiceError,
     WomRateLimitError,
@@ -83,26 +87,54 @@ async def job_check_activity(
                 await report_channel.send("✅ All members meet activity requirements!")
                 return
 
-            table_rows = [
-                [
-                    result.username,
-                    result.discord_role,
-                    f"{result.xp_gained:,}",
-                    (
-                        render_relative_time(result.last_changed_at)
-                        if result.last_changed_at
-                        else "unknown"
-                    ),
+            ltm_gains = await _fetch_ltm_gains_for_members(
+                inactive_results, report_channel
+            )
+
+            if ltm_gains is not None:
+                table_rows = [
+                    [
+                        result.username,
+                        result.discord_role,
+                        f"{result.xp_gained:,}",
+                        (
+                            f"{ltm_gains[result.username.lower()]:,}"
+                            if result.username.lower() in ltm_gains
+                            else "N/A"
+                        ),
+                        (
+                            render_relative_time(result.last_changed_at)
+                            if result.last_changed_at
+                            else "unknown"
+                        ),
+                    ]
+                    for result in inactive_results
                 ]
-                for result in inactive_results
-            ]
+                headers = ["Member", "Role", "Gained", "LTM", "Last Updated"]
+                colalign = ("left", "left", "right", "right", "right")
+            else:
+                table_rows = [
+                    [
+                        result.username,
+                        result.discord_role,
+                        f"{result.xp_gained:,}",
+                        (
+                            render_relative_time(result.last_changed_at)
+                            if result.last_changed_at
+                            else "unknown"
+                        ),
+                    ]
+                    for result in inactive_results
+                ]
+                headers = ["Member", "Role", "Gained", "Last Updated"]
+                colalign = ("left", "left", "right", "right")
 
             sorted_results = _sort_results_safely(table_rows)
             result_table = tabulate(
                 sorted_results,
-                headers=["Member", "Role", "Gained", "Last Updated"],
+                headers=headers,
                 tablefmt="github",
-                colalign=("left", "left", "right", "right"),
+                colalign=colalign,
             )
 
             discord_file = discord.File(
@@ -148,6 +180,68 @@ def _sort_results_safely(results: List[List[str]]) -> List[List[str]]:
             return 0
 
     return sorted(results, key=safe_int_extract)
+
+
+async def _fetch_ltm_gains_for_members(
+    inactive_results: List,
+    report_channel: discord.TextChannel,
+) -> Optional[Dict[str, int]]:
+    """Fetch LTM XP gains for each inactive member individually.
+
+    Only fetches data for members that failed the activity check, rather than
+    the entire group. Per-member failures are non-fatal, that member shows
+    N/A in the LTM column. A failure constructing the service sends a warning
+    to the channel and returns an empty dict (column still shown, all N/A).
+
+    Args:
+        inactive_results: List of ActivityCheckResult for inactive members.
+        report_channel: Discord channel for error reporting.
+
+    Returns:
+        Dict mapping lowercase username to LTM XP gained, or None if LTM is
+        disabled (column omitted). Returns {} if LTM is enabled but all
+        lookups fail (column still shown, all entries show N/A).
+    """
+    if not CONFIG.ltm_enabled:
+        return None
+
+    gains_map: Dict[str, int] = {}
+
+    try:
+        ltm_service = WomService(
+            base_url=CONFIG.WOM_LTM_BASE_URL, group_id=CONFIG.WOM_LTM_GROUP_ID
+        )
+    except Exception as e:
+        logger.warning(f"Failed to initialise LTM WOM service: {e}")
+        await report_channel.send(
+            "⚠️ LTM tracker unavailable. LTM column will show N/A for all members."
+        )
+        return gains_map
+
+    async with ltm_service:
+        for result in inactive_results:
+            try:
+                player_gains = await ltm_service.get_player_monthly_gains(
+                    result.username
+                )
+                xp = int(player_gains.data.skills[wom.Metric.Overall].experience.gained)
+                if xp > 0:
+                    gains_map[result.username.lower()] = xp
+            except (WomServiceError, WomRateLimitError, WomTimeoutError) as e:
+                logger.warning(
+                    f"Failed to fetch LTM gains for {result.username}: {e}; showing N/A"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Unexpected error fetching LTM gains for {result.username}: {e}; showing N/A"
+                )
+
+            await asyncio.sleep(0.1)
+
+    logger.info(
+        f"Fetched LTM gains for {len(gains_map)}/{len(inactive_results)} inactive members"
+    )
+    return gains_map
 
 
 async def _find_inactive_users(
