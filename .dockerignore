@@ -18,7 +18,6 @@ Dockerfile
 Makefile
 requirements.in
 requirements-dev.in
-requirements-dev.txt
 
 run_tests.py
 
