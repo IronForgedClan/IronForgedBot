@@ -26,6 +26,7 @@ services:
         build:
             context: .
             target: dev
+        image: ironforgedbot:dev
         restart: unless-stopped
         depends_on:
             db:
