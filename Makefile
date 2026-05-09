@@ -1,4 +1,4 @@
-.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-prod
+.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod
 
 up:
 	docker compose up db bot
@@ -27,8 +27,17 @@ revision:
 downgrade:
 	docker compose run --rm bot /home/botuser/.local/bin/alembic downgrade -1
 
+build-dev:
+	docker compose build bot
+
 build-prod:
-	docker build --target prod -t ironforgedbot:prod .
+	docker compose build bot_prod
+
+rmi-dev:
+	docker rmi ironforgedbot:dev
+
+rmi-prod:
+	docker rmi ironforgedbot:prod
 
 update-deps:
 	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
@@ -45,7 +54,8 @@ clean:
 	@echo "Removing project containers..."
 	docker compose rm -f
 	@echo "Removing project images..."
-	docker images -q ironforgedbot* | xargs -r docker rmi -f
+	$(MAKE) rmi-dev
+	$(MAKE) rmi-prod
 	@echo "Pruning unused Docker resources..."
 	docker system prune -f --volumes
 	@echo "Cleanup complete!"
