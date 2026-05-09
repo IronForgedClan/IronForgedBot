@@ -103,7 +103,7 @@ class ConfigTest(unittest.TestCase):
         result = Config()
 
         self.assertFalse(result.TRICK_OR_TREAT_ENABLED)
-        self.assertEqual(result.TRICK_OR_TREAT_CHANNEL_ID, 1)
+        self.assertEqual(result.TRICK_OR_TREAT_CHANNEL_ID, 0)
 
     @patch.dict(
         "os.environ", {**VALID_CONFIG, "TRICK_OR_TREAT_COOLDOWN_SECONDS": "7200"}

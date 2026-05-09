@@ -31,7 +31,20 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         service = WomService()
         self.assertEqual(service.api_key, "test_api_key")
         self.assertEqual(service.group_id, 12345)
+        self.assertIsNone(service.base_url)
         self.assertIsNone(service._client)
+
+    def test_init_with_base_url_override(self):
+        """Test WomService initialization with a custom base URL."""
+        service = WomService(base_url="https://api.wiseoldman.net/league")
+        self.assertEqual(service.base_url, "https://api.wiseoldman.net/league")
+        self.assertEqual(service.group_id, 12345)
+
+    def test_init_with_group_id_override(self):
+        """Test WomService initialization with a custom group ID."""
+        service = WomService(group_id=99999)
+        self.assertEqual(service.group_id, 99999)
+        self.assertIsNone(service.base_url)
 
     def test_init_with_missing_api_key(self):
         """Test WomService initialization with missing API key."""
@@ -53,13 +66,39 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         service.close.assert_called_once()
 
     @patch("ironforgedbot.services.wom_service.wom.Client")
-    async def test_get_monthly_activity_data_success(self, mock_client_class):
-        """Test successful monthly activity data retrieval."""
-        # Mock WOM client
+    async def test_get_client_without_base_url(self, mock_client_class):
+        """Test _get_client does not pass api_base_url when base_url is None."""
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        # Mock group details result
+        service = WomService()
+        await service._get_client()
+
+        mock_client_class.assert_called_once_with(
+            api_key="test_api_key", user_agent="IronForged"
+        )
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_get_client_with_base_url(self, mock_client_class):
+        """Test _get_client passes api_base_url when base_url is set."""
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        service = WomService(base_url="https://api.wiseoldman.net/league")
+        await service._get_client()
+
+        mock_client_class.assert_called_once_with(
+            api_key="test_api_key",
+            user_agent="IronForged",
+            api_base_url="https://api.wiseoldman.net/league",
+        )
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_get_monthly_activity_data_success(self, mock_client_class):
+        """Test successful monthly activity data retrieval."""
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+
         mock_group_result = Mock()
         mock_group_result.is_ok = True
         mock_group_details = SimpleNamespace(
@@ -69,7 +108,6 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         mock_group_result.unwrap.return_value = mock_group_details
         mock_client.groups.get_details.return_value = mock_group_result
 
-        # Mock gains result
         mock_gains_result = Mock()
         mock_gains_result.is_ok = True
         mock_gains = [SimpleNamespace(player=SimpleNamespace(username="Player1"))]
@@ -89,7 +127,6 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        # Mock rate limit error
         mock_result = Mock()
         mock_result.is_ok = False
         mock_result.unwrap_err.return_value = "Rate limit exceeded"
@@ -129,7 +166,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
         mock_result = Mock()
         mock_result.is_ok = True
-        mock_result.is_err = False  # Explicitly set this
+        mock_result.is_err = False
         mock_name_changes = [SimpleNamespace(old_name="OldName", new_name="NewName")]
         mock_result.unwrap.return_value = mock_name_changes
         mock_client.players.get_name_changes.return_value = mock_result
@@ -149,7 +186,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
         mock_result = Mock()
         mock_result.is_ok = False
-        mock_result.is_err = True  # Explicitly set this
+        mock_result.is_err = True
         mock_result.unwrap_err.return_value = "Player not found"
         mock_client.players.get_name_changes.return_value = mock_result
 
@@ -208,6 +245,7 @@ class TestGetWomService(unittest.TestCase):
         self.assertIsInstance(service, WomService)
         self.assertEqual(service.api_key, "test_key")
         self.assertEqual(service.group_id, 12345)
+        self.assertIsNone(service.base_url)
 
     @patch("ironforgedbot.services.wom_service.CONFIG")
     def test_get_wom_service_missing_config(self, mock_config):

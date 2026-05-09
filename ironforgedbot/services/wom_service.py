@@ -1,10 +1,10 @@
 import asyncio
 import logging
-from typing import List, Optional, Tuple
+from typing import List, NoReturn, Tuple
 
 import wom
 from wom import Metric, Period
-from wom.models import GroupDetail, GroupMemberGains, NameChange
+from wom.models import GroupDetail, GroupMemberGains, NameChange, PlayerGains
 
 from ironforgedbot.config import CONFIG
 
@@ -36,31 +36,45 @@ class WomService:
     Follows established service patterns with proper resource management.
     """
 
-    def __init__(self):
-        """Initialize the WOM service with application configuration."""
+    def __init__(
+        self,
+        base_url: str | None = None,
+        group_id: int | None = None,
+    ):
+        """Initialize the WOM service with application configuration.
+
+        Args:
+            base_url: Optional API base URL override (e.g. for LTM trackers).
+                      Defaults to the standard WOM API.
+            group_id: Optional group ID override. Defaults to CONFIG.WOM_GROUP_ID.
+        """
         if not CONFIG.WOM_API_KEY:
             raise WomServiceError("WOM_API_KEY not configured")
 
         self.api_key = CONFIG.WOM_API_KEY
-        self.group_id = CONFIG.WOM_GROUP_ID
-        self._client: Optional[wom.Client] = None
+        self.group_id = group_id if group_id is not None else CONFIG.WOM_GROUP_ID
+        self.base_url = base_url
+        self._client: wom.Client | None = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "WomService":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit with cleanup."""
         await self.close()
 
     async def _get_client(self) -> wom.Client:
         """Get or create a WOM client instance."""
         if self._client is None:
-            self._client = wom.Client(api_key=self.api_key, user_agent="IronForged")
+            kwargs = {"api_key": self.api_key, "user_agent": "IronForged"}
+            if self.base_url:
+                kwargs["api_base_url"] = self.base_url
+            self._client = wom.Client(**kwargs)
             await self._client.start()
         return self._client
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the WOM client connection."""
         if self._client is not None:
             try:
@@ -71,7 +85,7 @@ class WomService:
                 self._client = None
 
     async def get_monthly_activity_data(
-        self, group_id: Optional[int] = None
+        self, group_id: int | None = None
     ) -> Tuple[GroupDetail, List[GroupMemberGains]]:
         """Get group details and monthly member gains for activity checking.
 
@@ -118,10 +132,10 @@ class WomService:
             )
         except Exception as e:
             logger.error(f"Error getting activity data for group {group_id}: {e}")
-            self._handle_wom_error(e)
+            WomService._handle_wom_error(e)
 
     async def get_group_membership_data(
-        self, group_id: Optional[int] = None
+        self, group_id: int | None = None
     ) -> GroupDetail:
         """Get group membership data for discrepancy checking.
 
@@ -157,9 +171,9 @@ class WomService:
             raise WomTimeoutError("WOM API request timed out")
         except Exception as e:
             logger.error(f"Error getting membership data for group {group_id}: {e}")
-            self._handle_wom_error(e)
+            WomService._handle_wom_error(e)
 
-    async def get_player_monthly_gains(self, username: str):
+    async def get_player_monthly_gains(self, username: str) -> PlayerGains:
         """Get monthly gains for a single player.
 
         Args:
@@ -209,7 +223,7 @@ class WomService:
                 logger.error(
                     f"Detected JSON parsing error for {username}, WOM API may have returned HTML instead of JSON"
                 )
-            self._handle_wom_error(e)
+            WomService._handle_wom_error(e)
 
     async def get_player_name_history(self, player_name: str) -> List[NameChange]:
         """Get player's RuneScape name change history.
@@ -264,14 +278,13 @@ class WomService:
                 logger.error(
                     f"Detected JSON parsing error for {player_name}, WOM API may have returned HTML instead of JSON"
                 )
-            self._handle_wom_error(e)
+            WomService._handle_wom_error(e)
 
     async def _get_group_details(
         self, client: wom.Client, group_id: int
     ) -> GroupDetail:
         """Get group details with error handling."""
         try:
-            logger.debug(f"Fetching group details for group {group_id}")
             result = await client.groups.get_details(group_id)
 
             if result.is_ok:
@@ -281,6 +294,8 @@ class WomService:
                 logger.error(f"WOM API error getting group details: {error_details}")
                 raise WomServiceError(f"WOM API error: {error_details}")
 
+        except WomServiceError:
+            raise
         except Exception as e:
             error_str = str(e).lower()
             logger.error(
@@ -377,7 +392,8 @@ class WomService:
         logger.info(f"Retrieved {len(all_gains)} total gains across {page + 1} pages")
         return all_gains
 
-    def _handle_wom_error(self, error: Exception):
+    @staticmethod
+    def _handle_wom_error(error: Exception) -> NoReturn:
         """Convert WOM errors to appropriate service exceptions."""
         error_str = str(error).lower()
 

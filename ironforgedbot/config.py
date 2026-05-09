@@ -36,11 +36,16 @@ class Config:
         self.TRICK_OR_TREAT_CHANNEL_ID: int = (
             int(os.getenv("TRICK_OR_TREAT_CHANNEL_ID") or 0)
             if self.TRICK_OR_TREAT_ENABLED
-            else 1
+            else 0
         )
         self.TRICK_OR_TREAT_COOLDOWN_SECONDS: int = int(
             os.getenv("TRICK_OR_TREAT_COOLDOWN_SECONDS") or 3600
         )
+
+        # Limited Time Mode (LTM) tracker (optional)
+        # Both must be set for LTM tracking to be enabled.
+        self.WOM_LTM_BASE_URL: str = os.getenv("WOM_LTM_BASE_URL", "")
+        self.WOM_LTM_GROUP_ID: int = int(os.getenv("WOM_LTM_GROUP_ID") or 0)
 
         # Standard cron format: "minute hour day month day_of_week"
         # All times are in UTC
@@ -55,10 +60,23 @@ class Config:
 
         self.validate_config()
 
-    def validate_config(self):
+    @property
+    def ltm_enabled(self) -> bool:
+        return bool(self.WOM_LTM_BASE_URL and self.WOM_LTM_GROUP_ID > 0)
+
+    def validate_config(self) -> None:
+        optional_keys = {
+            "WOM_LTM_BASE_URL",
+            "WOM_LTM_GROUP_ID",
+            "TRICK_OR_TREAT_CHANNEL_ID",
+            "TRICK_OR_TREAT_COOLDOWN_SECONDS",
+        }
+
         for key, value in vars(self).items():
             if key.startswith("CRON_"):
                 # Skip validation for CRON_ variables (APScheduler will validate)
+                continue
+            if key in optional_keys:
                 continue
             if isinstance(value, bool):
                 continue

@@ -4,7 +4,10 @@ from typing import Optional
 import discord
 from discord import app_commands
 
-from ironforgedbot.common.activity_check import check_member_activity
+from ironforgedbot.common.activity_check import (
+    check_member_activity,
+    extract_overall_xp_gained,
+)
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -24,6 +27,7 @@ from ironforgedbot.services.service_factory import (
 )
 from ironforgedbot.services.wom_service import (
     get_wom_service,
+    WomService,
     WomServiceError,
     WomRateLimitError,
     WomTimeoutError,
@@ -48,7 +52,8 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     if player is None:
         player = interaction.user.display_name
 
-    assert interaction.guild
+    if not interaction.guild:
+        return
 
     try:
         member, player = validate_playername(
@@ -121,6 +126,21 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
             report_to_channel=False,
         )
 
+    ltm_xp_gained: int | None = None
+    if CONFIG.ltm_enabled:
+        try:
+            async with WomService(
+                base_url=CONFIG.WOM_LTM_BASE_URL,
+                group_id=CONFIG.WOM_LTM_GROUP_ID,
+            ) as ltm_wom_service:
+                ltm_player_gains = await ltm_wom_service.get_player_monthly_gains(
+                    db_member.nickname
+                )
+                ltm_xp_gained = int(extract_overall_xp_gained(ltm_player_gains))
+        except Exception as e:
+            logger.warning(f"Failed to fetch LTM gains for {player}: {e}")
+            ltm_xp_gained = None
+
     try:
         result = check_member_activity(
             username=db_member.nickname,
@@ -148,25 +168,39 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         prospect_emoji = find_emoji("Prospect")
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = f"This member is a {prospect_emoji} **Prospect** making them exempt from purges for the duration of their probation."
+        status_note = f"This member is a {prospect_emoji} **Prospect** making them exempt from purges for the duration of their probation."
     elif result.is_exempt:
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = "This member has a role that exempts them from activity checks."
+        status_note = "This member has a role that exempts them from activity checks."
     elif result.is_active:
         status_text = "✅ Safe"
         embed_color = discord.Colour.green()
-        note_text = ""
+        status_note = ""
     else:
-        status_text = "❌ In danger"
-        embed_color = discord.Colour.red()
-        note_text = ""
+        if CONFIG.ltm_enabled and ltm_xp_gained is not None and ltm_xp_gained > 0:
+            status_text = "🟠 Pending review"
+            embed_color = discord.Colour.orange()
+            status_note = "This member has not met the main game activity requirement but has LTM gains. Their case will be reviewed by leadership before any action is taken."
+        else:
+            status_text = "❌ In danger"
+            embed_color = discord.Colour.red()
+            status_note = ""
 
+    notes = []
+    if CONFIG.ltm_enabled:
+        notes.append(
+            "LTM (Limited Time Mode) is enabled and tracks activity on a separate game mode."
+        )
+    if status_note:
+        notes.append(status_note)
     if result.is_absent:
-        note_text += f"Member is marked as absent."
+        notes.append("Member is marked as absent.")
+
+    note_text = "\n\n".join(notes)
 
     embed = build_response_embed(
-        title=f"📊 Activity Check",
+        title="📊 Activity Check",
         description=f"Inactive members may be removed from the clan to make space for active members. For more information see <#{CONFIG.RULES_CHANNEL_ID}>.",
         color=embed_color,
     )
@@ -175,15 +209,19 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         url="https://oldschool.runescape.wiki/images/Count_Check_chathead.png"
     )
 
-    embed.add_field(name="Member", value=f"{rank_emoji} {display_name}", inline=True)
+    embed.add_field(
+        name="Member",
+        value=f"{rank_emoji} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+
+    embed.add_field(name="Rank", value=f"{db_member.rank}", inline=True)
 
     embed.add_field(
         name="Status",
         value=status_text,
         inline=True,
     )
-
-    embed.add_field(name="", value="", inline=True)
 
     embed.add_field(
         name="Requirement",
@@ -197,7 +235,11 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         inline=True,
     )
 
-    embed.add_field(name="", value="", inline=True)
+    if CONFIG.ltm_enabled:
+        ltm_value = f"{ltm_xp_gained:,} xp" if ltm_xp_gained is not None else "N/A"
+        embed.add_field(name="LTM Gained", value=ltm_value, inline=True)
+    else:
+        embed.add_field(name="", value="", inline=True)
 
     if note_text:
         embed.add_field(name="Note", value=note_text, inline=False)
