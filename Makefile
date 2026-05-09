@@ -26,6 +26,7 @@ downgrade:
 
 update-deps:
 	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
+	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements-dev.in -o requirements-dev.txt
 	docker compose build bot
 
 update-data:
