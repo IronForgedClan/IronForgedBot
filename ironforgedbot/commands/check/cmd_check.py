@@ -4,7 +4,10 @@ from typing import Optional
 import discord
 from discord import app_commands
 
-from ironforgedbot.common.activity_check import check_member_activity
+from ironforgedbot.common.activity_check import (
+    check_member_activity,
+    extract_overall_xp_gained,
+)
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
 from ironforgedbot.common.helpers import (
     find_emoji,
@@ -24,6 +27,7 @@ from ironforgedbot.services.service_factory import (
 )
 from ironforgedbot.services.wom_service import (
     get_wom_service,
+    WomService,
     WomServiceError,
     WomRateLimitError,
     WomTimeoutError,
@@ -121,6 +125,21 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
             report_to_channel=False,
         )
 
+    ltm_xp_gained: int | None = None
+    if CONFIG.ltm_enabled:
+        try:
+            async with WomService(
+                base_url=CONFIG.WOM_LTM_BASE_URL,
+                group_id=CONFIG.WOM_LTM_GROUP_ID,
+            ) as ltm_wom_service:
+                ltm_player_gains = await ltm_wom_service.get_player_monthly_gains(
+                    db_member.nickname
+                )
+                ltm_xp_gained = int(extract_overall_xp_gained(ltm_player_gains))
+        except Exception as e:
+            logger.warning(f"Failed to fetch LTM gains for {player}: {e}")
+            ltm_xp_gained = None
+
     try:
         result = check_member_activity(
             username=db_member.nickname,
@@ -165,6 +184,12 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     if result.is_absent:
         note_text += f"Member is marked as absent."
 
+    if CONFIG.ltm_enabled:
+        note_text += (
+            ("\n" if note_text else "")
+            + "LTM (Limited Time Mode) is enabled. This information will be considered; however, final activity decisions remain at the discretion of leadership."
+        )
+
     embed = build_response_embed(
         title=f"📊 Activity Check",
         description=f"Inactive members may be removed from the clan to make space for active members. For more information see <#{CONFIG.RULES_CHANNEL_ID}>.",
@@ -197,7 +222,11 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         inline=True,
     )
 
-    embed.add_field(name="", value="", inline=True)
+    if CONFIG.ltm_enabled:
+        ltm_value = f"{ltm_xp_gained:,} xp" if ltm_xp_gained is not None else "N/A"
+        embed.add_field(name="LTM", value=ltm_value, inline=True)
+    else:
+        embed.add_field(name="", value="", inline=True)
 
     if note_text:
         embed.add_field(name="Note", value=note_text, inline=False)
