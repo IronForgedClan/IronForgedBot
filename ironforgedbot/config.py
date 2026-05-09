@@ -56,9 +56,13 @@ class Config:
         self.validate_config()
 
     def validate_config(self):
+        optional_keys = {"WOM_LTM_BASE_URL", "WOM_LTM_GROUP_ID"}
+
         for key, value in vars(self).items():
             if key.startswith("CRON_"):
                 # Skip validation for CRON_ variables (APScheduler will validate)
+                continue
+            if key in optional_keys:
                 continue
             if isinstance(value, bool):
                 continue
