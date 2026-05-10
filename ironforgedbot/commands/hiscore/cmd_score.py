@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -45,6 +44,18 @@ _PROGRESS_BAR_LENGTH = 20
 _PROGRESS_BAR_FILLED = "▰"
 _PROGRESS_BAR_EMPTY = "▱"
 
+_SCORE_EMBED_DESCRIPTION = (
+    "Points are earned through in-game achievements and determine your clan rank. "
+    "Use the `breakdown` command to view a detailed breakdown of earned points. "
+    f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information."
+)
+
+_GOD_ALIGNMENT_EMOJI_NAMES: dict[GOD_ALIGNMENT | None, str] = {
+    GOD_ALIGNMENT.SARADOMIN: "Saradomin",
+    GOD_ALIGNMENT.ZAMORAK: "Zamorak",
+    GOD_ALIGNMENT.GUTHIX: "Guthix",
+}
+
 
 def _build_rank_progress_bar(
     points_total: int,
@@ -62,8 +73,8 @@ def _build_rank_progress_bar(
         rank_icon: Emoji for the current rank.
         next_rank_icon: Emoji for the next rank.
     """
-    span = int(next_rank_point_threshold) - int(rank_point_threshold)
-    progress = points_total - int(rank_point_threshold)
+    span = next_rank_point_threshold - rank_point_threshold
+    progress = points_total - rank_point_threshold
     ratio = max(0.0, min(1.0, progress / span)) if span > 0 else 1.0
     filled = round(ratio * _PROGRESS_BAR_LENGTH)
     bar = _PROGRESS_BAR_FILLED * filled + _PROGRESS_BAR_EMPTY * (
@@ -71,6 +82,35 @@ def _build_rank_progress_bar(
     )
     percentage = render_percentage(progress, span)
     return f"{rank_icon} {bar} {next_rank_icon}" f" ({percentage})"
+
+
+def _build_god_alignment_emojis(god_alignment: GOD_ALIGNMENT | None) -> str:
+    """Build the decorative emoji row displayed for God-rank members.
+
+    Args:
+        god_alignment: The member's god alignment, or None if unaligned.
+    """
+    emoji_name = _GOD_ALIGNMENT_EMOJI_NAMES.get(god_alignment)
+    if emoji_name:
+        icon = find_emoji(emoji_name)
+        sep = EMPTY_SPACE
+        return f"{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}"
+
+    icon = find_emoji("grass")
+    return f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
+
+
+def _calculate_points(data: ScoreBreakdown) -> tuple[int, int, int]:
+    """Sum skill and activity points from a score breakdown.
+
+    Returns:
+        (skill_points, activity_points, points_total)
+    """
+    skill_points = sum(s.points for s in data.skills)
+    activity_points = sum(
+        a.points for a in (data.clues + data.raids + data.bosses)
+    )
+    return skill_points, activity_points, skill_points + activity_points
 
 
 async def _get_score_history(discord_id: int, current_score: int) -> dict[int, int]:
@@ -107,7 +147,7 @@ async def _get_score_history(discord_id: int, current_score: int) -> dict[int, i
 @app_commands.describe(
     player="Player name to display score for (defaults to your nickname)"
 )
-async def cmd_score(interaction: discord.Interaction, player: Optional[str] = None):
+async def cmd_score(interaction: discord.Interaction, player: str | None = None):
     """Compute clan score for a Runescape player name.
 
     Arguments:
@@ -142,30 +182,24 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         else:
             data = ScoreBreakdown([], [], [], [])
 
-    activities = data.clues + data.raids + data.bosses
-
-    skill_points = 0
-    for skill in data.skills:
-        skill_points += skill.points
-
-    activity_points = 0
-    for activity in activities:
-        activity_points += activity.points
-
-    points_total = skill_points + activity_points
+    skill_points, activity_points, points_total = _calculate_points(data)
     rank_name = get_rank_from_points(points_total)
+
+    # Variables only used for non-GOD ranks; initialized to None to make scoping explicit.
+    rank_point_threshold: int | None = None
+    next_rank_name: str | None = None
+    next_rank_point_threshold: int | None = None
+    next_rank_icon: str | None = None
 
     god_alignment = None
     if rank_name == RANK.GOD:
         god_alignment = get_god_alignment_from_member(member)
-
         rank_color = get_rank_color_from_points(points_total, god_alignment)
         rank_icon = find_emoji(god_alignment or rank_name)
     else:
         rank_color = get_rank_color_from_points(points_total)
         rank_icon = find_emoji(rank_name)
         rank_point_threshold = RANK_POINTS[rank_name.upper()]
-
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(next_rank_name)
@@ -183,7 +217,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
 
     embed = build_response_embed(
         "🏆 Member Score",
-        f"Points are earned through in-game achievements and determine your clan rank. Use the `breakdown` command to view a detailed breakdown of earned points. See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information.",
+        _SCORE_EMBED_DESCRIPTION,
         rank_color,
     )
 
@@ -197,7 +231,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
     if rank_name == RANK.GOD:
         embed.add_field(name="", value="", inline=True)
     else:
-        points_needed = int(next_rank_point_threshold) - points_total
+        points_needed = next_rank_point_threshold - points_total
         embed.add_field(
             name="Next Rank",
             value=f"{next_rank_icon} {next_rank_name} (in {points_needed:,} pts)",
@@ -235,22 +269,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
             first = False
 
     if rank_name == RANK.GOD:
-        match god_alignment:
-            case GOD_ALIGNMENT.SARADOMIN:
-                icon = find_emoji("Saradomin")
-                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
-            case GOD_ALIGNMENT.ZAMORAK:
-                icon = find_emoji("Zamorak")
-                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
-            case GOD_ALIGNMENT.GUTHIX:
-                icon = find_emoji("Guthix")
-                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
-            case _:
-                icon = find_emoji("grass")
-                alignment_emojis = (
-                    f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
-                )
-
+        alignment_emojis = _build_god_alignment_emojis(god_alignment)
         embed.add_field(
             name="",
             value=f"{alignment_emojis}",
