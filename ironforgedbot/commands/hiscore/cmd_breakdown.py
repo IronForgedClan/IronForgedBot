@@ -1,4 +1,5 @@
 import logging
+import time
 
 import discord
 from discord import app_commands
@@ -39,6 +40,7 @@ from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
+_EMBED_TIMEOUT = 120
 _BOSS_FIELDS_PER_PAGE = 24
 _BOSS_COLUMNS = 3
 _RANK_ARROW_PADDING = EMPTY_SPACE * 7
@@ -322,7 +324,9 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
 
     skill_points, activity_points, points_total = _calculate_points(data)
     rank_name = get_rank_from_points(points_total)
-    rank_icon, rank_color, god_alignment = _resolve_rank_display(member, points_total, rank_name)
+    rank_icon, rank_color, god_alignment = _resolve_rank_display(
+        member, points_total, rank_name
+    )
 
     if member and member.roles:
         if has_prospect_role(member):
@@ -394,24 +398,50 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
         display_name, rank_name, rank_icon, rank_color, points_total, god_alignment
     )
 
+    expire_timestamp = int(time.time() + _EMBED_TIMEOUT)
+    expires_formatted = f"<t:{expire_timestamp}:R>"
+    expiry_text = f"-# This interaction expires {expires_formatted}.\n{EMPTY_SPACE}"
+
+    all_embeds = (
+        [skill_breakdown_embed]
+        + boss_embeds
+        + [raid_breakdown_embed, clue_breakdown_embed, rank_ladder_embed]
+    )
+    for embed in all_embeds:
+        embed.description = (embed.description or "") + f"\n{expiry_text}"
+
     menu = ViewMenu(
         interaction,
         menu_type=ViewMenu.TypeEmbed,
         show_page_director=False,
-        timeout=300,
+        timeout=_EMBED_TIMEOUT,
         delete_on_timeout=True,
     )
 
-    menu.add_page(skill_breakdown_embed)
-    for embed in boss_embeds:
+    for embed in all_embeds:
         menu.add_page(embed)
-    menu.add_page(raid_breakdown_embed)
-    menu.add_page(clue_breakdown_embed)
-    menu.add_page(rank_ladder_embed)
 
-    menu.add_button(ViewButton.back())
-    menu.add_button(ViewButton.next())
-    menu.add_button(ViewButton.end_session())
+    menu.add_button(
+        ViewButton(
+            style=discord.ButtonStyle.primary,
+            label="← Back",
+            custom_id=ViewButton.ID_PREVIOUS_PAGE,
+        )
+    )
+    menu.add_button(
+        ViewButton(
+            style=discord.ButtonStyle.primary,
+            label="Next →",
+            custom_id=ViewButton.ID_NEXT_PAGE,
+        )
+    )
+    menu.add_button(
+        ViewButton(
+            style=discord.ButtonStyle.danger,
+            label="⨯ Close",
+            custom_id=ViewButton.ID_END_SESSION,
+        )
+    )
 
     try:
         await menu.start()
