@@ -21,7 +21,6 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
         from ironforgedbot.commands.hiscore.cmd_score import (
             cmd_score,
             _build_rank_progress_bar,
-            _build_god_alignment_emojis,
             _calculate_points,
             _get_score_history,
         )
@@ -86,31 +85,6 @@ class TestBuildRankProgressBar(unittest.TestCase):
         ):
             result = _build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
         self.assertIn("50%", result)
-
-
-class TestBuildGodAlignmentEmojis(unittest.TestCase):
-    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":sara:")
-    def test_saradomin(self, _):
-        result = _build_god_alignment_emojis(GOD_ALIGNMENT.SARADOMIN)
-        self.assertEqual(result.count(":sara:"), 5)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":zam:")
-    def test_zamorak(self, _):
-        result = _build_god_alignment_emojis(GOD_ALIGNMENT.ZAMORAK)
-        self.assertEqual(result.count(":zam:"), 5)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":guth:")
-    def test_guthix(self, _):
-        result = _build_god_alignment_emojis(GOD_ALIGNMENT.GUTHIX)
-        self.assertEqual(result.count(":guth:"), 5)
-
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":grass:"
-    )
-    def test_no_alignment_uses_nerd_fallback(self, _):
-        result = _build_god_alignment_emojis(None)
-        self.assertIn(":nerd:", result)
-        self.assertIn(":grass:", result)
 
 
 class TestCalculatePoints(unittest.TestCase):
@@ -497,8 +471,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         mock_build_embed.assert_called_once()
 
-        # Member, Rank, blank | Total Points, Skill Points, Activity Points | god alignment row = 7 fields
-        self.assertEqual(len(mock_embed.fields), 7)
+        # Member, Current Rank, God Alignment | Total Points, Skill Points, Activity Points = 6 fields
+        self.assertEqual(len(mock_embed.fields), 6)
 
     @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")

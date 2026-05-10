@@ -78,21 +78,6 @@ def _build_rank_progress_bar(
     return f"{rank_icon} {bar} {next_rank_icon}" f" ({percentage})"
 
 
-def _build_god_alignment_emojis(god_alignment: GOD_ALIGNMENT | None) -> str:
-    """Build the decorative emoji row displayed for God-rank members.
-
-    Args:
-        god_alignment: The member's god alignment, or None if unaligned.
-    """
-    if god_alignment:
-        icon = find_emoji(god_alignment)
-        sep = EMPTY_SPACE
-        return f"{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}"
-
-    icon = find_emoji("Grass")
-    return f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
-
-
 def _calculate_points(data: ScoreBreakdown) -> tuple[int, int, int]:
     """Sum skill and activity points from a score breakdown.
 
@@ -183,10 +168,12 @@ async def cmd_score(interaction: discord.Interaction, player: str | None = None)
     next_rank_icon: str | None = None
 
     god_alignment = None
+    god_rank_icon: str | None = None
     if rank_name == RANK.GOD:
         god_alignment = get_god_alignment_from_member(member)
         rank_color = get_rank_color_from_points(points_total, god_alignment)
         rank_icon = find_emoji(god_alignment or rank_name)
+        god_rank_icon = find_emoji(RANK.GOD)
     else:
         rank_color = get_rank_color_from_points(points_total)
         rank_icon = find_emoji(rank_name)
@@ -212,15 +199,25 @@ async def cmd_score(interaction: discord.Interaction, player: str | None = None)
         rank_color,
     )
 
+    member_icon = find_emoji("Grass") if rank_name == RANK.GOD else rank_icon
     embed.add_field(
         name="Member",
-        value=f"{rank_icon} {normalize_discord_string(display_name)}",
+        value=f"{member_icon} {normalize_discord_string(display_name)}",
         inline=True,
     )
-    embed.add_field(name="Current Rank", value=f"{rank_icon} {rank_name}", inline=True)
+    embed.add_field(
+        name="Current Rank",
+        value=f"{god_rank_icon if god_rank_icon else rank_icon} {rank_name}",
+        inline=True,
+    )
 
     if rank_name == RANK.GOD:
-        embed.add_field(name="", value="", inline=True)
+        alignment_value = (
+            f"{find_emoji(god_alignment)} {god_alignment}"
+            if god_alignment
+            else "_Unaligned_"
+        )
+        embed.add_field(name="God Alignment", value=alignment_value, inline=True)
     else:
         points_needed = next_rank_point_threshold - points_total
         embed.add_field(
@@ -259,14 +256,7 @@ async def cmd_score(interaction: discord.Interaction, player: str | None = None)
             )
             first = False
 
-    if rank_name == RANK.GOD:
-        alignment_emojis = _build_god_alignment_emojis(god_alignment)
-        embed.add_field(
-            name="",
-            value=f"{alignment_emojis}",
-            inline=False,
-        )
-    else:
+    if rank_name != RANK.GOD:
         progress_bar = _build_rank_progress_bar(
             points_total,
             rank_point_threshold,
