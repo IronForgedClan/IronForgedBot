@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from ironforgedbot.models.member import Member
@@ -281,3 +281,162 @@ class TestScoreHistoryService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(score_history_call.member_id, "inactive-member-id")
         self.assertEqual(score_history_call.nickname, "InactiveUser")
         self.assertEqual(score_history_call.score, 8000)
+
+
+class TestGetScoreProgress(unittest.IsolatedAsyncioTestCase):
+
+    def setUp(self):
+        self.mock_db = AsyncMock()
+        self.mock_db.add = MagicMock()
+        self.mock_db.commit = AsyncMock()
+        self.mock_db.close = AsyncMock()
+
+        self.score_history_service = ScoreHistoryService(self.mock_db)
+        self.score_history_service.member_service = AsyncMock()
+
+        self.now = datetime.now(tz=timezone.utc)
+        self.joined_date = self.now - timedelta(days=60)
+
+        self.sample_member = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=10000,
+            joined_date=self.joined_date,
+            last_changed_date=self.joined_date,
+        )
+
+    def _make_snapshot(self, score: int, date: datetime) -> ScoreHistory:
+        snapshot = ScoreHistory(
+            member_id="test-member-id",
+            nickname="TestUser",
+            score=score,
+            date=date,
+        )
+        return snapshot
+
+    def _mock_execute(self, snapshot: ScoreHistory | None):
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = snapshot
+        self.mock_db.execute = AsyncMock(return_value=mock_result)
+
+    async def test_returns_score_for_matching_snapshot(self):
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            self.sample_member
+        )
+        snapshot = self._make_snapshot(10000, self.now - timedelta(days=7))
+        self._mock_execute(snapshot)
+
+        result = await self.score_history_service.get_score_progress(12345, [7])
+
+        self.assertEqual(result[7], 10000)
+
+    async def test_returns_none_when_no_snapshot_within_tolerance(self):
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            self.sample_member
+        )
+        self._mock_execute(None)
+
+        result = await self.score_history_service.get_score_progress(12345, [7])
+
+        self.assertIsNone(result[7])
+
+    async def test_returns_none_when_target_predates_joined_date(self):
+        member_recently_joined = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            joined_date=self.now - timedelta(days=5),
+            last_changed_date=self.now,
+        )
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            member_recently_joined
+        )
+        self.mock_db.execute = AsyncMock()
+
+        result = await self.score_history_service.get_score_progress(12345, [7])
+
+        self.assertIsNone(result[7])
+        self.mock_db.execute.assert_not_called()
+
+    async def test_returns_partial_results_for_mixed_periods(self):
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            self.sample_member
+        )
+
+        snapshot_7d = self._make_snapshot(9000, self.now - timedelta(days=7))
+        snapshot_none = None
+
+        results_sequence = []
+        for snapshot in [snapshot_7d, snapshot_none, snapshot_none]:
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = snapshot
+            results_sequence.append(mock_result)
+
+        self.mock_db.execute = AsyncMock(side_effect=results_sequence)
+
+        result = await self.score_history_service.get_score_progress(
+            12345, [7, 14, 30]
+        )
+
+        self.assertEqual(result[7], 9000)
+        self.assertIsNone(result[14])
+        self.assertIsNone(result[30])
+
+    async def test_member_not_found_raises(self):
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            None
+        )
+
+        with self.assertRaises(ReferenceError):
+            await self.score_history_service.get_score_progress(99999, [7])
+
+    async def test_all_periods_returned_when_snapshots_exist(self):
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            self.sample_member
+        )
+
+        snapshots = [
+            self._make_snapshot(9000, self.now - timedelta(days=7)),
+            self._make_snapshot(8000, self.now - timedelta(days=14)),
+            self._make_snapshot(7000, self.now - timedelta(days=30)),
+        ]
+
+        results_sequence = []
+        for snapshot in snapshots:
+            mock_result = MagicMock()
+            mock_result.scalar_one_or_none.return_value = snapshot
+            results_sequence.append(mock_result)
+
+        self.mock_db.execute = AsyncMock(side_effect=results_sequence)
+
+        result = await self.score_history_service.get_score_progress(
+            12345, [7, 14, 30]
+        )
+
+        self.assertEqual(result[7], 9000)
+        self.assertEqual(result[14], 8000)
+        self.assertEqual(result[30], 7000)
+
+    async def test_period_exactly_on_joined_date_is_included(self):
+        member = Member(
+            id="test-member-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            joined_date=self.now - timedelta(days=7),
+            last_changed_date=self.now,
+        )
+        self.score_history_service.member_service.get_member_by_discord_id.return_value = (
+            member
+        )
+        snapshot = self._make_snapshot(5000, self.now - timedelta(days=7))
+        self._mock_execute(snapshot)
+
+        result = await self.score_history_service.get_score_progress(12345, [7])
+
+        self.assertEqual(result[7], 5000)
