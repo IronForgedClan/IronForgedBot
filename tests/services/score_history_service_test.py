@@ -378,9 +378,7 @@ class TestGetScoreProgress(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.execute = AsyncMock(side_effect=results_sequence)
 
-        result = await self.score_history_service.get_score_progress(
-            12345, [7, 14, 30]
-        )
+        result = await self.score_history_service.get_score_progress(12345, [7, 14, 30])
 
         self.assertEqual(result[7], 9000)
         self.assertIsNone(result[14])
@@ -413,9 +411,7 @@ class TestGetScoreProgress(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.execute = AsyncMock(side_effect=results_sequence)
 
-        result = await self.score_history_service.get_score_progress(
-            12345, [7, 14, 30]
-        )
+        result = await self.score_history_service.get_score_progress(12345, [7, 14, 30])
 
         self.assertEqual(result[7], 9000)
         self.assertEqual(result[14], 8000)

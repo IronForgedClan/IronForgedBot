@@ -222,7 +222,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             mock_score_service.get_player_score.side_effect = side_effect
         else:
             mock_score_service.get_player_score.return_value = (
-                return_value if return_value is not None else self.sample_score_breakdown
+                return_value
+                if return_value is not None
+                else self.sample_score_breakdown
             )
         return mock_score_service
 
