@@ -50,12 +50,6 @@ _SCORE_EMBED_DESCRIPTION = (
     f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information."
 )
 
-_GOD_ALIGNMENT_EMOJI_NAMES: dict[GOD_ALIGNMENT | None, str] = {
-    GOD_ALIGNMENT.SARADOMIN: "Saradomin",
-    GOD_ALIGNMENT.ZAMORAK: "Zamorak",
-    GOD_ALIGNMENT.GUTHIX: "Guthix",
-}
-
 
 def _build_rank_progress_bar(
     points_total: int,
@@ -90,14 +84,13 @@ def _build_god_alignment_emojis(god_alignment: GOD_ALIGNMENT | None) -> str:
     Args:
         god_alignment: The member's god alignment, or None if unaligned.
     """
-    emoji_name = _GOD_ALIGNMENT_EMOJI_NAMES.get(god_alignment)
-    if emoji_name:
-        icon = find_emoji(emoji_name)
+    if god_alignment:
+        icon = find_emoji(god_alignment)
         sep = EMPTY_SPACE
-        return f"{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}"
+        return f"{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}{sep}{icon}"
 
-    icon = find_emoji("grass")
-    return f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
+    icon = find_emoji("Grass")
+    return f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
 
 
 def _calculate_points(data: ScoreBreakdown) -> tuple[int, int, int]:
@@ -107,9 +100,7 @@ def _calculate_points(data: ScoreBreakdown) -> tuple[int, int, int]:
         (skill_points, activity_points, points_total)
     """
     skill_points = sum(s.points for s in data.skills)
-    activity_points = sum(
-        a.points for a in (data.clues + data.raids + data.bosses)
-    )
+    activity_points = sum(a.points for a in (data.clues + data.raids + data.bosses))
     return skill_points, activity_points, skill_points + activity_points
 
 
