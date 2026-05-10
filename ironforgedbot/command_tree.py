@@ -129,7 +129,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="raffle",
-                description="Enter or manage the clan raffle.",
+                description="Participate in the clan raffle.",
                 callback=cmd_raffle,
             )
         )

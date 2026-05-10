@@ -65,10 +65,10 @@ def _build_commands_description() -> str:
 
 
 def _build_activities_description(has_trick_or_treat: bool) -> str:
-    desc = "As well as spending your ingots in the shop, you can also use them on these ~~useless~~ commands."
+    desc = "As well as spending your ingots in the shop, you can also use them on these ~~useless~~ entertaining commands."
     if has_trick_or_treat and getattr(CONFIG, "TRICK_OR_TREAT_CHANNEL_ID", None):
         tot = f"<#{CONFIG.TRICK_OR_TREAT_CHANNEL_ID}>"
-        desc += f" Head over to {tot} and try your luck!"
+        desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck!"
     return desc
 
 
@@ -107,7 +107,6 @@ async def cmd_help(interaction: discord.Interaction):
         ),
         color=discord.Colour.blue(),
     )
-    embed.set_footer(text=f"IronForgedBot v{CONFIG.BOT_VERSION}")
 
     sections = []
     if stats_cmds:
@@ -138,5 +137,11 @@ async def cmd_help(interaction: discord.Interaction):
             value=f"{description}\n\n{_build_ascii_table(cmds)}",
             inline=False,
         )
+
+    embed.add_field(
+        name=EMPTY_SPACE,
+        value=f"-# _ironforgedbot v{CONFIG.BOT_VERSION}_",
+        inline=False,
+    )
 
     await interaction.followup.send(embed=embed)
