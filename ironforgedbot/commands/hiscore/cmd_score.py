@@ -20,6 +20,7 @@ from ironforgedbot.common.ranks import (
     get_rank_color_from_points,
     get_rank_from_points,
 )
+from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
@@ -77,16 +78,6 @@ def _build_rank_progress_bar(
     percentage = render_percentage(progress, span)
     return f"{rank_icon} {bar} {next_rank_icon}" f" ({percentage})"
 
-
-def _calculate_points(data: ScoreBreakdown) -> tuple[int, int, int]:
-    """Sum skill and activity points from a score breakdown.
-
-    Returns:
-        (skill_points, activity_points, points_total)
-    """
-    skill_points = sum(s.points for s in data.skills)
-    activity_points = sum(a.points for a in (data.clues + data.raids + data.bosses))
-    return skill_points, activity_points, skill_points + activity_points
 
 
 async def _get_score_history(discord_id: int, current_score: int) -> dict[int, int]:
