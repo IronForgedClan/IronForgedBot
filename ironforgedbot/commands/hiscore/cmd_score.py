@@ -8,6 +8,7 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.helpers import (
     find_emoji,
+    normalize_discord_string,
     render_percentage,
     validate_playername,
 )
@@ -28,6 +29,7 @@ from ironforgedbot.common.responses import (
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
+from ironforgedbot.config import CONFIG
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
@@ -39,10 +41,43 @@ from ironforgedbot.services.score_service import get_score_service
 logger = logging.getLogger(__name__)
 
 _SCORE_PROGRESS_PERIODS = [7, 14, 30]
+_PROGRESS_BAR_LENGTH = 20
+_PROGRESS_BAR_FILLED = "▰"
+_PROGRESS_BAR_EMPTY = "▱"
+
+
+def _build_rank_progress_bar(
+    points_total: int,
+    rank_point_threshold: int,
+    next_rank_point_threshold: int,
+    rank_icon: str,
+    next_rank_icon: str,
+) -> str:
+    """Build a visual progress bar string showing progress toward the next rank.
+
+    Args:
+        points_total: The member's current score.
+        rank_point_threshold: The point threshold for the current rank.
+        next_rank_point_threshold: The point threshold for the next rank.
+        rank_icon: Emoji for the current rank.
+        next_rank_icon: Emoji for the next rank.
+    """
+    span = int(next_rank_point_threshold) - int(rank_point_threshold)
+    progress = points_total - int(rank_point_threshold)
+    ratio = max(0.0, min(1.0, progress / span)) if span > 0 else 1.0
+    filled = round(ratio * _PROGRESS_BAR_LENGTH)
+    bar = _PROGRESS_BAR_FILLED * filled + _PROGRESS_BAR_EMPTY * (
+        _PROGRESS_BAR_LENGTH - filled
+    )
+    percentage = render_percentage(progress, span)
+    return (
+        f"{rank_icon} {bar} {next_rank_icon}"
+        f"{EMPTY_SPACE}{points_total:,}/{next_rank_point_threshold:,} ({percentage})"
+    )
 
 
 async def _build_score_progress_field(discord_id: int, current_score: int) -> str:
-    """Build the value string for the Score Progress embed field.
+    """Build the value string for the Score History embed field.
 
     Queries the nearest score snapshot for each period (7d, 14d, 30d) and
     returns a formatted string showing the delta for each available period.
@@ -153,11 +188,24 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         )
 
     embed = build_response_embed(
-        f"{rank_icon} {display_name} | Score: {points_total:,}",
-        "",
+        "🏆 Member Score",
+        f"Points are earned through in-game achievements and determines clan rank. Use `/breakdown` for a detailed point breakdown. See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information.",
         rank_color,
     )
 
+    embed.add_field(
+        name="Member",
+        value=f"{rank_icon} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+    embed.add_field(name="Rank", value=f"{rank_name}", inline=True)
+    embed.add_field(name="", value="", inline=True)
+
+    embed.add_field(
+        name="Total Points",
+        value=f"{points_total:,}",
+        inline=True,
+    )
     embed.add_field(
         name="Skill Points",
         value=f"{skill_points:,} ({render_percentage(skill_points, points_total)})",
@@ -169,9 +217,9 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         inline=True,
     )
 
-    score_progress_value = await _build_score_progress_field(member.id, points_total)
-    if score_progress_value:
-        embed.add_field(name="Score History", value=score_progress_value, inline=False)
+    score_history_value = await _build_score_progress_field(member.id, points_total)
+    if score_history_value:
+        embed.add_field(name="Score History", value=score_history_value, inline=False)
 
     if rank_name == RANK.GOD:
         match god_alignment:
@@ -196,15 +244,16 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
             inline=False,
         )
     else:
-        percentage = render_percentage(
-            points_total - int(rank_point_threshold),
-            int(next_rank_point_threshold) - int(rank_point_threshold),
+        progress_bar = _build_rank_progress_bar(
+            points_total,
+            rank_point_threshold,
+            next_rank_point_threshold,
+            rank_icon,
+            next_rank_icon,
         )
         embed.add_field(
             name="Rank Progress",
-            value=(
-                f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})"
-            ),
+            value=progress_bar,
             inline=False,
         )
 
