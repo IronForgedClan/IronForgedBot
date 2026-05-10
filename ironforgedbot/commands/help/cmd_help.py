@@ -90,7 +90,7 @@ async def cmd_help(interaction: discord.Interaction):
 
     embed = build_response_embed(
         title=":robot: Bot Commands",
-        description=f"Use any command by typing `/` in bot-commands.",
+        description=f"Use any command by typing `/` in <#{CONFIG.BOT_COMMANDS_CHANNEL_ID}>.",
         color=discord.Colour.blue(),
     )
 

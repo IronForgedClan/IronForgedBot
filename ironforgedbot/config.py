@@ -30,6 +30,7 @@ class Config:
         self.RAFFLE_CHANNEL_ID: int = int(os.getenv("RAFFLE_CHANNEL_ID") or 0)
         self.INGOT_SHOP_CHANNEL_ID: int = int(os.getenv("INGOT_SHOP_CHANNEL_ID") or 0)
         self.RULES_CHANNEL_ID: int = int(os.getenv("RULES_CHANNEL_ID") or 0)
+        self.BOT_COMMANDS_CHANNEL_ID: int = int(os.getenv("BOT_COMMANDS_CHANNEL_ID") or 0)
         self.TRICK_OR_TREAT_ENABLED: bool = (
             os.getenv("TRICK_OR_TREAT_ENABLED", "False") == "True"
         )
@@ -68,6 +69,7 @@ class Config:
         optional_keys = {
             "WOM_LTM_BASE_URL",
             "WOM_LTM_GROUP_ID",
+            "BOT_COMMANDS_CHANNEL_ID",
             "TRICK_OR_TREAT_CHANNEL_ID",
             "TRICK_OR_TREAT_COOLDOWN_SECONDS",
         }
