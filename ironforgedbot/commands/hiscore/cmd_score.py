@@ -28,13 +28,49 @@ from ironforgedbot.common.responses import (
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
+from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
 from ironforgedbot.models.score import ScoreBreakdown
+from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
+
+_SCORE_PROGRESS_PERIODS = [7, 14, 30]
+
+
+async def _build_score_progress_field(discord_id: int, current_score: int) -> str:
+    """Build the value string for the Score Progress embed field.
+
+    Queries the nearest score snapshot for each period (7d, 14d, 30d) and
+    returns a formatted string showing the delta for each available period.
+    Returns an empty string if no historical data is available.
+
+    Args:
+        discord_id: The Discord ID of the member.
+        current_score: The member's current computed score.
+    """
+    try:
+        async with db.get_session() as session:
+            service = ScoreHistoryService(session)
+            progress = await service.get_score_history(
+                discord_id, _SCORE_PROGRESS_PERIODS
+            )
+    except Exception:
+        return ""
+
+    parts = []
+    for days in _SCORE_PROGRESS_PERIODS:
+        snapshot = progress.get(days)
+        if snapshot is None:
+            continue
+        delta = current_score - snapshot
+
+        parts.append(f"{delta:+,} ({days}d)")
+
+    return f"{EMPTY_SPACE}{EMPTY_SPACE}".join(parts)
 
 
 @require_role(ROLE.MEMBER)
@@ -132,6 +168,10 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         value=f"{activity_points:,} ({render_percentage(activity_points, points_total)})",
         inline=True,
     )
+
+    score_progress_value = await _build_score_progress_field(member.id, points_total)
+    if score_progress_value:
+        embed.add_field(name="Score History", value=score_progress_value, inline=False)
 
     if rank_name == RANK.GOD:
         match god_alignment:
