@@ -80,14 +80,14 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="check",
-                description="Check if a player meets the monthly activity requirement.",
+                description="Check if you meet the monthly activity requirement, or are in danger.",
                 callback=cmd_check,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="ingots",
-                description="Show your current ingot balance.",
+                description="Show your ingot balance and recent transaction history.",
                 callback=cmd_view_ingots,
             )
         )
