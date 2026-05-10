@@ -11,6 +11,7 @@
 
 | Command              | Parameters                                                                      | Permission | Information                                                                      |
 | -------------------- | ------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------- |
+| `help`               | N/A                                                                             | Member     | Displays all active bot commands with descriptions                               |
 | `score`              | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
