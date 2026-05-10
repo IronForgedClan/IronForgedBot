@@ -44,10 +44,41 @@ _BOSS_FIELDS_PER_PAGE = 24
 _BOSS_COLUMNS = 3
 _RANK_ARROW_PADDING = EMPTY_SPACE * 7
 _BREAKDOWN_TITLE = "ℹ️ Breakdown"
-_BREAKDOWN_EMBED_DESCRIPTION = (
+
+_BREAKDOWN_STATIC_DESCRIPTION = (
     "Points are earned through in-game achievements and determine your clan rank. "
     f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information."
 )
+
+
+def _build_embed_description(
+    rank_icon: str,
+    display_name: str,
+    points_total: int,
+    points_label: str | None = None,
+    points_value: int | None = None,
+) -> str:
+    """Build the standard breakdown embed description.
+
+    Args:
+        rank_icon: Emoji for the player's current rank.
+        display_name: The player's display name (should be normalized before passing).
+        points_total: The player's overall point total across all categories.
+        points_label: Label for the category points column e.g. "Skilling Points".
+        points_value: The point total for this category.
+    """
+    if points_label is not None and points_value is not None:
+        percentage = render_percentage(points_value, points_total)
+        return (
+            f"{_BREAKDOWN_STATIC_DESCRIPTION}\n\n"
+            f"**Member:** {rank_icon} {display_name}\n"
+            f"**{points_label}:** {points_value:,}/{points_total:,} ({percentage})\n{EMPTY_SPACE}"
+        )
+    return (
+        f"{_BREAKDOWN_STATIC_DESCRIPTION}\n\n"
+        f"**Member:** {rank_icon} {display_name}\n"
+        f"**Total Points:** {points_total:,}\n{EMPTY_SPACE}"
+    )
 
 
 def _build_rank_ladder_embed(
@@ -70,24 +101,20 @@ def _build_rank_ladder_embed(
     """
     embed = build_response_embed(
         f"{_BREAKDOWN_TITLE} - Rank Ladder",
-        _BREAKDOWN_EMBED_DESCRIPTION,
+        _build_embed_description(
+            rank_icon,
+            normalize_discord_string(display_name),
+            points_total,
+        ),
         rank_color,
     )
-
-    embed.add_field(
-        name="Member",
-        value=f"{rank_icon} {normalize_discord_string(display_name)}",
-        inline=True,
-    )
-    embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
-    embed.add_field(name="", value="", inline=True)
 
     display_ranks = [r for r in RANK if not r.lower().startswith("god_")]
     for rank in display_ranks:
         icon = find_emoji(rank)
         point_threshold = RANK_POINTS[rank.upper()]
         arrow = (
-            f"{_RANK_ARROW_PADDING}← {text_italic(display_name)}"
+            f"{_RANK_ARROW_PADDING}← {text_italic(normalize_discord_string(display_name))}"
             if rank == rank_name
             else ""
         )
@@ -127,6 +154,7 @@ def _build_boss_embeds(
     rank_icon: str,
     rank_color: discord.Color,
     display_name: str,
+    points_total: int,
 ) -> list[discord.Embed]:
     """Build paginated boss embeds, one page per _BOSS_FIELDS_PER_PAGE bosses.
 
@@ -138,6 +166,7 @@ def _build_boss_embeds(
         rank_icon: Emoji for the player's current rank.
         rank_color: Discord color for the embeds.
         display_name: The player's display name.
+        points_total: The player's overall point total across all categories.
     """
     embeds: list[discord.Embed] = []
     boss_point_counter = 0
@@ -167,18 +196,16 @@ def _build_boss_embeds(
 
     for index, embed in enumerate(embeds):
         embed.title = f"{_BREAKDOWN_TITLE} - Bossing"
-        embed.description = _BREAKDOWN_EMBED_DESCRIPTION
+        embed.description = _build_embed_description(
+            rank_icon,
+            normalize_discord_string(display_name),
+            points_total,
+            "Bossing Points",
+            boss_point_counter,
+        )
 
         if page_count > 1:
             embed.title += f" ({index + 1}/{page_count})"
-
-        embed.add_field(
-            name="Member",
-            value=f"{rank_icon} {normalize_discord_string(display_name)}",
-            inline=True,
-        )
-        embed.add_field(name="Bossing Points", value=f"{boss_point_counter:,}", inline=True)
-        embed.add_field(name="", value="", inline=True)
 
         if index + 1 == page_count:
             if len(embed.fields) % _BOSS_COLUMNS != 0:
@@ -209,9 +236,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
             interaction.guild, player, must_be_member=False
         )
     except Exception as e:
-        return await send_error_response(
-            interaction, str(e), report_to_channel=False
-        )
+        return await send_error_response(interaction, str(e), report_to_channel=False)
 
     display_name = member.display_name if member is not None else player
     service = get_score_service(HTTP)
@@ -259,18 +284,15 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
 
     skill_breakdown_embed = build_response_embed(
         f"{_BREAKDOWN_TITLE} - Skilling",
-        _BREAKDOWN_EMBED_DESCRIPTION,
+        _build_embed_description(
+            rank_icon,
+            normalize_discord_string(display_name),
+            points_total,
+            "Skilling Points",
+            skill_points,
+        ),
         rank_color,
     )
-    skill_breakdown_embed.add_field(
-        name="Member",
-        value=f"{rank_icon} {normalize_discord_string(display_name)}",
-        inline=True,
-    )
-    skill_breakdown_embed.add_field(
-        name="Skilling Points", value=f"{skill_points:,}", inline=True
-    )
-    skill_breakdown_embed.add_field(name="", value="", inline=True)
 
     ordered_skills = sorted(data.skills, key=lambda x: x.display_order)
     for skill in ordered_skills:
@@ -284,23 +306,22 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
     # Empty field to maintain three-column layout
     skill_breakdown_embed.add_field(name="", value="", inline=True)
 
-    boss_embeds = _build_boss_embeds(data.bosses, rank_icon, rank_color, display_name)
+    boss_embeds = _build_boss_embeds(
+        data.bosses, rank_icon, rank_color, display_name, points_total
+    )
 
     raid_point_counter = sum(r.points for r in data.raids)
     raid_breakdown_embed = build_response_embed(
         f"{_BREAKDOWN_TITLE} - Raids",
-        _BREAKDOWN_EMBED_DESCRIPTION,
+        _build_embed_description(
+            rank_icon,
+            normalize_discord_string(display_name),
+            points_total,
+            "Raid Points",
+            raid_point_counter,
+        ),
         rank_color,
     )
-    raid_breakdown_embed.add_field(
-        name="Member",
-        value=f"{rank_icon} {normalize_discord_string(display_name)}",
-        inline=True,
-    )
-    raid_breakdown_embed.add_field(
-        name="Raid Points", value=f"{raid_point_counter:,}", inline=True
-    )
-    raid_breakdown_embed.add_field(name="", value="", inline=True)
     for raid in data.raids:
         raid_icon = find_emoji(raid.emoji_key)
         raid_breakdown_embed.add_field(
@@ -311,18 +332,15 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
     clue_point_counter = sum(c.points for c in data.clues)
     clue_breakdown_embed = build_response_embed(
         f"{_BREAKDOWN_TITLE} - Clues",
-        _BREAKDOWN_EMBED_DESCRIPTION,
+        _build_embed_description(
+            rank_icon,
+            normalize_discord_string(display_name),
+            points_total,
+            "Clue Points",
+            clue_point_counter,
+        ),
         rank_color,
     )
-    clue_breakdown_embed.add_field(
-        name="Member",
-        value=f"{rank_icon} {normalize_discord_string(display_name)}",
-        inline=True,
-    )
-    clue_breakdown_embed.add_field(
-        name="Clue Points", value=f"{clue_point_counter:,}", inline=True
-    )
-    clue_breakdown_embed.add_field(name="", value="", inline=True)
     for clue in data.clues:
         clue_icon = find_emoji(clue.emoji_key)
         clue_breakdown_embed.add_field(
@@ -337,7 +355,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
     menu = ViewMenu(
         interaction,
         menu_type=ViewMenu.TypeEmbed,
-        show_page_director=True,
+        show_page_director=False,
         timeout=300,
         delete_on_timeout=True,
     )
