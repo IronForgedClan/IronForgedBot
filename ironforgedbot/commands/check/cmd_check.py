@@ -215,7 +215,7 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         inline=True,
     )
 
-    embed.add_field(name="Rank", value=f"{db_member.rank}", inline=True)
+    embed.add_field(name="Rank", value=f"{rank_emoji} {db_member.rank}", inline=True)
 
     embed.add_field(
         name="Status",
