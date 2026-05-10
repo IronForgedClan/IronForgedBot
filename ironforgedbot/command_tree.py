@@ -5,6 +5,7 @@ import discord
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_admin import cmd_admin
+from ironforgedbot.commands.help.cmd_help import cmd_help
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.check.cmd_check import cmd_check
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
@@ -65,91 +66,98 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="score",
-                description="View the player's score.",
+                description="Show your total clan score, rank, and progress to the next rank.",
                 callback=cmd_score,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="breakdown",
-                description="View the player's score breakdown.",
+                description="Show a full breakdown of your score across skills, bosses, raids, and clues.",
                 callback=cmd_breakdown,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="check",
-                description="Check if player meets monthly activity requirements.",
+                description="Check if a player meets this month's activity requirements.",
                 callback=cmd_check,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="ingots",
-                description="View player's ingot total.",
+                description="Show your current ingot balance.",
                 callback=cmd_view_ingots,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="add_remove_ingots",
-                description="🔒 Add or remove ingots.",
+                description="🔒 Add or remove ingots for one or more members.",
                 callback=cmd_add_remove_ingots,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="roster",
-                description="🔒 Creates an event roster.",
+                description="🔒 Generate an event roster from a message's reactions.",
                 callback=cmd_roster,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="whois",
-                description="View player's rsn history.",
+                description="Look up a player's RSN name change history.",
                 callback=cmd_whois,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="get_role_members",
-                description="🔒 Generate a list of all members with specified role.",
+                description="🔒 List all members assigned to a given role.",
                 callback=cmd_get_role_members,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
+                name="help",
+                description="Show all available commands and how to use them.",
+                callback=cmd_help,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
                 name="raffle",
-                description="Play the raffle.",
+                description="Enter or manage the clan raffle.",
                 callback=cmd_raffle,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="reset_rng",
-                description="💰 Attempt to reset your RNG. 50% of the time it works every time.",
+                description="💰 Sacrifice ingots to the RNG gods. Results may vary.",
                 callback=cmd_reset_rng,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="eight_ball",
-                description="💰 Ask the Magic 8-Ball a question and receive mystical wisdom.",
+                description="💰 Ask the Magic 8-Ball a yes or no question.",
                 callback=cmd_eight_ball,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="spin",
-                description="💰 Spin a wheel to randomly pick from your options.",
+                description="💰 Spin a wheel and let fate decide between your options.",
                 callback=cmd_spin,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="admin",
-                description="🔒 Admin actions.",
+                description="🔒 Open the admin menu.",
                 callback=cmd_admin,
             )
         )
