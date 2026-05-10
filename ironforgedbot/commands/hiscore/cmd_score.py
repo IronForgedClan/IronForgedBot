@@ -70,18 +70,15 @@ def _build_rank_progress_bar(
         _PROGRESS_BAR_LENGTH - filled
     )
     percentage = render_percentage(progress, span)
-    return (
-        f"{rank_icon} {bar} {next_rank_icon}"
-        f"{EMPTY_SPACE}{points_total:,}/{next_rank_point_threshold:,} ({percentage})"
-    )
+    return f"{rank_icon} {bar} {next_rank_icon}" f" ({percentage})"
 
 
-async def _build_score_progress_field(discord_id: int, current_score: int) -> str:
-    """Build the value string for the Score History embed field.
+async def _get_score_history(discord_id: int, current_score: int) -> dict[int, int]:
+    """Return score deltas for each history period that has a snapshot.
 
     Queries the nearest score snapshot for each period (7d, 14d, 30d) and
-    returns a formatted string showing the delta for each available period.
-    Returns an empty string if no historical data is available.
+    returns a dict mapping days -> delta for each period that has data.
+    Returns an empty dict if no historical data is available or on error.
 
     Args:
         discord_id: The Discord ID of the member.
@@ -94,18 +91,15 @@ async def _build_score_progress_field(discord_id: int, current_score: int) -> st
                 discord_id, _SCORE_PROGRESS_PERIODS
             )
     except Exception:
-        return ""
+        return {}
 
-    parts = []
+    result = {}
     for days in _SCORE_PROGRESS_PERIODS:
         snapshot = progress.get(days)
-        if snapshot is None:
-            continue
-        delta = current_score - snapshot
+        if snapshot is not None:
+            result[days] = current_score - snapshot
 
-        parts.append(f"{delta:+,} ({days}d)")
-
-    return f"{EMPTY_SPACE}{EMPTY_SPACE}".join(parts)
+    return result
 
 
 @require_role(ROLE.MEMBER)
@@ -189,7 +183,7 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
 
     embed = build_response_embed(
         "🏆 Member Score",
-        f"Points are earned through in-game achievements and determines clan rank. Use `/breakdown` for a detailed point breakdown. See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information.",
+        f"Points are earned through in-game achievements and determine your clan rank. Use the `breakdown` command to view a detailed breakdown of earned points. See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information.",
         rank_color,
     )
 
@@ -198,8 +192,17 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         value=f"{rank_icon} {normalize_discord_string(display_name)}",
         inline=True,
     )
-    embed.add_field(name="Rank", value=f"{rank_name}", inline=True)
-    embed.add_field(name="", value="", inline=True)
+    embed.add_field(name="Current Rank", value=f"{rank_icon} {rank_name}", inline=True)
+
+    if rank_name == RANK.GOD:
+        embed.add_field(name="", value="", inline=True)
+    else:
+        points_needed = int(next_rank_point_threshold) - points_total
+        embed.add_field(
+            name="Next Rank",
+            value=f"{next_rank_icon} {next_rank_name} (in {points_needed:,} pts)",
+            inline=True,
+        )
 
     embed.add_field(
         name="Total Points",
@@ -217,9 +220,19 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         inline=True,
     )
 
-    score_history_value = await _build_score_progress_field(member.id, points_total)
-    if score_history_value:
-        embed.add_field(name="Score History", value=score_history_value, inline=False)
+    score_history = await _get_score_history(member.id, points_total)
+    if score_history:
+        first = True
+        for days in _SCORE_PROGRESS_PERIODS:
+            delta = score_history.get(days)
+            if delta is None:
+                continue
+            embed.add_field(
+                name="Score History" if first else EMPTY_SPACE,
+                value=f"{delta:+,} ({days}d)",
+                inline=True,
+            )
+            first = False
 
     if rank_name == RANK.GOD:
         match god_alignment:
