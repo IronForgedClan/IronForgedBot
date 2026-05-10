@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import discord
 from discord import app_commands
@@ -150,7 +149,7 @@ def _build_rank_ladder_embed(
 
 
 def _build_boss_embeds(
-    bosses: List[ActivityScore],
+    bosses: list[ActivityScore],
     rank_icon: str,
     rank_color: discord.Color,
     display_name: str,
@@ -208,10 +207,77 @@ def _build_boss_embeds(
             embed.title += f" ({index + 1}/{page_count})"
 
         if index + 1 == page_count:
-            if len(embed.fields) % _BOSS_COLUMNS != 0:
+            while len(embed.fields) % _BOSS_COLUMNS != 0:
                 embed.add_field(name="", value="")
 
     return embeds
+
+
+def _build_activity_embed(
+    title: str,
+    items: list[ActivityScore],
+    points_label: str,
+    rank_icon: str,
+    rank_color: discord.Color,
+    display_name: str,
+    points_total: int,
+    value_formatter: callable,
+) -> discord.Embed:
+    """Build a single-page activity breakdown embed (raids, clues, etc.).
+
+    Args:
+        title: Embed title suffix e.g. "Raids".
+        items: List of ActivityScore objects to display.
+        points_label: Label for the category points column e.g. "Raid Points".
+        rank_icon: Emoji for the player's current rank.
+        rank_color: Discord color for the embed.
+        display_name: The player's display name.
+        points_total: The player's overall point total across all categories.
+        value_formatter: Callable(item) -> str for the field value text.
+    """
+    category_points = sum(item.points for item in items)
+    embed = build_response_embed(
+        f"{_BREAKDOWN_TITLE} - {title}",
+        _build_embed_description(
+            rank_icon,
+            normalize_discord_string(display_name),
+            points_total,
+            points_label,
+            category_points,
+        ),
+        rank_color,
+    )
+    for item in items:
+        icon = find_emoji(item.emoji_key)
+        embed.add_field(
+            name=f"{icon} {item.points:,} points",
+            value=value_formatter(item),
+        )
+    return embed
+
+
+def _resolve_rank_display(
+    member: discord.Member | None,
+    points_total: int,
+    rank_name: str,
+) -> tuple[str, discord.Color, str | None]:
+    """Resolve rank icon, embed color, and god alignment for a player.
+
+    Args:
+        member: The Discord member, or None if not in the clan.
+        points_total: The player's total points.
+        rank_name: The player's current rank name.
+
+    Returns:
+        Tuple of (rank_icon, rank_color, god_alignment).
+        god_alignment is None for non-GOD ranks.
+    """
+    if rank_name == RANK.GOD:
+        god_alignment = get_god_alignment_from_member(member)
+        rank_color = get_rank_color_from_points(points_total, god_alignment)
+        rank_icon = find_emoji(god_alignment or rank_name)
+        return rank_icon, rank_color, god_alignment
+    return find_emoji(rank_name), get_rank_color_from_points(points_total), None
 
 
 @require_role(ROLE.MEMBER)
@@ -256,15 +322,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
 
     skill_points, activity_points, points_total = _calculate_points(data)
     rank_name = get_rank_from_points(points_total)
-
-    god_alignment = None
-    if rank_name == RANK.GOD:
-        god_alignment = get_god_alignment_from_member(member)
-        rank_color = get_rank_color_from_points(points_total, god_alignment)
-        rank_icon = find_emoji(god_alignment or rank_name)
-    else:
-        rank_color = get_rank_color_from_points(points_total)
-        rank_icon = find_emoji(rank_name)
+    rank_icon, rank_color, god_alignment = _resolve_rank_display(member, points_total, rank_name)
 
     if member and member.roles:
         if has_prospect_role(member):
@@ -310,43 +368,27 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
         data.bosses, rank_icon, rank_color, display_name, points_total
     )
 
-    raid_point_counter = sum(r.points for r in data.raids)
-    raid_breakdown_embed = build_response_embed(
-        f"{_BREAKDOWN_TITLE} - Raids",
-        _build_embed_description(
-            rank_icon,
-            normalize_discord_string(display_name),
-            points_total,
-            "Raid Points",
-            raid_point_counter,
-        ),
+    raid_breakdown_embed = _build_activity_embed(
+        "Raids",
+        data.raids,
+        "Raid Points",
+        rank_icon,
         rank_color,
+        display_name,
+        points_total,
+        lambda r: f"{EMPTY_SPACE}{r.kc:,} kc",
     )
-    for raid in data.raids:
-        raid_icon = find_emoji(raid.emoji_key)
-        raid_breakdown_embed.add_field(
-            name=f"{raid_icon} {raid.points:,} points",
-            value=f"{EMPTY_SPACE}{raid.kc:,} kc",
-        )
 
-    clue_point_counter = sum(c.points for c in data.clues)
-    clue_breakdown_embed = build_response_embed(
-        f"{_BREAKDOWN_TITLE} - Clues",
-        _build_embed_description(
-            rank_icon,
-            normalize_discord_string(display_name),
-            points_total,
-            "Clue Points",
-            clue_point_counter,
-        ),
+    clue_breakdown_embed = _build_activity_embed(
+        "Clues",
+        data.clues,
+        "Clue Points",
+        rank_icon,
         rank_color,
+        display_name,
+        points_total,
+        lambda c: f"{EMPTY_SPACE}{c.kc:,} {c.display_name or c.name}",
     )
-    for clue in data.clues:
-        clue_icon = find_emoji(clue.emoji_key)
-        clue_breakdown_embed.add_field(
-            name=f"{clue_icon} {clue.points:,} points",
-            value=f"{EMPTY_SPACE}{clue.kc:,} {clue.display_name or clue.name}",
-        )
 
     rank_ladder_embed = _build_rank_ladder_embed(
         display_name, rank_name, rank_icon, rank_color, points_total, god_alignment
@@ -377,8 +419,8 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
         logger.error(f"Error starting breakdown menu: {e}", exc_info=True)
         try:
             await menu.stop()
-        except Exception:
-            pass
+        except Exception as stop_error:
+            logger.debug(f"Error stopping breakdown menu: {stop_error}")
         await send_error_response(
             interaction,
             "An unexpected error occurred while generating the breakdown. Please try again.",
