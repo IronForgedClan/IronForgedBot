@@ -1,5 +1,4 @@
 import logging
-import time
 
 import discord
 from discord import app_commands
@@ -40,7 +39,7 @@ from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
-_EMBED_TIMEOUT = 120
+_EMBED_TIMEOUT = 60
 _BOSS_FIELDS_PER_PAGE = 24
 _BOSS_COLUMNS = 3
 _RANK_ARROW_PADDING = EMPTY_SPACE * 7
@@ -398,17 +397,11 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
         display_name, rank_name, rank_icon, rank_color, points_total, god_alignment
     )
 
-    expire_timestamp = int(time.time() + _EMBED_TIMEOUT)
-    expires_formatted = f"<t:{expire_timestamp}:R>"
-    expiry_text = f"-# This interaction expires {expires_formatted}.\n{EMPTY_SPACE}"
-
     all_embeds = (
         [skill_breakdown_embed]
         + boss_embeds
         + [raid_breakdown_embed, clue_breakdown_embed, rank_ladder_embed]
     )
-    for embed in all_embeds:
-        embed.description = (embed.description or "") + f"\n{expiry_text}"
 
     menu = ViewMenu(
         interaction,
