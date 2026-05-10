@@ -21,9 +21,9 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
         from ironforgedbot.commands.hiscore.cmd_score import (
             cmd_score,
             _build_rank_progress_bar,
-            _calculate_points,
             _get_score_history,
         )
+        from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 
 
 def _make_embed_mock() -> Mock:
