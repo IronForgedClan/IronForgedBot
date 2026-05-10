@@ -3,6 +3,7 @@ from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import discord
 
+from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
@@ -17,10 +18,16 @@ from tests.helpers import (
 
 with patch("ironforgedbot.decorators.require_role.require_role", mock_require_role):
     with patch("ironforgedbot.common.helpers.find_emoji", return_value="<:emoji:123>"):
-        from ironforgedbot.commands.hiscore.cmd_score import cmd_score
+        from ironforgedbot.commands.hiscore.cmd_score import (
+            cmd_score,
+            _build_rank_progress_bar,
+            _build_god_alignment_emojis,
+            _calculate_points,
+            _get_score_history,
+        )
 
 
-def _make_embed_mock():
+def _make_embed_mock() -> Mock:
     mock_embed = Mock()
     mock_embed.fields = []
 
@@ -37,11 +44,159 @@ def _make_embed_mock():
     return mock_embed
 
 
+# ---------------------------------------------------------------------------
+# Unit tests for helper functions
+# ---------------------------------------------------------------------------
+
+
+class TestBuildRankProgressBar(unittest.TestCase):
+    def test_zero_progress(self):
+        result = _build_rank_progress_bar(0, 0, 1000, ":iron:", ":mithril:")
+        self.assertIn(":iron:", result)
+        self.assertIn(":mithril:", result)
+        self.assertNotIn("▰", result)
+
+    def test_full_progress(self):
+        result = _build_rank_progress_bar(1000, 0, 1000, ":iron:", ":mithril:")
+        self.assertNotIn("▱", result)
+
+    def test_half_progress(self):
+        result = _build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
+        filled = result.count("▰")
+        empty = result.count("▱")
+        self.assertEqual(filled, 10)
+        self.assertEqual(empty, 10)
+
+    def test_zero_span_returns_full_bar(self):
+        result = _build_rank_progress_bar(5000, 5000, 5000, ":god:", ":god:")
+        self.assertNotIn("▱", result)
+
+    def test_clamps_below_zero(self):
+        result = _build_rank_progress_bar(-100, 0, 1000, ":iron:", ":mithril:")
+        self.assertNotIn("▰", result)
+
+    def test_clamps_above_max(self):
+        result = _build_rank_progress_bar(9999, 0, 1000, ":iron:", ":mithril:")
+        self.assertNotIn("▱", result)
+
+    def test_includes_percentage(self):
+        with patch(
+            "ironforgedbot.commands.hiscore.cmd_score.render_percentage",
+            return_value="50%",
+        ):
+            result = _build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
+        self.assertIn("50%", result)
+
+
+class TestBuildGodAlignmentEmojis(unittest.TestCase):
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":sara:")
+    def test_saradomin(self, _):
+        result = _build_god_alignment_emojis(GOD_ALIGNMENT.SARADOMIN)
+        self.assertEqual(result.count(":sara:"), 5)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":zam:")
+    def test_zamorak(self, _):
+        result = _build_god_alignment_emojis(GOD_ALIGNMENT.ZAMORAK)
+        self.assertEqual(result.count(":zam:"), 5)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":guth:")
+    def test_guthix(self, _):
+        result = _build_god_alignment_emojis(GOD_ALIGNMENT.GUTHIX)
+        self.assertEqual(result.count(":guth:"), 5)
+
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_score.find_emoji", return_value=":grass:"
+    )
+    def test_no_alignment_uses_nerd_fallback(self, _):
+        result = _build_god_alignment_emojis(None)
+        self.assertIn(":nerd:", result)
+        self.assertIn(":grass:", result)
+
+
+class TestCalculatePoints(unittest.TestCase):
+    def test_sums_all_categories(self):
+        skills = [SkillScore("Attack", None, 1, "Attack", 13034000, 99, 1000)]
+        bosses = [ActivityScore("Zulrah", None, 1, "Zulrah", 200, 100)]
+        clues = [ActivityScore("Beginner", None, 1, "Beginner", 100, 50)]
+        raids = [ActivityScore("CoX", None, 1, "CoX", 50, 25)]
+        data = ScoreBreakdown(skills, clues, raids, bosses)
+
+        skill_pts, activity_pts, total = _calculate_points(data)
+
+        self.assertEqual(skill_pts, 1000)
+        self.assertEqual(activity_pts, 175)
+        self.assertEqual(total, 1175)
+
+    def test_empty_breakdown_returns_zeros(self):
+        data = ScoreBreakdown([], [], [], [])
+        skill_pts, activity_pts, total = _calculate_points(data)
+        self.assertEqual(skill_pts, 0)
+        self.assertEqual(activity_pts, 0)
+        self.assertEqual(total, 0)
+
+
+class TestGetScoreHistory(unittest.IsolatedAsyncioTestCase):
+    @patch("ironforgedbot.commands.hiscore.cmd_score.db")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreHistoryService")
+    async def test_returns_deltas_for_available_periods(
+        self, mock_service_cls, mock_db
+    ):
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_ctx
+
+        mock_service = AsyncMock()
+        mock_service_cls.return_value = mock_service
+        mock_service.get_score_history.return_value = {7: 900, 14: 800}
+
+        result = await _get_score_history(123456, 1000)
+
+        self.assertEqual(result[7], 100)
+        self.assertEqual(result[14], 200)
+        self.assertNotIn(30, result)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.db")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreHistoryService")
+    async def test_returns_empty_dict_on_exception(self, mock_service_cls, mock_db):
+        mock_db.get_session.side_effect = Exception("DB error")
+
+        result = await _get_score_history(123456, 1000)
+
+        self.assertEqual(result, {})
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score.db")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.ScoreHistoryService")
+    async def test_returns_empty_dict_when_no_snapshots(
+        self, mock_service_cls, mock_db
+    ):
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_ctx
+
+        mock_service = AsyncMock()
+        mock_service_cls.return_value = mock_service
+        mock_service.get_score_history.return_value = {}
+
+        result = await _get_score_history(123456, 1000)
+
+        self.assertEqual(result, {})
+
+
+# ---------------------------------------------------------------------------
+# Integration tests for cmd_score command handler
+# ---------------------------------------------------------------------------
+
+
 class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.prospect_user = create_test_member("ProspectUser", [PROSPECT_ROLE_NAME])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
+        self.mock_embed = _make_embed_mock()
 
         self.sample_skills = [
             SkillScore("Attack", None, 1, "Attack", 13034000, 99, 1000),
@@ -60,6 +215,16 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self.sample_score_breakdown = ScoreBreakdown(
             self.sample_skills, self.sample_clues, self.sample_raids, self.sample_bosses
         )
+
+    def _make_score_service_mock(self, return_value=None, side_effect=None):
+        mock_score_service = AsyncMock()
+        if side_effect:
+            mock_score_service.get_player_score.side_effect = side_effect
+        else:
+            mock_score_service.get_player_score.return_value = (
+                return_value if return_value is not None else self.sample_score_breakdown
+            )
+        return mock_score_service
 
     @patch("ironforgedbot.commands.hiscore.cmd_score.send_error_response")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -80,10 +245,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self, mock_send_error, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.side_effect = HiscoresError("API Error")
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            side_effect=HiscoresError("API Error")
+        )
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -100,10 +264,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self, mock_send_error, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.side_effect = HttpException("Network Error")
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            side_effect=HttpException("Network Error")
+        )
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -120,16 +283,15 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self, mock_send_no_hiscore, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.side_effect = HiscoresNotFound(
-            "No hiscores found"
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            side_effect=HiscoresNotFound("No hiscores found")
         )
 
         await cmd_score(self.interaction, "TestUser")
 
-        mock_send_no_hiscore.assert_called_once_with(self.interaction, "TestUser")
+        mock_send_no_hiscore.assert_called_once_with(
+            self.interaction, self.test_user.display_name
+        )
 
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
@@ -139,11 +301,8 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self, mock_send_not_clan, mock_validate, mock_http, mock_get_score_service
     ):
         mock_validate.return_value = (None, "NonMember")
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.side_effect = HiscoresNotFound(
-            "No hiscores found"
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            side_effect=HiscoresNotFound("No hiscores found")
         )
 
         await cmd_score(self.interaction, "NonMember")
@@ -160,18 +319,15 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_find_emoji,
         mock_send_prospect,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_validate,
         mock_http,
         mock_get_score_service,
     ):
         mock_validate.return_value = (self.prospect_user, "ProspectUser")
-        mock_check_role.return_value = True
+        mock_has_prospect_role.return_value = True
         mock_find_emoji.return_value = ":prospect:"
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "ProspectUser")
 
@@ -187,19 +343,16 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_find_emoji,
         mock_send_not_clan,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_validate,
         mock_http,
         mock_get_score_service,
     ):
         non_member = create_test_member("NonMember", [])
         mock_validate.return_value = (non_member, "NonMember")
-        mock_check_role.return_value = False
+        mock_has_prospect_role.return_value = False
         mock_find_emoji.return_value = ":iron:"
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "NonMember")
 
@@ -220,7 +373,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_next_rank,
         mock_get_color,
@@ -235,23 +388,23 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        # has_prospect_role called once (returns False), check_member_has_role called once (returns True)
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "45%"
         mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
         mock_validate.assert_called_once_with(
             self.interaction.guild, "TestUser", must_be_member=False
         )
-        mock_score_service.get_player_score.assert_called_once_with("TestUser")
+        mock_get_score_service.return_value.get_player_score.assert_called_once_with(
+            "TestUser"
+        )
         self.interaction.followup.send.assert_called_once()
 
         mock_build_embed.assert_called_once_with(
@@ -273,7 +426,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_score_default_player_self(
         self,
         mock_build_embed,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_color,
         mock_get_rank,
@@ -286,15 +439,10 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_get_history.return_value = {}
-
-        mock_embed = Mock()
-        mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_build_embed.return_value = Mock()
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, None)
 
@@ -315,7 +463,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_score_god_rank_saradomin(
         self,
         mock_build_embed,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_god_alignment,
         mock_get_color,
@@ -330,7 +478,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_color.return_value = discord.Color.blue()
         mock_get_god_alignment.return_value = GOD_ALIGNMENT.SARADOMIN
         mock_find_emoji.return_value = ":saradomin:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
@@ -339,10 +487,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         high_score_breakdown = ScoreBreakdown(
             [SkillScore("Attack", None, 1, "Attack", 200000000, 99, 50000)], [], [], []
         )
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = high_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            return_value=high_score_breakdown
+        )
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -363,7 +510,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_score_empty_score_data(
         self,
         mock_build_embed,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_color,
         mock_get_rank,
@@ -376,17 +523,12 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_get_history.return_value = {}
-
-        mock_embed = Mock()
-        mock_build_embed.return_value = mock_embed
-
-        empty_score_breakdown = ScoreBreakdown([], [], [], [])
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = empty_score_breakdown
+        mock_build_embed.return_value = Mock()
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            return_value=ScoreBreakdown([], [], [], [])
+        )
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -408,7 +550,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_color,
         mock_get_rank,
@@ -421,16 +563,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "89%"
         mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -463,7 +602,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_next_rank,
         mock_get_color,
@@ -478,16 +617,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "45%"
         mock_get_history.return_value = {7: 1250, 14: 2100, 30: 3400}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -499,11 +635,11 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self.assertIn("7d", mock_embed.fields[6].value)
         self.assertTrue(mock_embed.fields[6].inline)
 
-        self.assertEqual(mock_embed.fields[7].name, "")
+        self.assertEqual(mock_embed.fields[7].name, EMPTY_SPACE)
         self.assertIn("14d", mock_embed.fields[7].value)
         self.assertTrue(mock_embed.fields[7].inline)
 
-        self.assertEqual(mock_embed.fields[8].name, "")
+        self.assertEqual(mock_embed.fields[8].name, EMPTY_SPACE)
         self.assertIn("30d", mock_embed.fields[8].value)
         self.assertTrue(mock_embed.fields[8].inline)
 
@@ -522,7 +658,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_next_rank,
         mock_get_color,
@@ -537,16 +673,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "45%"
         mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -570,7 +703,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_next_rank,
         mock_get_color,
@@ -585,16 +718,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "45%"
         mock_get_history.return_value = {7: 500}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -621,7 +751,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_next_rank,
         mock_get_color,
@@ -636,16 +766,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "45%"
         mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -669,7 +796,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self,
         mock_build_embed,
         mock_render_percentage,
-        mock_check_role,
+        mock_has_prospect_role,
         mock_find_emoji,
         mock_get_next_rank,
         mock_get_color,
@@ -684,16 +811,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_next_rank.return_value = RANK.MITHRIL
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
-        mock_check_role.side_effect = [False, True]
+        mock_has_prospect_role.return_value = False
         mock_render_percentage.return_value = "45%"
         mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
-
-        mock_score_service = AsyncMock()
-        mock_get_score_service.return_value = mock_score_service
-        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+        mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_score(self.interaction, "TestUser")
 
@@ -702,4 +826,3 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Mithril", next_rank_field.value)
         self.assertIn("pts", next_rank_field.value)
         self.assertTrue(next_rank_field.inline)
-
