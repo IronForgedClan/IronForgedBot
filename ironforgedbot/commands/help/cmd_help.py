@@ -39,7 +39,7 @@ def _build_section_value(
             desc = desc[2:].lstrip()
 
         cost = _get_ingot_cost(cmd)
-        cost_str = f"{ingot_emoji} **{cost:,}** " if cost is not None else ""
+        cost_str = f"{ingot_emoji} **{cost:,}** - " if cost is not None else ""
         lines.append(f"`/{cmd.name}` - {cost_str}_{desc}_")
 
     return "\n".join(lines)
@@ -69,7 +69,7 @@ def _build_games_description(has_trick_or_treat: bool) -> str:
 async def cmd_help(interaction: discord.Interaction):
     """Display all active bot commands with descriptions."""
     tree = interaction.client.tree
-    all_commands = sorted(tree.get_commands(), key=lambda c: c.name)
+    all_commands = tree.get_commands()
 
     stats_cmds: list[discord.app_commands.Command] = []
     games_cmds: list[discord.app_commands.Command] = []

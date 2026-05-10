@@ -80,7 +80,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="check",
-                description="Check if a player meets this month's activity requirements.",
+                description="Check if a player meets the monthly activity requirement.",
                 callback=cmd_check,
             )
         )
