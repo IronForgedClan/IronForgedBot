@@ -212,7 +212,7 @@ class TestCmdBreakdown(unittest.IsolatedAsyncioTestCase):
         )
         mock_score_service.get_player_score.assert_called_once_with("TestUser")
         mock_menu.add_page.assert_called()
-        mock_menu.add_button.assert_called()
+        self.assertEqual(mock_menu.add_button.call_count, 3)
         mock_menu.start.assert_called_once()
 
     @patch("ironforgedbot.commands.hiscore.cmd_breakdown.get_score_service")

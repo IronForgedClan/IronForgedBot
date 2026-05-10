@@ -9,9 +9,11 @@ from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
     find_emoji,
+    normalize_discord_string,
     render_percentage,
     validate_playername,
 )
+from ironforgedbot.config import CONFIG
 from ironforgedbot.common.ranks import (
     RANK_POINTS,
     RANK,
@@ -29,7 +31,7 @@ from ironforgedbot.common.responses import (
 )
 from ironforgedbot.common.roles import ROLE, has_prospect_role
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.text_formatters import text_bold, text_italic
+from ironforgedbot.common.text_formatters import text_italic
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
@@ -41,6 +43,11 @@ logger = logging.getLogger(__name__)
 _BOSS_FIELDS_PER_PAGE = 24
 _BOSS_COLUMNS = 3
 _RANK_ARROW_PADDING = EMPTY_SPACE * 7
+_BREAKDOWN_TITLE = "ℹ️ Breakdown"
+_BREAKDOWN_EMBED_DESCRIPTION = (
+    "Points are earned through in-game achievements and determine your clan rank. "
+    f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information."
+)
 
 
 def _build_rank_ladder_embed(
@@ -62,10 +69,18 @@ def _build_rank_ladder_embed(
         god_alignment: God alignment string if at GOD rank, else None.
     """
     embed = build_response_embed(
-        f"{rank_icon} {display_name} | Rank Ladder",
-        "Gain xp, earn points, climb the ladder!",
+        f"{_BREAKDOWN_TITLE} - Rank Ladder",
+        _BREAKDOWN_EMBED_DESCRIPTION,
         rank_color,
     )
+
+    embed.add_field(
+        name="Member",
+        value=f"{rank_icon} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+    embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
+    embed.add_field(name="", value="", inline=True)
 
     display_ranks = [r for r in RANK if not r.lower().startswith("god_")]
     for rank in display_ranks:
@@ -151,11 +166,19 @@ def _build_boss_embeds(
     page_count = len(embeds)
 
     for index, embed in enumerate(embeds):
-        embed.title = f"{rank_icon} {display_name} | Bossing Points"
-        embed.description = f"Breakdown of {text_bold(f'{boss_point_counter:,}')} points awarded for boss kc."
+        embed.title = f"{_BREAKDOWN_TITLE} - Bossing"
+        embed.description = _BREAKDOWN_EMBED_DESCRIPTION
 
         if page_count > 1:
             embed.title += f" ({index + 1}/{page_count})"
+
+        embed.add_field(
+            name="Member",
+            value=f"{rank_icon} {normalize_discord_string(display_name)}",
+            inline=True,
+        )
+        embed.add_field(name="Bossing Points", value=f"{boss_point_counter:,}", inline=True)
+        embed.add_field(name="", value="", inline=True)
 
         if index + 1 == page_count:
             if len(embed.fields) % _BOSS_COLUMNS != 0:
@@ -235,10 +258,19 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
         )
 
     skill_breakdown_embed = build_response_embed(
-        f"{rank_icon} {display_name} | Skilling Points",
-        f"Breakdown of {text_bold(f'{skill_points:,}')} points awarded for skill xp.",
+        f"{_BREAKDOWN_TITLE} - Skilling",
+        _BREAKDOWN_EMBED_DESCRIPTION,
         rank_color,
     )
+    skill_breakdown_embed.add_field(
+        name="Member",
+        value=f"{rank_icon} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+    skill_breakdown_embed.add_field(
+        name="Skilling Points", value=f"{skill_points:,}", inline=True
+    )
+    skill_breakdown_embed.add_field(name="", value="", inline=True)
 
     ordered_skills = sorted(data.skills, key=lambda x: x.display_order)
     for skill in ordered_skills:
@@ -256,10 +288,19 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
 
     raid_point_counter = sum(r.points for r in data.raids)
     raid_breakdown_embed = build_response_embed(
-        f"{rank_icon} {display_name} | Raid Points",
-        f"Breakdown of {text_bold(f'{raid_point_counter:,}')} points awarded for raid completions.",
+        f"{_BREAKDOWN_TITLE} - Raids",
+        _BREAKDOWN_EMBED_DESCRIPTION,
         rank_color,
     )
+    raid_breakdown_embed.add_field(
+        name="Member",
+        value=f"{rank_icon} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+    raid_breakdown_embed.add_field(
+        name="Raid Points", value=f"{raid_point_counter:,}", inline=True
+    )
+    raid_breakdown_embed.add_field(name="", value="", inline=True)
     for raid in data.raids:
         raid_icon = find_emoji(raid.emoji_key)
         raid_breakdown_embed.add_field(
@@ -269,10 +310,19 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
 
     clue_point_counter = sum(c.points for c in data.clues)
     clue_breakdown_embed = build_response_embed(
-        f"{rank_icon} {display_name} | Cluescroll Points",
-        f"Breakdown of {text_bold(f'{clue_point_counter:,}')} points awarded for cluescroll completions.",
+        f"{_BREAKDOWN_TITLE} - Clues",
+        _BREAKDOWN_EMBED_DESCRIPTION,
         rank_color,
     )
+    clue_breakdown_embed.add_field(
+        name="Member",
+        value=f"{rank_icon} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+    clue_breakdown_embed.add_field(
+        name="Clue Points", value=f"{clue_point_counter:,}", inline=True
+    )
+    clue_breakdown_embed.add_field(name="", value="", inline=True)
     for clue in data.clues:
         clue_icon = find_emoji(clue.emoji_key)
         clue_breakdown_embed.add_field(
@@ -301,6 +351,7 @@ async def cmd_breakdown(interaction: discord.Interaction, player: str | None = N
 
     menu.add_button(ViewButton.back())
     menu.add_button(ViewButton.next())
+    menu.add_button(ViewButton.end_session())
 
     try:
         await menu.start()
