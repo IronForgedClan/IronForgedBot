@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import discord
 
@@ -205,7 +205,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         mock_send_not_clan.assert_called_once()
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -228,7 +228,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -237,10 +237,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "45%"
-        mock_build_progress.return_value = ""
+        mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
-        mock_embed.title = ":iron: TestUser | Score: 1,675"
         mock_build_embed.return_value = mock_embed
 
         mock_score_service = AsyncMock()
@@ -256,12 +255,13 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         self.interaction.followup.send.assert_called_once()
 
         mock_build_embed.assert_called_once_with(
-            ":iron: TestUser | Score: 1,675", "", discord.Color.greyple()
+            "🏆 Member Score", ANY, discord.Color.greyple()
         )
 
-        self.assertEqual(len(mock_embed.fields), 3)
+        # Member, Rank, Next Rank | Total Points, Skill Points, Activity Points | Rank Progress = 7 fields
+        self.assertEqual(len(mock_embed.fields), 7)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -280,14 +280,14 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
-        mock_build_progress.return_value = ""
+        mock_get_history.return_value = {}
 
         mock_embed = Mock()
         mock_build_embed.return_value = mock_embed
@@ -302,7 +302,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
             self.interaction.guild, "TestUser", must_be_member=False
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -323,7 +323,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.GOD
@@ -331,10 +331,9 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_get_god_alignment.return_value = GOD_ALIGNMENT.SARADOMIN
         mock_find_emoji.return_value = ":saradomin:"
         mock_check_role.side_effect = [False, True]
-        mock_build_progress.return_value = ""
+        mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
-        mock_embed.title = ":saradomin: TestUser | Score: 50,000"
         mock_build_embed.return_value = mock_embed
 
         high_score_breakdown = ScoreBreakdown(
@@ -349,9 +348,10 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         mock_build_embed.assert_called_once()
 
-        self.assertEqual(len(mock_embed.fields), 3)
+        # Member, Rank, blank | Total Points, Skill Points, Activity Points | god alignment row = 7 fields
+        self.assertEqual(len(mock_embed.fields), 7)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -370,17 +370,16 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
         mock_get_color.return_value = discord.Color.greyple()
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
-        mock_build_progress.return_value = ""
+        mock_get_history.return_value = {}
 
         mock_embed = Mock()
-        mock_embed.title = ":iron: TestUser | Score: 0"
         mock_build_embed.return_value = mock_embed
 
         empty_score_breakdown = ScoreBreakdown([], [], [], [])
@@ -392,10 +391,10 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         await cmd_score(self.interaction, "TestUser")
 
         mock_build_embed.assert_called_once_with(
-            ":iron: TestUser | Score: 0", "", discord.Color.greyple()
+            "🏆 Member Score", ANY, discord.Color.greyple()
         )
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -416,7 +415,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -424,7 +423,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "89%"
-        mock_build_progress.return_value = ""
+        mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
@@ -435,17 +434,21 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         await cmd_score(self.interaction, "TestUser")
 
-        self.assertEqual(len(mock_embed.fields), 3)
+        # Member, Rank, Next Rank | Total Points, Skill Points, Activity Points | Rank Progress = 7 fields
+        self.assertEqual(len(mock_embed.fields), 7)
 
-        skill_field = mock_embed.fields[0]
-        activity_field = mock_embed.fields[1]
+        score_field = mock_embed.fields[3]
+        skill_field = mock_embed.fields[4]
+        activity_field = mock_embed.fields[5]
 
+        self.assertEqual(score_field.name, "Total Points")
+        self.assertIn("1,675", score_field.value)
         self.assertEqual(skill_field.name, "Skill Points")
         self.assertIn("1,500", skill_field.value)
         self.assertEqual(activity_field.name, "Activity Points")
         self.assertIn("175", activity_field.value)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -456,7 +459,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
-    async def test_score_progress_field_present_when_data_available(
+    async def test_score_history_all_periods_present(
         self,
         mock_build_embed,
         mock_render_percentage,
@@ -468,7 +471,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -477,7 +480,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "45%"
-        mock_build_progress.return_value = "↑ +1,250 (7d)  |  ↑ +2,100 (14d)  |  ↑ +3,400 (30d)"
+        mock_get_history.return_value = {7: 1250, 14: 2100, 30: 3400}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
@@ -488,15 +491,23 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         await cmd_score(self.interaction, "TestUser")
 
-        self.assertEqual(len(mock_embed.fields), 4)
-        progress_field = mock_embed.fields[2]
-        self.assertEqual(progress_field.name, "Score Progress")
-        self.assertIn("7d", progress_field.value)
-        self.assertIn("14d", progress_field.value)
-        self.assertIn("30d", progress_field.value)
-        self.assertFalse(progress_field.inline)
+        # Member, Rank, Next Rank | Total Points, Skill Points, Activity Points
+        # | Score History (7d), (14d), (30d) | Rank Progress = 10 fields
+        self.assertEqual(len(mock_embed.fields), 10)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+        self.assertEqual(mock_embed.fields[6].name, "Score History")
+        self.assertIn("7d", mock_embed.fields[6].value)
+        self.assertTrue(mock_embed.fields[6].inline)
+
+        self.assertEqual(mock_embed.fields[7].name, "")
+        self.assertIn("14d", mock_embed.fields[7].value)
+        self.assertTrue(mock_embed.fields[7].inline)
+
+        self.assertEqual(mock_embed.fields[8].name, "")
+        self.assertIn("30d", mock_embed.fields[8].value)
+        self.assertTrue(mock_embed.fields[8].inline)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -507,7 +518,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
-    async def test_score_progress_field_omitted_when_no_history(
+    async def test_score_history_omitted_when_no_history(
         self,
         mock_build_embed,
         mock_render_percentage,
@@ -519,7 +530,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -528,7 +539,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "45%"
-        mock_build_progress.return_value = ""
+        mock_get_history.return_value = {}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
@@ -539,11 +550,12 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         await cmd_score(self.interaction, "TestUser")
 
-        self.assertEqual(len(mock_embed.fields), 3)
+        # Member, Rank, Next Rank | Total Points, Skill Points, Activity Points | Rank Progress = 7 fields
+        self.assertEqual(len(mock_embed.fields), 7)
         field_names = [f.name for f in mock_embed.fields]
-        self.assertNotIn("Score Progress", field_names)
+        self.assertNotIn("Score History", field_names)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_score._build_score_progress_field")
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
     @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
@@ -554,7 +566,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
     @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
-    async def test_score_progress_field_partial_periods(
+    async def test_score_history_partial_periods(
         self,
         mock_build_embed,
         mock_render_percentage,
@@ -566,7 +578,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_validate,
         mock_http,
         mock_get_score_service,
-        mock_build_progress,
+        mock_get_history,
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
         mock_get_rank.return_value = RANK.IRON
@@ -575,7 +587,7 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ":iron:"
         mock_check_role.side_effect = [False, True]
         mock_render_percentage.return_value = "45%"
-        mock_build_progress.return_value = "↑ +500 (7d)"
+        mock_get_history.return_value = {7: 500}
 
         mock_embed = _make_embed_mock()
         mock_build_embed.return_value = mock_embed
@@ -586,9 +598,108 @@ class TestCmdScore(unittest.IsolatedAsyncioTestCase):
 
         await cmd_score(self.interaction, "TestUser")
 
-        self.assertEqual(len(mock_embed.fields), 4)
-        progress_field = mock_embed.fields[2]
-        self.assertEqual(progress_field.name, "Score Progress")
-        self.assertIn("7d", progress_field.value)
-        self.assertNotIn("14d", progress_field.value)
-        self.assertNotIn("30d", progress_field.value)
+        # Member, Rank, Next Rank | Total Points, Skill Points, Activity Points
+        # | Score History (7d only) | Rank Progress = 8 fields
+        self.assertEqual(len(mock_embed.fields), 8)
+
+        self.assertEqual(mock_embed.fields[6].name, "Score History")
+        self.assertIn("7d", mock_embed.fields[6].value)
+        self.assertTrue(mock_embed.fields[6].inline)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_next_rank_from_points")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
+    async def test_rank_progress_field_shows_progress_bar(
+        self,
+        mock_build_embed,
+        mock_render_percentage,
+        mock_check_role,
+        mock_find_emoji,
+        mock_get_next_rank,
+        mock_get_color,
+        mock_get_rank,
+        mock_validate,
+        mock_http,
+        mock_get_score_service,
+        mock_get_history,
+    ):
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_next_rank.return_value = RANK.MITHRIL
+        mock_get_color.return_value = discord.Color.greyple()
+        mock_find_emoji.return_value = ":iron:"
+        mock_check_role.side_effect = [False, True]
+        mock_render_percentage.return_value = "45%"
+        mock_get_history.return_value = {}
+
+        mock_embed = _make_embed_mock()
+        mock_build_embed.return_value = mock_embed
+
+        mock_score_service = AsyncMock()
+        mock_get_score_service.return_value = mock_score_service
+        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+
+        await cmd_score(self.interaction, "TestUser")
+
+        rank_progress_field = mock_embed.fields[6]
+        self.assertEqual(rank_progress_field.name, "Rank Progress")
+        self.assertFalse(rank_progress_field.inline)
+        self.assertIn("▰", rank_progress_field.value)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_score._get_score_history")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_score_service")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.HTTP")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.validate_playername")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_from_points")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_rank_color_from_points")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.get_next_rank_from_points")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.has_prospect_role")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_score.build_response_embed")
+    async def test_next_rank_field_shows_points_needed(
+        self,
+        mock_build_embed,
+        mock_render_percentage,
+        mock_check_role,
+        mock_find_emoji,
+        mock_get_next_rank,
+        mock_get_color,
+        mock_get_rank,
+        mock_validate,
+        mock_http,
+        mock_get_score_service,
+        mock_get_history,
+    ):
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_get_next_rank.return_value = RANK.MITHRIL
+        mock_get_color.return_value = discord.Color.greyple()
+        mock_find_emoji.return_value = ":iron:"
+        mock_check_role.side_effect = [False, True]
+        mock_render_percentage.return_value = "45%"
+        mock_get_history.return_value = {}
+
+        mock_embed = _make_embed_mock()
+        mock_build_embed.return_value = mock_embed
+
+        mock_score_service = AsyncMock()
+        mock_get_score_service.return_value = mock_score_service
+        mock_score_service.get_player_score.return_value = self.sample_score_breakdown
+
+        await cmd_score(self.interaction, "TestUser")
+
+        next_rank_field = mock_embed.fields[2]
+        self.assertEqual(next_rank_field.name, "Next Rank")
+        self.assertIn("Mithril", next_rank_field.value)
+        self.assertIn("pts", next_rank_field.value)
+        self.assertTrue(next_rank_field.inline)
+
