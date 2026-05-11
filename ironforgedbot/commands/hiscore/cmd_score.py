@@ -50,7 +50,6 @@ _SCORE_EMBED_DESCRIPTION = (
 )
 
 
-
 async def _get_score_history(discord_id: int, current_score: int) -> dict[int, int]:
     """Return score deltas for each history period that has a snapshot.
 
