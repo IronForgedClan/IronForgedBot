@@ -20,10 +20,11 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
     with patch("ironforgedbot.common.helpers.find_emoji", return_value="<:emoji:123>"):
         from ironforgedbot.commands.hiscore.cmd_score import (
             cmd_score,
-            _build_rank_progress_bar,
             _get_score_history,
         )
         from ironforgedbot.commands.hiscore.score_utils import _calculate_points
+
+from ironforgedbot.common.helpers import build_rank_progress_bar
 
 
 def _make_embed_mock() -> Mock:
@@ -50,40 +51,40 @@ def _make_embed_mock() -> Mock:
 
 class TestBuildRankProgressBar(unittest.TestCase):
     def test_zero_progress(self):
-        result = _build_rank_progress_bar(0, 0, 1000, ":iron:", ":mithril:")
+        result = build_rank_progress_bar(0, 0, 1000, ":iron:", ":mithril:")
         self.assertIn(":iron:", result)
         self.assertIn(":mithril:", result)
         self.assertNotIn("▰", result)
 
     def test_full_progress(self):
-        result = _build_rank_progress_bar(1000, 0, 1000, ":iron:", ":mithril:")
+        result = build_rank_progress_bar(1000, 0, 1000, ":iron:", ":mithril:")
         self.assertNotIn("▱", result)
 
     def test_half_progress(self):
-        result = _build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
+        result = build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
         filled = result.count("▰")
         empty = result.count("▱")
         self.assertEqual(filled, 10)
         self.assertEqual(empty, 10)
 
     def test_zero_span_returns_full_bar(self):
-        result = _build_rank_progress_bar(5000, 5000, 5000, ":god:", ":god:")
+        result = build_rank_progress_bar(5000, 5000, 5000, ":god:", ":god:")
         self.assertNotIn("▱", result)
 
     def test_clamps_below_zero(self):
-        result = _build_rank_progress_bar(-100, 0, 1000, ":iron:", ":mithril:")
+        result = build_rank_progress_bar(-100, 0, 1000, ":iron:", ":mithril:")
         self.assertNotIn("▰", result)
 
     def test_clamps_above_max(self):
-        result = _build_rank_progress_bar(9999, 0, 1000, ":iron:", ":mithril:")
+        result = build_rank_progress_bar(9999, 0, 1000, ":iron:", ":mithril:")
         self.assertNotIn("▱", result)
 
     def test_includes_percentage(self):
         with patch(
-            "ironforgedbot.commands.hiscore.cmd_score.render_percentage",
+            "ironforgedbot.common.helpers.render_percentage",
             return_value="50%",
         ):
-            result = _build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
+            result = build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")
         self.assertIn("50%", result)
 
 

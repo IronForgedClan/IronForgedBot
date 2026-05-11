@@ -429,7 +429,7 @@ class TestBuildRankLadderEmbed(unittest.TestCase):
         )
 
         field_names = [f.name for f in embed.fields]
-        self.assertIn("Your Progress", field_names)
+        self.assertIn("Rank Progress", field_names)
 
     @patch(
         "ironforgedbot.commands.hiscore.cmd_breakdown.find_emoji", return_value=":icon:"
@@ -511,7 +511,7 @@ class TestBuildRankLadderEmbed(unittest.TestCase):
         non_iron_fields = [
             f
             for f in embed.fields
-            if "Iron" not in f.name and f.name != "Your Progress"
+            if "Iron" not in f.name and f.name != "Rank Progress"
         ]
         for field in non_iron_fields:
             self.assertNotIn("←", field.name)
