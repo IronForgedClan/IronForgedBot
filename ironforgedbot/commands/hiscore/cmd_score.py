@@ -6,6 +6,7 @@ from discord import app_commands
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.helpers import (
+    build_rank_progress_bar,
     find_emoji,
     normalize_discord_string,
     render_percentage,
@@ -41,9 +42,6 @@ from ironforgedbot.services.score_service import get_score_service
 logger = logging.getLogger(__name__)
 
 _SCORE_PROGRESS_PERIODS = [7, 14, 30]
-_PROGRESS_BAR_LENGTH = 20
-_PROGRESS_BAR_FILLED = "▰"
-_PROGRESS_BAR_EMPTY = "▱"
 
 _SCORE_EMBED_DESCRIPTION = (
     "Points are earned through in-game achievements and determine your clan rank. "
@@ -51,32 +49,6 @@ _SCORE_EMBED_DESCRIPTION = (
     f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information."
 )
 
-
-def _build_rank_progress_bar(
-    points_total: int,
-    rank_point_threshold: int,
-    next_rank_point_threshold: int,
-    rank_icon: str,
-    next_rank_icon: str,
-) -> str:
-    """Build a visual progress bar string showing progress toward the next rank.
-
-    Args:
-        points_total: The member's current score.
-        rank_point_threshold: The point threshold for the current rank.
-        next_rank_point_threshold: The point threshold for the next rank.
-        rank_icon: Emoji for the current rank.
-        next_rank_icon: Emoji for the next rank.
-    """
-    span = next_rank_point_threshold - rank_point_threshold
-    progress = points_total - rank_point_threshold
-    ratio = max(0.0, min(1.0, progress / span)) if span > 0 else 1.0
-    filled = round(ratio * _PROGRESS_BAR_LENGTH)
-    bar = _PROGRESS_BAR_FILLED * filled + _PROGRESS_BAR_EMPTY * (
-        _PROGRESS_BAR_LENGTH - filled
-    )
-    percentage = render_percentage(progress, span)
-    return f"{rank_icon} {bar} {next_rank_icon}" f" ({percentage})"
 
 
 async def _get_score_history(discord_id: int, current_score: int) -> dict[int, int]:
@@ -247,7 +219,7 @@ async def cmd_score(interaction: discord.Interaction, player: str | None = None)
             first = False
 
     if rank_name != RANK.GOD:
-        progress_bar = _build_rank_progress_bar(
+        progress_bar = build_rank_progress_bar(
             points_total,
             rank_point_threshold,
             next_rank_point_threshold,

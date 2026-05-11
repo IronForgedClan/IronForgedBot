@@ -7,6 +7,7 @@ from reactionmenu import ViewButton, ViewMenu
 from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import (
+    build_rank_progress_bar,
     find_emoji,
     normalize_discord_string,
     render_percentage,
@@ -136,13 +137,16 @@ def _build_rank_ladder_embed(
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(next_rank_name)
-        percentage = render_percentage(
-            points_total - int(rank_point_threshold),
-            int(next_rank_point_threshold) - int(rank_point_threshold),
+        progress_bar = build_rank_progress_bar(
+            points_total,
+            int(rank_point_threshold),
+            int(next_rank_point_threshold),
+            rank_icon,
+            next_rank_icon,
         )
         embed.add_field(
-            name="Your Progress",
-            value=f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})",
+            name="Rank Progress",
+            value=progress_bar,
             inline=False,
         )
 
