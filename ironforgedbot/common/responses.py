@@ -256,6 +256,9 @@ async def send_prospect_response(
 
         if remaining_time <= timedelta(0):
             embed_description += f"\n\n⏳ _soon™_"
+            embed_description += (
+                "\n\n-# _This is a manual process, please be patient. Welcome :wave:_"
+            )
         elif remaining_time < timedelta(days=1):
             embed_description += f"\n\n⏳ _A few hours remaining..._"
         else:

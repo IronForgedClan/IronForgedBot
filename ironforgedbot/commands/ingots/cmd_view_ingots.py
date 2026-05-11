@@ -5,7 +5,11 @@ import discord
 from discord import app_commands
 from tabulate import tabulate
 
-from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedbot.common.helpers import (
+    find_emoji,
+    normalize_discord_string,
+    validate_playername,
+)
 from ironforgedbot.common.ranks import get_rank_from_member
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import (
@@ -93,11 +97,13 @@ async def cmd_view_ingots(
         ingot_icon = find_emoji("Ingot")
 
         embed = build_ingot_response_embed(
-            title=f"{ingot_icon} Ingot Account",
+            title=f"{ingot_icon} Ingots",
             description=f"Ingots are our clan currency. Learn how to earn or spend them in <#{CONFIG.INGOT_SHOP_CHANNEL_ID}>.",
         )
 
-        embed.add_field(name="Member", value=f"{rank_icon} {display_name}")
+        embed.add_field(
+            name="Member", value=f"{rank_icon} {normalize_discord_string(display_name)}"
+        )
         embed.add_field(name="Balance", value=f"{ingot_icon} {member.ingots:,}")
 
         if transactions:
