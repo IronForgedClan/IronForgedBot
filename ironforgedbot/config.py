@@ -37,6 +37,9 @@ class Config:
         self.BOT_CHANGELOG_CHANNEL_ID: int = int(
             os.getenv("BOT_CHANGELOG_CHANNEL_ID") or 0
         )
+        self.CREATE_TICKET_CHANNEL_ID: int = int(
+            os.getenv("CREATE_TICKET_CHANNEL_ID") or 0
+        )
         self.TRICK_OR_TREAT_ENABLED: bool = (
             os.getenv("TRICK_OR_TREAT_ENABLED", "False") == "True"
         )
