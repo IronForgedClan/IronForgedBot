@@ -5,7 +5,7 @@ import discord
 from tabulate import tabulate
 
 from ironforgedbot.common.constants import EMPTY_SPACE
-from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.helpers import build_discord_link, find_emoji
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.roles import ROLE
@@ -138,9 +138,10 @@ async def cmd_help(interaction: discord.Interaction):
             inline=False,
         )
 
+    changelog_link = build_discord_link(CONFIG.BOT_CHANGELOG_CHANNEL_ID)
     embed.add_field(
         name=EMPTY_SPACE,
-        value=f"-# _ironforgedbot v{CONFIG.BOT_VERSION}_",
+        value=f"-# _ironforgedbot⠀•⠀v{CONFIG.BOT_VERSION}⠀•⠀[changelog]({changelog_link})_",
         inline=False,
     )
 
