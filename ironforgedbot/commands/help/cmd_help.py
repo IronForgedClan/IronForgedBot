@@ -58,14 +58,14 @@ def _build_commands_description() -> str:
     rules = f"<#{CONFIG.RULES_CHANNEL_ID}>"
     shop = f"<#{CONFIG.INGOT_SHOP_CHANNEL_ID}>"
     return (
-        f"Look up scores, ranks, and player information. "
+        f"Check scores, ranks, and player information. "
         f"Activity requirements can be found in {rules}. "
         f"Learn about earning and spending ingots in {shop}."
     )
 
 
 def _build_activities_description(has_trick_or_treat: bool) -> str:
-    desc = "As well as spending your ingots in the shop, you can also use them on these ~~useless~~ entertaining commands."
+    desc = "Additional ways to spend your ingots. Just a bit of fun."
     if has_trick_or_treat and getattr(CONFIG, "TRICK_OR_TREAT_CHANNEL_ID", None):
         tot = f"<#{CONFIG.TRICK_OR_TREAT_CHANNEL_ID}>"
         desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck! 👻"
@@ -107,7 +107,7 @@ async def cmd_help(interaction: discord.Interaction):
     embed = build_response_embed(
         title=f"{dwh_emoji} Iron Forged Commands",
         description=(
-            f"Keep tabs on your score, manage your ingots, and make questionable financial decisions - all in one place.\n\n"
+            f"The bot's primary purpose is to make your life easier. Feedback or suggestions are always welcome <#{CONFIG.CREATE_TICKET_CHANNEL_ID}>.\n\n"
             f"Type `/` in <#{CONFIG.BOT_COMMANDS_CHANNEL_ID}> to use any of the commands below."
         ),
         color=discord.Colour.blue(),
