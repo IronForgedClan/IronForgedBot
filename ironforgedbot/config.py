@@ -31,6 +31,9 @@ class Config:
         self.INGOT_SHOP_CHANNEL_ID: int = int(os.getenv("INGOT_SHOP_CHANNEL_ID") or 0)
         self.RULES_CHANNEL_ID: int = int(os.getenv("RULES_CHANNEL_ID") or 0)
         self.RANKINGS_CHANNEL_ID: int = int(os.getenv("RANKINGS_CHANNEL_ID") or 0)
+        self.BOT_COMMANDS_CHANNEL_ID: int = int(
+            os.getenv("BOT_COMMANDS_CHANNEL_ID") or 0
+        )
         self.BOT_CHANGELOG_CHANNEL_ID: int = int(
             os.getenv("BOT_CHANGELOG_CHANNEL_ID") or 0
         )
