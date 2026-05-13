@@ -126,7 +126,7 @@ async def cmd_help(interaction: discord.Interaction):
         sections.append(
             (
                 "Miscellaneous",
-                "Miscellaneous commands that don't fit elsewhere.",
+                "Extra tools and services.",
                 other_cmds,
             )
         )
