@@ -31,7 +31,7 @@ def _get_ingot_cost(cmd: discord.app_commands.Command) -> int | None:
     return None
 
 
-_DESC_WRAP_WIDTH = 30
+_DESC_WRAP_WIDTH = 35
 
 
 def _build_ascii_table(cmds: list[discord.app_commands.Command]) -> str:
