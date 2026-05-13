@@ -68,7 +68,12 @@ def _build_activities_description(has_trick_or_treat: bool) -> str:
     desc = "As well as spending your ingots in the shop, you can also use them on these ~~useless~~ entertaining commands."
     if has_trick_or_treat and getattr(CONFIG, "TRICK_OR_TREAT_CHANNEL_ID", None):
         tot = f"<#{CONFIG.TRICK_OR_TREAT_CHANNEL_ID}>"
-        desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck!"
+        desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck! 👻"
+    if STATE.state["raffle_on"]:
+        raffle = f"<#{CONFIG.RAFFLE_CHANNEL_ID}>"
+        desc += (
+            f"\n\n-# **NEW:** There is a raffle happening __right now__ in {raffle}!"
+        )
     return desc
 
 
