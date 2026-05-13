@@ -66,21 +66,21 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="score",
-                description="Show your total clan score, rank, and progress to the next rank.",
+                description="Show your score, rank, and progress to the next rank.",
                 callback=cmd_score,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="breakdown",
-                description="Show a full breakdown of your score across skills, bosses, raids, and clues.",
+                description="Show a breakdown of your score across skills, bosses, raids, and clues.",
                 callback=cmd_breakdown,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="check",
-                description="Check if you meet the monthly activity requirement, or are in danger.",
+                description="Check if you meet the monthly activity requirement.",
                 callback=cmd_check,
             )
         )
@@ -108,7 +108,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="whois",
-                description="Look up a player's RSN name change history.",
+                description="Show a player's RSN history.",
                 callback=cmd_whois,
             )
         )
@@ -122,7 +122,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="help",
-                description="Show all available commands and how to use them.",
+                description="Show all available commands and what they do.",
                 callback=cmd_help,
             )
         )
@@ -143,14 +143,14 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="eight_ball",
-                description="💰 Ask the Magic 8-Ball a yes or no question.",
+                description="💰 Ask the magic 8-ball a yes or no question.",
                 callback=cmd_eight_ball,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="spin",
-                description="💰 Spin a wheel and let fate decide between your options.",
+                description="💰 Spin a wheel and let fate decide.",
                 callback=cmd_spin,
             )
         )
@@ -172,22 +172,22 @@ class IronForgedCommands:
         if CONFIG.ENVIRONMENT in [ENVIRONMENT.DEVELOPMENT, ENVIRONMENT.STAGING]:
             self._tree.add_command(
                 discord.app_commands.Command(
-                    name="debug_commands",
-                    description="Menu showing all commands",
+                    name="debug_cmds",
+                    description="Show the debug menu.",
                     callback=cmd_debug_commands,
                 )
             )
             self._tree.add_command(
                 discord.app_commands.Command(
-                    name="debug_error_report",
-                    description="Test error reporting system with phantom command",
+                    name="debug_err",
+                    description="Test error reporting system.",
                     callback=cmd_debug_error_report,
                 )
             )
             self._tree.add_command(
                 discord.app_commands.Command(
-                    name="stress_test",
-                    description="Stress test",
+                    name="debug_stress",
+                    description="Starts a stress test.",
                     callback=cmd_stress_test,
                 )
             )
