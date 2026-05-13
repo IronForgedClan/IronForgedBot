@@ -47,7 +47,7 @@ def _build_ascii_table(cmds: list[discord.app_commands.Command]) -> str:
             desc = f"{desc} ({cost:,} ingots)"
 
         wrapped = "\n".join(textwrap.wrap(desc, _DESC_WRAP_WIDTH))
-        rows.append([f"/{cmd.name}", wrapped])
+        rows.append([f"{cmd.name}", wrapped])
 
     return text_code_block(
         tabulate(rows, headers=["Command", "Description"], tablefmt="simple")
