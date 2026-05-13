@@ -64,7 +64,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_nickname.assert_called_once_with("TestUser")
 
         embed = assert_embed_structure(self, self.interaction)
-        self.assertIn("Ingot Account", embed.title)
+        self.assertIn(":Ingot: Ingots", embed.title)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
@@ -105,7 +105,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_member_by_nickname.assert_called_once_with("OtherUser")
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("Ingot Account", sent_embed.title)
+        self.assertIn(":Ingot: Ingots", sent_embed.title)
         self.assertEqual(len(sent_embed.fields), 2)
 
     @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")

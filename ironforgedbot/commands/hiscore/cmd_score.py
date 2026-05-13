@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -7,7 +6,9 @@ from discord import app_commands
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.helpers import (
+    build_rank_progress_bar,
     find_emoji,
+    normalize_discord_string,
     render_percentage,
     validate_playername,
 )
@@ -20,6 +21,7 @@ from ironforgedbot.common.ranks import (
     get_rank_color_from_points,
     get_rank_from_points,
 )
+from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
@@ -28,13 +30,53 @@ from ironforgedbot.common.responses import (
     send_prospect_response,
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
+from ironforgedbot.config import CONFIG
+from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
 from ironforgedbot.models.score import ScoreBreakdown
+from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
+
+_SCORE_PROGRESS_PERIODS = [7, 14, 30]
+
+_SCORE_EMBED_DESCRIPTION = (
+    "Points are earned through in-game achievements and determine your clan rank. "
+    "Use the `breakdown` command to view a detailed breakdown of earned points. "
+    f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for more information."
+)
+
+
+async def _get_score_history(discord_id: int, current_score: int) -> dict[int, int]:
+    """Return score deltas for each history period that has a snapshot.
+
+    Queries the nearest score snapshot for each period (7d, 14d, 30d) and
+    returns a dict mapping days -> delta for each period that has data.
+    Returns an empty dict if no historical data is available or on error.
+
+    Args:
+        discord_id: The Discord ID of the member.
+        current_score: The member's current computed score.
+    """
+    try:
+        async with db.get_session() as session:
+            service = ScoreHistoryService(session)
+            progress = await service.get_score_history(
+                discord_id, _SCORE_PROGRESS_PERIODS
+            )
+    except Exception:
+        return {}
+
+    result = {}
+    for days in _SCORE_PROGRESS_PERIODS:
+        snapshot = progress.get(days)
+        if snapshot is not None:
+            result[days] = current_score - snapshot
+
+    return result
 
 
 @require_role(ROLE.MEMBER)
@@ -42,7 +84,7 @@ logger = logging.getLogger(__name__)
 @app_commands.describe(
     player="Player name to display score for (defaults to your nickname)"
 )
-async def cmd_score(interaction: discord.Interaction, player: Optional[str] = None):
+async def cmd_score(interaction: discord.Interaction, player: str | None = None):
     """Compute clan score for a Runescape player name.
 
     Arguments:
@@ -77,30 +119,26 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         else:
             data = ScoreBreakdown([], [], [], [])
 
-    activities = data.clues + data.raids + data.bosses
-
-    skill_points = 0
-    for skill in data.skills:
-        skill_points += skill.points
-
-    activity_points = 0
-    for activity in activities:
-        activity_points += activity.points
-
-    points_total = skill_points + activity_points
+    skill_points, activity_points, points_total = _calculate_points(data)
     rank_name = get_rank_from_points(points_total)
 
+    # Variables only used for non-GOD ranks; initialized to None to make scoping explicit.
+    rank_point_threshold: int | None = None
+    next_rank_name: str | None = None
+    next_rank_point_threshold: int | None = None
+    next_rank_icon: str | None = None
+
     god_alignment = None
+    god_rank_icon: str | None = None
     if rank_name == RANK.GOD:
         god_alignment = get_god_alignment_from_member(member)
-
         rank_color = get_rank_color_from_points(points_total, god_alignment)
         rank_icon = find_emoji(god_alignment or rank_name)
+        god_rank_icon = find_emoji(RANK.GOD)
     else:
         rank_color = get_rank_color_from_points(points_total)
         rank_icon = find_emoji(rank_name)
         rank_point_threshold = RANK_POINTS[rank_name.upper()]
-
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]
         next_rank_icon = find_emoji(next_rank_name)
@@ -117,11 +155,43 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         )
 
     embed = build_response_embed(
-        f"{rank_icon} {display_name} | Score: {points_total:,}",
-        "",
+        "🏆 Member Score",
+        _SCORE_EMBED_DESCRIPTION,
         rank_color,
     )
 
+    member_icon = find_emoji("Grass") if rank_name == RANK.GOD else rank_icon
+    embed.add_field(
+        name="Member",
+        value=f"{member_icon} {normalize_discord_string(display_name)}",
+        inline=True,
+    )
+    embed.add_field(
+        name="Current Rank",
+        value=f"{god_rank_icon if god_rank_icon else rank_icon} {rank_name}",
+        inline=True,
+    )
+
+    if rank_name == RANK.GOD:
+        alignment_value = (
+            f"{find_emoji(god_alignment)} {god_alignment}"
+            if god_alignment
+            else "_Unaligned_"
+        )
+        embed.add_field(name="God Alignment", value=alignment_value, inline=True)
+    else:
+        points_needed = next_rank_point_threshold - points_total
+        embed.add_field(
+            name="Next Rank",
+            value=f"{next_rank_icon} {next_rank_name} (in {points_needed:,} pts)",
+            inline=True,
+        )
+
+    embed.add_field(
+        name="Total Points",
+        value=f"{points_total:,}",
+        inline=True,
+    )
     embed.add_field(
         name="Skill Points",
         value=f"{skill_points:,} ({render_percentage(skill_points, points_total)})",
@@ -133,38 +203,31 @@ async def cmd_score(interaction: discord.Interaction, player: Optional[str] = No
         inline=True,
     )
 
-    if rank_name == RANK.GOD:
-        match god_alignment:
-            case GOD_ALIGNMENT.SARADOMIN:
-                icon = find_emoji("Saradomin")
-                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
-            case GOD_ALIGNMENT.ZAMORAK:
-                icon = find_emoji("Zamorak")
-                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
-            case GOD_ALIGNMENT.GUTHIX:
-                icon = find_emoji("Guthix")
-                alignment_emojis = f"{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}{EMPTY_SPACE}{icon}"
-            case _:
-                icon = find_emoji("grass")
-                alignment_emojis = (
-                    f"{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}:nerd:{icon}"
-                )
+    score_history = await _get_score_history(member.id, points_total)
+    if score_history:
+        first = True
+        for days in _SCORE_PROGRESS_PERIODS:
+            delta = score_history.get(days)
+            if delta is None:
+                continue
+            embed.add_field(
+                name="Score History" if first else EMPTY_SPACE,
+                value=f"{delta:+,} ({days}d)",
+                inline=True,
+            )
+            first = False
 
-        embed.add_field(
-            name="",
-            value=f"{alignment_emojis}",
-            inline=False,
-        )
-    else:
-        percentage = render_percentage(
-            points_total - int(rank_point_threshold),
-            int(next_rank_point_threshold) - int(rank_point_threshold),
+    if rank_name != RANK.GOD:
+        progress_bar = build_rank_progress_bar(
+            points_total,
+            rank_point_threshold,
+            next_rank_point_threshold,
+            rank_icon,
+            next_rank_icon,
         )
         embed.add_field(
             name="Rank Progress",
-            value=(
-                f"{rank_icon} → {next_rank_icon} {points_total:,}/{next_rank_point_threshold:,} ({percentage})"
-            ),
+            value=progress_bar,
             inline=False,
         )
 
