@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Tuple
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.logging_utils import log_database_operation
+from ironforgedbot.models.member import Member
 from ironforgedbot.models.score_history import ScoreHistory
 from ironforgedbot.services.member_service import MemberService
 
@@ -104,3 +106,50 @@ class ScoreHistoryService:
             result[days] = row.score if row is not None else None
 
         return result
+
+    @log_database_operation(logger)
+    async def get_latest_score_snapshot(self) -> list[Tuple[int, str, int]]:
+        """Return the latest score snapshot for each eligible member.
+
+        Eligible members are those who:
+          - Are marked active
+          - Are not prospects
+          - Have at least one score_history entry
+
+        Args:
+            None
+
+        Returns:
+            A list of (discord_id, nickname, score) tuples, one per eligible
+            member, representing their most recent snapshot. Members with no
+            snapshots are excluded. Order is unspecified; callers should sort.
+        """
+        latest_per_member = (
+            select(
+                ScoreHistory.member_id,
+                func.max(ScoreHistory.date).label("latest_date"),
+            )
+            .group_by(ScoreHistory.member_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                Member.discord_id,
+                ScoreHistory.nickname,
+                ScoreHistory.score,
+            )
+            .join(Member, ScoreHistory.member_id == Member.id)
+            .join(
+                latest_per_member,
+                (ScoreHistory.member_id == latest_per_member.c.member_id)
+                & (ScoreHistory.date == latest_per_member.c.latest_date),
+            )
+            .where(
+                Member.active == True,
+                Member.is_prospect == False,
+            )
+        )
+
+        result = await self.db.execute(stmt)
+        return [(row.discord_id, row.nickname, row.score) for row in result]
