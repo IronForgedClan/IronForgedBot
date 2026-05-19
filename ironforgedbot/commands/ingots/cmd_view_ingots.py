@@ -46,8 +46,9 @@ def format_transaction(changelog: Changelog) -> list[str]:
     sign = "+" if difference >= 0 else ""
     change_string = f"{sign}{difference:,}"
 
-    comment = changelog.comment[:LINE_LIMIT] + (
-        "..." if len(changelog.comment) > LINE_LIMIT else ""
+    comment_text = changelog.comment or ""
+    comment = comment_text[:LINE_LIMIT] + (
+        "..." if len(comment_text) > LINE_LIMIT else ""
     )
 
     return [change_string, comment]

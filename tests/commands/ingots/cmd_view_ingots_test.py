@@ -425,6 +425,27 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
             discord_id=12345, quantity=5, after=joined
         )
 
+    def test_format_transaction_with_none_comment(self):
+        """Test format_transaction handles None comment as an empty string."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id=None,
+            change_type=ChangeType.ADD_INGOTS,
+            previous_value="0",
+            new_value="100",
+            comment=None,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["+100", ""])
+
     def test_format_transaction_add_ingots(self):
         """Test format_transaction with ADD_INGOTS."""
         from datetime import datetime, timezone
