@@ -209,8 +209,10 @@ def build_error_message_string(message: str) -> str:
 
 
 def build_response_embed(
-    title: str, description: str, color: discord.Color
+    title: str, description: str, color: discord.Color | None
 ) -> discord.Embed:
+    if not color:
+        return discord.Embed(title=title, description=description)
     return discord.Embed(title=title, description=description, color=color)
 
 
