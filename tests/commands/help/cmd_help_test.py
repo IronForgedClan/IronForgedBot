@@ -69,10 +69,12 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Iron Forged Commands", embed.title)
 
     async def test_cmd_help_stats_lookup_section_present(self):
-        self._setup_commands([
-            _make_command("score", "View the player's score."),
-            _make_command("whois", "View player's rsn history."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("score", "View the player's score."),
+                _make_command("whois", "View player's rsn history."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -81,10 +83,14 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any("Core Commands" in n for n in field_names))
 
     async def test_cmd_help_games_fun_section_present(self):
-        self._setup_commands([
-            _make_command("raffle", "Play the raffle."),
-            _make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999),
-        ])
+        self._setup_commands(
+            [
+                _make_command("raffle", "Play the raffle."),
+                _make_command(
+                    "reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999
+                ),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -93,11 +99,13 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any("Activities" in n for n in field_names))
 
     async def test_cmd_help_leadership_commands_excluded(self):
-        self._setup_commands([
-            _make_command("score", "View the player's score."),
-            _make_command("admin", "🔒 Admin actions."),
-            _make_command("roster", "🔒 Creates an event roster."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("score", "View the player's score."),
+                _make_command("admin", "🔒 Admin actions."),
+                _make_command("roster", "🔒 Creates an event roster."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -108,10 +116,12 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("🔒", all_values)
 
     async def test_cmd_help_excludes_itself(self):
-        self._setup_commands([
-            _make_command("help", "View all available bot commands."),
-            _make_command("score", "View the player's score."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("help", "View all available bot commands."),
+                _make_command("score", "View the player's score."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -120,10 +130,16 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("/help", all_values)
 
     async def test_cmd_help_ingot_cost_shown_in_games_section(self):
-        self._setup_commands([
-            _make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999),
-            _make_command("eight_ball", "💰 Ask the Magic 8-Ball a question.", ingot_cost=1999),
-        ])
+        self._setup_commands(
+            [
+                _make_command(
+                    "reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999
+                ),
+                _make_command(
+                    "eight_ball", "💰 Ask the Magic 8-Ball a question.", ingot_cost=1999
+                ),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -133,9 +149,11 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertIn("1,999", games_value)
 
     async def test_cmd_help_no_ingot_cost_for_free_commands(self):
-        self._setup_commands([
-            _make_command("score", "View the player's score."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("score", "View the player's score."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -144,12 +162,15 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("ingots", stats_value.split("```")[1])
 
     async def test_cmd_help_stats_section_contains_channel_links(self):
-        self._setup_commands([
-            _make_command("score", "View the player's score."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("score", "View the player's score."),
+            ]
+        )
 
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RULES_CHANNEL_ID = 111
             mock_config.INGOT_SHOP_CHANNEL_ID = 222
             mock_config.RAFFLE_CHANNEL_ID = 333
@@ -168,12 +189,15 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<#222>", stats_value)
 
     async def test_cmd_help_games_section_contains_raffle_channel_link(self):
-        self._setup_commands([
-            _make_command("raffle", "Play the raffle."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("raffle", "Play the raffle."),
+            ]
+        )
 
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RULES_CHANNEL_ID = 111
             mock_config.INGOT_SHOP_CHANNEL_ID = 222
             mock_config.RAFFLE_CHANNEL_ID = 333
@@ -191,12 +215,15 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<#333>", games_value)
 
     async def test_cmd_help_trick_or_treat_channel_shown_when_present(self):
-        self._setup_commands([
-            _make_command("trick_or_treat", "💰 Feeling lucky, punk?"),
-        ])
+        self._setup_commands(
+            [
+                _make_command("trick_or_treat", "💰 Feeling lucky, punk?"),
+            ]
+        )
 
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RULES_CHANNEL_ID = 1
             mock_config.INGOT_SHOP_CHANNEL_ID = 2
             mock_config.RAFFLE_CHANNEL_ID = 3
@@ -214,12 +241,15 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<#444>", games_value)
 
     async def test_cmd_help_trick_or_treat_channel_hidden_when_not_configured(self):
-        self._setup_commands([
-            _make_command("trick_or_treat", "💰 Feeling lucky, punk?"),
-        ])
+        self._setup_commands(
+            [
+                _make_command("trick_or_treat", "💰 Feeling lucky, punk?"),
+            ]
+        )
 
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RULES_CHANNEL_ID = 1
             mock_config.INGOT_SHOP_CHANNEL_ID = 2
             mock_config.RAFFLE_CHANNEL_ID = 3
@@ -237,9 +267,11 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("<#444>", games_value)
 
     async def test_cmd_help_unknown_commands_go_to_other_section(self):
-        self._setup_commands([
-            _make_command("brand_new_command", "Does something new."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("brand_new_command", "Does something new."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -248,9 +280,11 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any("Miscellaneous" in n for n in field_names))
 
     async def test_cmd_help_empty_section_not_shown(self):
-        self._setup_commands([
-            _make_command("score", "View the player's score."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("score", "View the player's score."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -260,11 +294,13 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(any("Miscellaneous" in n for n in field_names))
 
     async def test_cmd_help_commands_preserve_registration_order(self):
-        self._setup_commands([
-            _make_command("check", "Check your account."),
-            _make_command("ingots", "View your ingot balance."),
-            _make_command("score", "View the player's score."),
-        ])
+        self._setup_commands(
+            [
+                _make_command("check", "Check your account."),
+                _make_command("ingots", "View your ingot balance."),
+                _make_command("score", "View the player's score."),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -278,9 +314,13 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
         self.assertLess(ingots_pos, score_pos)
 
     async def test_cmd_help_emoji_prefix_stripped_from_description(self):
-        self._setup_commands([
-            _make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999),
-        ])
+        self._setup_commands(
+            [
+                _make_command(
+                    "reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999
+                ),
+            ]
+        )
 
         await cmd_help(self.mock_interaction)
 
@@ -293,7 +333,9 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
 @patch.dict("os.environ", VALID_CONFIG)
 class TestGetIngotCost(unittest.TestCase):
     def test_returns_cost_when_stamped_on_callback(self):
-        cmd = _make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999)
+        cmd = _make_command(
+            "reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999
+        )
         self.assertEqual(_get_ingot_cost(cmd), 999)
 
     def test_returns_none_when_no_cost(self):
@@ -329,7 +371,9 @@ class TestBuildAsciiTable(unittest.TestCase):
         cmds = [_make_command("score", "View the player's score.")]
         result = _build_ascii_table(cmds)
         table = result.strip("`")
-        separator_lines = [l for l in table.splitlines() if set(l.strip()) <= set("- ") and l.strip()]
+        separator_lines = [
+            l for l in table.splitlines() if set(l.strip()) <= set("- ") and l.strip()
+        ]
         self.assertTrue(len(separator_lines) > 0)
 
     def test_headers_present(self):
@@ -339,7 +383,9 @@ class TestBuildAsciiTable(unittest.TestCase):
         self.assertIn("Description", result)
 
     def test_cost_header_present_when_costs_exist(self):
-        cmds = [_make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999)]
+        cmds = [
+            _make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999)
+        ]
         result = _build_ascii_table(cmds)
         self.assertIn("ingots", result)
 
@@ -392,7 +438,9 @@ class TestBuildAsciiTable(unittest.TestCase):
         self.assertIn("1,999", result)
 
     def test_strips_emoji_prefix_from_description(self):
-        cmds = [_make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999)]
+        cmds = [
+            _make_command("reset_rng", "💰 Attempt to reset your RNG.", ingot_cost=999)
+        ]
         result = _build_ascii_table(cmds)
         self.assertNotIn("💰 Attempt", result)
         self.assertIn("Attempt to reset your RNG.", result)
@@ -424,8 +472,9 @@ class TestBuildCommandsDescription(unittest.TestCase):
 @patch.dict("os.environ", VALID_CONFIG)
 class TestBuildActivitiesDescription(unittest.TestCase):
     def test_contains_raffle_mention(self):
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RAFFLE_CHANNEL_ID = 333
             mock_config.TRICK_OR_TREAT_CHANNEL_ID = None
             mock_state.state = {"raffle_on": True}
@@ -433,8 +482,9 @@ class TestBuildActivitiesDescription(unittest.TestCase):
         self.assertIn("<#333>", result)
 
     def test_appends_trick_or_treat_channel_when_enabled(self):
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RAFFLE_CHANNEL_ID = 333
             mock_config.TRICK_OR_TREAT_CHANNEL_ID = 444
             mock_state.state = {"raffle_on": False}
@@ -442,8 +492,9 @@ class TestBuildActivitiesDescription(unittest.TestCase):
         self.assertIn("<#444>", result)
 
     def test_no_trick_or_treat_channel_when_not_enabled(self):
-        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, \
-             patch("ironforgedbot.commands.help.cmd_help.STATE") as mock_state:
+        with patch("ironforgedbot.commands.help.cmd_help.CONFIG") as mock_config, patch(
+            "ironforgedbot.commands.help.cmd_help.STATE"
+        ) as mock_state:
             mock_config.RAFFLE_CHANNEL_ID = 333
             mock_config.TRICK_OR_TREAT_CHANNEL_ID = 444
             mock_state.state = {"raffle_on": False}
