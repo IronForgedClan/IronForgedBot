@@ -52,6 +52,7 @@ class IronForgedAutomations:
         self.discord_guild = discord_guild
 
         self._setup_task = asyncio.create_task(self.setup_automations())
+        self._setup_task.add_done_callback(self._setup_done_callback)
 
     async def stop(self):
         """Initiates shutdown and cleanup of scheduled jobs."""
@@ -128,6 +129,16 @@ class IronForgedAutomations:
         except Exception as e:
             logger.error(f"Error starting job {job_func.__name__}: {e}")
             raise
+
+    def _setup_done_callback(self, task: asyncio.Task):
+        """Log any exception raised during automation setup."""
+        if not task.cancelled():
+            exc = task.exception()
+            if exc:
+                logger.critical(
+                    f"Automation setup failed: {type(exc).__name__}: {exc}",
+                    exc_info=exc,
+                )
 
     def _job_done_callback(self, task: asyncio.Task):
         """Remove the job from the running_jobs set once it is finished."""
