@@ -16,7 +16,7 @@ from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
 
-_STATS_LOOKUP: set[str] = {"score", "breakdown", "check", "ingots", "whois"}
+_STATS_LOOKUP: set[str] = {"score", "breakdown", "check", "ingots"}
 _GAMES_FUN: set[str] = {"raffle", "reset_rng", "eight_ball", "spin", "trick_or_treat"}
 
 
@@ -58,17 +58,16 @@ def _build_commands_description() -> str:
     rules = f"<#{CONFIG.RULES_CHANNEL_ID}>"
     shop = f"<#{CONFIG.INGOT_SHOP_CHANNEL_ID}>"
     return (
-        f"Check scores, ranks, and player information. "
-        f"Activity requirements can be found in {rules}. "
-        f"Learn about earning and spending ingots in {shop}."
+        f"Look up scores, check your rank, and view player stats. "
+        f"Activity requirements are in {rules}, ingot info is in {shop}."
     )
 
 
 def _build_activities_description(has_trick_or_treat: bool) -> str:
-    desc = "Additional ways to spend your ingots. Just a bit of fun."
+    desc = "Spend your ingots and have a bit of fun with the clan."
     if has_trick_or_treat and getattr(CONFIG, "TRICK_OR_TREAT_CHANNEL_ID", None):
         tot = f"<#{CONFIG.TRICK_OR_TREAT_CHANNEL_ID}>"
-        desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck! 👻"
+        desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck!"
     if STATE.state["raffle_on"]:
         raffle = f"<#{CONFIG.RAFFLE_CHANNEL_ID}>"
         desc += (
@@ -107,15 +106,17 @@ async def cmd_help(interaction: discord.Interaction):
     embed = build_response_embed(
         title=f"{dwh_emoji} Iron Forged Commands",
         description=(
-            f"The bot's primary purpose is to make your life easier. Feedback or suggestions are always welcome <#{CONFIG.CREATE_TICKET_CHANNEL_ID}>.\n\n"
-            f"Type `/` in <#{CONFIG.BOT_COMMANDS_CHANNEL_ID}> to use any of the commands below."
+            f"Everything you need to keep up with the clan, right here in Discord. "
+            f"Check your score and rank, see where your ingots stand, and explore ways to earn and spend them. "
+            f"Use `/` in <#{CONFIG.BOT_COMMANDS_CHANNEL_ID}> to browse available commands. "
+            f"Feedback and suggestions are always welcome - drop them in <#{CONFIG.CREATE_TICKET_CHANNEL_ID}>."
         ),
         color=discord.Colour.blue(),
     )
 
     sections = []
     if stats_cmds:
-        sections.append(("Commands", _build_commands_description(), stats_cmds))
+        sections.append(("Core Commands", _build_commands_description(), stats_cmds))
 
     has_trick_or_treat = any(c.name == "trick_or_treat" for c in games_cmds)
     if games_cmds:
@@ -131,7 +132,7 @@ async def cmd_help(interaction: discord.Interaction):
         sections.append(
             (
                 "Miscellaneous",
-                "Extra tools and services.",
+                "Handy utilities that don't fit anywhere else.",
                 other_cmds,
             )
         )
