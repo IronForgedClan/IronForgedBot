@@ -5,6 +5,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_types import (
     LeaderboardConfig,
     LeaderboardEntry,
 )
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.text_formatters import text_code_block
 
@@ -39,6 +40,13 @@ def _build_leaderboard_table(
     return text_code_block(table)
 
 
+def _resolve_title(config: LeaderboardConfig) -> str:
+    if config.emoji:
+        icon = find_emoji(config.emoji)
+        return f"{icon} {config.title}" if icon else config.title
+    return config.title
+
+
 def build_leaderboard_embeds(
     entries: list[LeaderboardEntry],
     config: LeaderboardConfig,
@@ -55,10 +63,11 @@ def build_leaderboard_embeds(
         A list of discord.Embed objects, one per page. Returns a single embed
         with an empty-state message if entries is empty.
     """
+    title = _resolve_title(config)
     if not entries:
         return [
             build_response_embed(
-                config.title,
+                title,
                 f"{config.description}\n\nNo members found.",
                 discord.Colour.light_grey(),
             )
@@ -74,7 +83,7 @@ def build_leaderboard_embeds(
         if total_pages > 1:
             parts.append(f"-# Page {page_idx + 1} of {total_pages}")
         embed = build_response_embed(
-            config.title,
+            title,
             "\n\n".join(parts),
             None,
         )

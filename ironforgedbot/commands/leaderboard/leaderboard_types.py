@@ -30,6 +30,7 @@ class LeaderboardConfig:
     title: str
     description: str
     column_header: str
+    emoji: str | None
     sort_key: Callable[[LeaderboardEntry], int]
     value_formatter: Callable[[LeaderboardEntry], str]
     fetcher: Callable[[AsyncSession], Awaitable[list[LeaderboardEntry]]]
@@ -59,9 +60,10 @@ async def _fetch_scores(session: AsyncSession) -> list[LeaderboardEntry]:
 
 LEADERBOARD_TYPES: dict[str, LeaderboardConfig] = {
     "ingots": LeaderboardConfig(
-        title=":Ingot: Ingot Leaderboard",
+        title="Ingot Leaderboard",
         description="The clan treasury rankings - a measure of loyalty, grind, and contribution. See where you stand among Iron Forged's wealthiest members.",
         column_header="Ingots",
+        emoji="Ingot",
         sort_key=lambda e: e.value,
         value_formatter=lambda e: f"{e.value:,}",
         fetcher=_fetch_ingots,
@@ -70,6 +72,7 @@ LEADERBOARD_TYPES: dict[str, LeaderboardConfig] = {
         title=":trophy: Score Leaderboard",
         description="The definitive measure of in-game achievement within Iron Forged. A ranking of members by their overall OSRS progression, calculated from hiscores data and updated twice daily.",
         column_header="Score",
+        emoji=None,
         sort_key=lambda e: e.value,
         value_formatter=lambda e: f"{e.value:,}",
         fetcher=_fetch_scores,
