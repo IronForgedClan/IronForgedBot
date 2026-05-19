@@ -78,7 +78,6 @@ class Config:
         optional_keys = {
             "WOM_LTM_BASE_URL",
             "WOM_LTM_GROUP_ID",
-            "BOT_COMMANDS_CHANNEL_ID",
             "TRICK_OR_TREAT_CHANNEL_ID",
             "TRICK_OR_TREAT_COOLDOWN_SECONDS",
         }

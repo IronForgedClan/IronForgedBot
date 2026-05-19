@@ -65,7 +65,7 @@ def _build_commands_description() -> str:
 
 def _build_activities_description(has_trick_or_treat: bool) -> str:
     desc = "Spend your ingots and have a bit of fun with the clan."
-    if has_trick_or_treat and getattr(CONFIG, "TRICK_OR_TREAT_CHANNEL_ID", None):
+    if has_trick_or_treat and CONFIG.TRICK_OR_TREAT_CHANNEL_ID:
         tot = f"<#{CONFIG.TRICK_OR_TREAT_CHANNEL_ID}>"
         desc += f"\n\n-# **NEW:** Head over to {tot} and try your luck!"
     if STATE.state["raffle_on"]:

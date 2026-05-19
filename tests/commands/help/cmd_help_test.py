@@ -234,7 +234,7 @@ class TestCmdHelp(unittest.IsolatedAsyncioTestCase):
 
         embed = self.mock_interaction.followup.send.call_args[1]["embed"]
         games_value = next(f.value for f in embed.fields if "Activities" in f.name)
-        self.assertNotIn("tricks or treats", games_value)
+        self.assertNotIn("<#444>", games_value)
 
     async def test_cmd_help_unknown_commands_go_to_other_section(self):
         self._setup_commands([
@@ -324,13 +324,6 @@ class TestBuildAsciiTable(unittest.TestCase):
         result = _build_ascii_table(cmds)
         self.assertTrue(result.startswith("```"))
         self.assertTrue(result.endswith("```"))
-
-    def test_uses_github_table_format(self):
-        cmds = [_make_command("score", "View the player's score.")]
-        result = _build_ascii_table(cmds)
-        table = result.strip("`")
-        separator_lines = [l for l in table.splitlines() if set(l.strip()) <= set("- ") and l.strip()]
-        self.assertTrue(len(separator_lines) > 0)
 
     def test_has_header_separator_row(self):
         cmds = [_make_command("score", "View the player's score.")]
