@@ -67,7 +67,9 @@ def build_leaderboard_embeds(
     if not entries:
         return [
             build_response_embed(
-                title, f"{config.description}\n\nNo members found.", None
+                title,
+                f"{config.description}\n\nNo members found.",
+                discord.Color.gold(),
             )
         ]
 
@@ -83,7 +85,7 @@ def build_leaderboard_embeds(
         embed = build_response_embed(
             title,
             "\n".join(parts),
-            None,
+            discord.Color.gold(),
         )
         embeds.append(embed)
 

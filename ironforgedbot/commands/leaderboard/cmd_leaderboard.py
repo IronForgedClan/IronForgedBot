@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 @app_commands.rename(leaderboard_type="type")
 @app_commands.choices(
     leaderboard_type=[
-        app_commands.Choice(name="Ingot", value="ingots"),
-        app_commands.Choice(name="Score", value="score"),
+        app_commands.Choice(name="Score Leaderboard", value="score"),
+        app_commands.Choice(name="Ingot Rich List", value="ingots"),
     ]
 )
 async def cmd_leaderboard(
