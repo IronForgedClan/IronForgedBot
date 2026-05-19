@@ -67,9 +67,7 @@ def build_leaderboard_embeds(
     if not entries:
         return [
             build_response_embed(
-                title,
-                f"{config.description}\n\nNo members found.",
-                discord.Colour.light_grey(),
+                title, f"{config.description}\n\nNo members found.", None
             )
         ]
 
@@ -79,12 +77,12 @@ def build_leaderboard_embeds(
 
     for page_idx, page in enumerate(pages):
         table = _build_leaderboard_table(page, config, page_offset=page_idx * page_size)
-        parts = [config.description, table]
+        parts = [f"{config.description}\n", table]
         if total_pages > 1:
-            parts.append(f"-# Page {page_idx + 1} of {total_pages}")
+            parts.append(f"-# _page {page_idx + 1} of {total_pages}_")
         embed = build_response_embed(
             title,
-            "\n\n".join(parts),
+            "\n".join(parts),
             None,
         )
         embeds.append(embed)

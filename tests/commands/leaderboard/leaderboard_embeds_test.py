@@ -84,8 +84,8 @@ class TestBuildLeaderboardEmbeds(unittest.TestCase):
             for i in range(30)
         ]
         embeds = build_leaderboard_embeds(entries, self.config, page_size=25)
-        self.assertIn("Page 1 of 2", embeds[0].description)
-        self.assertIn("Page 2 of 2", embeds[1].description)
+        self.assertIn("page 1 of 2", embeds[0].description)
+        self.assertIn("page 2 of 2", embeds[1].description)
 
     def test_embed_title_matches_config(self):
         entries = [_make_entry(value=500)]
