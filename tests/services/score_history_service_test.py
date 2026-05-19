@@ -436,3 +436,79 @@ class TestGetScoreProgress(unittest.IsolatedAsyncioTestCase):
         result = await self.score_history_service.get_score_history(12345, [7])
 
         self.assertEqual(result[7], 5000)
+
+
+class TestGetLatestScoreSnapshot(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_db = AsyncMock()
+        self.mock_db.add = MagicMock()
+        self.mock_db.commit = AsyncMock()
+        self.mock_db.close = AsyncMock()
+
+        self.score_history_service = ScoreHistoryService(self.mock_db)
+        self.score_history_service.member_service = AsyncMock()
+
+    def _mock_rows(self, rows: list[tuple]) -> None:
+        mock_result = MagicMock()
+        mock_result.__iter__ = MagicMock(
+            return_value=iter(
+                [MagicMock(discord_id=r[0], nickname=r[1], score=r[2]) for r in rows]
+            )
+        )
+        self.mock_db.execute = AsyncMock(return_value=mock_result)
+
+    async def test_returns_list_of_tuples(self):
+        self._mock_rows([(111, "PlayerA", 5000)])
+
+        result = await self.score_history_service.get_latest_score_snapshot()
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], (111, "PlayerA", 5000))
+
+    async def test_returns_empty_list_when_no_snapshots(self):
+        self._mock_rows([])
+
+        result = await self.score_history_service.get_latest_score_snapshot()
+
+        self.assertEqual(result, [])
+
+    async def test_returns_multiple_members(self):
+        rows = [
+            (111, "PlayerA", 9000),
+            (222, "PlayerB", 7500),
+            (333, "PlayerC", 3000),
+        ]
+        self._mock_rows(rows)
+
+        result = await self.score_history_service.get_latest_score_snapshot()
+
+        self.assertEqual(len(result), 3)
+        self.assertIn((111, "PlayerA", 9000), result)
+        self.assertIn((222, "PlayerB", 7500), result)
+        self.assertIn((333, "PlayerC", 3000), result)
+
+    async def test_each_tuple_has_three_elements(self):
+        self._mock_rows([(111, "PlayerA", 5000)])
+
+        result = await self.score_history_service.get_latest_score_snapshot()
+
+        discord_id, nickname, score = result[0]
+        self.assertIsInstance(discord_id, int)
+        self.assertIsInstance(nickname, str)
+        self.assertIsInstance(score, int)
+
+    async def test_executes_one_database_query(self):
+        self._mock_rows([])
+
+        await self.score_history_service.get_latest_score_snapshot()
+
+        self.mock_db.execute.assert_called_once()
+
+    async def test_db_error_propagates(self):
+        self.mock_db.execute = AsyncMock(side_effect=Exception("DB connection lost"))
+
+        with self.assertRaises(Exception) as ctx:
+            await self.score_history_service.get_latest_score_snapshot()
+
+        self.assertIn("DB connection lost", str(ctx.exception))

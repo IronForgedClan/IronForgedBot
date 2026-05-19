@@ -373,7 +373,9 @@ class TestChangelogService(unittest.IsolatedAsyncioTestCase):
 
         after_date = datetime(2025, 6, 1, 0, 0, 0, tzinfo=timezone.utc)
 
-        await self.changelog_service.latest_ingot_transactions(12345, 5, after=after_date)
+        await self.changelog_service.latest_ingot_transactions(
+            12345, 5, after=after_date
+        )
 
         self.mock_db.execute.assert_called_once()
         query_str = str(self.mock_db.execute.call_args[0][0])

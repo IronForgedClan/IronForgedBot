@@ -13,6 +13,7 @@
 | -------------------- | ------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------- |
 | `score`              | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
+| `leaderboard`        | Leaderboard Type                                                                | Member     | Displays a paginated clan leaderboard                                            |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
 | `ingots`             | Player (str) _Optional_                                                         | Member     | Returns ingot count for player                                                   |
 | `raffle`             | N/A                                                                             | Member     | Play or manage the raffle                                                        |
