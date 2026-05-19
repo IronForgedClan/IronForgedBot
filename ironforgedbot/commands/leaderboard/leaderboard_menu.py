@@ -71,8 +71,8 @@ def build_leaderboard_menu(
         )
         menu.add_button(
             ViewButton(
-                style=discord.ButtonStyle.secondary,
-                label="Find Me",
+                style=discord.ButtonStyle.success,
+                label=f"Find {interaction.user.display_name}",
                 custom_id=ViewButton.ID_CALLER,
                 followup=followup,
             )
