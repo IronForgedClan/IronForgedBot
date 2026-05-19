@@ -13,6 +13,7 @@ from discord.utils import get
 
 from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
 from ironforgedbot.common.roles import ROLE
+from ironforgedbot.config import CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -286,3 +287,7 @@ def build_rank_progress_bar(
     bar = filled_char * filled + empty_char * (bar_length - filled)
     percentage = render_percentage(progress, span)
     return f"{rank_icon} {bar} {next_rank_icon} ({percentage})"
+
+
+def build_discord_link(channel_id: int) -> str:
+    return f"https://discord.com/channels/{CONFIG.GUILD_ID}/{channel_id}"

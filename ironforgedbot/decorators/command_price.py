@@ -147,6 +147,7 @@ def command_price(amount: int):
 
             view.confirmation_message = confirmation_message
 
+        wrapper.ingot_cost = amount
         return wrapper
 
     return decorator

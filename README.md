@@ -11,6 +11,7 @@
 
 | Command              | Parameters                                                                      | Permission | Information                                                                      |
 | -------------------- | ------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------- |
+| `help`               | N/A                                                                             | Member     | Displays all active bot commands with descriptions                               |
 | `score`              | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
@@ -218,7 +219,10 @@ Now you can modify the example `.env` file with your values.
 | RAFFLE_CHANNEL_ID               | The unique ID of the channel that will house the raffle.                                                           | Your own Discord server channel: right click, "Copy Channel ID".     |
 | INGOT_SHOP_CHANNEL_ID           | The unique ID of the ingot shop channel.                                                                           | Your own Discord server channel: right click, "Copy Channel ID".     |
 | RULES_CHANNEL_ID                | The unique ID of the rules channel.                                                                                | Your own Discord server channel: right click, "Copy Channel ID".     |
+| BOT_COMMANDS_CHANNEL_ID         | The unique ID of the bot commands channel.                                                                         | Your own Discord server channel: right click, "Copy Channel ID".     |
 | RANKINGS_CHANNEL_ID             | The unique ID of the rankings/scoring information channel.                                                         | Your own Discord server channel: right click, "Copy Channel ID".     |
+| BOT_CHANGELOG_CHANNEL_ID        | The unique ID of the bot changelog channel.                                                                        | Your own Discord server channel: right click, "Copy Channel ID".     |
+| CREATE_TICKET_CHANNEL_ID        | The unique ID of the channel where users submit feedback or support tickets.                                        | Your own Discord server channel: right click, "Copy Channel ID".     |
 | DB_ROOT                         | The password used by the root database account.                                                                    | Generate a secure password.                                          |
 | DB_USER                         | The name of the user account the bot will use to access the database.                                              | Any value. Eg: test_user                                             |
 | DB_PASS                         | The password of the account the bot will use to access the database.                                               | Generate a secure password.                                          |
