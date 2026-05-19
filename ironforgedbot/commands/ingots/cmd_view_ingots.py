@@ -90,7 +90,7 @@ async def cmd_view_ingots(
             )
 
         transactions = await changelog_service.latest_ingot_transactions(
-            discord_id=member.discord_id, quantity=5
+            discord_id=member.discord_id, quantity=5, after=member.joined_date
         )
 
         rank_icon = find_emoji(str(get_rank_from_member(discord_member)))
