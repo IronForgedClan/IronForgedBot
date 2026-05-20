@@ -30,11 +30,13 @@ class TestFetchIngots(unittest.IsolatedAsyncioTestCase):
         member_a.discord_id = 1
         member_a.nickname = "Alice"
         member_a.ingots = 5000
+        member_a.is_prospect = False
 
         member_b = AsyncMock()
         member_b.discord_id = 2
         member_b.nickname = "Bob"
         member_b.ingots = 2500
+        member_b.is_prospect = False
 
         mock_member_service.get_all_active_members.return_value = [member_a, member_b]
 
@@ -64,6 +66,21 @@ class TestFetchIngots(unittest.IsolatedAsyncioTestCase):
             results = await _fetch_ingots(mock_session)
 
         self.assertEqual(results, [])
+
+    async def test_excludes_prospects(self):
+        mock_session = AsyncMock()
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = []
+
+        with patch(
+            "ironforgedbot.commands.leaderboard.leaderboard_types.create_member_service",
+            return_value=mock_member_service,
+        ):
+            await _fetch_ingots(mock_session)
+
+        mock_member_service.get_all_active_members.assert_called_once_with(
+            include_prospects=False
+        )
 
 
 @patch.dict("os.environ", VALID_CONFIG)

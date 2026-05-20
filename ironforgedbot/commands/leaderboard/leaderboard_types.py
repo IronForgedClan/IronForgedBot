@@ -38,7 +38,7 @@ class LeaderboardConfig:
 
 async def _fetch_ingots(session: AsyncSession) -> list[LeaderboardEntry]:
     member_service = create_member_service(session)
-    members = await member_service.get_all_active_members()
+    members = await member_service.get_all_active_members(include_prospects=False)
     return [
         LeaderboardEntry(
             discord_id=m.discord_id,
