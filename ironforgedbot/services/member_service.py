@@ -112,8 +112,11 @@ class MemberService:
 
         return member
 
-    async def get_all_active_members(self) -> list[Member]:
-        result = await self.db.execute(select(Member).where(Member.active.is_(True)))
+    async def get_all_active_members(self, include_prospects: bool = True) -> list[Member]:
+        stmt = select(Member).where(Member.active.is_(True))
+        if not include_prospects:
+            stmt = stmt.where(Member.is_prospect.is_(False))
+        result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def get_all_inactive_members(self) -> list[Member]:
