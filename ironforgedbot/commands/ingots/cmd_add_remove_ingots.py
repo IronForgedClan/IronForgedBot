@@ -22,6 +22,7 @@ from ironforgedbot.common.text_formatters import (
     text_h2,
     text_italic,
 )
+from ironforgedbot.config import CONFIG
 from ironforgedbot.database.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_ingot_service
@@ -117,12 +118,14 @@ async def cmd_add_remove_ingots(
     sorted_output_data = sorted(output_data, key=lambda row: row[0])
     result_table = tabulate(
         sorted_output_data,
-        headers=["Player", "Change", "Total"],
+        headers=["Member", "Change", "Total"],
         tablefmt="github",
         colalign=("left", "right", "right"),
     )
-    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots Result"
+    result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots"
+    result_description = f"Ingots are our clan currency. Visit <#{CONFIG.INGOT_SHOP_CHANNEL_ID}> to see how they can be earned and spent."
     result_content = (
+        f"{result_description}\n\n"
         f"{text_bold('Total Change:')} {'+' if is_positive else ''}{total_change:,}\n"
         f"{text_bold('Reason:')} {text_italic(reason)}"
     )
@@ -130,8 +133,8 @@ async def cmd_add_remove_ingots(
     if len(output_data) >= 9:
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),
-            description="example description",
-            filename=f"ingot_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            description="Ingot transaction result",
+            filename=f"{'add' if is_positive else 'remove'}_ingots_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
         )
 
         return await interaction.followup.send(
@@ -140,6 +143,6 @@ async def cmd_add_remove_ingots(
         )
 
     embed = build_ingot_response_embed(result_title, result_content)
-
     embed.add_field(name="", value=text_code_block(result_table))
+
     return await interaction.followup.send(embed=embed)
