@@ -11,7 +11,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_menu import (
     LeaderboardMenu,
     build_leaderboard_menu,
 )
-from ironforgedbot.commands.leaderboard.leaderboard_types import LEADERBOARD_TYPES
+from ironforgedbot.commands.leaderboard.leaderboard_registry import LEADERBOARD_TYPES
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE

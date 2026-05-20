@@ -4,10 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
 
-from ironforgedbot.commands.leaderboard.leaderboard_types import (
-    LEADERBOARD_TYPES,
-    LeaderboardEntry,
-)
+from ironforgedbot.commands.leaderboard.leaderboard_registry import LEADERBOARD_TYPES
+from ironforgedbot.commands.leaderboard.leaderboard_types import LeaderboardEntry
 from ironforgedbot.common.roles import ROLE
 from tests.helpers import (
     VALID_CONFIG,

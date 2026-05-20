@@ -7,10 +7,8 @@ from ironforgedbot.commands.leaderboard.leaderboard_embeds import (
     build_leaderboard_embeds,
     find_caller_page,
 )
-from ironforgedbot.commands.leaderboard.leaderboard_types import (
-    LEADERBOARD_TYPES,
-    LeaderboardEntry,
-)
+from ironforgedbot.commands.leaderboard.leaderboard_registry import LEADERBOARD_TYPES
+from ironforgedbot.commands.leaderboard.leaderboard_types import LeaderboardEntry
 from tests.helpers import VALID_CONFIG
 
 
