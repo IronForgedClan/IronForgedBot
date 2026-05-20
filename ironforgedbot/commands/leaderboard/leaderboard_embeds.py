@@ -33,7 +33,7 @@ def _build_leaderboard_table(
     ]
     table = tabulate(
         rows,
-        headers=["Rank", "Player", config.column_header],
+        headers=["Rank", "Member", config.column_header],
         tablefmt="github",
         colalign=("right", "left", "right"),
     )
