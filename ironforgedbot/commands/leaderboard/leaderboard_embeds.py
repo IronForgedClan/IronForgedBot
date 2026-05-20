@@ -9,7 +9,7 @@ from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.text_formatters import text_code_block
 
-_PAGE_SIZE = 1
+_PAGE_SIZE = 20
 _EMBED_TIMEOUT = 60
 
 
