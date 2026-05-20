@@ -187,3 +187,28 @@ class TestCommandPriceDecorator(unittest.IsolatedAsyncioTestCase):
             await test_command("not an interaction")
 
         self.assertIn("Expected discord.Interaction", str(context.exception))
+
+    def test_command_price_stamps_ingot_cost_on_wrapper(self):
+        """Test that command_price stamps the ingot cost as an attribute on the wrapper."""
+        from ironforgedbot.decorators.command_price import command_price
+
+        @command_price(750)
+        async def my_command(interaction):
+            pass
+
+        self.assertEqual(my_command.ingot_cost, 750)
+
+    def test_command_price_stamps_correct_cost_for_different_amounts(self):
+        """Test that each decorated function gets its own correct ingot_cost."""
+        from ironforgedbot.decorators.command_price import command_price
+
+        @command_price(999)
+        async def cmd_a(interaction):
+            pass
+
+        @command_price(3499)
+        async def cmd_b(interaction):
+            pass
+
+        self.assertEqual(cmd_a.ingot_cost, 999)
+        self.assertEqual(cmd_b.ingot_cost, 3499)

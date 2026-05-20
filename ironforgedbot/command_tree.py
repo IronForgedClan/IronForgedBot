@@ -5,6 +5,7 @@ import discord
 
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.commands.admin.cmd_admin import cmd_admin
+from ironforgedbot.commands.help.cmd_help import cmd_help
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.check.cmd_check import cmd_check
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
@@ -66,14 +67,14 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="score",
-                description="View the player's score.",
+                description="Show your score, rank, and progress to the next rank.",
                 callback=cmd_score,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="breakdown",
-                description="View the player's score breakdown.",
+                description="Show a breakdown of your score across skills, bosses, raids, and clues.",
                 callback=cmd_breakdown,
             )
         )
@@ -87,77 +88,84 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="check",
-                description="Check if player meets monthly activity requirements.",
+                description="Check if you meet the monthly activity requirement.",
                 callback=cmd_check,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="ingots",
-                description="View player's ingot total.",
+                description="Show your ingot balance and recent transaction history.",
                 callback=cmd_view_ingots,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="add_remove_ingots",
-                description="🔒 Add or remove ingots.",
+                description="🔒 Add or remove ingots for one or more members.",
                 callback=cmd_add_remove_ingots,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="roster",
-                description="🔒 Creates an event roster.",
+                description="🔒 Generate an event roster from a message's reactions.",
                 callback=cmd_roster,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="whois",
-                description="View player's rsn history.",
+                description="Show a player's RSN history.",
                 callback=cmd_whois,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="get_role_members",
-                description="🔒 Generate a list of all members with specified role.",
+                description="🔒 List all members assigned to a given role.",
                 callback=cmd_get_role_members,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
+                name="help",
+                description="Show all available commands and what they do.",
+                callback=cmd_help,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
                 name="raffle",
-                description="Play the raffle.",
+                description="Participate in the clan raffle.",
                 callback=cmd_raffle,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="reset_rng",
-                description="💰 Attempt to reset your RNG. 50% of the time it works every time.",
+                description="💰 Sacrifice ingots to the RNG gods. Results may vary.",
                 callback=cmd_reset_rng,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="eight_ball",
-                description="💰 Ask the Magic 8-Ball a question and receive mystical wisdom.",
+                description="💰 Ask the magic 8-ball a yes or no question.",
                 callback=cmd_eight_ball,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="spin",
-                description="💰 Spin a wheel to randomly pick from your options.",
+                description="💰 Spin a wheel and let fate decide.",
                 callback=cmd_spin,
             )
         )
         self._tree.add_command(
             discord.app_commands.Command(
                 name="admin",
-                description="🔒 Admin actions.",
+                description="🔒 Open the admin menu.",
                 callback=cmd_admin,
             )
         )
@@ -172,22 +180,22 @@ class IronForgedCommands:
         if CONFIG.ENVIRONMENT in [ENVIRONMENT.DEVELOPMENT, ENVIRONMENT.STAGING]:
             self._tree.add_command(
                 discord.app_commands.Command(
-                    name="debug_commands",
-                    description="Menu showing all commands",
+                    name="debug_cmds",
+                    description="Show the debug menu.",
                     callback=cmd_debug_commands,
                 )
             )
             self._tree.add_command(
                 discord.app_commands.Command(
-                    name="debug_error_report",
-                    description="Test error reporting system with phantom command",
+                    name="debug_err",
+                    description="Test error reporting system.",
                     callback=cmd_debug_error_report,
                 )
             )
             self._tree.add_command(
                 discord.app_commands.Command(
-                    name="stress_test",
-                    description="Stress test",
+                    name="debug_stress",
+                    description="Starts a stress test.",
                     callback=cmd_stress_test,
                 )
             )
