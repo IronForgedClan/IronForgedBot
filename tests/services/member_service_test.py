@@ -165,7 +165,9 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         mock_result.scalars.return_value = mock_scalars
         self.mock_db.execute.return_value = mock_result
 
-        result = await self.member_service.get_all_active_members(include_prospects=False)
+        result = await self.member_service.get_all_active_members(
+            include_prospects=False
+        )
 
         self.assertEqual(result, [self.sample_member])
         self.mock_db.execute.assert_awaited_once()

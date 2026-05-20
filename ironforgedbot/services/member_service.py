@@ -112,7 +112,9 @@ class MemberService:
 
         return member
 
-    async def get_all_active_members(self, include_prospects: bool = True) -> list[Member]:
+    async def get_all_active_members(
+        self, include_prospects: bool = True
+    ) -> list[Member]:
         stmt = select(Member).where(Member.active.is_(True))
         if not include_prospects:
             stmt = stmt.where(Member.is_prospect.is_(False))
