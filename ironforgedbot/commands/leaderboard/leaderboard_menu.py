@@ -2,6 +2,7 @@ import discord
 from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.commands.leaderboard.leaderboard_embeds import _EMBED_TIMEOUT
+from ironforgedbot.common.helpers import normalize_discord_string
 
 
 class LeaderboardMenu(ViewMenu):
@@ -72,7 +73,7 @@ def build_leaderboard_menu(
         menu.add_button(
             ViewButton(
                 style=discord.ButtonStyle.success,
-                label=f"Find {interaction.user.display_name}",
+                label=f"Find {normalize_discord_string(interaction.user.display_name)}",
                 custom_id=ViewButton.ID_CALLER,
                 followup=followup,
             )
