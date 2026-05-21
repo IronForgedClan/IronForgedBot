@@ -73,7 +73,7 @@ def build_leaderboard_menu(
         menu.add_button(
             ViewButton(
                 style=discord.ButtonStyle.success,
-                label=f"Find {normalize_discord_string(interaction.user.display_name)}",
+                label=f"🔍 {normalize_discord_string(interaction.user.display_name)}",
                 custom_id=ViewButton.ID_CALLER,
                 followup=followup,
             )
