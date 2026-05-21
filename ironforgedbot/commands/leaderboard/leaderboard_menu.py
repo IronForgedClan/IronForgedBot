@@ -50,7 +50,8 @@ def build_leaderboard_menu(
         menu_type=ViewMenu.TypeEmbed,
         show_page_director=False,
         timeout=_EMBED_TIMEOUT,
-        delete_on_timeout=True,
+        disable_items_on_timeout=False,
+        remove_items_on_timeout=True,
     )
 
     for embed in embeds:
