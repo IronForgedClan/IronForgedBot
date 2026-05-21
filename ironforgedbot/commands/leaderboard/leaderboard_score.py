@@ -18,7 +18,7 @@ async def fetch_scores(session: AsyncSession) -> list[LeaderboardEntry]:
 
 SCORE_LEADERBOARD = LeaderboardConfig(
     title=":trophy: Score Leaderboard",
-    description="The definitive measure of in-game achievement. A ranking of members by their overall progression, calculated from hiscores data and updated twice daily.",
+    description="The definitive measure of in-game achievement. A ranking of members by their overall progression, calculated from hiscores data and updated twice a day.",
     column_header="Score",
     emoji=None,
     sort_key=lambda e: e.value,
