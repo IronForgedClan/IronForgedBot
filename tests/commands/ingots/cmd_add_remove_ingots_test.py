@@ -59,7 +59,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         )
 
         embed = assert_embed_structure(self, self.interaction)
-        self.assertIn("Add Ingots Result", embed.title)
+        self.assertIn("Add Ingots", embed.title)
         self.assertIn("+5,000", embed.description)
         self.assertIn("testing", embed.description)
 
@@ -90,7 +90,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         )
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("Remove Ingots Result", sent_embed.title)
+        self.assertIn("Remove Ingots", sent_embed.title)
         self.assertIn("-2,000", sent_embed.description)
         self.assertIn("penalty", sent_embed.description)
 
@@ -124,7 +124,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_ingot_service.try_add_ingots.call_count, 2)
 
         sent_embed = self.interaction.followup.send.call_args.kwargs["embed"]
-        self.assertIn("Add Ingots Result", sent_embed.title)
+        self.assertIn("Add Ingots", sent_embed.title)
         self.assertIn("+6,000", sent_embed.description)  # Total change: 3000 * 2
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
@@ -241,7 +241,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         embed_field = sent_embed.fields[0]
         self.assertEqual(embed_field.name, "")
         self.assertIn("```", embed_field.value)  # Should be code block
-        self.assertIn("Player", embed_field.value)  # Table headers
+        self.assertIn("Member", embed_field.value)  # Table headers
         self.assertIn("Change", embed_field.value)
         self.assertIn("Total", embed_field.value)
 
@@ -284,7 +284,7 @@ class TestCmdAddRemoveIngots(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(call_args.kwargs.get("file"))
 
         sent_file = call_args.kwargs["file"]
-        self.assertIn("ingot_results_20250101_120000.txt", sent_file.filename)
+        self.assertIn("add_ingots_20250101_120000.txt", sent_file.filename)
 
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.db")
     @patch("ironforgedbot.commands.ingots.cmd_add_remove_ingots.create_ingot_service")

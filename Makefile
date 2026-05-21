@@ -19,13 +19,13 @@ shell:
 	docker compose run --rm bot /bin/sh
 
 migrate:
-	docker compose run --rm bot /home/botuser/.local/bin/alembic upgrade head
+	docker compose run --rm bot python -m alembic upgrade head
 
 revision:
-	docker compose run --rm bot /home/botuser/.local/bin/alembic revision --autogenerate -m "$(DESC)"
+	docker compose run --rm bot python -m alembic revision --autogenerate -m "$(DESC)"
 
 downgrade:
-	docker compose run --rm bot /home/botuser/.local/bin/alembic downgrade -1
+	docker compose run --rm bot python -m alembic downgrade -1
 
 build-dev:
 	docker compose build bot
@@ -40,8 +40,8 @@ rmi-prod:
 	docker rmi ironforgedbot:prod
 
 update-deps:
-	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements.in
-	docker compose run --rm bot /home/botuser/.local/bin/pip-compile --upgrade requirements-dev.in -o requirements-dev.txt
+	docker compose run --rm bot python -m piptools compile --upgrade requirements.in
+	docker compose run --rm bot python -m piptools compile --upgrade requirements-dev.in -o requirements-dev.txt
 	docker compose build bot
 
 update-data:

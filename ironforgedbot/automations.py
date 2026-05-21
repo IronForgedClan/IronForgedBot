@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 import sys
 from typing import Optional, Set
@@ -51,6 +52,7 @@ class IronForgedAutomations:
         self.discord_guild = discord_guild
 
         self._setup_task = asyncio.create_task(self.setup_automations())
+        self._setup_task.add_done_callback(self._setup_done_callback)
 
     async def stop(self):
         """Initiates shutdown and cleanup of scheduled jobs."""
@@ -127,6 +129,16 @@ class IronForgedAutomations:
         except Exception as e:
             logger.error(f"Error starting job {job_func.__name__}: {e}")
             raise
+
+    def _setup_done_callback(self, task: asyncio.Task):
+        """Log any exception raised during automation setup."""
+        if not task.cancelled():
+            exc = task.exception()
+            if exc:
+                logger.critical(
+                    f"Automation setup failed: {type(exc).__name__}: {exc}",
+                    exc_info=exc,
+                )
 
     def _job_done_callback(self, task: asyncio.Task):
         """Remove the job from the running_jobs set once it is finished."""
@@ -225,7 +237,9 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_sync_members, self.discord_guild, self.report_channel
             ),
-            CronTrigger.from_crontab(CONFIG.CRON_SYNC_MEMBERS, timezone="UTC"),
+            CronTrigger.from_crontab(
+                CONFIG.CRON_SYNC_MEMBERS, timezone=datetime.timezone.utc
+            ),
             id="sync_members",
             name="Member Sync Job",
         )
@@ -234,7 +248,9 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_refresh_ranks, self.discord_guild, self.report_channel
             ),
-            CronTrigger.from_crontab(CONFIG.CRON_REFRESH_RANKS, timezone="UTC"),
+            CronTrigger.from_crontab(
+                CONFIG.CRON_REFRESH_RANKS, timezone=datetime.timezone.utc
+            ),
             id="refresh_ranks",
             name="Rank Refresh Job",
         )
@@ -246,7 +262,9 @@ class IronForgedAutomations:
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ),
-            CronTrigger.from_crontab(CONFIG.CRON_CHECK_ACTIVITY, timezone="UTC"),
+            CronTrigger.from_crontab(
+                CONFIG.CRON_CHECK_ACTIVITY, timezone=datetime.timezone.utc
+            ),
             id="check_activity",
             name="Activity Check Job",
         )
@@ -259,14 +277,18 @@ class IronForgedAutomations:
                 CONFIG.WOM_API_KEY,
                 CONFIG.WOM_GROUP_ID,
             ),
-            CronTrigger.from_crontab(CONFIG.CRON_CHECK_DISCREPANCIES, timezone="UTC"),
+            CronTrigger.from_crontab(
+                CONFIG.CRON_CHECK_DISCREPANCIES, timezone=datetime.timezone.utc
+            ),
             id="check_membership_discrepancies",
             name="Membership Discrepancy Check Job",
         )
 
         self.scheduler.add_job(
             self._job_wrapper(self._clear_caches),
-            CronTrigger.from_crontab(CONFIG.CRON_CLEAR_CACHES, timezone="UTC"),
+            CronTrigger.from_crontab(
+                CONFIG.CRON_CLEAR_CACHES, timezone=datetime.timezone.utc
+            ),
             id="clear_caches",
             name="Cache Cleanup Job",
         )
@@ -276,7 +298,9 @@ class IronForgedAutomations:
                 job_payroll,
                 self.report_channel,
             ),
-            CronTrigger.from_crontab(CONFIG.CRON_PAYROLL, timezone="UTC"),
+            CronTrigger.from_crontab(
+                CONFIG.CRON_PAYROLL, timezone=datetime.timezone.utc
+            ),
             id="job_payroll",
             name="Monthly Payroll Job",
         )

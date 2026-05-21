@@ -146,6 +146,32 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, [self.sample_member])
         self.mock_db.execute.assert_awaited_once()
 
+    async def test_get_all_active_members_includes_prospects_by_default(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [self.sample_member]
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_all_active_members()
+
+        self.assertEqual(result, [self.sample_member])
+        self.mock_db.execute.assert_awaited_once()
+
+    async def test_get_all_active_members_excludes_prospects_when_flag_false(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [self.sample_member]
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_all_active_members(
+            include_prospects=False
+        )
+
+        self.assertEqual(result, [self.sample_member])
+        self.mock_db.execute.assert_awaited_once()
+
     async def test_get_all_inactive_members(self):
         mock_result = MagicMock()
         mock_scalars = MagicMock()

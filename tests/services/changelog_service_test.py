@@ -362,3 +362,35 @@ class TestChangelogService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].id, 1)
+
+    async def test_latest_ingot_transactions_with_after_includes_date_filter(self):
+        """Test that providing after parameter adds a timestamp filter to the query."""
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        after_date = datetime(2025, 6, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+        await self.changelog_service.latest_ingot_transactions(
+            12345, 5, after=after_date
+        )
+
+        self.mock_db.execute.assert_called_once()
+        query_str = str(self.mock_db.execute.call_args[0][0])
+        self.assertIn("changelog.timestamp", query_str.lower())
+
+    async def test_latest_ingot_transactions_without_after_no_date_filter(self):
+        """Test that omitting after does not add a timestamp filter to the query."""
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        await self.changelog_service.latest_ingot_transactions(12345, 5)
+
+        self.mock_db.execute.assert_called_once()
+        query_str = str(self.mock_db.execute.call_args[0][0])
+        self.assertNotIn(">= :timestamp_1", query_str.lower())

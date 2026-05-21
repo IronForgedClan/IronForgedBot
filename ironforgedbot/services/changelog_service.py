@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +23,7 @@ class ChangelogService:
 
     @log_database_operation(logger)
     async def latest_ingot_transactions(
-        self, discord_id: int, quantity: int
+        self, discord_id: int, quantity: int, after: datetime | None = None
     ) -> list[Changelog]:
         if not isinstance(quantity, int):
             raise TypeError("Quantity must be a valid integer")
@@ -30,7 +31,7 @@ class ChangelogService:
         if quantity < 1:
             return []
 
-        result = await self.db.execute(
+        query = (
             select(Changelog)
             .join(Member, Changelog.member_id == Member.id)
             .where(Member.discord_id == discord_id)
@@ -38,8 +39,13 @@ class ChangelogService:
                 (Changelog.change_type == ChangeType.ADD_INGOTS)
                 | (Changelog.change_type == ChangeType.REMOVE_INGOTS)
             )
-            .order_by(Changelog.timestamp.desc())
-            .limit(quantity)
+        )
+
+        if after is not None:
+            query = query.where(Changelog.timestamp >= after)
+
+        result = await self.db.execute(
+            query.order_by(Changelog.timestamp.desc()).limit(quantity)
         )
 
         return list(result.scalars().all())

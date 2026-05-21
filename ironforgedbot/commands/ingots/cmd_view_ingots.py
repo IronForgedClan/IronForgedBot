@@ -46,8 +46,9 @@ def format_transaction(changelog: Changelog) -> list[str]:
     sign = "+" if difference >= 0 else ""
     change_string = f"{sign}{difference:,}"
 
-    comment = changelog.comment[:LINE_LIMIT] + (
-        "..." if len(changelog.comment) > LINE_LIMIT else ""
+    comment_text = changelog.comment or ""
+    comment = comment_text[:LINE_LIMIT] + (
+        "..." if len(comment_text) > LINE_LIMIT else ""
     )
 
     return [change_string, comment]
@@ -90,7 +91,7 @@ async def cmd_view_ingots(
             )
 
         transactions = await changelog_service.latest_ingot_transactions(
-            discord_id=member.discord_id, quantity=5
+            discord_id=member.discord_id, quantity=5, after=member.joined_date
         )
 
         rank_icon = find_emoji(str(get_rank_from_member(discord_member)))

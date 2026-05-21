@@ -379,6 +379,73 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sent_embed.fields[0].name, "Member")
         self.assertEqual(sent_embed.fields[1].name, "Balance")
 
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.db")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.MemberService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.ChangelogService")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.validate_playername")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.get_rank_from_member")
+    @patch("ironforgedbot.commands.ingots.cmd_view_ingots.find_emoji")
+    async def test_cmd_view_ingots_passes_joined_date_to_changelog_service(
+        self,
+        mock_find_emoji,
+        mock_get_rank,
+        mock_validate,
+        mock_changelog_service_class,
+        mock_member_service_class,
+        mock_db,
+    ):
+        """Test that latest_ingot_transactions is called with the member's joined_date."""
+        from datetime import datetime, timezone
+
+        joined = datetime(2025, 3, 15, 0, 0, 0, tzinfo=timezone.utc)
+        member_with_join = create_test_db_member(
+            nickname="TestUser",
+            discord_id=12345,
+            rank=RANK.IRON,
+            ingots=1000,
+            id="test-member-id",
+        )
+        member_with_join.joined_date = joined
+
+        mock_db_session, mock_member_service = setup_database_service_mocks(
+            mock_db, mock_member_service_class
+        )
+        mock_changelog_service = AsyncMock()
+        mock_changelog_service.latest_ingot_transactions.return_value = []
+        mock_changelog_service_class.return_value = mock_changelog_service
+
+        mock_validate.return_value = (self.test_user, "TestUser")
+        mock_get_rank.return_value = RANK.IRON
+        mock_find_emoji.side_effect = lambda x: f":{x}:" if x else ""
+        mock_member_service.get_member_by_nickname.return_value = member_with_join
+
+        await cmd_view_ingots(self.interaction, "TestUser")
+
+        mock_changelog_service.latest_ingot_transactions.assert_called_once_with(
+            discord_id=12345, quantity=5, after=joined
+        )
+
+    def test_format_transaction_with_none_comment(self):
+        """Test format_transaction handles None comment as an empty string."""
+        from datetime import datetime, timezone
+        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
+
+        changelog = Changelog(
+            id=1,
+            member_id="test-id",
+            admin_id=None,
+            change_type=ChangeType.ADD_INGOTS,
+            previous_value="0",
+            new_value="100",
+            comment=None,
+            timestamp=datetime.now(timezone.utc),
+        )
+
+        result = format_transaction(changelog)
+
+        self.assertEqual(result, ["+100", ""])
+
     def test_format_transaction_add_ingots(self):
         """Test format_transaction with ADD_INGOTS."""
         from datetime import datetime, timezone
