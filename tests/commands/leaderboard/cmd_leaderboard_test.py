@@ -150,7 +150,7 @@ class TestCmdLeaderboard(unittest.IsolatedAsyncioTestCase):
         _, mock_menu = await self._run_cmd(entries)
 
         button_calls = [str(call) for call in mock_menu.add_button.call_args_list]
-        self.assertEqual(len([c for c in button_calls if "Find Caller" in c]), 1)
+        self.assertEqual(len([c for c in button_calls if "🔍 Caller" in c]), 1)
 
     async def test_find_me_button_absent_when_caller_not_in_list(self):
         entries = [
@@ -160,7 +160,7 @@ class TestCmdLeaderboard(unittest.IsolatedAsyncioTestCase):
         _, mock_menu = await self._run_cmd(entries)
 
         button_calls = [str(call) for call in mock_menu.add_button.call_args_list]
-        self.assertEqual(len([c for c in button_calls if "Find Caller" in c]), 0)
+        self.assertEqual(len([c for c in button_calls if "🔍 Caller" in c]), 0)
 
     async def test_empty_entry_list(self):
         _, mock_menu = await self._run_cmd([])

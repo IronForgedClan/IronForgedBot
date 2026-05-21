@@ -79,7 +79,7 @@ class TestBuildLeaderboardMenu(unittest.TestCase):
         build_leaderboard_menu(interaction, embeds, caller_page=2)
 
         button_calls = [str(call) for call in mock_menu.add_button.call_args_list]
-        find_me_calls = [c for c in button_calls if "Find tester" in c]
+        find_me_calls = [c for c in button_calls if "🔍 tester" in c]
         self.assertEqual(len(find_me_calls), 1)
 
     @patch("ironforgedbot.commands.leaderboard.leaderboard_menu.LeaderboardMenu")
@@ -93,7 +93,7 @@ class TestBuildLeaderboardMenu(unittest.TestCase):
         build_leaderboard_menu(interaction, embeds, caller_page=None)
 
         button_calls = [str(call) for call in mock_menu.add_button.call_args_list]
-        find_me_calls = [c for c in button_calls if "Find tester" in c]
+        find_me_calls = [c for c in button_calls if "🔍 tester" in c]
         self.assertEqual(len(find_me_calls), 0)
 
     @patch("ironforgedbot.commands.leaderboard.leaderboard_menu.LeaderboardMenu")
@@ -134,7 +134,7 @@ class TestBuildLeaderboardMenu(unittest.TestCase):
         build_leaderboard_menu(interaction, embeds, caller_page=2)
 
         added_buttons = [call.args[0] for call in mock_menu.add_button.call_args_list]
-        find_me_button = next(b for b in added_buttons if b.label == "Find tester")
+        find_me_button = next(b for b in added_buttons if b.label == "🔍 tester")
         self.assertTrue(find_me_button.custom_id.startswith(ViewButton.ID_CALLER))
 
     @patch("ironforgedbot.commands.leaderboard.leaderboard_menu.LeaderboardMenu")
@@ -148,7 +148,7 @@ class TestBuildLeaderboardMenu(unittest.TestCase):
         build_leaderboard_menu(interaction, embeds, caller_page=2)
 
         added_buttons = [call.args[0] for call in mock_menu.add_button.call_args_list]
-        find_me_button = next(b for b in added_buttons if b.label == "Find tester")
+        find_me_button = next(b for b in added_buttons if b.label == "🔍 tester")
         self.assertIsNotNone(find_me_button.followup)
         self.assertIsNotNone(find_me_button.followup.details)
 
