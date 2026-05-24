@@ -200,6 +200,66 @@ def check_member_activity(
     )
 
 
+def build_daily_gains(
+    snapshots: List[SnapshotTimelineEntry],
+) -> List[tuple[datetime, int]]:
+    """Convert a snapshot timeline into per-day XP gains, oldest to newest.
+
+    Groups absolute XP snapshots by UTC day (taking the highest value per day),
+    fills any gap days by carrying the previous day's value forward (0 gain for
+    that day), then diffs consecutive days to produce gains. The first day in the
+    window always has a gain of 0 because there is no prior snapshot to diff
+    against.
+
+    Args:
+        snapshots: List of SnapshotTimelineEntry with absolute overall XP values
+                   and timestamps. May be unsorted. May contain multiple entries
+                   per day.
+
+    Returns:
+        Ordered list of (datetime, xp_gained) tuples, one per day in the window,
+        oldest first. Returns an empty list if fewer than 2 snapshots are provided
+        (insufficient to calculate any gain).
+    """
+    if len(snapshots) < 2:
+        return []
+
+    sorted_snapshots = sorted(snapshots, key=lambda s: s.date)
+
+    # Group by UTC day, keeping the highest XP value seen that day.
+    daily_max: Dict[datetime, int] = defaultdict(int)
+    for entry in sorted_snapshots:
+        day = entry.date.replace(hour=0, minute=0, second=0, microsecond=0)
+        if entry.value > daily_max[day]:
+            daily_max[day] = entry.value
+
+    ordered_days = sorted(daily_max.keys())
+    if not ordered_days:
+        return []
+
+    # Fill gaps: days between the first and last snapshot day that have no
+    # snapshot carry the previous day's absolute XP value (implying 0 gain).
+    filled: List[tuple[datetime, int]] = []
+    current_day = ordered_days[0]
+    last_value = daily_max[current_day]
+    end_day = ordered_days[-1]
+
+    while current_day <= end_day:
+        if current_day in daily_max:
+            last_value = daily_max[current_day]
+        filled.append((current_day, last_value))
+        current_day += timedelta(days=1)
+
+    # Diff consecutive days to get per-day gains.
+    # The first day has no predecessor, so its gain is 0.
+    daily_gains: List[tuple[datetime, int]] = []
+    for i, (day, value) in enumerate(filled):
+        gain = 0 if i == 0 else max(0, value - filled[i - 1][1])
+        daily_gains.append((day, gain))
+
+    return daily_gains
+
+
 def calculate_days_of_buffer(
     snapshots: List[SnapshotTimelineEntry],
     xp_threshold: int,
@@ -222,65 +282,21 @@ def calculate_days_of_buffer(
         below the threshold, or None if the calculation cannot be performed
         (e.g. fewer than 2 snapshots).
     """
-    if len(snapshots) < 2:
+    daily_gains = build_daily_gains(snapshots)
+    if not daily_gains:
         return None
 
-    # Sort ascending by date (WOM should already return them sorted, but be safe)
-    sorted_snapshots = sorted(snapshots, key=lambda s: s.date)
-
-    # Group snapshots by UTC date, keeping the maximum XP value per day.
-    # A higher value later in the day is more accurate for that day's total.
-    daily_max: Dict[datetime, int] = defaultdict(int)
-    for entry in sorted_snapshots:
-        day = entry.date.replace(hour=0, minute=0, second=0, microsecond=0)
-        if entry.value > daily_max[day]:
-            daily_max[day] = entry.value
-
-    # Build an ordered list of (date, xp_value) covering every day in the window.
-    ordered_days = sorted(daily_max.keys())
-    if not ordered_days:
-        return None
-
-    filled: List[tuple[datetime, int]] = []
-    current_day = ordered_days[0]
-    last_value = daily_max[current_day]
-    end_day = ordered_days[-1]
-
-    while current_day <= end_day:
-        if current_day in daily_max:
-            last_value = daily_max[current_day]
-        filled.append((current_day, last_value))
-        current_day += timedelta(days=1)
-
-    # Convert absolute XP values into daily gains by diffing consecutive days.
-    # Day 0 has no predecessor so its gain is 0 (we can't know what was gained
-    # before the window started).
-    daily_gains: List[tuple[datetime, int]] = []
-    for i, (day, value) in enumerate(filled):
-        if i == 0:
-            gain = 0
-        else:
-            gain = max(0, value - filled[i - 1][1])
-        daily_gains.append((day, gain))
-
-    logger.debug(f"Buffer calculated daily gains as:")
-    for date, xp in daily_gains:
-        logger.debug(f"   {date} - {xp:,}")
-
-    # Current total XP gained in the 30-day window is the sum of all daily gains.
     total_xp = sum(g for _, g in daily_gains)
-    logger.debug(f"Buffer calculated total xp gained as: {total_xp}")
 
     # Simulate the window rolling forward one day at a time.
     # Each iteration: the oldest day drops off, and the new day contributes 0 xp.
     # Count how many days until total < threshold.
-    gains_deque = list(daily_gains)  # [(date, gain), ...]
+    gains_deque = list(daily_gains)
     days_safe = 0
 
     for _ in range(30):
         dropped_gain = gains_deque.pop(0)[1]
         total_xp -= dropped_gain
-
         gains_deque.append((datetime.now(tz=timezone.utc), 0))
 
         if total_xp < xp_threshold:
