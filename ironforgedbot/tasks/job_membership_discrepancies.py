@@ -48,9 +48,7 @@ async def job_check_membership_discrepancies(
     logger.debug(ignored)
 
     discord_members = [
-        normalize_rsn(member)
-        for member in discord_members
-        if member not in ignored
+        normalize_rsn(member) for member in discord_members if member not in ignored
     ]
     wom_members = [
         normalize_rsn(member) for member in wom_members if member not in ignored
