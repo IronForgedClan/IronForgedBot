@@ -186,9 +186,13 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
     embed.add_field(name="Median", value=f"{median_xp:,} xp/day", inline=True)
     embed.add_field(name="", value="", inline=True)
 
+    description = (
+        table
+        + f"\n-# _Dates shown here are in UTC. You can view gains in your local timezone on the [wise old man website](https://wiseoldman.net/players/{normalize_discord_string(display_name)}/gained?metric=overall&period=month&expand=bar-chart)._"
+    )
     table_embed = build_response_embed(
-        title="-" * 65,
-        description=table,
+        title="",
+        description=description,
         color=discord.Color.fuchsia(),
     )
 
