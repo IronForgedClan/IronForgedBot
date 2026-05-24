@@ -1,10 +1,17 @@
 import logging
+from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
-from typing import List, Optional, Union
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Union
 
 from wom import GroupRole
-from wom.models import GroupDetail, GroupMembership, GroupMemberGains, PlayerGains
+from wom.models import (
+    GroupDetail,
+    GroupMembership,
+    GroupMemberGains,
+    PlayerGains,
+    SnapshotTimelineEntry,
+)
 
 from ironforgedbot.common.helpers import normalize_rsn
 from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
@@ -191,6 +198,97 @@ def check_member_activity(
         check_timestamp=check_timestamp,
         skip_reason=skip_reason,
     )
+
+
+def calculate_days_of_buffer(
+    snapshots: List[SnapshotTimelineEntry],
+    xp_threshold: int,
+) -> int | None:
+    """Calculate how many days a member can gain 0 XP before falling below threshold.
+
+    Uses snapshot timeline data (absolute XP values at points in time) to
+    reconstruct daily XP gains over the rolling 30-day window. Simulates
+    the window advancing day by day, with each step dropping the oldest
+    day's gains from the total, to find the first day the total falls below
+    the threshold.
+
+    Args:
+        snapshots: Ordered list of SnapshotTimelineEntry for the past month.
+                   Each entry has an absolute overall XP value and a date.
+        xp_threshold: XP required per rolling month to be considered active.
+
+    Returns:
+        Number of days (>= 0) the member can sustain 0 XP before dropping
+        below the threshold, or None if the calculation cannot be performed
+        (e.g. fewer than 2 snapshots).
+    """
+    if len(snapshots) < 2:
+        return None
+
+    # Sort ascending by date (WOM should already return them sorted, but be safe)
+    sorted_snapshots = sorted(snapshots, key=lambda s: s.date)
+
+    # Group snapshots by UTC date, keeping the maximum XP value per day.
+    # A higher value later in the day is more accurate for that day's total.
+    daily_max: Dict[datetime, int] = defaultdict(int)
+    for entry in sorted_snapshots:
+        day = entry.date.replace(hour=0, minute=0, second=0, microsecond=0)
+        if entry.value > daily_max[day]:
+            daily_max[day] = entry.value
+
+    # Build an ordered list of (date, xp_value) covering every day in the window.
+    ordered_days = sorted(daily_max.keys())
+    if not ordered_days:
+        return None
+
+    filled: List[tuple[datetime, int]] = []
+    current_day = ordered_days[0]
+    last_value = daily_max[current_day]
+    end_day = ordered_days[-1]
+
+    while current_day <= end_day:
+        if current_day in daily_max:
+            last_value = daily_max[current_day]
+        filled.append((current_day, last_value))
+        current_day += timedelta(days=1)
+
+    # Convert absolute XP values into daily gains by diffing consecutive days.
+    # Day 0 has no predecessor so its gain is 0 (we can't know what was gained
+    # before the window started).
+    daily_gains: List[tuple[datetime, int]] = []
+    for i, (day, value) in enumerate(filled):
+        if i == 0:
+            gain = 0
+        else:
+            gain = max(0, value - filled[i - 1][1])
+        daily_gains.append((day, gain))
+
+    logger.debug(f"Buffer calculated daily gains as:")
+    for date, xp in daily_gains:
+        logger.debug(f"   {date} - {xp:,}")
+
+    # Current total XP gained in the 30-day window is the sum of all daily gains.
+    total_xp = sum(g for _, g in daily_gains)
+    logger.debug(f"Buffer calculated total xp gained as: {total_xp}")
+
+    # Simulate the window rolling forward one day at a time.
+    # Each iteration: the oldest day drops off, and the new day contributes 0 xp.
+    # Count how many days until total < threshold.
+    gains_deque = list(daily_gains)  # [(date, gain), ...]
+    days_safe = 0
+
+    for _ in range(30):
+        dropped_gain = gains_deque.pop(0)[1]
+        total_xp -= dropped_gain
+
+        gains_deque.append((datetime.now(tz=timezone.utc), 0))
+
+        if total_xp < xp_threshold:
+            break
+
+        days_safe += 1
+
+    return days_safe
 
 
 async def check_bulk_activity(
