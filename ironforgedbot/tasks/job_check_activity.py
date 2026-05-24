@@ -14,6 +14,7 @@ from ironforgedbot.common.activity_check import (
 )
 from ironforgedbot.common.helpers import (
     format_duration,
+    normalize_rsn,
     render_relative_time,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
@@ -57,7 +58,7 @@ async def job_check_activity(
             await report_channel.send("🧗 **Activity Check:** starting...")
 
             absentee_list = await absent_service.process_absent_members()
-            known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
+            known_absentees = [normalize_rsn(absentee.nickname) for absentee in absentee_list]
 
             logger.debug(f"Known absentees: {known_absentees}")
 
