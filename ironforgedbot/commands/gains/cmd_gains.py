@@ -48,7 +48,7 @@ def _median_daily_gains(daily: List[tuple[datetime, int]]) -> int:
 
 
 def _build_gains_table(daily: List[tuple[datetime, int]]) -> str:
-    """Build a formatted markdown table of daily XP gains.
+    """Build a formatted markdown table of daily XP gains with a running total.
 
     Args:
         daily: List of (date, xp_gained) tuples ordered oldest to newest.
@@ -56,12 +56,16 @@ def _build_gains_table(daily: List[tuple[datetime, int]]) -> str:
     Returns:
         A code-block string containing the formatted table.
     """
-    rows = [(d.strftime("%Y-%m-%d"), f"{xp:,}") for d, xp in daily]
+    rows = []
+    running_total = 0
+    for d, xp in daily:
+        running_total += xp
+        rows.append((d.strftime("%Y-%m-%d"), f"{xp:,}", f"{running_total:,}"))
     table = tabulate(
         rows,
-        headers=["Date", "XP Gained"],
+        headers=["Date", "XP Gained", "Total"],
         tablefmt="github",
-        colalign=("left", "right"),
+        colalign=("left", "right", "right"),
     )
     return text_code_block(table)
 
