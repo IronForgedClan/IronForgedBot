@@ -182,10 +182,14 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
     embed.add_field(name="Period Start", value=period_start, inline=True)
     embed.add_field(name="Period End", value=period_end, inline=True)
 
-    embed.add_field(name="Average Gains", value=f"{average_xp:,} xp/day", inline=True)
-    embed.add_field(name="Median Gains", value=f"{median_xp:,} xp/day", inline=True)
+    embed.add_field(name="Average", value=f"{average_xp:,} xp/day", inline=True)
+    embed.add_field(name="Median", value=f"{median_xp:,} xp/day", inline=True)
     embed.add_field(name="", value="", inline=True)
 
-    embed.add_field(name="Gains", value=table, inline=False)
+    table_embed = build_response_embed(
+        title="-" * 65,
+        description=table,
+        color=discord.Color.fuchsia(),
+    )
 
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(embeds=[embed, table_embed])
