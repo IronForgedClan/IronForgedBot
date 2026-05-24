@@ -262,6 +262,67 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
 
+    async def test_get_member_by_rsn_exact_match(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [self.sample_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn("TestUser")
+
+        self.assertEqual(result, self.sample_member)
+
+    async def test_get_member_by_rsn_hyphen_matches_space(self):
+        hyphen_member = Member(
+            id="hyphen-id",
+            discord_id=11111,
+            active=True,
+            nickname="Iron-Man",
+            ingots=0,
+            rank=RANK.IRON,
+        )
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [hyphen_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn("iron man")
+
+        self.assertEqual(result, hyphen_member)
+
+    async def test_get_member_by_rsn_underscore_matches_space(self):
+        underscore_member = Member(
+            id="underscore-id",
+            discord_id=22222,
+            active=True,
+            nickname="Iron_Man",
+            ingots=0,
+            rank=RANK.IRON,
+        )
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [underscore_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn("iron man")
+
+        self.assertEqual(result, underscore_member)
+
+    async def test_get_member_by_rsn_case_insensitive(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [self.sample_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn("testuser")
+
+        self.assertEqual(result, self.sample_member)
+
+    async def test_get_member_by_rsn_not_found(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [self.sample_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn("NonExistent")
+
+        self.assertIsNone(result)
+
     @patch("ironforgedbot.services.member_service.datetime")
     async def test_reactivate_member_success_basic(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
