@@ -83,6 +83,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         mock_wom_service = AsyncMock()
         mock_wom_service.get_player_monthly_gains.return_value = player_gains
         mock_wom_service.get_group_membership_data.return_value = Mock()
+        mock_wom_service.get_player_snapshot_timeline.return_value = []
 
         mock_get_wom = Mock()
         mock_get_wom.return_value.__aenter__ = AsyncMock(return_value=mock_wom_service)
@@ -486,7 +487,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         status_field = next(f for f in embed.fields if f.name == "Status")
         self.assertEqual(status_field.value, "✅ Safe")
         self.assertEqual(embed.color, discord.Colour.green())
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 0)
 
     @patch("ironforgedbot.commands.check.cmd_check.CONFIG")
@@ -529,7 +530,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         status_field = next(f for f in embed.fields if f.name == "Status")
         self.assertEqual(status_field.value, "✅ Safe")
         self.assertEqual(embed.color, discord.Colour.green())
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         self.assertIn("exempts them from activity checks", note_fields[0].value)
 
@@ -573,7 +574,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         status_field = next(f for f in embed.fields if f.name == "Status")
         self.assertEqual(status_field.value, "✅ Safe")
         self.assertEqual(embed.color, discord.Colour.green())
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         self.assertIn("Prospect", note_fields[0].value)
 
@@ -616,7 +617,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
 
         field_names = [f.name for f in embed.fields]
         self.assertNotIn("LTM Gained", field_names)
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         for nf in note_fields:
             self.assertNotIn("LTM (Limited Time Mode)", nf.value)
 
@@ -710,7 +711,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ltm_field.value, "1,234,567 xp")
         self.assertTrue(ltm_field.inline)
 
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         self.assertIn("LTM (Limited Time Mode)", note_fields[0].value)
 
@@ -762,7 +763,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         ltm_field = next(f for f in embed.fields if f.name == "LTM Gained")
         self.assertEqual(ltm_field.value, "N/A")
 
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         self.assertIn("LTM (Limited Time Mode)", note_fields[0].value)
 
@@ -808,7 +809,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         await cmd_check(self.mock_interaction, "TestPlayer")
 
         embed = self.mock_interaction.followup.send.call_args.kwargs["embed"]
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         note_value = note_fields[0].value
         self.assertIn("LTM (Limited Time Mode)", note_value)
@@ -863,7 +864,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status_field.value, "🟠 Pending review")
         self.assertEqual(embed.color, discord.Colour.orange())
 
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         note_value = note_fields[0].value
         self.assertTrue(note_value.startswith("LTM (Limited Time Mode)"))
@@ -918,7 +919,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status_field.value, "❌ In danger")
         self.assertEqual(embed.color, discord.Colour.red())
 
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         self.assertIn("LTM (Limited Time Mode)", note_fields[0].value)
 
@@ -968,7 +969,7 @@ class TestCmdCheck(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status_field.value, "❌ In danger")
         self.assertEqual(embed.color, discord.Colour.red())
 
-        note_fields = [f for f in embed.fields if f.name == "Note"]
+        note_fields = [f for f in embed.fields if f.name == "Notes"]
         self.assertEqual(len(note_fields), 1)
         self.assertIn("LTM (Limited Time Mode)", note_fields[0].value)
 
