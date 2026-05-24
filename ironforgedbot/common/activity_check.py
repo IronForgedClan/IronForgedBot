@@ -251,10 +251,16 @@ def build_daily_gains(
         current_day += timedelta(days=1)
 
     # Diff consecutive days to get per-day gains.
-    # The first day has no predecessor, so its gain is 0.
+    # The first day is diffed against the very first snapshot's absolute XP value
+    # (the baseline), so any XP gained within that first day is captured.
+    # All subsequent days are diffed against the previous day's max value.
+    baseline = sorted_snapshots[0].value
     daily_gains: List[tuple[datetime, int]] = []
     for i, (day, value) in enumerate(filled):
-        gain = 0 if i == 0 else max(0, value - filled[i - 1][1])
+        if i == 0:
+            gain = max(0, value - baseline)
+        else:
+            gain = max(0, value - filled[i - 1][1])
         daily_gains.append((day, gain))
 
     return daily_gains
