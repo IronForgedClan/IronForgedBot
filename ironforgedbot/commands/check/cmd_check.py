@@ -5,6 +5,7 @@ import discord
 from discord import app_commands
 
 from ironforgedbot.common.activity_check import (
+    calculate_days_of_buffer,
     check_member_activity,
     extract_overall_xp_gained,
 )
@@ -102,6 +103,16 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
 
                 wom_group = await wom_service.get_group_membership_data()
 
+                try:
+                    snapshot_timeline = await wom_service.get_player_snapshot_timeline(
+                        db_member.nickname
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to fetch snapshot timeline for {player}: {e}"
+                    )
+                    snapshot_timeline = None
+
             except WomRateLimitError:
                 return await send_error_response(
                     interaction,
@@ -167,6 +178,20 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
             report_to_channel=False,
         )
 
+    days_of_buffer: int | None = None
+    if (
+        snapshot_timeline is not None
+        and not result.is_prospect
+        and not result.is_exempt
+    ):
+        try:
+            days_of_buffer = calculate_days_of_buffer(
+                snapshot_timeline, result.xp_threshold
+            )
+        except Exception as e:
+            logger.warning(f"Failed to calculate days of buffer for {player}: {e}")
+            days_of_buffer = None
+
     if result.is_prospect:
         prospect_emoji = find_emoji("Prospect")
         status_text = "✅ Safe"
@@ -199,6 +224,10 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         notes.append(status_note)
     if result.is_absent:
         notes.append("Member is marked as absent.")
+    if days_of_buffer and days_of_buffer > 0:
+        notes.append(
+            "Buffer refers to how many days this member could gain no xp before falling below the requirement."
+        )
 
     note_text = "\n\n".join(notes)
 
@@ -244,7 +273,18 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     else:
         embed.add_field(name="", value="", inline=True)
 
+    if days_of_buffer is not None:
+        if days_of_buffer == 0:
+            buffer_value = None
+        elif days_of_buffer == 1:
+            buffer_value = "~1 day"
+        else:
+            buffer_value = f"~{days_of_buffer} days"
+
+        if buffer_value:
+            embed.add_field(name="Buffer", value=buffer_value, inline=False)
+
     if note_text:
-        embed.add_field(name="Note", value=note_text, inline=False)
+        embed.add_field(name="Notes", value=note_text, inline=False)
 
     await interaction.followup.send(embed=embed)
