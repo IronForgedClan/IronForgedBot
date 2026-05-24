@@ -4,7 +4,13 @@ from typing import List, NoReturn, Tuple
 
 import wom
 from wom import Metric, Period
-from wom.models import GroupDetail, GroupMemberGains, NameChange, PlayerGains, SnapshotTimelineEntry
+from wom.models import (
+    GroupDetail,
+    GroupMemberGains,
+    NameChange,
+    PlayerGains,
+    SnapshotTimelineEntry,
+)
 
 from ironforgedbot.config import CONFIG
 
