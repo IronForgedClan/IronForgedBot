@@ -12,6 +12,7 @@ from ironforgedbot.common.autocompletes import member_nickname_autocomplete
 from ironforgedbot.common.helpers import (
     find_emoji,
     normalize_discord_string,
+    normalize_rsn,
     validate_playername,
 )
 from ironforgedbot.common.logging_utils import log_command_execution
@@ -88,7 +89,9 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
 
         absent_service = create_absent_service(session)
         absentee_list = await absent_service.process_absent_members()
-        known_absentees = [absentee.nickname.lower() for absentee in absentee_list]
+        known_absentees = [
+            normalize_rsn(absentee.nickname) for absentee in absentee_list
+        ]
 
     try:
         async with get_wom_service() as wom_service:

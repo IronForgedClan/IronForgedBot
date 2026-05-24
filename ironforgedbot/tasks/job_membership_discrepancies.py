@@ -8,6 +8,7 @@ from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
     get_all_discord_members,
     normalize_discord_string,
+    normalize_rsn,
 )
 from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.services.wom_service import (
@@ -30,9 +31,6 @@ async def job_check_membership_discrepancies(
     wom_api_key: str,
     wom_group_id: int,
 ):
-    def normalize_username(name: str) -> str:
-        return name.lower().replace("-", " ").replace("_", " ")
-
     await report_channel.send("Beginning membership discrepancy check...")
 
     discord_members = get_all_discord_members(guild)
@@ -50,12 +48,10 @@ async def job_check_membership_discrepancies(
     logger.debug(ignored)
 
     discord_members = [
-        normalize_username(member)
-        for member in discord_members
-        if member not in ignored
+        normalize_rsn(member) for member in discord_members if member not in ignored
     ]
     wom_members = [
-        normalize_username(member) for member in wom_members if member not in ignored
+        normalize_rsn(member) for member in wom_members if member not in ignored
     ]
 
     if (

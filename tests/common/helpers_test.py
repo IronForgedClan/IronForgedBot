@@ -9,6 +9,7 @@ from ironforgedbot.common.helpers import (
     find_member_by_nickname,
     datetime_to_discord_relative,
     normalize_discord_string,
+    normalize_rsn,
     render_percentage,
     render_relative_time,
     validate_playername,
@@ -42,6 +43,21 @@ class TestHelpers(unittest.TestCase):
             normalize_discord_string("long_text with! symbols?$😄"),
             "long_text with! symbols?$",
         )
+
+    def test_normalize_rsn_plain(self):
+        self.assertEqual(normalize_rsn("PlayerOne"), "playerone")
+
+    def test_normalize_rsn_hyphen(self):
+        self.assertEqual(normalize_rsn("my-name"), "my name")
+
+    def test_normalize_rsn_underscore(self):
+        self.assertEqual(normalize_rsn("my_name"), "my name")
+
+    def test_normalize_rsn_mixed(self):
+        self.assertEqual(normalize_rsn("My-Cool_Name"), "my cool name")
+
+    def test_normalize_rsn_already_normalized(self):
+        self.assertEqual(normalize_rsn("my name"), "my name")
 
     def test_validate_playername(self):
         """Test validate playername happy path"""

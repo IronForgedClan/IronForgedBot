@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedbot.common.helpers import normalize_discord_string, normalize_rsn
 from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
@@ -190,6 +190,23 @@ class MemberService:
             select(Member).where(Member.nickname == nickname)
         )
         return result.scalars().first()
+
+    async def get_member_by_rsn(self, rsn: str) -> Member | None:
+        """Find a member by RSN using cross-system normalization.
+
+        Unlike get_member_by_nickname (which performs an exact SQL match),
+        this method normalizes both the query and stored nicknames so that
+        hyphens, underscores, and spaces are treated as equivalent and
+        comparison is case-insensitive. Use this whenever the RSN comes
+        from an external system (WOM, hiscores) rather than from Discord.
+        """
+        normalized = normalize_rsn(rsn)
+        result = await self.db.execute(select(Member))
+        members = result.scalars().all()
+        for member in members:
+            if normalize_rsn(member.nickname) == normalized:
+                return member
+        return None
 
     async def get_member_rank(self, nickname: str) -> RANK | None:
         result = await self.db.execute(

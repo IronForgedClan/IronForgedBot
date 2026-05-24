@@ -6,6 +6,7 @@ from typing import List, Optional, Union
 from wom import GroupRole
 from wom.models import GroupDetail, GroupMembership, GroupMemberGains, PlayerGains
 
+from ironforgedbot.common.helpers import normalize_rsn
 from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
 from ironforgedbot.common.wom_role_mapping import (
     get_discord_role_for_wom_role,
@@ -102,7 +103,7 @@ def check_member_activity(
         wom_username: Player's WOM username
         wom_group: WOM group details containing membership info
         monthly_gains: Monthly gains data (from bulk or individual API)
-        absentees: List of absent member usernames (lowercase)
+        absentees: List of absent member nicknames normalized with normalize_rsn
         member_rank: Member's rank
 
     Returns:
@@ -115,9 +116,7 @@ def check_member_activity(
     else:
         player_membership = None
         for member in wom_group.memberships:
-            # NOTE: WOM treats underscore as space and will fail
-            #       to match a member with one in their rsn
-            if member.player.username.lower() == username.lower().replace("_", " "):
+            if member.player.username.lower() == normalize_rsn(username):
                 player_membership = member
                 break
 
@@ -157,7 +156,7 @@ def check_member_activity(
             skip_reason="not_in_group",
         )
 
-    is_absent = wom_member.player.username.lower() in absentees
+    is_absent = normalize_rsn(wom_member.player.username) in absentees
     is_prospect = wom_member.role == GroupRole.Dogsbody
 
     # TODO: remove flag, prospects are now handled by is_prospect flag
@@ -204,12 +203,11 @@ async def check_bulk_activity(
     Args:
         wom_group: WOM group details
         all_member_gains: List of all member gains from bulk API
-        absentees: List of absent member usernames (lowercase)
+        absentees: List of absent member nicknames normalized with normalize_rsn
 
     Returns:
         List of ActivityCheckResult for all members
     """
-    from ironforgedbot.common.helpers import normalize_discord_string
     from ironforgedbot.database.database import db
     from ironforgedbot.services.service_factory import create_member_service
 
@@ -221,8 +219,8 @@ async def check_bulk_activity(
         for member_gains in all_member_gains:
             try:
                 # Fetch member from database to get their rank
-                db_member = await member_service.get_member_by_nickname(
-                    normalize_discord_string(member_gains.player.username)
+                db_member = await member_service.get_member_by_rsn(
+                    member_gains.player.username
                 )
 
                 if not db_member:

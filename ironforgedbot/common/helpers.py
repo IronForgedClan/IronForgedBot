@@ -26,6 +26,18 @@ class EmojiCache(TypedDict):
 emojiCache: dict[str, EmojiCache] = {}
 
 
+def normalize_rsn(username: str) -> str:
+    """Normalize a RuneScape username for cross-system comparison.
+
+    OSRS treats hyphens, underscores, and spaces as equivalent in
+    player names, and comparisons are case-insensitive. Use this
+    whenever comparing a name from one system (Discord, DB, WOM,
+    hiscores) against a name from another. Never use this for storage
+    — always preserve the original casing and characters on write.
+    """
+    return username.lower().replace("-", " ").replace("_", " ")
+
+
 def normalize_discord_string(input: str) -> str:
     """Strips string down to plaintext."""
     emoji_pattern = re.compile(
