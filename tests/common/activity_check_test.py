@@ -93,15 +93,15 @@ class TestCalculateDaysOfBuffer(unittest.TestCase):
         result = calculate_days_of_buffer(snapshots, 10_000)
         self.assertIsNotNone(result)
 
-    def test_returns_at_most_29_days(self):
-        # Enormous XP gain, tiny threshold -> capped at 29 simulation steps
+    def test_returns_at_most_30_days(self):
+        # Enormous XP gain, tiny threshold -> capped at 30 simulation steps
         snapshots = [
             make_snapshot(day(0), 0),
             make_snapshot(day(1), 100_000_000),
             make_snapshot(day(29), 100_000_000),
         ]
         result = calculate_days_of_buffer(snapshots, 1)
-        self.assertLessEqual(result, 29)
+        self.assertLessEqual(result, 30)
 
 
 class TestBuildDailyGains(unittest.TestCase):

@@ -207,9 +207,9 @@ def build_daily_gains(
 
     Groups absolute XP snapshots by UTC day (taking the highest value per day),
     fills any gap days by carrying the previous day's value forward (0 gain for
-    that day), then diffs consecutive days to produce gains. The first day in the
-    window always has a gain of 0 because there is no prior snapshot to diff
-    against.
+    that day), then diffs consecutive days to produce gains. The first day's gain
+    is calculated as max_xp(day0) - first_snapshot_value, so it can be non-zero
+    if XP was earned within that first day.
 
     Args:
         snapshots: List of SnapshotTimelineEntry with absolute overall XP values
@@ -284,9 +284,10 @@ def calculate_days_of_buffer(
         xp_threshold: XP required per rolling month to be considered active.
 
     Returns:
-        Number of days (>= 0) the member can sustain 0 XP before dropping
-        below the threshold, or None if the calculation cannot be performed
-        (e.g. fewer than 2 snapshots).
+        Number of days (>= 0, capped at 30) the member can sustain 0 XP before
+        dropping below the threshold. Capped at 30 because the simulation runs
+        for 30 iterations, one per day in the rolling window. Returns None if
+        the calculation cannot be performed (e.g. fewer than 2 snapshots).
     """
     daily_gains = build_daily_gains(snapshots)
     if not daily_gains:
