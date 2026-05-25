@@ -2,7 +2,10 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from ironforgedbot.common.activity_check import build_daily_gains, calculate_days_of_buffer
+from ironforgedbot.common.activity_check import (
+    build_daily_gains,
+    calculate_days_of_buffer,
+)
 
 
 def make_snapshot(date: datetime, value: int):
@@ -32,8 +35,8 @@ class TestCalculateDaysOfBuffer(unittest.TestCase):
         self.assertEqual(result, 0)
 
     def test_member_well_above_threshold_returns_many_days(self):
-        # Member gains 10k XP on day 0, nothing after → total 10k in window
-        # Threshold 5k → safe, dropping that 10k on day 30 leaves 0 → buffer = 29 days
+        # Member gains 10k XP on day 0, nothing after -> total 10k in window
+        # Threshold 5k -> safe, dropping that 10k on day 30 leaves 0 -> buffer = 29 days
         snapshots = [
             make_snapshot(day(0), 1_000_000),
             make_snapshot(day(1), 1_010_000),
@@ -46,8 +49,8 @@ class TestCalculateDaysOfBuffer(unittest.TestCase):
 
     def test_member_exactly_at_threshold_small_buffer(self):
         # 50k gained on day 1, nothing after. Threshold = 50k.
-        # Day 0 drops off (gain=0) → total still 50k → safe for 1 day.
-        # Day 1 drops off (gain=50k) → total 0 → in danger.
+        # Day 0 drops off (gain=0) -> total still 50k -> safe for 1 day.
+        # Day 1 drops off (gain=50k) -> total 0 → in danger.
         snapshots = [
             make_snapshot(day(0), 0),
             make_snapshot(day(1), 50_000),
@@ -57,8 +60,8 @@ class TestCalculateDaysOfBuffer(unittest.TestCase):
         self.assertEqual(result, 1)
 
     def test_gains_spread_across_many_days(self):
-        # 1k XP gained per day for 30 days → total 29k
-        # threshold 20k → safe for a while
+        # 1k XP gained per day for 30 days -> total 29k
+        # threshold 20k -> safe for a while
         base_xp = 1_000_000
         snapshots = [make_snapshot(day(i), base_xp + i * 1_000) for i in range(30)]
         result = calculate_days_of_buffer(snapshots, 20_000)
@@ -66,15 +69,19 @@ class TestCalculateDaysOfBuffer(unittest.TestCase):
         self.assertGreater(result, 0)
 
     def test_uses_max_value_per_day_for_multiple_snapshots_same_day(self):
-        # Multiple snapshots on day 0 — should use highest value (1_020_000)
+        # Multiple snapshots on day 0 — should use highest value (1_020_000).
+        # Baseline = first snapshot = 1_000_000.
+        # Day 0 gain = 1_020_000 - 1_000_000 = 20_000.
+        # Day 29 gain = 0 (same value as day 0 max).
+        # Total = 20_000, threshold = 5_000 -> active.
+        # Simulating forward: day 0 drops off on first step, leaving 0 XP -> 0 days buffer.
         snapshots = [
             make_snapshot(day(0).replace(hour=8), 1_000_000),
             make_snapshot(day(0).replace(hour=20), 1_020_000),
             make_snapshot(day(29), 1_020_000),
         ]
-        # Only 2 distinct days → gain on day 29 vs day 0 = 0 (same value)
         result = calculate_days_of_buffer(snapshots, 5_000)
-        # xp_gained = 0 → below threshold → 0 days
+        self.assertIsNotNone(result)
         self.assertEqual(result, 0)
 
     def test_handles_unsorted_snapshots(self):
@@ -87,7 +94,7 @@ class TestCalculateDaysOfBuffer(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_returns_at_most_29_days(self):
-        # Enormous XP gain, tiny threshold → capped at 29 simulation steps
+        # Enormous XP gain, tiny threshold -> capped at 29 simulation steps
         snapshots = [
             make_snapshot(day(0), 0),
             make_snapshot(day(1), 100_000_000),
@@ -104,8 +111,9 @@ class TestBuildDailyGains(unittest.TestCase):
     def test_single_snapshot_returns_empty(self):
         self.assertEqual(build_daily_gains([make_snapshot(day(0), 1_000_000)]), [])
 
-    def test_two_snapshots_same_day_single_entry_zero_gain(self):
-        # Two snapshots on the same day → one day, gain = 0 (no predecessor to diff against)
+    def test_two_snapshots_same_day_single_entry_intraday_gain(self):
+        # Two snapshots on the same day -> one day.
+        # Gain = max_xp(day 0) - first_snapshot_value = 1_010_000 - 1_000_000 = 10_000.
         snapshots = [
             make_snapshot(day(0).replace(hour=8), 1_000_000),
             make_snapshot(day(0).replace(hour=20), 1_010_000),
@@ -113,9 +121,11 @@ class TestBuildDailyGains(unittest.TestCase):
         result = build_daily_gains(snapshots)
         self.assertEqual(len(result), 1)
         _, gain = result[0]
-        self.assertEqual(gain, 0)
+        self.assertEqual(gain, 10_000)
 
     def test_correct_xp_diff_between_two_days(self):
+        # Single snapshot on day 0: baseline == day 0 max -> day 0 gain = 0.
+        # Day 1 gain = 1_025_000 - 1_000_000 = 25_000.
         snapshots = [
             make_snapshot(day(0), 1_000_000),
             make_snapshot(day(1), 1_025_000),
@@ -133,7 +143,7 @@ class TestBuildDailyGains(unittest.TestCase):
             make_snapshot(day(5), 1_050_000),
         ]
         result = build_daily_gains(snapshots)
-        # days 0, 1, 2, 3, 4, 5 → 6 entries
+        # days 0, 1, 2, 3, 4, 5 -> 6 entries
         self.assertEqual(len(result), 6)
         # gap days (1–4) should have 0 gain
         for _, gain in result[1:5]:
@@ -180,3 +190,19 @@ class TestBuildDailyGains(unittest.TestCase):
         result = build_daily_gains(snapshots)
         dates = [d for d, _ in result]
         self.assertEqual(dates, sorted(dates))
+
+    def test_first_day_gain_uses_first_snapshot_as_baseline(self):
+        # First snapshot is the baseline; XP gained within the first day is captured.
+        # baseline = 1_000_000; day 0 max = 1_015_000 -> day 0 gain = 15_000.
+        # day 1 gain = 1_040_000 - 1_015_000 = 25_000.
+        snapshots = [
+            make_snapshot(day(0).replace(hour=6), 1_000_000),
+            make_snapshot(day(0).replace(hour=22), 1_015_000),
+            make_snapshot(day(1), 1_040_000),
+        ]
+        result = build_daily_gains(snapshots)
+        self.assertEqual(len(result), 2)
+        _, gain_day0 = result[0]
+        _, gain_day1 = result[1]
+        self.assertEqual(gain_day0, 15_000)
+        self.assertEqual(gain_day1, 25_000)

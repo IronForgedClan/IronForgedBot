@@ -236,26 +236,26 @@ class TestCmdGains(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = ""
         mock_validate_playername.return_value = (self.test_member, "TestPlayer")
         self._setup_db(mock_db, mock_create_member_service)
-        mock_ctx, _ = self._make_wom_ctx(snapshots=_make_snapshots(10, xp_per_day=10_000))
+        mock_ctx, _ = self._make_wom_ctx(
+            snapshots=_make_snapshots(10, xp_per_day=10_000)
+        )
         mock_get_wom_service.return_value = mock_ctx
 
         await cmd_gains(self.mock_interaction, "TestPlayer")
 
         self.mock_interaction.followup.send.assert_called_once()
-        embed = self.mock_interaction.followup.send.call_args.kwargs["embed"]
+        embeds = self.mock_interaction.followup.send.call_args.kwargs["embeds"]
+        embed = embeds[0]
         self.assertIsInstance(embed, discord.Embed)
         self.assertEqual(embed.title, "📈 Monthly Gains")
 
         field_names = [f.name for f in embed.fields]
         for expected in [
             "Member",
-            "Rank",
-            "Total Gained",
             "Period Start",
             "Period End",
-            "Average Daily",
-            "Median Daily",
-            "Gains",
+            "Average",
+            "Median",
         ]:
             self.assertIn(expected, field_names)
 
@@ -264,7 +264,7 @@ class TestCmdGains(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.gains.cmd_gains.db")
     @patch("ironforgedbot.commands.gains.cmd_gains.validate_playername")
     @patch("ironforgedbot.commands.gains.cmd_gains.find_emoji")
-    async def test_success_total_gained_correct(
+    async def test_success_total_in_gains_table(
         self,
         mock_find_emoji,
         mock_validate_playername,
@@ -272,11 +272,11 @@ class TestCmdGains(unittest.IsolatedAsyncioTestCase):
         mock_create_member_service,
         mock_get_wom_service,
     ):
-        """Total Gained field reflects the sum of all daily gains."""
+        """Gains table content contains the correct running total for the last row."""
         mock_find_emoji.return_value = ""
         mock_validate_playername.return_value = (self.test_member, "TestPlayer")
         self._setup_db(mock_db, mock_create_member_service)
-        # 5 snapshots: days 0–4, each gaining 5k → total = 4 * 5000 = 20000
+        # 5 snapshots: days 0–4, each gaining 5k → running total by day 4 = 20,000
         # (day 0 has no predecessor so gain = 0)
         snapshots = _make_snapshots(5, xp_per_day=5_000)
         mock_ctx, _ = self._make_wom_ctx(snapshots=snapshots)
@@ -284,9 +284,8 @@ class TestCmdGains(unittest.IsolatedAsyncioTestCase):
 
         await cmd_gains(self.mock_interaction, "TestPlayer")
 
-        embed = self.mock_interaction.followup.send.call_args.kwargs["embed"]
-        total_field = next(f for f in embed.fields if f.name == "Total Gained")
-        self.assertIn("20,000", total_field.value)
+        embed = self.mock_interaction.followup.send.call_args.kwargs["embeds"]
+        self.assertIn("20,000", embed[1].description)
 
     @patch("ironforgedbot.commands.gains.cmd_gains.get_wom_service")
     @patch("ironforgedbot.commands.gains.cmd_gains.create_member_service")
@@ -309,8 +308,8 @@ class TestCmdGains(unittest.IsolatedAsyncioTestCase):
 
         await cmd_gains(self.mock_interaction, "TestPlayer")
 
-        embed = self.mock_interaction.followup.send.call_args.kwargs["embed"]
-        self.assertEqual(embed.color, discord.Color.gold())
+        embed = self.mock_interaction.followup.send.call_args.kwargs["embeds"][0]
+        self.assertEqual(embed.color, discord.Color.fuchsia())
 
     @patch("ironforgedbot.commands.gains.cmd_gains.get_wom_service")
     @patch("ironforgedbot.commands.gains.cmd_gains.create_member_service")
