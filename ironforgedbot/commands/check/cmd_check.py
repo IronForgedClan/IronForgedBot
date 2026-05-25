@@ -104,6 +104,9 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
                 wom_group = await wom_service.get_group_membership_data()
 
                 try:
+                    # Snapshot fetch is intentionally isolated: a failure here
+                    # degrades the /check output gracefully (no buffer field)
+                    # rather than failing the entire command.
                     snapshot_timeline = await wom_service.get_player_snapshot_timeline(
                         db_member.nickname
                     )
