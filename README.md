@@ -16,6 +16,7 @@
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
 | `leaderboard`        | Leaderboard Type                                                                | Member     | Displays a paginated clan leaderboard                                            |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
+| `gains`              | Player (str) _Optional_                                                         | Member     | Returns daily XP gains over the past 30 days for the player                      |
 | `ingots`             | Player (str) _Optional_                                                         | Member     | Returns ingot count for player                                                   |
 | `raffle`             | N/A                                                                             | Member     | Play or manage the raffle                                                        |
 | `reset_rng`          | N/A                                                                             | Member     | Resets your RNG. Costs 999 ingots                                                |
