@@ -278,5 +278,64 @@ class TestWomServiceExceptions(unittest.TestCase):
         self.assertEqual(str(timeout_error), "Timeout")
 
 
+class TestGetPlayerSnapshotTimeline(unittest.IsolatedAsyncioTestCase):
+    """Tests for WomService.get_player_snapshot_timeline."""
+
+    def setUp(self):
+        self.config_patcher = patch("ironforgedbot.services.wom_service.CONFIG")
+        self.mock_config = self.config_patcher.start()
+        self.mock_config.WOM_API_KEY = "test_api_key"
+        self.mock_config.WOM_GROUP_ID = 12345
+
+    def tearDown(self):
+        self.config_patcher.stop()
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_success_returns_snapshot_list(self, mock_client_class):
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        fake_snapshots = [
+            SimpleNamespace(value=1_000_000, rank=100, date="2025-01-01"),
+            SimpleNamespace(value=1_050_000, rank=99, date="2025-01-15"),
+        ]
+        mock_result = Mock()
+        mock_result.is_err = False
+        mock_result.unwrap.return_value = fake_snapshots
+        mock_client.players.get_snapshots_timeline.return_value = mock_result
+
+        service = WomService()
+        result = await service.get_player_snapshot_timeline("testplayer")
+
+        self.assertEqual(result, fake_snapshots)
+        mock_client.players.get_snapshots_timeline.assert_called_once()
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_api_error_raises_wom_service_error(self, mock_client_class):
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        mock_result = Mock()
+        mock_result.is_err = True
+        mock_result.unwrap_err.return_value = "Player not found"
+        mock_client.players.get_snapshots_timeline.return_value = mock_result
+
+        service = WomService()
+        with self.assertRaises(WomServiceError):
+            await service.get_player_snapshot_timeline("unknownplayer")
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_timeout_raises_wom_timeout_error(self, mock_client_class):
+        import asyncio
+
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+        mock_client.players.get_snapshots_timeline.side_effect = asyncio.TimeoutError()
+
+        service = WomService()
+        with self.assertRaises(WomTimeoutError):
+            await service.get_player_snapshot_timeline("testplayer")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,7 @@ from ironforgedbot.commands.admin.cmd_admin import cmd_admin
 from ironforgedbot.commands.help.cmd_help import cmd_help
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.check.cmd_check import cmd_check
+from ironforgedbot.commands.gains.cmd_gains import cmd_gains
 from ironforgedbot.commands.debug.cmd_debug_commands import cmd_debug_commands
 from ironforgedbot.commands.debug.cmd_debug_error_report import cmd_debug_error_report
 from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
@@ -90,6 +91,13 @@ class IronForgedCommands:
                 name="check",
                 description="Check if you meet the monthly activity requirement.",
                 callback=cmd_check,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="gains",
+                description="Show your daily XP gains over the past 30 days.",
+                callback=cmd_gains,
             )
         )
         self._tree.add_command(

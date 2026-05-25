@@ -1,10 +1,17 @@
 import logging
+from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
-from typing import List, Optional, Union
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Union
 
 from wom import GroupRole
-from wom.models import GroupDetail, GroupMembership, GroupMemberGains, PlayerGains
+from wom.models import (
+    GroupDetail,
+    GroupMembership,
+    GroupMemberGains,
+    PlayerGains,
+    SnapshotTimelineEntry,
+)
 
 from ironforgedbot.common.helpers import normalize_rsn
 from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
@@ -191,6 +198,120 @@ def check_member_activity(
         check_timestamp=check_timestamp,
         skip_reason=skip_reason,
     )
+
+
+def build_daily_gains(
+    snapshots: List[SnapshotTimelineEntry],
+) -> List[tuple[datetime, int]]:
+    """Convert a snapshot timeline into per-day XP gains, oldest to newest.
+
+    Groups absolute XP snapshots by UTC day (taking the highest value per day),
+    fills any gap days by carrying the previous day's value forward (0 gain for
+    that day), then diffs consecutive days to produce gains. The first day's gain
+    is calculated as max_xp(day0) - first_snapshot_value, so it can be non-zero
+    if XP was earned within that first day.
+
+    Args:
+        snapshots: List of SnapshotTimelineEntry with absolute overall XP values
+                   and timestamps. May be unsorted. May contain multiple entries
+                   per day.
+
+    Returns:
+        Ordered list of (datetime, xp_gained) tuples, one per day in the window,
+        oldest first. Returns an empty list if fewer than 2 snapshots are provided
+        (insufficient to calculate any gain).
+    """
+    if len(snapshots) < 2:
+        return []
+
+    sorted_snapshots = sorted(snapshots, key=lambda s: s.date)
+
+    # Group by UTC day, keeping the highest XP value seen that day.
+    daily_max: Dict[datetime, int] = defaultdict(int)
+    for entry in sorted_snapshots:
+        day = entry.date.replace(hour=0, minute=0, second=0, microsecond=0)
+        if entry.value > daily_max[day]:
+            daily_max[day] = entry.value
+
+    ordered_days = sorted(daily_max.keys())
+    if not ordered_days:
+        return []
+
+    # Fill gaps: days between the first and last snapshot day that have no
+    # snapshot carry the previous day's absolute XP value (implying 0 gain).
+    filled: List[tuple[datetime, int]] = []
+    current_day = ordered_days[0]
+    last_value = daily_max[current_day]
+    end_day = ordered_days[-1]
+
+    while current_day <= end_day:
+        if current_day in daily_max:
+            last_value = daily_max[current_day]
+        filled.append((current_day, last_value))
+        current_day += timedelta(days=1)
+
+    # Diff consecutive days to get per-day gains.
+    # The first day is diffed against the very first snapshot's absolute XP value
+    # (the baseline), so any XP gained within that first day is captured.
+    # All subsequent days are diffed against the previous day's max value.
+    baseline = sorted_snapshots[0].value
+    daily_gains: List[tuple[datetime, int]] = []
+    for i, (day, value) in enumerate(filled):
+        if i == 0:
+            gain = max(0, value - baseline)
+        else:
+            gain = max(0, value - filled[i - 1][1])
+        daily_gains.append((day, gain))
+
+    return daily_gains
+
+
+def calculate_days_of_buffer(
+    snapshots: List[SnapshotTimelineEntry],
+    xp_threshold: int,
+) -> int | None:
+    """Calculate how many days a member can gain 0 XP before falling below threshold.
+
+    Uses snapshot timeline data (absolute XP values at points in time) to
+    reconstruct daily XP gains over the rolling 30-day window. Simulates
+    the window advancing day by day, with each step dropping the oldest
+    day's gains from the total, to find the first day the total falls below
+    the threshold.
+
+    Args:
+        snapshots: Ordered list of SnapshotTimelineEntry for the past month.
+                   Each entry has an absolute overall XP value and a date.
+        xp_threshold: XP required per rolling month to be considered active.
+
+    Returns:
+        Number of days (>= 0, capped at 30) the member can sustain 0 XP before
+        dropping below the threshold. Capped at 30 because the simulation runs
+        for 30 iterations, one per day in the rolling window. Returns None if
+        the calculation cannot be performed (e.g. fewer than 2 snapshots).
+    """
+    daily_gains = build_daily_gains(snapshots)
+    if not daily_gains:
+        return None
+
+    total_xp = sum(g for _, g in daily_gains)
+
+    # Simulate the window rolling forward one day at a time.
+    # Each iteration: the oldest day drops off, and the new day contributes 0 xp.
+    # Count how many days until total < threshold.
+    gains_deque = list(daily_gains)
+    days_safe = 0
+
+    for _ in range(30):
+        dropped_gain = gains_deque.pop(0)[1]
+        total_xp -= dropped_gain
+        gains_deque.append((datetime.now(tz=timezone.utc), 0))
+
+        if total_xp < xp_threshold:
+            break
+
+        days_safe += 1
+
+    return days_safe
 
 
 async def check_bulk_activity(

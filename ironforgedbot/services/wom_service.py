@@ -4,7 +4,13 @@ from typing import List, NoReturn, Tuple
 
 import wom
 from wom import Metric, Period
-from wom.models import GroupDetail, GroupMemberGains, NameChange, PlayerGains
+from wom.models import (
+    GroupDetail,
+    GroupMemberGains,
+    NameChange,
+    PlayerGains,
+    SnapshotTimelineEntry,
+)
 
 from ironforgedbot.config import CONFIG
 
@@ -278,6 +284,64 @@ class WomService:
                 logger.error(
                     f"Detected JSON parsing error for {player_name}, WOM API may have returned HTML instead of JSON"
                 )
+            WomService._handle_wom_error(e)
+
+    async def get_player_snapshot_timeline(
+        self, username: str
+    ) -> List[SnapshotTimelineEntry]:
+        """Get monthly overall XP snapshot timeline for a single player.
+
+        Returns ordered snapshots of absolute overall XP values over the
+        past rolling month. Used to reconstruct daily gains and calculate
+        how many days a member can afford to gain 0 XP before falling below
+        the activity threshold.
+
+        Args:
+            username: Player's RuneScape username
+
+        Returns:
+            List of SnapshotTimelineEntry ordered by date ascending
+
+        Raises:
+            WomServiceError: If the API call fails
+            WomRateLimitError: If rate limit is exceeded
+            WomTimeoutError: If request times out
+        """
+        client = await self._get_client()
+
+        try:
+            logger.debug(f"Fetching snapshot timeline for player {username}")
+            result = await asyncio.wait_for(
+                client.players.get_snapshots_timeline(
+                    username, Metric.Overall, period=Period.Month
+                ),
+                timeout=30.0,
+            )
+
+            if result.is_err:
+                error_details = result.unwrap_err()
+                logger.error(
+                    f"WOM API error getting snapshot timeline for {username}: {error_details}"
+                )
+                raise WomServiceError(
+                    f"Failed to get snapshot timeline: {error_details}"
+                )
+
+            snapshots = result.unwrap()
+            logger.info(
+                f"Retrieved {len(snapshots)} snapshot timeline entries for {username}"
+            )
+            return snapshots
+
+        except asyncio.TimeoutError as e:
+            logger.error(f"Timeout getting snapshot timeline for {username}: {e}")
+            raise WomTimeoutError("WOM API request timed out")
+        except (WomServiceError, WomRateLimitError, WomTimeoutError):
+            raise
+        except Exception as e:
+            logger.error(
+                f"Error getting snapshot timeline for {username}: {type(e).__name__}: {e}"
+            )
             WomService._handle_wom_error(e)
 
     async def _get_group_details(
