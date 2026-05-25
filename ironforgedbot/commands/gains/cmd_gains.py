@@ -169,7 +169,7 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
 
     embed = build_response_embed(
         title="📈 Monthly Gains",
-        description="XP gains for the **last 30 days**, by day. Run `check` to see if you meet your rank's requirement.",
+        description="XP gained over the last **30 days**, shown by day. Use the `check` command to see if you meet your rank requirement.",
         color=discord.Color.fuchsia(),
     )
 
@@ -188,7 +188,7 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
 
     description = (
         table
-        + f"\n-# _All dates displayed in UTC. View gains in your local timezone on the [Wise Old Man website](https://wiseoldman.net/players/{quote(db_member.nickname)}/gained?metric=overall&period=month&expand=bar-chart). All activity checks and automations are conducted in UTC._"
+        + f"\n-# _Dates displayed in UTC. View gains for this member in your local timezone on the [Wise Old Man website](https://wiseoldman.net/players/{quote(db_member.nickname)}/gained?metric=overall&period=month&expand=bar-chart). All activity calculations are made in UTC._"
     )
     table_embed = build_response_embed(
         title="",
