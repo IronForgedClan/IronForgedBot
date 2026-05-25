@@ -224,10 +224,6 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
         notes.append(status_note)
     if result.is_absent:
         notes.append("Member is marked as absent.")
-    if days_of_buffer and days_of_buffer > 0:
-        notes.append(
-            "Buffer refers to how many days this member could gain no xp before falling below the requirement."
-        )
 
     note_text = "\n\n".join(notes)
 
@@ -276,13 +272,12 @@ async def cmd_check(interaction: discord.Interaction, player: Optional[str] = No
     if days_of_buffer is not None:
         if days_of_buffer == 0:
             buffer_value = None
-        elif days_of_buffer == 1:
-            buffer_value = "~1 day"
         else:
-            buffer_value = f"~{days_of_buffer} days"
+            day_word = "day" if days_of_buffer == 1 else "days"
+            buffer_value = f"This member is projected to fall below the rank requirement after approximately **{days_of_buffer} {day_word}** of inactivity."
 
         if buffer_value:
-            embed.add_field(name="Buffer", value=buffer_value, inline=False)
+            embed.add_field(name="Inactivity Buffer", value=buffer_value, inline=False)
 
     if note_text:
         embed.add_field(name="Notes", value=note_text, inline=False)

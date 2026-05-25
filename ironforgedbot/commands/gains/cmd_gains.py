@@ -15,7 +15,6 @@ from ironforgedbot.common.helpers import (
     validate_playername,
 )
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.ranks import get_rank_from_member
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_code_block
@@ -169,7 +168,7 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
 
     embed = build_response_embed(
         title="📈 Monthly Gains",
-        description="Daily XP gained over the **last 30 days**. Use the `check` command to verify you meet the xp requirements of your rank.",
+        description="XP gains for the **last 30 days**, by day. Run `check` to see if you meet your rank's requirement.",
         color=discord.Color.fuchsia(),
     )
 
@@ -188,7 +187,7 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
 
     description = (
         table
-        + f"\n-# _Dates shown here are in UTC. You can view gains in your local timezone on the [wise old man website](https://wiseoldman.net/players/{normalize_discord_string(display_name)}/gained?metric=overall&period=month&expand=bar-chart)._"
+        + f"\n-# _All dates displayed in UTC. View gains in your local timezone on the [Wise Old Man website](https://wiseoldman.net/players/{normalize_discord_string(display_name)}/gained?metric=overall&period=month&expand=bar-chart). All activity checks and automations are conducted in UTC._"
     )
     table_embed = build_response_embed(
         title="",
