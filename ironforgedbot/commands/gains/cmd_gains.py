@@ -2,6 +2,7 @@ import logging
 import statistics
 from datetime import datetime
 from typing import List, Optional
+from urllib.parse import quote
 
 import discord
 from discord import app_commands
@@ -187,7 +188,7 @@ async def cmd_gains(interaction: discord.Interaction, player: Optional[str] = No
 
     description = (
         table
-        + f"\n-# _All dates displayed in UTC. View gains in your local timezone on the [Wise Old Man website](https://wiseoldman.net/players/{normalize_discord_string(display_name)}/gained?metric=overall&period=month&expand=bar-chart). All activity checks and automations are conducted in UTC._"
+        + f"\n-# _All dates displayed in UTC. View gains in your local timezone on the [Wise Old Man website](https://wiseoldman.net/players/{quote(db_member.nickname)}/gained?metric=overall&period=month&expand=bar-chart). All activity checks and automations are conducted in UTC._"
     )
     table_embed = build_response_embed(
         title="",
