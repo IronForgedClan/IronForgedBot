@@ -15,6 +15,9 @@ class TestLeaderboardRegistry(unittest.TestCase):
     def test_score_type_registered(self):
         self.assertIn("score", LEADERBOARD_TYPES)
 
+    def test_staff_type_registered(self):
+        self.assertIn("staff", LEADERBOARD_TYPES)
+
     def test_all_entries_are_leaderboard_configs(self):
         for key, config in LEADERBOARD_TYPES.items():
             with self.subTest(key=key):

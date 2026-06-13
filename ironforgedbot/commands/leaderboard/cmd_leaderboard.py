@@ -5,6 +5,7 @@ from discord import app_commands
 
 from ironforgedbot.commands.leaderboard.leaderboard_embeds import (
     build_leaderboard_embeds,
+    build_staff_leaderboard_embeds,
     find_caller_page,
 )
 from ironforgedbot.commands.leaderboard.leaderboard_menu import (
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
     leaderboard_type=[
         app_commands.Choice(name="Score Leaderboard", value="score"),
         app_commands.Choice(name="Ingot Leaderboard", value="ingots"),
+        app_commands.Choice(name="Staff Leaderboard", value="staff"),
     ]
 )
 async def cmd_leaderboard(
@@ -40,10 +42,14 @@ async def cmd_leaderboard(
     async with db.get_session() as session:
         entries = await config.fetcher(session)
 
-    entries.sort(key=config.sort_key, reverse=True)
+    if leaderboard_type.value == "staff":
+        embeds = build_staff_leaderboard_embeds(entries, config)
+        caller_page = None
+    else:
+        entries.sort(key=config.sort_key, reverse=True)
+        caller_page = find_caller_page(entries, interaction.user.id)
+        embeds = build_leaderboard_embeds(entries, config)
 
-    caller_page = find_caller_page(entries, interaction.user.id)
-    embeds = build_leaderboard_embeds(entries, config)
     menu = build_leaderboard_menu(interaction, embeds, caller_page)
 
     try:

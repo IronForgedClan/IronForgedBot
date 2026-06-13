@@ -3,6 +3,8 @@ from typing import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ironforgedbot.common.ranks import RANK
+
 
 @dataclass
 class LeaderboardEntry:
@@ -11,6 +13,16 @@ class LeaderboardEntry:
     discord_id: int
     nickname: str
     value: int
+
+
+@dataclass
+class StaffLeaderboardEntry:
+    """A single row of data for the staff leaderboard, including rank for grouping."""
+
+    discord_id: int
+    nickname: str
+    value: int
+    rank: RANK
 
 
 @dataclass

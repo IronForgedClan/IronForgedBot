@@ -512,3 +512,89 @@ class TestGetLatestScoreSnapshot(unittest.IsolatedAsyncioTestCase):
             await self.score_history_service.get_latest_score_snapshot()
 
         self.assertIn("DB connection lost", str(ctx.exception))
+
+
+class TestGetStaffScoreSnapshot(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_db = AsyncMock()
+        self.mock_db.add = MagicMock()
+        self.mock_db.commit = AsyncMock()
+        self.mock_db.close = AsyncMock()
+
+        self.score_history_service = ScoreHistoryService(self.mock_db)
+        self.score_history_service.member_service = AsyncMock()
+
+    def _mock_rows(self, rows: list[tuple]) -> None:
+        mock_result = MagicMock()
+        mock_result.__iter__ = MagicMock(
+            return_value=iter(
+                [
+                    MagicMock(discord_id=r[0], nickname=r[1], score=r[2], rank=r[3])
+                    for r in rows
+                ]
+            )
+        )
+        self.mock_db.execute = AsyncMock(return_value=mock_result)
+
+    async def test_returns_list_of_tuples(self):
+        from ironforgedbot.common.ranks import RANK
+
+        self._mock_rows([(111, "StaffA", 9000, RANK.MYTH)])
+
+        result = await self.score_history_service.get_staff_score_snapshot()
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], (111, "StaffA", 9000, RANK.MYTH))
+
+    async def test_returns_empty_list_when_no_staff(self):
+        self._mock_rows([])
+
+        result = await self.score_history_service.get_staff_score_snapshot()
+
+        self.assertEqual(result, [])
+
+    async def test_returns_multiple_staff_members(self):
+        from ironforgedbot.common.ranks import RANK
+
+        rows = [
+            (111, "StaffA", 9000, RANK.MYTH),
+            (222, "StaffB", 7500, RANK.LEGEND),
+            (333, "StaffC", 3000, RANK.RUNE),
+        ]
+        self._mock_rows(rows)
+
+        result = await self.score_history_service.get_staff_score_snapshot()
+
+        self.assertEqual(len(result), 3)
+        self.assertIn((111, "StaffA", 9000, RANK.MYTH), result)
+        self.assertIn((222, "StaffB", 7500, RANK.LEGEND), result)
+        self.assertIn((333, "StaffC", 3000, RANK.RUNE), result)
+
+    async def test_each_tuple_has_four_elements(self):
+        from ironforgedbot.common.ranks import RANK
+
+        self._mock_rows([(111, "StaffA", 9000, RANK.DRAGON)])
+
+        result = await self.score_history_service.get_staff_score_snapshot()
+
+        discord_id, nickname, score, rank = result[0]
+        self.assertIsInstance(discord_id, int)
+        self.assertIsInstance(nickname, str)
+        self.assertIsInstance(score, int)
+        self.assertIsInstance(rank, str)
+
+    async def test_executes_one_database_query(self):
+        self._mock_rows([])
+
+        await self.score_history_service.get_staff_score_snapshot()
+
+        self.mock_db.execute.assert_called_once()
+
+    async def test_db_error_propagates(self):
+        self.mock_db.execute = AsyncMock(side_effect=Exception("DB connection lost"))
+
+        with self.assertRaises(Exception) as ctx:
+            await self.score_history_service.get_staff_score_snapshot()
+
+        self.assertIn("DB connection lost", str(ctx.exception))

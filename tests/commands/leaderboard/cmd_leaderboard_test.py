@@ -115,17 +115,25 @@ class TestCmdLeaderboard(unittest.IsolatedAsyncioTestCase):
             _make_entry(nickname="High", value=9999, discord_id=2),
             _make_entry(nickname="Mid", value=5000, discord_id=3),
         ]
-        captured_embeds: list[discord.Embed] = []
+        captured_entries: list = []
 
         mock_fetcher = AsyncMock(return_value=entries)
         mock_menu = MagicMock()
         mock_menu.start = AsyncMock()
-        mock_menu.add_page.side_effect = lambda embed: captured_embeds.append(embed)
+
+        def capture_embeds(sorted_entries, config):
+            captured_entries.extend(sorted_entries)
+            return [discord.Embed(description="placeholder")]
 
         with patch.object(LEADERBOARD_TYPES["ingots"], "fetcher", mock_fetcher), patch(
-            "ironforgedbot.commands.leaderboard.leaderboard_menu.LeaderboardMenu",
+            "ironforgedbot.commands.leaderboard.cmd_leaderboard.build_leaderboard_menu",
             return_value=mock_menu,
-        ), patch("ironforgedbot.commands.leaderboard.cmd_leaderboard.db") as mock_db:
+        ), patch(
+            "ironforgedbot.commands.leaderboard.cmd_leaderboard.build_leaderboard_embeds",
+            side_effect=capture_embeds,
+        ), patch(
+            "ironforgedbot.commands.leaderboard.cmd_leaderboard.db"
+        ) as mock_db:
             mock_session = AsyncMock()
             mock_ctx = AsyncMock()
             mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
@@ -134,13 +142,10 @@ class TestCmdLeaderboard(unittest.IsolatedAsyncioTestCase):
 
             await cmd_leaderboard(self.interaction, _make_choice("ingots"))
 
-        self.assertEqual(len(captured_embeds), 1)
-        desc = captured_embeds[0].description
-        high_pos = desc.index("| High ")
-        mid_pos = desc.index("| Mid ")
-        low_pos = desc.index("| Low ")
-        self.assertLess(high_pos, mid_pos)
-        self.assertLess(mid_pos, low_pos)
+        self.assertEqual(len(captured_entries), 3)
+        self.assertEqual(captured_entries[0].nickname, "High")
+        self.assertEqual(captured_entries[1].nickname, "Mid")
+        self.assertEqual(captured_entries[2].nickname, "Low")
 
     async def test_find_me_button_added_when_caller_in_list(self):
         entries = [
