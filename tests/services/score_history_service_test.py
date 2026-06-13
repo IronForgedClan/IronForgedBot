@@ -529,9 +529,7 @@ class TestGetStaffScoreSnapshot(unittest.IsolatedAsyncioTestCase):
         mock_result.__iter__ = MagicMock(
             return_value=iter(
                 [
-                    MagicMock(
-                        discord_id=r[0], nickname=r[1], score=r[2], rank=r[3]
-                    )
+                    MagicMock(discord_id=r[0], nickname=r[1], score=r[2], rank=r[3])
                     for r in rows
                 ]
             )

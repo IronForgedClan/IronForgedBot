@@ -281,7 +281,9 @@ class TestBuildStaffLeaderboardEmbeds(unittest.TestCase):
         self.assertIn("```", embeds[0].description)
 
     def test_values_formatted_with_commas(self):
-        entries = [_make_staff_entry(nickname="RichStaff", value=1234567, rank=RANK.GOD)]
+        entries = [
+            _make_staff_entry(nickname="RichStaff", value=1234567, rank=RANK.GOD)
+        ]
         embeds = build_staff_leaderboard_embeds(entries, self.config)
         self.assertIn("1,234,567", embeds[0].description)
 

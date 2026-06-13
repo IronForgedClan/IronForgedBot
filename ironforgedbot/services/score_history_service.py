@@ -209,6 +209,4 @@ class ScoreHistoryService:
         )
 
         result = await self.db.execute(stmt)
-        return [
-            (row.discord_id, row.nickname, row.score, row.rank) for row in result
-        ]
+        return [(row.discord_id, row.nickname, row.score, row.rank) for row in result]
