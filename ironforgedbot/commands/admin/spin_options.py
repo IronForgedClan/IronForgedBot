@@ -1,4 +1,4 @@
-from ironforgedbot.storage.data import BOSSES, SKILLS
+from ironforgedbot.storage.data import BOSSES, SKILLS, RAIDS
 
 
 def get_sotw_options() -> list[str]:
@@ -24,7 +24,12 @@ def get_botw_options() -> list[str]:
         "dagannoth supreme",
     ]
     options = [b["name"] for b in BOSSES if b["name"].lower() not in exclusions]
-    additions = ["Dagannoth Kings"]
+    additions = [
+        "Dagannoth Kings",
+        RAIDS[0]["name"],  # cox
+        RAIDS[2]["name"],  # tob
+        RAIDS[4]["name"],  # toa
+    ]
 
     grouped_names = {name for group in groups for name in group}
     combined_options = additions + [o for o in options if o not in grouped_names]
