@@ -109,7 +109,6 @@ class TestBuildLeaderboardMenu(unittest.TestCase):
         button_calls = [str(call) for call in mock_menu.add_button.call_args_list]
         self.assertTrue(any("Back" in c for c in button_calls))
         self.assertTrue(any("Next" in c for c in button_calls))
-        self.assertTrue(any("Close" in c for c in button_calls))
 
     @patch("ironforgedbot.commands.leaderboard.leaderboard_menu.LeaderboardMenu")
     def test_all_embeds_added_as_pages(self, mock_menu_class):

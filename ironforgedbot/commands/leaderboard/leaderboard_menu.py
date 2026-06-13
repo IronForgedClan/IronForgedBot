@@ -35,7 +35,7 @@ def build_leaderboard_menu(
     """Construct a LeaderboardMenu with navigation buttons.
 
     Buttons added (in order):
-      ← Back | Find Me (if caller_page is not None) | Next → | ⨯ Close
+      ← Back | Find Me (if caller_page is not None) | Next →
 
     Args:
         interaction: The originating Discord interaction.
@@ -85,13 +85,6 @@ def build_leaderboard_menu(
             style=discord.ButtonStyle.primary,
             label="Next →",
             custom_id=ViewButton.ID_NEXT_PAGE,
-        )
-    )
-    menu.add_button(
-        ViewButton(
-            style=discord.ButtonStyle.danger,
-            label="⨯ Close",
-            custom_id=ViewButton.ID_END_SESSION,
         )
     )
 
