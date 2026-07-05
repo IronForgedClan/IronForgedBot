@@ -1,11 +1,19 @@
+import logging
 import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import wom
+from wom import GroupRole
 
 from ironforgedbot.common.activity_check import (
     build_daily_gains,
     calculate_days_of_buffer,
+    check_bulk_activity,
 )
+from ironforgedbot.common.ranks import RANK
+from tests.helpers import create_test_db_member
 
 
 def make_snapshot(date: datetime, value: int):
@@ -206,3 +214,129 @@ class TestBuildDailyGains(unittest.TestCase):
         _, gain_day1 = result[1]
         self.assertEqual(gain_day0, 15_000)
         self.assertEqual(gain_day1, 25_000)
+
+
+class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
+    def _make_gains(self, username, xp_gained=50000):
+        mock_gains = MagicMock(spec=wom.GroupMemberGains)
+        mock_gains.player = SimpleNamespace(username=username, id=12345)
+        mock_gains.data.gained = float(xp_gained)
+        return mock_gains
+
+    def _make_wom_group(self):
+        return SimpleNamespace(
+            memberships=[
+                SimpleNamespace(
+                    player=SimpleNamespace(
+                        id=12345, username="TestUser", last_changed_at=None
+                    ),
+                    role=GroupRole.Iron,
+                ),
+            ],
+        )
+
+    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedbot.database.database.db")
+    async def test_loads_all_members_once_uses_dict_lookup(
+        self, mock_db, mock_create_service
+    ):
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_ctx
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [
+            create_test_db_member(nickname="TestUser", rank=RANK.IRON),
+        ]
+        mock_create_service.return_value = mock_member_service
+
+        wom_group = self._make_wom_group()
+        gains = [self._make_gains("TestUser", xp_gained=200000)]
+
+        results = await check_bulk_activity(wom_group, gains, [])
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].username, "TestUser")
+        self.assertTrue(results[0].is_active)
+        mock_member_service.get_all_active_members.assert_called_once()
+
+    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedbot.database.database.db")
+    async def test_skips_members_not_in_db_with_warning(
+        self, mock_db, mock_create_service
+    ):
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_ctx
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = []
+        mock_create_service.return_value = mock_member_service
+
+        wom_group = self._make_wom_group()
+        gains = [self._make_gains("NotInDb")]
+
+        logging.disable(logging.NOTSET)
+        try:
+            with self.assertLogs(
+                "ironforgedbot.common.activity_check", level="WARNING"
+            ) as cm:
+                results = await check_bulk_activity(wom_group, gains, [])
+        finally:
+            logging.disable(logging.CRITICAL)
+
+        self.assertEqual(len(results), 0)
+        self.assertTrue(
+            any(
+                "NotInDb" in msg and "not found in database" in msg for msg in cm.output
+            )
+        )
+
+    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedbot.database.database.db")
+    async def test_handles_exception_gracefully(self, mock_db, mock_create_service):
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_ctx
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.side_effect = RuntimeError(
+            "db error"
+        )
+        mock_create_service.return_value = mock_member_service
+
+        wom_group = self._make_wom_group()
+        gains = [self._make_gains("TestUser")]
+
+        with self.assertRaises(RuntimeError):
+            await check_bulk_activity(wom_group, gains, [])
+
+    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedbot.database.database.db")
+    async def test_matches_with_normalized_rsn(self, mock_db, mock_create_service):
+        mock_session = AsyncMock()
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__.return_value = mock_session
+        mock_ctx.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_ctx
+
+        mock_member_service = AsyncMock()
+        mock_member_service.get_all_active_members.return_value = [
+            create_test_db_member(nickname="Test_User", rank=RANK.IRON),
+        ]
+        mock_create_service.return_value = mock_member_service
+
+        wom_group = self._make_wom_group()
+        gains = [self._make_gains("Test-User", xp_gained=200000)]
+
+        results = await check_bulk_activity(wom_group, gains, [])
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].username, "TestUser")
+        self.assertTrue(results[0].is_active)

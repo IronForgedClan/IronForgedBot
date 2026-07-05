@@ -336,31 +336,31 @@ async def check_bulk_activity(
 
     async with db.get_session() as session:
         member_service = create_member_service(session)
+        all_members = await member_service.get_all_active_members()
 
-        for member_gains in all_member_gains:
-            try:
-                # Fetch member from database to get their rank
-                db_member = await member_service.get_member_by_rsn(
-                    member_gains.player.username
-                )
+    member_map = {normalize_rsn(m.nickname): m for m in all_members}
 
-                if not db_member:
-                    logger.warning(
-                        f"Member {member_gains.player.username} not found in database, skipping"
-                    )
-                    continue
+    for member_gains in all_member_gains:
+        try:
+            db_member = member_map.get(normalize_rsn(member_gains.player.username))
 
-                result = check_member_activity(
-                    username=member_gains.player.username,
-                    wom_group=wom_group,
-                    monthly_gains=member_gains,
-                    absentees=absentees,
-                    member_rank=db_member.rank,
-                )
-                results.append(result)
-            except Exception as e:
+            if not db_member:
                 logger.warning(
-                    f"Error checking activity for {getattr(member_gains.player, 'username', 'unknown')}: {e}"
+                    f"Member {member_gains.player.username} not found in database, skipping"
                 )
+                continue
+
+            result = check_member_activity(
+                username=member_gains.player.username,
+                wom_group=wom_group,
+                monthly_gains=member_gains,
+                absentees=absentees,
+                member_rank=db_member.rank,
+            )
+            results.append(result)
+        except Exception as e:
+            logger.warning(
+                f"Error checking activity for {getattr(member_gains.player, 'username', 'unknown')}: {e}"
+            )
 
     return results
