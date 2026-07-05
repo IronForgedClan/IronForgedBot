@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 from types import SimpleNamespace
 
+import wom
+
 from ironforgedbot.services.wom_service import (
     WomService,
     WomServiceError,
@@ -94,6 +96,49 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_get_group_gains_single_call(self, mock_client_class):
+        """Test _get_group_gains makes a single API call without pagination."""
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        mock_gains_result = Mock()
+        mock_gains_result.is_ok = True
+        mock_gains = [
+            SimpleNamespace(player=SimpleNamespace(username="Player1")),
+            SimpleNamespace(player=SimpleNamespace(username="Player2")),
+        ]
+        mock_gains_result.unwrap.return_value = mock_gains
+        mock_client.groups.get_gains.return_value = mock_gains_result
+
+        service = WomService()
+        result = await service._get_group_gains(mock_client, 12345)
+
+        self.assertEqual(result, mock_gains)
+        mock_client.groups.get_gains.assert_called_once_with(
+            12345,
+            metric=wom.Metric.Overall,
+            period=wom.Period.Month,
+        )
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
+    async def test_get_group_gains_api_error(self, mock_client_class):
+        """Test _get_group_gains raises WomServiceError on API failure."""
+        mock_client = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        mock_gains_result = Mock()
+        mock_gains_result.is_ok = False
+        mock_gains_result.unwrap_err.return_value = "Group not found"
+        mock_client.groups.get_gains.return_value = mock_gains_result
+
+        service = WomService()
+
+        with self.assertRaises(WomServiceError) as cm:
+            await service._get_group_gains(mock_client, 12345)
+
+        self.assertIn("WOM API error", str(cm.exception))
+
+    @patch("ironforgedbot.services.wom_service.wom.Client")
     async def test_get_monthly_activity_data_success(self, mock_client_class):
         """Test successful monthly activity data retrieval."""
         mock_client = AsyncMock()
@@ -120,6 +165,13 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(group_details, mock_group_details)
         self.assertEqual(member_gains, mock_gains)
+
+        # Verify single API call with no pagination parameters
+        mock_client.groups.get_gains.assert_called_once()
+        call_kwargs = mock_client.groups.get_gains.call_args
+        self.assertEqual(call_kwargs[0][0], 12345)
+        self.assertNotIn("limit", call_kwargs[1])
+        self.assertNotIn("offset", call_kwargs[1])
 
     @patch("ironforgedbot.services.wom_service.wom.Client")
     async def test_get_monthly_activity_data_rate_limit_error(self, mock_client_class):
