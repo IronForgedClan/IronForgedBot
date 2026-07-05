@@ -121,7 +121,7 @@ class WomService:
             # Get monthly member gains with extended timeout for slow WOM API
             logger.debug(f"Fetching monthly gains for group {group_id}")
             member_gains = await asyncio.wait_for(
-                self._get_all_group_gains(client, group_id), timeout=300.0
+                self._get_group_gains(client, group_id), timeout=300.0
             )
 
             logger.info(
@@ -374,87 +374,30 @@ class WomService:
                 )
             raise
 
-    async def _get_all_group_gains(
+    async def _get_group_gains(
         self, client: wom.Client, group_id: int
     ) -> List[GroupMemberGains]:
-        """Get all group member gains with pagination."""
-        all_gains = []
-        limit = 50
-        offset = 0
-        page = 0
-        max_pages = 100
+        """Get all group member gains in a single API call.
 
-        logger.debug("Starting to fetch group gains with pagination")
+        The WOM API /groups/:id/gained endpoint does not support pagination
+        and always returns the full member list.
+        """
+        logger.debug(f"Fetching group gains for group {group_id}")
 
-        while page < max_pages:
-            try:
-                logger.debug(
-                    f"Fetching gains page {page + 1}, offset={offset}, limit={limit}"
-                )
+        result = await client.groups.get_gains(
+            group_id,
+            metric=Metric.Overall,
+            period=Period.Month,
+        )
 
-                result = await client.groups.get_gains(
-                    group_id,
-                    metric=Metric.Overall,
-                    period=Period.Month,
-                    limit=limit,
-                    offset=offset,
-                )
-
-                if result.is_ok:
-                    gains = result.unwrap()
-                    logger.debug(
-                        f"Page {page + 1}: successfully retrieved {len(gains)} gains"
-                    )
-                else:
-                    error_details = result.unwrap_err()
-                    logger.error(
-                        f"WOM API error getting group gains page {page + 1}: {error_details}"
-                    )
-                    raise WomServiceError(f"WOM API error: {error_details}")
-
-            except Exception as e:
-                error_str = str(e).lower()
-                logger.error(
-                    f"Unexpected error fetching gains page {page + 1}: {type(e).__name__}: {e}"
-                )
-
-                # Check if this looks like a JSON parsing error
-                if any(
-                    keyword in error_str
-                    for keyword in ["json", "decode", "parse", "invalid"]
-                ):
-                    logger.error(
-                        f"Detected JSON parsing error on page {page + 1}, this may indicate WOM API returned unexpected response format"
-                    )
-
-                raise
-
-            if not gains:
-                logger.debug(f"Page {page + 1}: no gains returned, ending pagination")
-                break
-
-            all_gains.extend(gains)
-
-            # If we got fewer results than the limit, we've reached the end
-            if len(gains) < limit:
-                logger.debug(
-                    f"Page {page + 1}: received {len(gains)} gains (less than limit {limit}), ending pagination"
-                )
-                break
-
-            offset += limit
-            page += 1
-
-            # Small delay between all requests to be respectful to the API
-            await asyncio.sleep(0.1)
-
-        if page >= max_pages:
-            logger.warning(
-                f"Reached max pages limit ({max_pages}), may have incomplete data"
-            )
-
-        logger.info(f"Retrieved {len(all_gains)} total gains across {page + 1} pages")
-        return all_gains
+        if result.is_ok:
+            gains = result.unwrap()
+            logger.info(f"Retrieved {len(gains)} total gains")
+            return gains
+        else:
+            error_details = result.unwrap_err()
+            logger.error(f"WOM API error getting group gains: {error_details}")
+            raise WomServiceError(f"WOM API error: {error_details}")
 
     @staticmethod
     def _handle_wom_error(error: Exception) -> NoReturn:
