@@ -1,14 +1,13 @@
 import logging
-from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_consumer, get_db_session
-from api.permissions import PERM
+from api.models import ApiConsumer
 from api.perm import requires_perm
+from api.permissions import PERM
 from api.rate_limit import rate_limit
-from api.routers.members import _resolve_member
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.ingot import (
     IngotBalance,
@@ -18,8 +17,6 @@ from api.schemas.ingot import (
 from ironforgedbot.models import Changelog
 from ironforgedbot.services.changelog_service import ChangelogService
 from ironforgedbot.services.service_factory import create_member_service
-
-from api.models import ApiConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +34,7 @@ async def get_member_ingots(
 ):
 
     service = create_member_service(session)
-    member = await _resolve_member(service, member_id)
+    member = await service.get_member_by_id_or_discord(member_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -65,21 +62,17 @@ async def get_member_ingot_transactions(
     _: None = Depends(rate_limit()),
 ):
 
-    service = create_member_service(session)
-    member = await _resolve_member(service, member_id)
+    member_service = create_member_service(session)
+    member = await member_service.get_member_by_id_or_discord(member_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No member with id={member_id}",
         )
 
-    after: datetime | None = None
-    if days is not None:
-        after = datetime.now(tz=timezone.utc) - timedelta(days=days)
-
     changelog_service = ChangelogService(session)
     logs: list[Changelog] = await changelog_service.latest_ingot_transactions(
-        discord_id=member.discord_id, quantity=limit, after=after
+        discord_id=member.discord_id, quantity=limit, days=days
     )
 
     return ApiResponse(

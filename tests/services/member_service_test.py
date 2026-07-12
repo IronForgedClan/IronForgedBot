@@ -220,6 +220,43 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
 
+    async def test_get_member_by_id_or_discord_digits_calls_by_discord_id(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = self.sample_member
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord("12345")
+
+        self.assertEqual(result, self.sample_member)
+        self.assertEqual(self.mock_db.execute.await_count, 1)
+
+    async def test_get_member_by_id_or_discord_uuid_calls_by_id(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = self.sample_member
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord(
+            "11111111-2222-3333-4444-555555555555"
+        )
+
+        self.assertEqual(result, self.sample_member)
+        self.assertEqual(self.mock_db.execute.await_count, 1)
+
+    async def test_get_member_by_id_or_discord_miss_returns_none(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord("99999")
+
+        self.assertIsNone(result)
+
     async def test_get_member_by_discord_id_found(self):
         mock_result = MagicMock()
         mock_scalars = MagicMock()

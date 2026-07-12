@@ -1,9 +1,9 @@
 import hashlib
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api import consumer_service
 from api.models import ApiConsumer
 from api.tokens import hash_token
 
@@ -30,10 +30,7 @@ async def verify_bearer(
     token = _extract_bearer(authorization)
     token_hash = hash_token(token)
 
-    result = await session.execute(
-        select(ApiConsumer).where(ApiConsumer.token_hash == token_hash)
-    )
-    consumer = result.scalar_one_or_none()
+    consumer = await consumer_service.get_consumer_by_token_hash(session, token_hash)
 
     if consumer is None or not consumer.enabled:
         raise HTTPException(

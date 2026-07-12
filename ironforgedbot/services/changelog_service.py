@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,8 +24,19 @@ class ChangelogService:
 
     @log_database_operation(logger)
     async def latest_ingot_transactions(
-        self, discord_id: int, quantity: int, after: datetime | None = None
+        self,
+        discord_id: int,
+        quantity: int,
+        after: datetime | None = None,
+        days: int | None = None,
     ) -> list[Changelog]:
+        """Return the most recent ingot transactions for a member.
+
+        Filters by timestamp when `after` is set, or when `days` is a positive
+        int (in which case the cutoff is computed as `now - days`). `after`
+        takes precedence when both are provided; `days <= 0` is treated as no
+        filter (ignored).
+        """
         if not isinstance(quantity, int):
             raise TypeError("Quantity must be a valid integer")
 
@@ -33,6 +44,9 @@ class ChangelogService:
             return []
 
         AdminMember = aliased(Member, name="admin")
+
+        if after is None and days is not None and days > 0:
+            after = datetime.now(tz=timezone.utc) - timedelta(days=days)
 
         query = (
             select(Changelog)

@@ -49,6 +49,15 @@ async def get_consumer_by_name(session: AsyncSession, name: str) -> ApiConsumer 
     return result.scalar_one_or_none()
 
 
+async def get_consumer_by_token_hash(
+    session: AsyncSession, token_hash: str
+) -> ApiConsumer | None:
+    result = await session.execute(
+        select(ApiConsumer).where(ApiConsumer.token_hash == token_hash)
+    )
+    return result.scalar_one_or_none()
+
+
 async def grant_perm(session: AsyncSession, name: str, perm: str) -> ApiConsumer:
     consumer = await get_consumer_by_name(session, name)
     if consumer is None:

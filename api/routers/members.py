@@ -10,19 +10,12 @@ from api.permissions import PERM
 from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.member import MemberFilter, MemberSummary
-from ironforgedbot.models import Member
 from ironforgedbot.services.member_service import MemberListFilter
 from ironforgedbot.services.service_factory import create_member_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/members", tags=["members"])
-
-
-async def _resolve_member(service, member_id: str) -> Member | None:
-    if member_id.isdigit():
-        return await service.get_member_by_discord_id(int(member_id))
-    return await service.get_member_by_id(member_id)
 
 
 @router.get("", response_model=ApiResponse)
@@ -70,7 +63,7 @@ async def get_member(
 ):
 
     service = create_member_service(session)
-    member = await _resolve_member(service, member_id)
+    member = await service.get_member_by_id_or_discord(member_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

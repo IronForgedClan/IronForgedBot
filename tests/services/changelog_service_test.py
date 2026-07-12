@@ -408,3 +408,51 @@ class TestChangelogService(unittest.IsolatedAsyncioTestCase):
         self.mock_db.execute.assert_called_once()
         query_str = str(self.mock_db.execute.call_args[0][0])
         self.assertIn("left outer join", query_str.lower())
+
+
+class TestLatestIngotTransactionsDaysArg(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_db = AsyncMock()
+        self.mock_db.execute = AsyncMock()
+        self.service = ChangelogService(self.mock_db)
+        self.service.member_service = AsyncMock()
+
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+    def _where_clause(self) -> str:
+        query = self.mock_db.execute.call_args[0][0]
+        return str(query).lower().split("where", 1)[1]
+
+    async def test_days_none_does_not_filter_by_timestamp(self):
+        await self.service.latest_ingot_transactions(12345, 5, days=None)
+
+        self.assertNotIn("timestamp >=", self._where_clause())
+
+    async def test_days_int_adds_timestamp_filter(self):
+        await self.service.latest_ingot_transactions(12345, 5, days=7)
+
+        self.assertIn("timestamp >=", self._where_clause())
+
+    async def test_days_zero_does_not_filter(self):
+        await self.service.latest_ingot_transactions(12345, 5, days=0)
+
+        self.assertNotIn("timestamp >=", self._where_clause())
+
+    async def test_after_kwarg_still_works(self):
+        fixed = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        await self.service.latest_ingot_transactions(12345, 5, after=fixed)
+
+        self.assertIn("timestamp >=", self._where_clause())
+
+    async def test_after_kwarg_takes_precedence_over_days(self):
+        fixed = datetime(2024, 6, 1, tzinfo=timezone.utc)
+        await self.service.latest_ingot_transactions(12345, 5, days=7, after=fixed)
+
+        query = self.mock_db.execute.call_args[0][0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        self.assertIn("2024-06-01", sql)
+        self.assertNotIn("2025", sql)

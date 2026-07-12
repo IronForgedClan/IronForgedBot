@@ -4,11 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_consumer, get_db_session
-from api.permissions import PERM
+from api.models import ApiConsumer
 from api.perm import requires_perm
+from api.permissions import PERM
 from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
-from api.schemas.score import PlayerScoreResponse, ScoreHistoryResponse
+from api.schemas.score import (
+    PlayerScoreResponse,
+    ScoreHistoryQueryParams,
+    ScoreHistoryResponse,
+)
 from ironforgedbot.exceptions.score_exceptions import HiscoresNotFound
 from ironforgedbot.http import HTTP
 from ironforgedbot.services import score_service as score_service_module
@@ -16,8 +21,6 @@ from ironforgedbot.services.service_factory import (
     create_member_service,
     create_score_history_service,
 )
-
-from api.models import ApiConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -67,18 +70,12 @@ async def get_player_score_history(
 ):
 
     try:
-        periods = [int(d.strip()) for d in days.split(",") if d.strip()]
-    except ValueError:
+        params = ScoreHistoryQueryParams.parse(days)
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid days parameter; expected comma-separated integers",
-        )
-
-    if not periods or any(p < 1 or p > 365 for p in periods):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Each day value must be between 1 and 365",
-        )
+            detail=str(e),
+        ) from e
 
     member_service = create_member_service(session)
     member = await member_service.get_member_by_rsn(rsn)
@@ -89,7 +86,9 @@ async def get_player_score_history(
         )
 
     score_service = create_score_history_service(session)
-    score_history = await score_service.get_score_history(member.discord_id, periods)
+    score_history = await score_service.get_score_history(
+        member.discord_id, params.periods
+    )
 
     return ApiResponse(
         data=ScoreHistoryResponse.from_periods(

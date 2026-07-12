@@ -251,6 +251,16 @@ class MemberService:
         )
         return result.scalars().first()
 
+    async def get_member_by_id_or_discord(self, member_id: str) -> Member | None:
+        """Dispatch to get_member_by_discord_id or get_member_by_id based on input shape.
+
+        All-digit strings are treated as Discord IDs; anything else is treated
+        as the internal UUID-style member ID.
+        """
+        if member_id.isdigit():
+            return await self.get_member_by_discord_id(int(member_id))
+        return await self.get_member_by_id(member_id)
+
     async def get_member_by_nickname(self, nickname: str) -> Member | None:
         result = await self.db.execute(
             select(Member).where(Member.nickname == nickname)

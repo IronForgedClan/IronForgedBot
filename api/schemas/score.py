@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
 
@@ -94,3 +94,28 @@ class ScoreHistoryResponse(BaseModel):
                 ScoreHistoryEntry(period_days=p, score=s) for p, s in periods.items()
             ],
         )
+
+
+class ScoreHistoryQueryParams(BaseModel):
+    """Parsed score-history query parameters.
+
+    Raw `days` input is a comma-separated string of integers (e.g. `"7,30,90"`).
+    Use `parse` to validate and split it into a list of period days; the
+    constructed model holds the parsed list under `periods`.
+    """
+
+    periods: list[int] = Field(default_factory=lambda: [7, 30, 90])
+
+    @classmethod
+    def parse(cls, raw: str) -> "ScoreHistoryQueryParams":
+        try:
+            parsed = [int(d.strip()) for d in raw.split(",") if d.strip()]
+        except ValueError as e:
+            raise ValueError(
+                "Invalid days parameter; expected comma-separated integers"
+            ) from e
+
+        if not parsed or any(p < 1 or p > 365 for p in parsed):
+            raise ValueError("Each day value must be between 1 and 365")
+
+        return cls(periods=parsed)
