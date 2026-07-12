@@ -1,6 +1,7 @@
 import logging
 import time
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -15,10 +16,14 @@ _PATH_MAX_LENGTH = 512
 _ERROR_MAX_LENGTH = 512
 _USER_AGENT_MAX_LENGTH = 512
 _IP_MAX_LENGTH = 64
+_REQUEST_ID_HEADER = "X-Request-ID"
 
 
 class ApiAuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
+        request_id = str(uuid4())
+        request.state.request_id = request_id
+
         start = time.perf_counter()
         error_message: str | None = None
         status_code = 500
@@ -27,6 +32,7 @@ class ApiAuditMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             status_code = response.status_code
+            response.headers[_REQUEST_ID_HEADER] = request_id
             return response
         except Exception as exc:
             error_message = str(exc)[:_ERROR_MAX_LENGTH]
@@ -54,6 +60,7 @@ class ApiAuditMiddleware(BaseHTTPMiddleware):
                 duration_ms=duration_ms,
                 client_ip=client_ip,
                 user_agent=user_agent,
+                request_id=request_id,
                 consumer_id=consumer_id,
                 consumer_name=consumer_name,
                 consumer_perms=consumer_perms,
@@ -69,6 +76,7 @@ class ApiAuditMiddleware(BaseHTTPMiddleware):
         duration_ms: int,
         client_ip: str | None,
         user_agent: str | None,
+        request_id: str,
         consumer_id: int | None,
         consumer_name: str | None,
         consumer_perms: list[str] | None,
@@ -80,6 +88,7 @@ class ApiAuditMiddleware(BaseHTTPMiddleware):
                 session.add(
                     ApiAudit(
                         timestamp=datetime.now(tz=timezone.utc),
+                        request_id=request_id,
                         consumer_id=consumer_id,
                         consumer_name=consumer_name,
                         consumer_perms=consumer_perms,

@@ -23,6 +23,7 @@ def upgrade() -> None:
         "api_audit",
         sa.Column("id", sa.BigInteger(), primary_key=True, autoincrement=True),
         sa.Column("timestamp", sa.DateTime(), nullable=False),
+        sa.Column("request_id", sa.String(length=36), nullable=False),
         sa.Column("consumer_id", sa.BigInteger(), nullable=True),
         sa.Column("consumer_name", sa.String(length=64), nullable=True),
         sa.Column("consumer_perms", sa.JSON(), nullable=True),
@@ -36,6 +37,7 @@ def upgrade() -> None:
         sa.Column("error", sa.String(length=512), nullable=True),
         sa.ForeignKeyConstraint(["consumer_id"], ["api_consumers.id"]),
         sa.Index("ix_api_audit_timestamp", "timestamp"),
+        sa.Index("ix_api_audit_request_id", "request_id"),
         sa.Index("ix_api_audit_consumer_id", "consumer_id"),
     )
 

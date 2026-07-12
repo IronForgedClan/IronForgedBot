@@ -23,6 +23,9 @@ class ApiAudit(Base):
         nullable=False,
         index=True,
     )
+    request_id: Mapped[str] = mapped_column(
+        String(length=36), nullable=False, index=True
+    )
     consumer_id: Mapped[int | None] = mapped_column(
         ForeignKey("api_consumers.id"), nullable=True, index=True
     )

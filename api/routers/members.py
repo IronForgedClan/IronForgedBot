@@ -80,7 +80,7 @@ async def list_members(
             "limit": limit,
             "offset": offset,
         },
-        meta=ResponseMeta(),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
@@ -104,5 +104,5 @@ async def get_member(
 
     return ApiResponse(
         data=MemberSummary.from_member(member).model_dump(mode="json"),
-        meta=ResponseMeta(),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )

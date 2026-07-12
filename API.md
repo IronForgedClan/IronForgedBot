@@ -63,6 +63,13 @@ All error responses share this envelope. The `code` is a stable string; the
 | 422    | `validation_error`   | Request validation failed (query type, range, etc.).                     |
 | 500    | `internal_error`     | Unhandled server-side exception.                                         |
 
+## Request correlation
+
+Every response (success or error) carries a `meta.request_id`. The same id is
+also returned in the `X-Request-ID` response header and is persisted on the
+`api_audit` row for the request. When reporting an issue, share the
+`X-Request-ID` value to help debugging.
+
 ## Endpoint reference
 
 ### GET /health

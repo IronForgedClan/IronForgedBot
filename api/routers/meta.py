@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,9 @@ router = APIRouter(tags=["meta"])
 
 
 @router.get("/health", response_model=ApiResponse)
-async def health(session: AsyncSession = Depends(get_db_session)) -> JSONResponse:
+async def health(
+    request: Request, session: AsyncSession = Depends(get_db_session)
+) -> JSONResponse:
     db_ok = True
     try:
         await session.execute(text("SELECT 1"))
@@ -30,5 +32,7 @@ async def health(session: AsyncSession = Depends(get_db_session)) -> JSONRespons
         "environment": API_CONFIG.base.ENVIRONMENT.value,
     }
     code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
-    body = ApiResponse(data=payload, meta=ResponseMeta())
+    body = ApiResponse(
+        data=payload, meta=ResponseMeta(request_id=request.state.request_id)
+    )
     return JSONResponse(status_code=code, content=body.model_dump(mode="json"))

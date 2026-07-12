@@ -49,7 +49,7 @@ async def get_member_ingots(
             nickname=member.nickname,
             ingots=member.ingots,
         ).model_dump(mode="json"),
-        meta=ResponseMeta(),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
@@ -87,5 +87,5 @@ async def get_member_ingot_transactions(
             discord_id=member.discord_id,
             transactions=[IngotTransaction.from_changelog(log) for log in logs],
         ).model_dump(mode="json"),
-        meta=ResponseMeta(),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )

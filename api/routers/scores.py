@@ -50,7 +50,7 @@ async def get_player_score(
 
     return ApiResponse(
         data=PlayerScoreResponse.from_breakdown(rsn, breakdown).model_dump(mode="json"),
-        meta=ResponseMeta(),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )
 
 
@@ -94,5 +94,5 @@ async def get_player_score_history(
         data=ScoreHistoryResponse.from_periods(
             member.discord_id, score_history
         ).model_dump(mode="json"),
-        meta=ResponseMeta(),
+        meta=ResponseMeta(request_id=request.state.request_id),
     )

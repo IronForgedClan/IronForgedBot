@@ -34,7 +34,7 @@ def install_error_handlers(app: FastAPI) -> None:
         message = exc.detail if isinstance(exc.detail, str) else "Error"
         body = ApiErrorResponse(
             error=ApiError(code=_code_for(exc.status_code), message=message),
-            meta=ResponseMeta(),
+            meta=ResponseMeta(request_id=request.state.request_id),
         )
         headers = getattr(exc, "headers", None)
         return JSONResponse(
@@ -52,7 +52,7 @@ def install_error_handlers(app: FastAPI) -> None:
                 code="validation_error",
                 message="Invalid request parameters",
             ),
-            meta=ResponseMeta(),
+            meta=ResponseMeta(request_id=request.state.request_id),
         )
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -66,7 +66,7 @@ def install_error_handlers(app: FastAPI) -> None:
         logger.exception("Unhandled API exception", exc_info=exc)
         body = ApiErrorResponse(
             error=ApiError(code="internal_error", message="Internal server error"),
-            meta=ResponseMeta(),
+            meta=ResponseMeta(request_id=request.state.request_id),
         )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
