@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from enum import Enum
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +44,20 @@ class MemberServiceReactivateResponse:
     approximate_leave_date: datetime
     previous_rank: RANK
     new_member: Member
+
+
+class MemberListFilter(str, Enum):
+    ACTIVE = "active"
+    BOOSTER = "booster"
+    PROSPECT = "prospect"
+    BLACKLISTED = "blacklisted"
+    BANNED = "banned"
+
+
+@dataclass
+class MemberListResult:
+    members: list[Member]
+    total: int
 
 
 logger: logging.Logger = logging.getLogger(name=__name__)
@@ -125,6 +140,57 @@ class MemberService:
         """Get all inactive/disabled members."""
         result = await self.db.execute(select(Member).where(Member.active.is_(False)))
         return list(result.scalars().all())
+
+    async def list_members(
+        self,
+        *,
+        filter: MemberListFilter | None = None,
+        role: str | None = None,
+        rank: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> MemberListResult:
+        """List members with optional filtering and pagination.
+
+        `filter` semantics:
+        - ACTIVE (default): only `active=True` members.
+        - BOOSTER / PROSPECT / BLACKLISTED: `active=True` plus the matching flag.
+        - BANNED: only `is_banned=True` (active state ignored — banned members
+          may be inactive).
+
+        `role` and `rank` are string equality filters against the SQLAlchemy
+        enum columns (values coerced by the DB).
+
+        Returns a `MemberListResult` with the page of members and the total
+        count matching the filter (ignoring pagination).
+        """
+        stmt = select(Member)
+
+        if filter == MemberListFilter.BOOSTER:
+            stmt = stmt.where(Member.is_booster.is_(True), Member.active.is_(True))
+        elif filter == MemberListFilter.PROSPECT:
+            stmt = stmt.where(Member.is_prospect.is_(True), Member.active.is_(True))
+        elif filter == MemberListFilter.BLACKLISTED:
+            stmt = stmt.where(Member.is_blacklisted.is_(True), Member.active.is_(True))
+        elif filter == MemberListFilter.BANNED:
+            stmt = stmt.where(Member.is_banned.is_(True))
+        else:
+            stmt = stmt.where(Member.active.is_(True))
+
+        if role is not None:
+            stmt = stmt.where(Member.role == role)
+        if rank is not None:
+            stmt = stmt.where(Member.rank == rank)
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_result = await self.db.execute(count_stmt)
+        total = int(count_result.scalar_one())
+
+        page_stmt = stmt.offset(offset).limit(limit)
+        page_result = await self.db.execute(page_stmt)
+        members = list(page_result.scalars().all())
+
+        return MemberListResult(members=members, total=total)
 
     async def get_active_members_by_role(self, role: ROLE) -> list[Member]:
         """Get all active members with a specific role."""

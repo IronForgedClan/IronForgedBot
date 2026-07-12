@@ -10,6 +10,8 @@ from ironforgedbot.models.changelog import ChangeType, Changelog
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.member_service import (
     MEMBER_FLAGS,
+    MemberListFilter,
+    MemberListResult,
     MemberNotFoundException,
     MemberService,
     MemberServiceReactivateResponse,
@@ -891,3 +893,188 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result), 2)
         self.assertIn(admiral, result)
         self.assertIn(marshal, result)
+
+
+class TestMemberListFilterEnum(unittest.TestCase):
+    def test_values_match_api_filter(self):
+        self.assertEqual(MemberListFilter.ACTIVE.value, "active")
+        self.assertEqual(MemberListFilter.BOOSTER.value, "booster")
+        self.assertEqual(MemberListFilter.PROSPECT.value, "prospect")
+        self.assertEqual(MemberListFilter.BLACKLISTED.value, "blacklisted")
+        self.assertEqual(MemberListFilter.BANNED.value, "banned")
+
+
+class TestListMembers(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_db = AsyncMock()
+        self.mock_db.execute = AsyncMock()
+        self.member_service = MemberService(self.mock_db)
+
+        self.count_result = MagicMock()
+        self.count_result.scalar_one.return_value = 0
+        self.page_result = MagicMock()
+        self.page_result.scalars.return_value.all.return_value = []
+
+        self.sample_member = Member(
+            id="sample-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            rank=RANK.IRON,
+        )
+
+    def _wire_execute(self, total: int, members: list) -> None:
+        self.count_result.scalar_one.return_value = total
+        self.page_result.scalars.return_value.all.return_value = members
+        self.mock_db.execute.side_effect = [self.count_result, self.page_result]
+
+    def _page_sql(self) -> str:
+        stmt = self.mock_db.execute.call_args_list[1][0][0]
+        return str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    def _count_sql(self) -> str:
+        stmt = self.mock_db.execute.call_args_list[0][0][0]
+        return str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    def _page_where(self) -> str:
+        sql = self._page_sql()
+        return sql.split("WHERE", 1)[1].split("LIMIT", 1)[0]
+
+    async def test_list_members_default_returns_active_only(self):
+        self._wire_execute(total=2, members=[self.sample_member])
+
+        result = await self.member_service.list_members()
+
+        self.assertIsInstance(result, MemberListResult)
+        self.assertEqual(result.total, 2)
+        self.assertEqual(result.members, [self.sample_member])
+        self.assertIn("WHERE members.active IS true", self._page_sql())
+        self.assertIn("LIMIT 100", self._page_sql())
+        self.assertIn("OFFSET 0", self._page_sql())
+
+    async def test_list_members_filter_booster_applies_active_and_flag(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.BOOSTER)
+
+        where = self._page_where()
+        self.assertIn("members.is_booster IS true", where)
+        self.assertIn("members.active IS true", where)
+
+    async def test_list_members_filter_prospect_applies_active_and_flag(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.PROSPECT)
+
+        where = self._page_where()
+        self.assertIn("members.is_prospect IS true", where)
+        self.assertIn("members.active IS true", where)
+
+    async def test_list_members_filter_blacklisted_applies_active_and_flag(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.BLACKLISTED)
+
+        where = self._page_where()
+        self.assertIn("members.is_blacklisted IS true", where)
+        self.assertIn("members.active IS true", where)
+
+    async def test_list_members_filter_banned_does_not_require_active(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.BANNED)
+
+        where = self._page_where()
+        self.assertIn("members.is_banned IS true", where)
+        self.assertNotIn("members.active", where)
+
+    async def test_list_members_role_filter(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(role="Member")
+
+        where = self._page_where()
+        self.assertIn("members.role = 'MEMBER'", where)
+
+    async def test_list_members_rank_filter(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(rank="Mithril")
+
+        where = self._page_where()
+        self.assertIn("members.rank = 'MITHRIL'", where)
+
+    async def test_list_members_pagination_applies_offset_and_limit(self):
+        self._wire_execute(total=250, members=[])
+
+        await self.member_service.list_members(limit=50, offset=100)
+
+        sql = self._page_sql()
+        self.assertIn("LIMIT 50", sql)
+        self.assertIn("OFFSET 100", sql)
+
+    async def test_list_members_count_uses_same_filters_as_page(self):
+        self._wire_execute(total=5, members=[])
+
+        await self.member_service.list_members(
+            filter=MemberListFilter.BOOSTER, role="Member", limit=10, offset=0
+        )
+
+        count_sql = self._count_sql()
+        self.assertIn("is_booster", count_sql)
+        self.assertIn("members.active IS true", count_sql)
+        self.assertIn("members.role = 'MEMBER'", count_sql)
+
+    async def test_list_members_returns_total_from_count_query(self):
+        self._wire_execute(total=42, members=[self.sample_member])
+
+        result = await self.member_service.list_members()
+
+        self.assertEqual(result.total, 42)
+        self.assertEqual(len(result.members), 1)
+
+    async def test_list_members_empty_result(self):
+        self._wire_execute(total=0, members=[])
+
+        result = await self.member_service.list_members()
+
+        self.assertEqual(result.total, 0)
+        self.assertEqual(result.members, [])
+
+    async def test_list_members_combined_filters(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(
+            filter=MemberListFilter.PROSPECT,
+            role="Member",
+            rank="Mithril",
+            limit=25,
+            offset=5,
+        )
+
+        where = self._page_where()
+        sql = self._page_sql()
+        self.assertIn("members.is_prospect IS true", where)
+        self.assertIn("members.active IS true", where)
+        self.assertIn("members.role = 'MEMBER'", where)
+        self.assertIn("members.rank = 'MITHRIL'", where)
+        self.assertIn("LIMIT 25", sql)
+        self.assertIn("OFFSET 5", sql)
+
+    async def test_list_members_default_pagination_when_unspecified(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members()
+
+        sql = self._page_sql()
+        self.assertIn("LIMIT 100", sql)
+        self.assertIn("OFFSET 0", sql)
+
+    async def test_list_members_executes_count_then_page(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members()
+
+        self.assertEqual(self.mock_db.execute.await_count, 2)
+        self.assertIn("count(", self._count_sql().lower())

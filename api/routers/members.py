@@ -1,19 +1,18 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_consumer, get_db_session
-from api.permissions import PERM
+from api.models import ApiConsumer
 from api.perm import requires_perm
+from api.permissions import PERM
 from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.member import MemberFilter, MemberSummary
 from ironforgedbot.models import Member
+from ironforgedbot.services.member_service import MemberListFilter
 from ironforgedbot.services.service_factory import create_member_service
-
-from api.models import ApiConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -24,27 +23,6 @@ async def _resolve_member(service, member_id: str) -> Member | None:
     if member_id.isdigit():
         return await service.get_member_by_discord_id(int(member_id))
     return await service.get_member_by_id(member_id)
-
-
-def _apply_member_filters(
-    stmt, filter_: MemberFilter | None, role: str | None, rank: str | None
-):
-    if filter_ == MemberFilter.BOOSTER:
-        stmt = stmt.where(Member.is_booster.is_(True), Member.active.is_(True))
-    elif filter_ == MemberFilter.PROSPECT:
-        stmt = stmt.where(Member.is_prospect.is_(True), Member.active.is_(True))
-    elif filter_ == MemberFilter.BLACKLISTED:
-        stmt = stmt.where(Member.is_blacklisted.is_(True), Member.active.is_(True))
-    elif filter_ == MemberFilter.BANNED:
-        stmt = stmt.where(Member.is_banned.is_(True))
-    else:
-        stmt = stmt.where(Member.active.is_(True))
-
-    if role:
-        stmt = stmt.where(Member.role == role)
-    if rank:
-        stmt = stmt.where(Member.rank == rank)
-    return stmt
 
 
 @router.get("", response_model=ApiResponse)
@@ -61,23 +39,19 @@ async def list_members(
     _: None = Depends(rate_limit()),
 ):
 
-    base_stmt = select(Member)
-    base_stmt = _apply_member_filters(base_stmt, filter, role, rank)
-
-    count_result = await session.execute(
-        select(func.count()).select_from(base_stmt.subquery())
+    service = create_member_service(session)
+    filter_kind = MemberListFilter(filter.value) if filter else None
+    result = await service.list_members(
+        filter=filter_kind, role=role, rank=rank, limit=limit, offset=offset
     )
-    total = int(count_result.scalar_one())
 
-    page_stmt = base_stmt.offset(offset).limit(limit)
-    result = await session.execute(page_stmt)
-    members = result.scalars().all()
-
-    summaries = [MemberSummary.from_member(m) for m in members]
     return ApiResponse(
         data={
-            "members": [s.model_dump(mode="json") for s in summaries],
-            "total": total,
+            "members": [
+                MemberSummary.from_member(m).model_dump(mode="json")
+                for m in result.members
+            ],
+            "total": result.total,
             "limit": limit,
             "offset": offset,
         },
