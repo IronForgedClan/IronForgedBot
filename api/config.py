@@ -3,10 +3,13 @@ import sys
 
 from ironforgedbot.config import CONFIG, Config, ENVIRONMENT
 
+from api.version import get_api_version
+
 
 class ApiConfig:
     def __init__(self, base: Config | None = None):
         self.base: Config = base if base is not None else CONFIG
+        self.api_version: str = get_api_version()
 
         self.API_ENABLED: bool = os.getenv("API_ENABLED", "False") == "True"
         self.API_HOST: str = os.getenv("API_HOST", "0.0.0.0")

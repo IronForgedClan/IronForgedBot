@@ -26,7 +26,7 @@ async def health(session: AsyncSession = Depends(get_db_session)) -> JSONRespons
     payload = {
         "status": "ok" if db_ok else "degraded",
         "db": "ok" if db_ok else "error",
-        "version": API_CONFIG.base.BOT_VERSION,
+        "version": API_CONFIG.api_version,
         "environment": API_CONFIG.base.ENVIRONMENT.value,
     }
     code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
@@ -38,7 +38,7 @@ async def health(session: AsyncSession = Depends(get_db_session)) -> JSONRespons
 async def version() -> ApiResponse:
     return ApiResponse(
         data={
-            "version": API_CONFIG.base.BOT_VERSION,
+            "version": API_CONFIG.api_version,
             "environment": API_CONFIG.base.ENVIRONMENT.value,
         },
         meta=ResponseMeta(),

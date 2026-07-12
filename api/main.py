@@ -14,7 +14,7 @@ def init_api() -> None:
         return
 
     logger.info(
-        f"Starting IronForgedBot API v{API_CONFIG.base.BOT_VERSION} on "
+        f"Starting IronForgedBot API v{API_CONFIG.api_version} on "
         f"{API_CONFIG.API_HOST}:{API_CONFIG.API_PORT}"
     )
 

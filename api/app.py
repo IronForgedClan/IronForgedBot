@@ -26,7 +26,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="IronForgedBot API",
-        version=API_CONFIG.base.BOT_VERSION,
+        version=API_CONFIG.api_version,
         docs_url="/docs" if API_CONFIG.API_DOCS_ENABLED else None,
         redoc_url=None,
         openapi_url="/openapi.json" if API_CONFIG.API_DOCS_ENABLED else None,
