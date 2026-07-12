@@ -1,0 +1,7 @@
+vars {
+  base_url: https://api.ironforged.example.com
+  token:
+}
+vars:secret [
+  token
+]

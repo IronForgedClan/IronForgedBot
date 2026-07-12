@@ -1,0 +1,24 @@
+meta {
+  name: Set Token Helper
+  type: http
+  seq: 99
+}
+
+get {
+  url: {{base_url}}/health
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  This is a placeholder. To set your token, edit your active environment
+  in Bruno UI or pass via CLI: bru run api/bruno --env Local --env-var token=if_live_xxx
+}
+
+script:post-response {
+  bru.setEnvVar("token", bru.getEnvVar("token") || "");
+}

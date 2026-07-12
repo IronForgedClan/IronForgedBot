@@ -1,0 +1,29 @@
+meta {
+  name: Get Member Ingot Transactions
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/members/123456789012345678/ingots/transactions?limit=50
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Requires perm: ingots:read:transactions
+  Query params:
+    days  - optional, filter to last N days (1-365)
+    limit - page size (1-500, default 50)
+  Returns ADD_INGOTS and REMOVE_INGOTS changelog entries.
+}
+
+tests {
+  test("status 200 or 404", function() {
+    expect([200, 404]).to.include(res.status);
+  });
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Get Member Ingots
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/members/123456789012345678/ingots
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Requires perm: ingots:read
+  Returns current ingot balance for the member.
+}
+
+tests {
+  test("status 200 or 404", function() {
+    expect([200, 404]).to.include(res.status);
+  });
+  test("ingots field", function() {
+    if (res.status === 200) {
+      expect(res.body.data).to.have.property("ingots");
+      expect(res.body.data.ingots).to.be.a("number");
+    }
+  });
+}

@@ -1,0 +1,37 @@
+meta {
+  name: List Members
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/members?limit=100&offset=0
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Requires perm: members:read
+  Query params:
+    limit  - page size (1-500, default 100)
+    offset - page offset (default 0)
+    role   - filter by Discord role (e.g. "Member", "Staff")
+    rank   - filter by RANK enum (e.g. "Iron", "Dragon")
+    filter - one of: active, booster, prospect, blacklisted, banned
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape", function() {
+    expect(res.body.data).to.have.property("members");
+    expect(res.body.data).to.have.property("total");
+    expect(res.body.data).to.have.property("limit");
+    expect(res.body.data).to.have.property("offset");
+  });
+}

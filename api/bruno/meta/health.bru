@@ -1,0 +1,32 @@
+meta {
+  name: Health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/health
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Requires perm: meta:read
+  Returns 200 when API and DB are healthy; 503 when DB is down.
+}
+
+tests {
+  test("status ok", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.data.status).to.equal("ok");
+    expect(res.body.data.db).to.equal("ok");
+  });
+  test("meta present", function() {
+    expect(res.body.meta).to.have.property("request_id");
+    expect(res.body.meta).to.have.property("timestamp");
+  });
+}
