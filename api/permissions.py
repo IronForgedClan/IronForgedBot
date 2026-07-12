@@ -10,6 +10,7 @@ from api.models import ApiPermission
 class PERM(enum.StrEnum):
     META_READ = "meta:read"
     MEMBERS_READ = "members:read"
+    MEMBERS_LIST = "members:list"
     INGOTS_READ = "ingots:read"
     INGOTS_READ_TRANSACTIONS = "ingots:read:transactions"
     SCORES_READ = "scores:read"
@@ -18,7 +19,8 @@ class PERM(enum.StrEnum):
 
 KNOWN_PERMS: list[tuple[str, str]] = [
     (PERM.META_READ, "Access /health and /version"),
-    (PERM.MEMBERS_READ, "List and read member records"),
+    (PERM.MEMBERS_READ, "Read a single member record"),
+    (PERM.MEMBERS_LIST, "List member directory"),
     (PERM.INGOTS_READ, "Read member ingot balances"),
     (PERM.INGOTS_READ_TRANSACTIONS, "Read ingot transaction history"),
     (PERM.SCORES_READ, "Read player score breakdowns"),

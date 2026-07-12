@@ -57,8 +57,8 @@ async def list_members(
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
 ):
-    request.state.required_perm = PERM.MEMBERS_READ
-    await require_perm(PERM.MEMBERS_READ)(consumer=consumer)
+    request.state.required_perm = PERM.MEMBERS_LIST
+    await require_perm(PERM.MEMBERS_LIST)(consumer=consumer)
 
     base_stmt = select(Member)
     base_stmt = _apply_member_filters(base_stmt, filter, role, rank)
