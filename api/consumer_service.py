@@ -14,7 +14,7 @@ except RuntimeError:
 
 
 def generate_token() -> str:
-    return f"if_live_{secrets.token_urlsafe(32)}"
+    return f"iron_{secrets.token_urlsafe(32)}"
 
 
 async def create_consumer(
