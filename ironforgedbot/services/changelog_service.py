@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.models.changelog import Changelog, ChangeType
@@ -31,9 +32,12 @@ class ChangelogService:
         if quantity < 1:
             return []
 
+        AdminMember = aliased(Member, name="admin")
+
         query = (
             select(Changelog)
             .join(Member, Changelog.member_id == Member.id)
+            .outerjoin(AdminMember, Changelog.admin_id == AdminMember.id)
             .where(Member.discord_id == discord_id)
             .where(
                 (Changelog.change_type == ChangeType.ADD_INGOTS)
@@ -47,5 +51,17 @@ class ChangelogService:
         result = await self.db.execute(
             query.order_by(Changelog.timestamp.desc()).limit(quantity)
         )
+        logs = list(result.scalars().all())
 
-        return list(result.scalars().all())
+        admin_ids = {log.admin_id for log in logs if log.admin_id is not None}
+        admin_map: dict[str, Member] = {}
+        if admin_ids:
+            admin_result = await self.db.execute(
+                select(Member).where(Member.id.in_(admin_ids))
+            )
+            admin_map = {m.id: m for m in admin_result.scalars().all()}
+
+        for log in logs:
+            log.admin_member = admin_map.get(log.admin_id) if log.admin_id else None
+
+        return logs
