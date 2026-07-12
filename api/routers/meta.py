@@ -32,14 +32,3 @@ async def health(session: AsyncSession = Depends(get_db_session)) -> JSONRespons
     code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
     body = ApiResponse(data=payload, meta=ResponseMeta())
     return JSONResponse(status_code=code, content=body.model_dump(mode="json"))
-
-
-@router.get("/version", response_model=ApiResponse)
-async def version() -> ApiResponse:
-    return ApiResponse(
-        data={
-            "version": API_CONFIG.api_version,
-            "environment": API_CONFIG.base.ENVIRONMENT.value,
-        },
-        meta=ResponseMeta(),
-    )

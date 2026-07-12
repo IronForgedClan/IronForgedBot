@@ -7,7 +7,6 @@ A REST API exposing various member data points to authenticated consumers.
 | Method | Path                                       | Required perm              |
 | ------ | ------------------------------------------ | -------------------------- |
 | GET    | `/health`                                  | _none (public)_            |
-| GET    | `/version`                                 | _none (public)_            |
 | GET    | `/members`                                 | `members:list`             |
 | GET    | `/members/{member_id}`                     | `members:read`             |
 | GET    | `/members/{member_id}/ingots`              | `ingots:read`              |
@@ -15,8 +14,8 @@ A REST API exposing various member data points to authenticated consumers.
 | GET    | `/players/{rsn}/score`                     | `scores:read`              |
 | GET    | `/players/{rsn}/score-history`             | `scores:read:history`      |
 
-> **Note:** `/health` and `/version` do not require authentication. They are
-> intended for load balancers and operational monitoring.
+> **Note:** `/health` is public and does not require authentication. It is
+> intended for load balancers, version probes, and operational monitoring.
 
 ## Response shapes
 
@@ -93,26 +92,6 @@ Public health probe. Pings the database.
     "data": {
         "status": "degraded",
         "db": "error",
-        "version": "1.2.3",
-        "environment": "prod"
-    },
-    "meta": { "request_id": "…", "timestamp": "…" }
-}
-```
-
----
-
-### GET /version
-
-Public version probe.
-
-**Required perm:** none
-
-**Response — 200:**
-
-```json
-{
-    "data": {
         "version": "1.2.3",
         "environment": "prod"
     },
@@ -543,7 +522,7 @@ each consumer (`api_consumers.perms`).
 | `scores:read`              | `GET /players/{rsn}/score`                     |
 | `scores:read:history`      | `GET /players/{rsn}/score-history`             |
 
-`/health` and `/version` are public and require no perm.
+`/health` is public and requires no perm.
 
 Perms are defined in code at `api/permissions.py`. To add a new perm, add it to
 both the `PERM` enum and the `KNOWN_PERMS` table in this doc, then redeploy.

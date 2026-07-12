@@ -12,7 +12,7 @@ class PERM(enum.StrEnum):
 
 
 KNOWN_PERMS: list[tuple[str, str]] = [
-    (PERM.META_READ, "Access /health and /version"),
+    (PERM.META_READ, "Access /health"),
     (PERM.MEMBERS_READ, "Read a single member record"),
     (PERM.MEMBERS_LIST, "List member directory"),
     (PERM.INGOTS_READ, "Read member ingot balances"),
