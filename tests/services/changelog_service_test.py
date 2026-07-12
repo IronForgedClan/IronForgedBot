@@ -394,3 +394,17 @@ class TestChangelogService(unittest.IsolatedAsyncioTestCase):
         self.mock_db.execute.assert_called_once()
         query_str = str(self.mock_db.execute.call_args[0][0])
         self.assertNotIn(">= :timestamp_1", query_str.lower())
+
+    async def test_latest_ingot_transactions_outer_joins_admin_member(self):
+        """Query should outer-join the admin Member so admin can be serialized."""
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        await self.changelog_service.latest_ingot_transactions(12345, 5)
+
+        self.mock_db.execute.assert_called_once()
+        query_str = str(self.mock_db.execute.call_args[0][0])
+        self.assertIn("left outer join", query_str.lower())
