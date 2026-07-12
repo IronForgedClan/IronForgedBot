@@ -78,12 +78,7 @@ async def get_player_score_history(
         ) from e
 
     member_service = create_member_service(session)
-    member = await member_service.get_member_by_rsn(rsn)
-    if member is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No member with rsn={rsn}",
-        )
+    member = await member_service.get_member_by_rsn_or_raise(rsn)
 
     score_service = create_score_history_service(session)
     score_history = await score_service.get_score_history(

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.schemas.common import ApiError, ApiErrorResponse, ResponseMeta
+from ironforgedbot.services.member_service import MemberNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,19 @@ def install_error_handlers(app: FastAPI) -> None:
         )
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content=body.model_dump(mode="json"),
+        )
+
+    @app.exception_handler(MemberNotFoundException)
+    async def member_not_found_handler(
+        request: Request, exc: MemberNotFoundException
+    ) -> JSONResponse:
+        body = ApiErrorResponse(
+            error=ApiError(code="not_found", message=str(exc)),
+            meta=ResponseMeta(request_id=request.state.request_id),
+        )
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
             content=body.model_dump(mode="json"),
         )
 

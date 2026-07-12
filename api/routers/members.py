@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_consumer, get_db_session
@@ -63,12 +63,7 @@ async def get_member(
 ):
 
     service = create_member_service(session)
-    member = await service.get_member_by_id_or_discord(member_id)
-    if member is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No member with id={member_id}",
-        )
+    member = await service.get_member_by_id_or_discord_or_raise(member_id)
 
     return ApiResponse(
         data=MemberSummary.from_member(member).model_dump(mode="json"),

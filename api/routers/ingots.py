@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import get_current_consumer, get_db_session
@@ -34,12 +34,7 @@ async def get_member_ingots(
 ):
 
     service = create_member_service(session)
-    member = await service.get_member_by_id_or_discord(member_id)
-    if member is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No member with id={member_id}",
-        )
+    member = await service.get_member_by_id_or_discord_or_raise(member_id)
 
     return ApiResponse(
         data=IngotBalance(
@@ -63,12 +58,7 @@ async def get_member_ingot_transactions(
 ):
 
     member_service = create_member_service(session)
-    member = await member_service.get_member_by_id_or_discord(member_id)
-    if member is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No member with id={member_id}",
-        )
+    member = await member_service.get_member_by_id_or_discord_or_raise(member_id)
 
     changelog_service = ChangelogService(session)
     logs: list[Changelog] = await changelog_service.latest_ingot_transactions(

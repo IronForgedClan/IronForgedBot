@@ -261,6 +261,18 @@ class MemberService:
             return await self.get_member_by_discord_id(int(member_id))
         return await self.get_member_by_id(member_id)
 
+    async def get_member_by_id_or_discord_or_raise(self, member_id: str) -> Member:
+        member = await self.get_member_by_id_or_discord(member_id)
+        if member is None:
+            raise MemberNotFoundException(f"No member with id={member_id}")
+        return member
+
+    async def get_member_by_rsn_or_raise(self, rsn: str) -> Member:
+        member = await self.get_member_by_rsn(rsn)
+        if member is None:
+            raise MemberNotFoundException(f"No member with rsn={rsn}")
+        return member
+
     async def get_member_by_nickname(self, nickname: str) -> Member | None:
         result = await self.db.execute(
             select(Member).where(Member.nickname == nickname)
