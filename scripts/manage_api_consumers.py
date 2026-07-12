@@ -20,6 +20,22 @@ from api.consumer_service import (  # noqa: E402
     set_enabled,
     set_perms,
 )
+from api.permissions_cli import add_perm, list_perms, remove_perm  # noqa: E402
+from scripts._api_console import Console, Prompter  # noqa: E402
+
+_TOP_MENU = [
+    "Create a new consumer",
+    "Change a consumer's permissions (grant / revoke)",
+    "Enable / disable a consumer",
+    "Rotate a consumer's token",
+    "Delete a consumer",
+    "List consumers",
+    "Add a new permission to the catalog",
+    "Remove a permission from the catalog",
+    "Exit",
+]
+
+_EXIT_INDEX = len(_TOP_MENU) - 1
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -27,117 +43,303 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Manage API consumers for IronForgedBot"
     )
     sub = parser.add_subparsers(dest="command", required=True)
-
-    add_p = sub.add_parser("add", help="Create a new consumer")
-    add_p.add_argument("--name", required=True)
-    add_p.add_argument("--perms", default="", help="Comma-separated perm list")
-    add_p.add_argument("--description", default=None)
-
     sub.add_parser("list", help="List all consumers")
-
-    grant_p = sub.add_parser("grant", help="Grant a permission")
-    grant_p.add_argument("--name", required=True)
-    grant_p.add_argument("--perm", required=True)
-
-    revoke_p = sub.add_parser("revoke", help="Revoke a permission")
-    revoke_p.add_argument("--name", required=True)
-    revoke_p.add_argument("--perm", required=True)
-
-    set_p = sub.add_parser("set-perms", help="Replace consumer's perm list")
-    set_p.add_argument("--name", required=True)
-    set_p.add_argument("--perms", required=True, help="Comma-separated perm list")
-
-    enable_p = sub.add_parser("enable", help="Enable a consumer")
-    enable_p.add_argument("--name", required=True)
-
-    disable_p = sub.add_parser("disable", help="Disable a consumer")
-    disable_p.add_argument("--name", required=True)
-
-    rotate_p = sub.add_parser("rotate", help="Rotate a consumer's token")
-    rotate_p.add_argument("--name", required=True)
-
-    delete_p = sub.add_parser("delete", help="Delete a consumer")
-    delete_p.add_argument("--name", required=True)
-
+    sub.add_parser(
+        "interactive",
+        help="Walk through consumer management with prompts",
+    )
     return parser.parse_args(argv)
 
 
-def _parse_perms(raw: str) -> list[str]:
-    return [p.strip() for p in raw.split(",") if p.strip()]
+async def _cmd_list(session) -> int:
+    consumers = await list_consumers(session)
+    if not consumers:
+        print("No consumers registered.")
+        return 0
+    print(f"{'NAME':<24} {'ENABLED':<8} {'PERMS':<60} ID")
+    for c in consumers:
+        print(f"{c.name:<24} {str(c.enabled):<8} " f"{','.join(c.perms):<60} {c.id}")
+    return 0
 
 
-async def run(args: argparse.Namespace) -> int:
+async def _flow_create(prompter: Prompter, session) -> None:
+    Console.section("Create new consumer")
+    name = prompter.ask("Consumer name: ").strip()
+    if not name:
+        print("Name is required.")
+        return
+
+    existing = await get_consumer_by_name(session, name)
+    if existing is not None:
+        print(f"Consumer already exists: {name}")
+        return
+
+    description = (
+        prompter.ask("Description (optional, Enter to skip): ").strip() or None
+    )
+
+    perms = await list_perms(session)
+    options = [(p.name, p.description or "") for p in perms]
+    selected: set[str] = set()
+    if options:
+        Console.info("Available permissions (toggle to add/remove):")
+        selected = prompter.multi_select(options, current=[], prompt="toggle")
+
+    print()
+    Console.info("--- Summary ---")
+    Console.info(f"  Name:        {name}")
+    Console.info(f"  Description: {description or '(none)'}")
+    Console.info(f"  Permissions: {', '.join(sorted(selected)) or '(none)'}")
+
+    if not prompter.confirm("Create this consumer?"):
+        print("Aborted.")
+        return
+
+    consumer, token = await create_consumer(
+        session, name, perms=sorted(selected), description=description
+    )
+    print()
+    print(f"Created consumer: {consumer.name} (id={consumer.id})")
+    print(f"Token (save this, it will not be shown again): {token}")
+
+
+async def _flow_change_perms(prompter: Prompter, session) -> None:
+    consumers = await list_consumers(session)
+    if not consumers:
+        print("No consumers registered.")
+        return
+
+    Console.section("Change consumer permissions")
+    for i, c in enumerate(consumers, start=1):
+        perms_str = ",".join(c.perms) or "(none)"
+        print(f"  {i}. {c.name:<24} perms: {perms_str}")
+
+    idx = prompter.menu([c.name for c in consumers], prompt="Pick a consumer")
+    consumer = consumers[idx]
+
+    all_perms = await list_perms(session)
+    options = [(p.name, p.description or "") for p in all_perms]
+    if not options:
+        print("No permissions registered.")
+        return
+
+    while True:
+        Console.info(
+            f"\nConsumer: {consumer.name}\n"
+            f"Current perms: {', '.join(consumer.perms) or '(none)'}"
+        )
+        action = prompter.menu(
+            ["Grant all missing", "Revoke all current", "Custom toggle"],
+            prompt="Action",
+        )
+        if action == 0:
+            missing = [p.name for p in all_perms if p.name not in consumer.perms]
+            new_perms = sorted(set(consumer.perms) | set(missing))
+        elif action == 1:
+            new_perms = []
+        else:
+            toggled = prompter.multi_select(
+                options, current=consumer.perms, prompt="toggle"
+            )
+            new_perms = sorted(toggled)
+
+        if new_perms == sorted(consumer.perms):
+            print("No change.")
+            return
+
+        Console.info(f"  -> new perms: {', '.join(new_perms) or '(none)'}")
+        if not prompter.confirm("Apply changes?"):
+            print("Aborted.")
+            return
+
+        consumer = await set_perms(session, consumer.name, new_perms)
+        added = sorted(set(new_perms) - set(consumer.perms))
+        removed = sorted(set(consumer.perms) - set(new_perms))
+        if added:
+            print(f"  Added:   {', '.join(added)}")
+        if removed:
+            print(f"  Removed: {', '.join(removed)}")
+        return
+
+
+async def _flow_toggle_enabled(prompter: Prompter, session) -> None:
+    consumers = await list_consumers(session)
+    if not consumers:
+        print("No consumers registered.")
+        return
+
+    Console.section("Enable / disable consumer")
+    for i, c in enumerate(consumers, start=1):
+        state = "enabled " if c.enabled else "disabled"
+        print(f"  {i}. {c.name:<24} ({state})")
+
+    idx = prompter.menu([c.name for c in consumers], prompt="Pick a consumer")
+    consumer = consumers[idx]
+    new_state = not consumer.enabled
+    verb = "Enable" if new_state else "Disable"
+    if not prompter.confirm(f"{verb} {consumer.name}?"):
+        print("Aborted.")
+        return
+    consumer = await set_enabled(session, consumer.name, new_state)
+    print(f"{verb}d {consumer.name}")
+
+
+async def _flow_rotate_token(prompter: Prompter, session) -> None:
+    consumers = await list_consumers(session)
+    if not consumers:
+        print("No consumers registered.")
+        return
+
+    Console.section("Rotate consumer token")
+    for i, c in enumerate(consumers, start=1):
+        print(f"  {i}. {c.name}")
+    idx = prompter.menu([c.name for c in consumers], prompt="Pick a consumer")
+    consumer = consumers[idx]
+
+    Console.info("\nRotating the token immediately invalidates the old token.")
+    if not prompter.confirm(f"Rotate token for {consumer.name}?"):
+        print("Aborted.")
+        return
+
+    consumer, token = await rotate_token(session, consumer.name)
+    print(f"Rotated token for {consumer.name}")
+    print(f"New token (save this): {token}")
+
+
+async def _flow_delete(prompter: Prompter, session) -> None:
+    consumers = await list_consumers(session)
+    if not consumers:
+        print("No consumers registered.")
+        return
+
+    Console.section("Delete consumer")
+    for i, c in enumerate(consumers, start=1):
+        print(f"  {i}. {c.name}")
+    idx = prompter.menu([c.name for c in consumers], prompt="Pick a consumer")
+    consumer = consumers[idx]
+
+    Console.info(f"\nThis permanently deletes the consumer and revokes their token.")
+    confirm_name = prompter.ask(
+        f"Type the consumer name ({consumer.name}) to confirm: "
+    ).strip()
+    if confirm_name != consumer.name:
+        print("Name did not match. Aborted.")
+        return
+
+    await delete_consumer(session, consumer.name)
+    print(f"Deleted consumer: {consumer.name}")
+
+
+async def _flow_list(prompter: Prompter, session) -> None:
+    Console.section("Consumers")
+    await _cmd_list(session)
+    prompter.ask("\nPress Enter to return to menu...")
+
+
+async def _flow_add_perm(prompter: Prompter, session) -> None:
+    Console.section("Add permission to catalog")
+    existing = await list_perms(session)
+    if existing:
+        Console.info("Currently registered:")
+        for p in existing:
+            Console.info(f"  {p.name:<32} {p.description or ''}")
+
+    name = prompter.ask("Permission name (e.g. 'scores:read:history'): ").strip()
+    if not name:
+        print("Name is required.")
+        return
+    if any(p.name == name for p in existing):
+        print(f"Permission already exists: {name}")
+        return
+
+    description = (
+        prompter.ask("Description (optional, Enter to skip): ").strip() or None
+    )
+
+    print()
+    Console.info("--- Summary ---")
+    Console.info(f"  Name:        {name}")
+    Console.info(f"  Description: {description or '(none)'}")
+    if not prompter.confirm("Add this permission?"):
+        print("Aborted.")
+        return
+
+    perm = await add_perm(session, name, description)
+    print(f"Added permission: {perm.name}")
+
+
+async def _flow_remove_perm(prompter: Prompter, session) -> None:
+    Console.section("Remove permission from catalog")
+    existing = await list_perms(session)
+    if not existing:
+        print("No permissions registered.")
+        return
+
+    for i, p in enumerate(existing, start=1):
+        Console.info(f"  {i}. {p.name:<32} {p.description or ''}")
+
+    idx = prompter.menu(
+        [p.name for p in existing], prompt="Pick a permission to remove"
+    )
+    perm_to_remove = existing[idx]
+
+    Console.info(
+        f"\nThis removes '{perm_to_remove.name}' from the catalog."
+        f"\nFails if any consumer still has it."
+    )
+    if not prompter.confirm(f"Remove {perm_to_remove.name}?"):
+        print("Aborted.")
+        return
+
     try:
-        async with db.get_session() as session:
-            if args.command == "add":
-                perms = _parse_perms(args.perms)
-                consumer, token = await create_consumer(
-                    session, args.name, perms=perms, description=args.description
-                )
-                print(f"Created consumer: {consumer.name} (id={consumer.id})")
-                print(f"Token (save this, it will not be shown again): {token}")
-                return 0
-
-            if args.command == "list":
-                consumers = await list_consumers(session)
-                if not consumers:
-                    print("No consumers registered.")
-                    return 0
-                print(f"{'NAME':<24} {'ENABLED':<8} {'PERMS':<60} ID")
-                for c in consumers:
-                    print(
-                        f"{c.name:<24} {str(c.enabled):<8} "
-                        f"{','.join(c.perms):<60} {c.id}"
-                    )
-                return 0
-
-            if args.command == "grant":
-                consumer = await grant_perm(session, args.name, args.perm)
-                print(f"Granted {args.perm} to {consumer.name}")
-                return 0
-
-            if args.command == "revoke":
-                consumer = await revoke_perm(session, args.name, args.perm)
-                print(f"Revoked {args.perm} from {consumer.name}")
-                return 0
-
-            if args.command == "set-perms":
-                perms = _parse_perms(args.perms)
-                consumer = await set_perms(session, args.name, perms)
-                print(f"Set perms for {consumer.name}: {','.join(consumer.perms)}")
-                return 0
-
-            if args.command == "enable":
-                consumer = await set_enabled(session, args.name, True)
-                print(f"Enabled {consumer.name}")
-                return 0
-
-            if args.command == "disable":
-                consumer = await set_enabled(session, args.name, False)
-                print(f"Disabled {consumer.name}")
-                return 0
-
-            if args.command == "rotate":
-                consumer, token = await rotate_token(session, args.name)
-                print(f"Rotated token for {consumer.name}")
-                print(f"New token (save this): {token}")
-                return 0
-
-            if args.command == "delete":
-                if not await get_consumer_by_name(session, args.name):
-                    print(f"Consumer not found: {args.name}", file=sys.stderr)
-                    return 1
-                await delete_consumer(session, args.name)
-                print(f"Deleted consumer: {args.name}")
-                return 0
-
+        removed = await remove_perm(session, perm_to_remove.name)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
-        return 1
-    except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
-        return 2
+        return
+    if not removed:
+        print(f"Permission not found: {perm_to_remove.name}")
+        return
+    print(f"Removed permission: {perm_to_remove.name}")
 
+
+async def _interactive_loop(prompter: Prompter) -> None:
+    async with db.get_session() as session:
+        while True:
+            Console.header("API Consumer Management")
+            choice = prompter.menu(_TOP_MENU, prompt="What would you like to do")
+            if choice == _EXIT_INDEX:
+                print("Bye.")
+                return
+            try:
+                if choice == 0:
+                    await _flow_create(prompter, session)
+                elif choice == 1:
+                    await _flow_change_perms(prompter, session)
+                elif choice == 2:
+                    await _flow_toggle_enabled(prompter, session)
+                elif choice == 3:
+                    await _flow_rotate_token(prompter, session)
+                elif choice == 4:
+                    await _flow_delete(prompter, session)
+                elif choice == 5:
+                    await _flow_list(prompter, session)
+                elif choice == 6:
+                    await _flow_add_perm(prompter, session)
+                elif choice == 7:
+                    await _flow_remove_perm(prompter, session)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+            prompter.ask("\nPress Enter to return to menu...")
+
+
+async def run(args: argparse.Namespace, prompter: Prompter | None = None) -> int:
+    prompter = prompter or Prompter()
+    if args.command == "list":
+        async with db.get_session() as session:
+            return await _cmd_list(session)
+    if args.command == "interactive":
+        await _interactive_loop(prompter)
+        return 0
     return 0
 
 
