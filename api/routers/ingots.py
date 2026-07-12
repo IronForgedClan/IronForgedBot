@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import require_perm
 from api.deps import get_current_consumer, get_db_session
 from api.permissions import PERM
+from api.rate_limit import default_rate_limit
 from api.routers.members import _resolve_member
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.ingot import (
@@ -31,6 +32,7 @@ async def get_member_ingots(
     member_id: str,
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
+    _: None = Depends(default_rate_limit),
 ):
     request.state.required_perm = PERM.INGOTS_READ
     await require_perm(PERM.INGOTS_READ)(consumer=consumer)
@@ -61,6 +63,7 @@ async def get_member_ingot_transactions(
     limit: int = Query(default=50, ge=1, le=500),
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
+    _: None = Depends(default_rate_limit),
 ):
     request.state.required_perm = PERM.INGOTS_READ_TRANSACTIONS
     await require_perm(PERM.INGOTS_READ_TRANSACTIONS)(consumer=consumer)
