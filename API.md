@@ -236,7 +236,6 @@ Current ingot balance for a member.
 ```json
 {
     "data": {
-        "discord_id": 123456789012345678,
         "nickname": "Zezima",
         "ingots": 4200
     },
@@ -268,7 +267,6 @@ Recent ingot add/remove transactions for a member, newest first.
 ```json
 {
     "data": {
-        "discord_id": 123456789012345678,
         "transactions": [
             {
                 "id": 98765,
@@ -276,7 +274,11 @@ Recent ingot add/remove transactions for a member, newest first.
                 "previous_value": "4000",
                 "new_value": "4200",
                 "comment": "Payroll",
-                "admin_name": null,
+                "admin": {
+                    "id": "f0e1d2c3-b4a5-9687-6543-210fedcba987",
+                    "discord_id": 111222333444555666,
+                    "nickname": "ModBoss"
+                },
                 "timestamp": "2026-07-01T06:00:00+00:00"
             },
             {
@@ -285,7 +287,7 @@ Recent ingot add/remove transactions for a member, newest first.
                 "previous_value": "4050",
                 "new_value": "4000",
                 "comment": "Raffle tickets",
-                "admin_name": null,
+                "admin": null,
                 "timestamp": "2026-06-15T18:42:11+00:00"
             }
         ]
@@ -294,8 +296,9 @@ Recent ingot add/remove transactions for a member, newest first.
 }
 ```
 
-> **Note:** `admin_name` is currently always `null` — admin attribution is not
-> yet serialized in the response.
+> `admin` is `null` when the changelog row has no `admin_id` (e.g. system-driven
+> changes). When populated, it is a `MemberRef` containing the admins internal
+> UUID, Discord snowflake, and nickname.
 
 **Response — 404:** see [GET /members/{member_id}](#get-membersmember_id).
 
@@ -534,6 +537,14 @@ each consumer (`api_consumers.perms`).
 Perms are defined in code at `api/permissions.py`. To add a new perm, add it to
 both the `PERM` enum and the `KNOWN_PERMS` table in this doc, then redeploy.
 
+## Rate limiting
+
+When a request exceeds a limit, we raise `HTTPException(429)` which flows
+through the standard error handler -> audit middleware -> `api_audit` row. The
+429 response uses the standard error envelope (`code: "rate_limited"`) and
+includes a `Retry-After` header giving the seconds until the current minute
+window ends.
+
 ## Audit log
 
 Every API request writes one row to the `api_audit` table. Fields captured:
@@ -585,5 +596,6 @@ to any consumer.
 | `API_AUDIT_LOG_ENABLED` | `True`    | Write `api_audit` rows.                                                    |
 | `API_DOCS_ENABLED`      | (auto)    | Expose `/docs` and `/openapi.json`. Auto-disabled when `ENVIRONMENT=prod`. |
 | `API_CORS_ORIGINS`      | (empty)   | Comma-separated allowed CORS origins.                                      |
+| `API_RATE_LIMIT`        | `30`      | Per-route per-consumer per-minute. `0` disables.                           |
 
 See the main `README.md` Keys table for the full project env var reference.
