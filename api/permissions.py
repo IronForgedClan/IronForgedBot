@@ -1,10 +1,4 @@
 import enum
-from datetime import datetime, timezone
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from api.models import ApiPermission
 
 
 class PERM(enum.StrEnum):
@@ -28,14 +22,4 @@ KNOWN_PERMS: list[tuple[str, str]] = [
 ]
 
 
-async def seed_known_permissions(session: AsyncSession) -> None:
-    result = await session.execute(select(ApiPermission.name))
-    existing = {row for row in result.scalars().all()}
-
-    now = datetime.now(tz=timezone.utc)
-    for name, description in KNOWN_PERMS:
-        if name in existing:
-            continue
-        session.add(ApiPermission(name=name, description=description, created_at=now))
-
-    await session.commit()
+KNOWN_PERM_NAMES: frozenset[str] = frozenset(name for name, _ in KNOWN_PERMS)

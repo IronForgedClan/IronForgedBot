@@ -11,7 +11,7 @@ from alembic import context
 
 from ironforgedbot.models import Base
 
-from api.models import ApiAudit, ApiConsumer, ApiPermission  # noqa: F401
+from api.models import ApiAudit, ApiConsumer  # noqa: F401
 
 config = context.config
 fileConfig(config.config_file_name)

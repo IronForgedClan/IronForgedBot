@@ -20,7 +20,7 @@ from api.consumer_service import (  # noqa: E402
     set_enabled,
     set_perms,
 )
-from api.permissions_cli import add_perm, list_perms, remove_perm  # noqa: E402
+from api.permissions import KNOWN_PERMS  # noqa: E402
 from scripts._api_console import Console, Prompter  # noqa: E402
 
 _TOP_MENU = [
@@ -30,12 +30,14 @@ _TOP_MENU = [
     "Rotate a consumer's token",
     "Delete a consumer",
     "List consumers",
-    "Add a new permission to the catalog",
-    "Remove a permission from the catalog",
     "Exit",
 ]
 
 _EXIT_INDEX = len(_TOP_MENU) - 1
+
+
+def known_perm_options() -> list[tuple[str, str]]:
+    return list(KNOWN_PERMS)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -78,8 +80,7 @@ async def _flow_create(prompter: Prompter, session) -> None:
         prompter.ask("Description (optional, Enter to skip): ").strip() or None
     )
 
-    perms = await list_perms(session)
-    options = [(p.name, p.description or "") for p in perms]
+    options = known_perm_options()
     selected: set[str] = set()
     if options:
         Console.info("Available permissions (toggle to add/remove):")
@@ -117,8 +118,7 @@ async def _flow_change_perms(prompter: Prompter, session) -> None:
     idx = prompter.menu([c.name for c in consumers], prompt="Pick a consumer")
     consumer = consumers[idx]
 
-    all_perms = await list_perms(session)
-    options = [(p.name, p.description or "") for p in all_perms]
+    options = known_perm_options()
     if not options:
         print("No permissions registered.")
         return
@@ -132,8 +132,9 @@ async def _flow_change_perms(prompter: Prompter, session) -> None:
             ["Grant all missing", "Revoke all current", "Custom toggle"],
             prompt="Action",
         )
+        all_perm_names = [name for name, _ in options]
         if action == 0:
-            missing = [p.name for p in all_perms if p.name not in consumer.perms]
+            missing = [p for p in all_perm_names if p not in consumer.perms]
             new_perms = sorted(set(consumer.perms) | set(missing))
         elif action == 1:
             new_perms = []
@@ -236,72 +237,6 @@ async def _flow_list(prompter: Prompter, session) -> None:
     prompter.ask("\nPress Enter to return to menu...")
 
 
-async def _flow_add_perm(prompter: Prompter, session) -> None:
-    Console.section("Add permission to catalog")
-    existing = await list_perms(session)
-    if existing:
-        Console.info("Currently registered:")
-        for p in existing:
-            Console.info(f"  {p.name:<32} {p.description or ''}")
-
-    name = prompter.ask("Permission name (e.g. 'scores:read:history'): ").strip()
-    if not name:
-        print("Name is required.")
-        return
-    if any(p.name == name for p in existing):
-        print(f"Permission already exists: {name}")
-        return
-
-    description = (
-        prompter.ask("Description (optional, Enter to skip): ").strip() or None
-    )
-
-    print()
-    Console.info("--- Summary ---")
-    Console.info(f"  Name:        {name}")
-    Console.info(f"  Description: {description or '(none)'}")
-    if not prompter.confirm("Add this permission?"):
-        print("Aborted.")
-        return
-
-    perm = await add_perm(session, name, description)
-    print(f"Added permission: {perm.name}")
-
-
-async def _flow_remove_perm(prompter: Prompter, session) -> None:
-    Console.section("Remove permission from catalog")
-    existing = await list_perms(session)
-    if not existing:
-        print("No permissions registered.")
-        return
-
-    for i, p in enumerate(existing, start=1):
-        Console.info(f"  {i}. {p.name:<32} {p.description or ''}")
-
-    idx = prompter.menu(
-        [p.name for p in existing], prompt="Pick a permission to remove"
-    )
-    perm_to_remove = existing[idx]
-
-    Console.info(
-        f"\nThis removes '{perm_to_remove.name}' from the catalog."
-        f"\nFails if any consumer still has it."
-    )
-    if not prompter.confirm(f"Remove {perm_to_remove.name}?"):
-        print("Aborted.")
-        return
-
-    try:
-        removed = await remove_perm(session, perm_to_remove.name)
-    except ValueError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return
-    if not removed:
-        print(f"Permission not found: {perm_to_remove.name}")
-        return
-    print(f"Removed permission: {perm_to_remove.name}")
-
-
 async def _interactive_loop(prompter: Prompter) -> None:
     async with db.get_session() as session:
         while True:
@@ -323,10 +258,6 @@ async def _interactive_loop(prompter: Prompter) -> None:
                     await _flow_delete(prompter, session)
                 elif choice == 5:
                     await _flow_list(prompter, session)
-                elif choice == 6:
-                    await _flow_add_perm(prompter, session)
-                elif choice == 7:
-                    await _flow_remove_perm(prompter, session)
             except ValueError as e:
                 print(f"Error: {e}", file=sys.stderr)
             prompter.ask("\nPress Enter to return to menu...")

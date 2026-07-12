@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models import ApiConsumer, ApiPermission
+from api.models import ApiConsumer
+from api.permissions import KNOWN_PERM_NAMES
 from api.tokens import hash_token
 
 try:
@@ -53,11 +54,8 @@ async def grant_perm(session: AsyncSession, name: str, perm: str) -> ApiConsumer
     if consumer is None:
         raise ValueError(f"Consumer not found: {name}")
 
-    perm_exists = await session.execute(
-        select(ApiPermission).where(ApiPermission.name == perm)
-    )
-    if perm_exists.scalar_one_or_none() is None:
-        raise ValueError(f"Permission not registered: {perm}")
+    if perm not in KNOWN_PERM_NAMES:
+        raise ValueError(f"Unknown permission: {perm}")
 
     if perm not in consumer.perms:
         consumer.perms = [*consumer.perms, perm]
@@ -83,11 +81,7 @@ async def set_perms(session: AsyncSession, name: str, perms: list[str]) -> ApiCo
     if consumer is None:
         raise ValueError(f"Consumer not found: {name}")
 
-    existing = {
-        row
-        for row in (await session.execute(select(ApiPermission.name))).scalars().all()
-    }
-    unknown = [p for p in perms if p not in existing]
+    unknown = [p for p in perms if p not in KNOWN_PERM_NAMES]
     if unknown:
         raise ValueError(f"Unknown permissions: {', '.join(unknown)}")
 
