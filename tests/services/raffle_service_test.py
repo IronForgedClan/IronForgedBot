@@ -11,13 +11,13 @@ from ironforgedbot.services.raffle_service import (
     RaffleServiceResponse,
 )
 from ironforgedbot.services.ingot_service import IngotServiceResponse
+from tests.helpers import create_mock_db_session
 
 
 class TestRaffleService(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
-        self.mock_db = AsyncMock()
-        self.mock_db.add = MagicMock()
+        self.mock_db = create_mock_db_session()
         self.mock_db.commit = AsyncMock()
         self.mock_db.execute = AsyncMock()
         self.mock_db.close = AsyncMock()

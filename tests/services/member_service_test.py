@@ -18,12 +18,12 @@ from ironforgedbot.services.member_service import (
     UniqueDiscordIdVolation,
     UniqueNicknameViolation,
 )
+from tests.helpers import create_mock_db_session
 
 
 class TestMemberService(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_db = AsyncMock()
-        self.mock_db.add = MagicMock()
+        self.mock_db = create_mock_db_session()
         self.mock_db.flush = AsyncMock()
         self.mock_db.commit = AsyncMock()
         self.mock_db.rollback = AsyncMock()
@@ -256,6 +256,59 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         result = await self.member_service.get_member_by_id_or_discord("99999")
 
         self.assertIsNone(result)
+
+    async def test_get_member_by_id_or_discord_or_raise_found(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = self.sample_member
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord_or_raise("42")
+
+        self.assertEqual(result, self.sample_member)
+
+    async def test_get_member_by_id_or_discord_or_raise_digits_raises(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        with self.assertRaises(MemberNotFoundException) as ctx:
+            await self.member_service.get_member_by_id_or_discord_or_raise("99999")
+        self.assertIn("id=99999", str(ctx.exception))
+
+    async def test_get_member_by_id_or_discord_or_raise_uuid_raises(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        with self.assertRaises(MemberNotFoundException) as ctx:
+            await self.member_service.get_member_by_id_or_discord_or_raise(
+                "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+            )
+        self.assertIn("id=aaaaaaaa", str(ctx.exception))
+
+    async def test_get_member_by_rsn_or_raise_found(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [self.sample_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn_or_raise("TestUser")
+
+        self.assertEqual(result, self.sample_member)
+
+    async def test_get_member_by_rsn_or_raise_raises(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        self.mock_db.execute.return_value = mock_result
+
+        with self.assertRaises(MemberNotFoundException) as ctx:
+            await self.member_service.get_member_by_rsn_or_raise("ghost")
+        self.assertIn("rsn=ghost", str(ctx.exception))
 
     async def test_get_member_by_discord_id_found(self):
         mock_result = MagicMock()

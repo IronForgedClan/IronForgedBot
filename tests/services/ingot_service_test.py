@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from ironforgedbot.models.changelog import Changelog, ChangeType
 from ironforgedbot.models.member import Member
 from ironforgedbot.services.ingot_service import IngotService, IngotServiceResponse
+from tests.helpers import create_mock_db_session
 
 
 class TestIngotService(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
-        self.mock_db = AsyncMock()
-        self.mock_db.add = MagicMock()
+        self.mock_db = create_mock_db_session()
         self.mock_db.commit = AsyncMock()
         self.mock_db.refresh = AsyncMock()
         self.mock_db.close = AsyncMock()
