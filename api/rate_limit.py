@@ -46,15 +46,13 @@ def _bucket_key(request: Request, prefer_consumer: bool) -> str:
     return f"ip:{ip}|{request.method} {request.url.path}"
 
 
-def rate_limit(*, per_minute: int | None = None, required_perm: str | None = None):
+def rate_limit(*, per_minute: int | None = None):
     limit = per_minute if per_minute is not None else API_CONFIG.API_RATE_LIMIT
 
     async def dep(
         request: Request,
         _consumer: ApiConsumer = Depends(get_current_consumer),
     ) -> None:
-        if required_perm is not None:
-            request.state.required_perm = required_perm
         _check(_bucket_key(request, prefer_consumer=True), limit)
 
     return dep

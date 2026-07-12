@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import require_perm
 from api.deps import get_current_consumer, get_db_session
 from api.permissions import PERM
+from api.perm import requires_perm
 from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.member import MemberFilter, MemberSummary
@@ -57,9 +57,9 @@ async def list_members(
     filter: MemberFilter | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(rate_limit(required_perm=PERM.MEMBERS_LIST)),
+    _perm: None = Depends(requires_perm(PERM.MEMBERS_LIST)),
+    _: None = Depends(rate_limit()),
 ):
-    await require_perm(PERM.MEMBERS_LIST)(consumer=consumer)
 
     base_stmt = select(Member)
     base_stmt = _apply_member_filters(base_stmt, filter, role, rank)
@@ -91,9 +91,9 @@ async def get_member(
     member_id: str,
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(rate_limit(required_perm=PERM.MEMBERS_READ)),
+    _perm: None = Depends(requires_perm(PERM.MEMBERS_READ)),
+    _: None = Depends(rate_limit()),
 ):
-    await require_perm(PERM.MEMBERS_READ)(consumer=consumer)
 
     service = create_member_service(session)
     member = await _resolve_member(service, member_id)

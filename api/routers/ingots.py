@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import require_perm
 from api.deps import get_current_consumer, get_db_session
 from api.permissions import PERM
+from api.perm import requires_perm
 from api.rate_limit import rate_limit
 from api.routers.members import _resolve_member
 from api.schemas.common import ApiResponse, ResponseMeta
@@ -32,9 +32,9 @@ async def get_member_ingots(
     member_id: str,
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(rate_limit(required_perm=PERM.INGOTS_READ)),
+    _perm: None = Depends(requires_perm(PERM.INGOTS_READ)),
+    _: None = Depends(rate_limit()),
 ):
-    await require_perm(PERM.INGOTS_READ)(consumer=consumer)
 
     service = create_member_service(session)
     member = await _resolve_member(service, member_id)
@@ -62,9 +62,9 @@ async def get_member_ingot_transactions(
     limit: int = Query(default=50, ge=1, le=500),
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(rate_limit(required_perm=PERM.INGOTS_READ_TRANSACTIONS)),
+    _perm: None = Depends(requires_perm(PERM.INGOTS_READ_TRANSACTIONS)),
+    _: None = Depends(rate_limit()),
 ):
-    await require_perm(PERM.INGOTS_READ_TRANSACTIONS)(consumer=consumer)
 
     service = create_member_service(session)
     member = await _resolve_member(service, member_id)

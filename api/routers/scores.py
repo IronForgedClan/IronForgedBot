@@ -3,9 +3,9 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import require_perm
 from api.deps import get_current_consumer, get_db_session
 from api.permissions import PERM
+from api.perm import requires_perm
 from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.score import PlayerScoreResponse, ScoreHistoryResponse
@@ -30,9 +30,9 @@ async def get_player_score(
     rsn: str,
     bypass_cache: bool = Query(default=False),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(rate_limit(required_perm=PERM.SCORES_READ)),
+    _perm: None = Depends(requires_perm(PERM.SCORES_READ)),
+    _: None = Depends(rate_limit()),
 ):
-    await require_perm(PERM.SCORES_READ)(consumer=consumer)
 
     if not rsn or len(rsn) > 12:
         raise HTTPException(
@@ -62,9 +62,9 @@ async def get_player_score_history(
     days: str = Query(default="7,30,90"),
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(rate_limit(required_perm=PERM.SCORES_READ_HISTORY)),
+    _perm: None = Depends(requires_perm(PERM.SCORES_READ_HISTORY)),
+    _: None = Depends(rate_limit()),
 ):
-    await require_perm(PERM.SCORES_READ_HISTORY)(consumer=consumer)
 
     try:
         periods = [int(d.strip()) for d in days.split(",") if d.strip()]

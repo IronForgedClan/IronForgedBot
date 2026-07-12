@@ -42,15 +42,3 @@ async def verify_bearer(
         )
 
     return consumer
-
-
-def require_perm(perm: str):
-    async def _check(consumer: ApiConsumer) -> ApiConsumer:
-        if perm not in (consumer.perms or []):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required permission: {perm}",
-            )
-        return consumer
-
-    return _check
