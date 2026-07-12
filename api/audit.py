@@ -43,9 +43,9 @@ class ApiAuditMiddleware(BaseHTTPMiddleware):
             consumer = getattr(request.state, "consumer", None)
             required_perm = getattr(request.state, "required_perm", None)
 
-            consumer_id = consumer.id if consumer is not None else None
-            consumer_name = consumer.name if consumer is not None else None
-            consumer_perms = list(consumer.perms) if consumer is not None else None
+            consumer_id = consumer["id"] if consumer is not None else None
+            consumer_name = consumer["name"] if consumer is not None else None
+            consumer_perms = list(consumer["perms"]) if consumer is not None else None
 
             await self._write_audit(
                 method=method,

@@ -20,5 +20,9 @@ async def get_current_consumer(
 ) -> ApiConsumer:
     auth_header = request.headers.get("Authorization")
     consumer = await verify_bearer(auth_header, session)
-    request.state.consumer = consumer
+    request.state.consumer = {
+        "id": consumer.id,
+        "name": consumer.name,
+        "perms": list(consumer.perms or []),
+    }
     return consumer
