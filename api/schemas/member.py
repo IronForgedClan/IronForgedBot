@@ -48,6 +48,20 @@ class MemberFilter(str, Enum):
     BANNED = "banned"
 
 
+class MemberRef(BaseModel):
+    id: str
+    discord_id: int
+    nickname: str
+
+    @classmethod
+    def from_member(cls, member: Member) -> "MemberRef":
+        return cls(
+            id=member.id,
+            discord_id=member.discord_id,
+            nickname=member.nickname,
+        )
+
+
 class MemberQueryParams(BaseModel):
     model_config = ConfigDict(extra="forbid")
     limit: int = Field(default=100, ge=1, le=500)

@@ -3,7 +3,8 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from ironforgedbot.models import Changelog
+from api.schemas.member import MemberRef
+from ironforgedbot.models import Changelog, Member
 
 
 class IngotTransaction(BaseModel):
@@ -12,11 +13,13 @@ class IngotTransaction(BaseModel):
     previous_value: str
     new_value: str
     comment: str | None = None
-    admin_name: str | None = None
+    admin: MemberRef | None = None
     timestamp: datetime
 
     @classmethod
-    def from_changelog(cls, log: Changelog) -> "IngotTransaction":
+    def from_changelog(
+        cls, log: Changelog, admin_member: Member | None
+    ) -> "IngotTransaction":
         return cls(
             id=log.id,
             change_type=(
@@ -27,17 +30,15 @@ class IngotTransaction(BaseModel):
             previous_value=log.previous_value or "",
             new_value=log.new_value or "",
             comment=log.comment,
-            admin_name=None,
+            admin=MemberRef.from_member(admin_member) if admin_member else None,
             timestamp=log.timestamp,
         )
 
 
 class IngotBalance(BaseModel):
-    discord_id: int
     nickname: str
     ingots: int
 
 
 class IngotTransactionsResponse(BaseModel):
-    discord_id: int
     transactions: list[IngotTransaction]

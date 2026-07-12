@@ -46,7 +46,6 @@ async def get_member_ingots(
 
     return ApiResponse(
         data=IngotBalance(
-            discord_id=member.discord_id,
             nickname=member.nickname,
             ingots=member.ingots,
         ).model_dump(mode="json"),
@@ -85,8 +84,10 @@ async def get_member_ingot_transactions(
 
     return ApiResponse(
         data=IngotTransactionsResponse(
-            discord_id=member.discord_id,
-            transactions=[IngotTransaction.from_changelog(log) for log in logs],
+            transactions=[
+                IngotTransaction.from_changelog(log, getattr(log, "admin_member", None))
+                for log in logs
+            ],
         ).model_dump(mode="json"),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
