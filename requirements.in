@@ -19,3 +19,6 @@ aiomysql
 alembic
 audioop-lts # https://github.com/Rapptz/discord.py/issues/9742
 PyYAML
+fastapi
+uvicorn[standard]
+pydantic
