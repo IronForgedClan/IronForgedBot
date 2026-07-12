@@ -333,6 +333,12 @@ view its source command and try running that instead.
   Stops containers, removes project containers and images, and prunes unused
   Docker resources to free up disk space.
 
+## API
+
+A REST API exposing various member data points to authenticated consumers. Runs
+as a separate process in the same Docker container when `API_ENABLED=True`. See
+[API.md](./API.md) for full documentation.
+
 ## Tooling
 
 As all dependencies are installed within the Docker container, you might find
