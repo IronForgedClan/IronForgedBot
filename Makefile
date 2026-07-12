@@ -1,10 +1,13 @@
-.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod
+.PHONY: up up-prod up-full down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod api-up api-down api-logs api-shell api-manage
 
 up:
 	docker compose up db bot
 
 up-prod:
 	docker compose up db bot_prod
+
+up-full:
+	docker compose --profile full up db bot_prod api
 
 down:
 	docker compose down
@@ -47,6 +50,21 @@ update-deps:
 update-data:
 	git submodule update --remote data
 	@echo "Data submodule updated to latest commit"
+
+api-up:
+	docker compose up -d api
+
+api-down:
+	docker compose stop api
+
+api-logs:
+	docker compose logs -f api
+
+api-shell:
+	docker compose exec api /bin/sh
+
+api-manage:
+	docker compose run --rm bot python scripts/manage_api_consumers.py interactive
 
 clean:
 	@echo "Stopping containers..."
