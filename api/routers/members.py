@@ -19,6 +19,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/members", tags=["members"])
 
 
+async def _resolve_member(service, member_id: str) -> Member | None:
+    if member_id.isdigit():
+        return await service.get_member_by_discord_id(int(member_id))
+    return await service.get_member_by_id(member_id)
+
+
 def _apply_member_filters(
     stmt, filter_: MemberFilter | None, role: str | None, rank: str | None
 ):
@@ -78,10 +84,10 @@ async def list_members(
     )
 
 
-@router.get("/{discord_id}", response_model=ApiResponse)
+@router.get("/{member_id}", response_model=ApiResponse)
 async def get_member(
     request: Request,
-    discord_id: int,
+    member_id: str,
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
 ):
@@ -89,11 +95,11 @@ async def get_member(
     await require_perm(PERM.MEMBERS_READ)(consumer=consumer)
 
     service = create_member_service(session)
-    member = await service.get_member_by_discord_id(discord_id)
+    member = await _resolve_member(service, member_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No member with discord_id={discord_id}",
+            detail=f"No member with id={member_id}",
         )
 
     return ApiResponse(
