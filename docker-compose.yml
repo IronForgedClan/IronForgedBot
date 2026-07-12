@@ -59,6 +59,30 @@ services:
         networks:
             - ironforged-network
 
+    api:
+        build:
+            context: .
+            target: prod
+        image: ironforgedbot:prod
+        restart: unless-stopped
+        working_dir: /app
+        command: ["python", "-m", "api.main"]
+        depends_on:
+            db:
+                condition: service_healthy
+        env_file: .env
+        environment:
+            DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
+            API_ENABLED: "True"
+            API_HOST: 0.0.0.0
+        ports:
+            - "${API_PORT:-8080}:8080"
+        volumes:
+            - ./data:/app/data:ro
+            - ./logs:/app/logs
+        networks:
+            - ironforged-network
+
 volumes:
     mariadb_data:
 
