@@ -1,15 +1,10 @@
 from datetime import datetime, timezone
-import secrets
 
 from sqlalchemy import JSON, BigInteger, Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ironforgedbot.database.database import Base
 from ironforgedbot.models.decorators import UTCDateTime
-
-
-def _generate_token() -> str:
-    return f"if_live_{secrets.token_urlsafe(32)}"
 
 
 class ApiConsumer(Base):
