@@ -30,6 +30,8 @@ tests {
     if (res.status === 200) {
       expect(res.body.data).to.have.property("ingots");
       expect(res.body.data.ingots).to.be.a("number");
+      expect(res.body.data).to.not.have.property("discord_id");
+      expect(res.body.data).to.have.property("nickname");
     }
   });
 }
