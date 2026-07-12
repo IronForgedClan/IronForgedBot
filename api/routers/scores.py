@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import require_perm
 from api.deps import get_current_consumer, get_db_session
 from api.permissions import PERM
-from api.rate_limit import default_rate_limit
+from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.score import PlayerScoreResponse, ScoreHistoryResponse
 from ironforgedbot.exceptions.score_exceptions import HiscoresNotFound
@@ -30,9 +30,8 @@ async def get_player_score(
     rsn: str,
     bypass_cache: bool = Query(default=False),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(default_rate_limit),
+    _: None = Depends(rate_limit(required_perm=PERM.SCORES_READ)),
 ):
-    request.state.required_perm = PERM.SCORES_READ
     await require_perm(PERM.SCORES_READ)(consumer=consumer)
 
     if not rsn or len(rsn) > 12:
@@ -63,9 +62,8 @@ async def get_player_score_history(
     days: str = Query(default="7,30,90"),
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(default_rate_limit),
+    _: None = Depends(rate_limit(required_perm=PERM.SCORES_READ_HISTORY)),
 ):
-    request.state.required_perm = PERM.SCORES_READ_HISTORY
     await require_perm(PERM.SCORES_READ_HISTORY)(consumer=consumer)
 
     try:

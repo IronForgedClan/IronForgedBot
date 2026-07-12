@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.config import API_CONFIG
 from api.deps import get_db_session
-from api.rate_limit import health_rate_limit
+from api.rate_limit import public_rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ router = APIRouter(tags=["meta"])
 async def health(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    _: None = Depends(health_rate_limit),
+    _: None = Depends(public_rate_limit(per_minute=2)),
 ) -> JSONResponse:
     db_ok = True
     try:

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.auth import require_perm
 from api.deps import get_current_consumer, get_db_session
 from api.permissions import PERM
-from api.rate_limit import default_rate_limit
+from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.member import MemberFilter, MemberSummary
 from ironforgedbot.models import Member
@@ -57,9 +57,8 @@ async def list_members(
     filter: MemberFilter | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(default_rate_limit),
+    _: None = Depends(rate_limit(required_perm=PERM.MEMBERS_LIST)),
 ):
-    request.state.required_perm = PERM.MEMBERS_LIST
     await require_perm(PERM.MEMBERS_LIST)(consumer=consumer)
 
     base_stmt = select(Member)
@@ -92,9 +91,8 @@ async def get_member(
     member_id: str,
     session: AsyncSession = Depends(get_db_session),
     consumer: ApiConsumer = Depends(get_current_consumer),
-    _: None = Depends(default_rate_limit),
+    _: None = Depends(rate_limit(required_perm=PERM.MEMBERS_READ)),
 ):
-    request.state.required_perm = PERM.MEMBERS_READ
     await require_perm(PERM.MEMBERS_READ)(consumer=consumer)
 
     service = create_member_service(session)

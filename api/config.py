@@ -14,16 +14,7 @@ class ApiConfig:
         self.API_ENABLED: bool = os.getenv("API_ENABLED", "False") == "True"
         self.API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
         self.API_PORT: int = int(os.getenv("API_PORT") or 8080)
-        self.API_RATE_LIMIT_PER_MINUTE: int = int(
-            os.getenv("API_RATE_LIMIT_PER_MINUTE") or 60
-        )
-        pre_auth_env = os.getenv("API_PRE_AUTH_RATE_LIMIT_PER_MINUTE")
-        if pre_auth_env is None:
-            self.API_PRE_AUTH_RATE_LIMIT_PER_MINUTE: int = (
-                self.API_RATE_LIMIT_PER_MINUTE
-            )
-        else:
-            self.API_PRE_AUTH_RATE_LIMIT_PER_MINUTE: int = int(pre_auth_env)
+        self.API_RATE_LIMIT: int = int(os.getenv("API_RATE_LIMIT") or 30)
         self.API_AUDIT_LOG_ENABLED: bool = (
             os.getenv("API_AUDIT_LOG_ENABLED", "True") == "True"
         )

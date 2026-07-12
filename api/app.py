@@ -7,7 +7,6 @@ from api.audit import ApiAuditMiddleware
 from api.config import API_CONFIG
 from api.database_init import initialize_database
 from api.errors import install_error_handlers
-from api.rate_limit import PreAuthRateLimitMiddleware
 from api.routers import ingots, members, meta, scores
 from ironforgedbot.logging_config import get_logger_instance
 
@@ -35,7 +34,6 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(ApiAuditMiddleware)
-    app.add_middleware(PreAuthRateLimitMiddleware)
     install_error_handlers(app)
 
     if API_CONFIG.API_CORS_ORIGINS:
