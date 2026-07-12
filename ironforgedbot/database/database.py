@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from starlette.exceptions import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,12 @@ class Database:
                 # await session.commit()
                 logger.debug("Database session completed successfully")
             except Exception as e:
-                logger.error(f"Database session error: {e}", exc_info=True)
+                if isinstance(e, HTTPException):
+                    logger.debug(
+                        f"Database session rolled back for HTTPException {e.status_code}"
+                    )
+                else:
+                    logger.error(f"Database session error: {e}", exc_info=True)
                 await session.rollback()
                 raise
             finally:
