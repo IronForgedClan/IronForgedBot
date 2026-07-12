@@ -1,4 +1,4 @@
 black
 pip-tools
 watchdog[watchmedo]
-httpx
+httpx2
