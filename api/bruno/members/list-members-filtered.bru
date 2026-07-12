@@ -1,0 +1,36 @@
+meta {
+  name: List Members (Filtered: Boosters)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/members?filter=booster&limit=10
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Requires perm: members:list
+  Same as List Members, with filter=booster to restrict to active boosters.
+  Other valid filter values: active, prospect, blacklisted, banned.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape", function() {
+    expect(res.body.data).to.have.property("members");
+    expect(res.body.data).to.have.property("total");
+  });
+  test("all returned are boosters", function() {
+    res.body.data.members.forEach(function(m) {
+      expect(m.is_booster).to.equal(true);
+    });
+  });
+}

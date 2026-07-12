@@ -1,0 +1,38 @@
+meta {
+  name: Get Player Score (Bypass Cache)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/players/oxore/score?bypass_cache=true
+  body: none
+  auth: none
+}
+
+params:query {
+  bypass_cache: true
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+tests {
+  test("status 200 or 404", function() {
+    expect([200, 404]).to.include(res.status);
+  });
+  test("shape", function() {
+    if (res.status === 200) {
+      expect(res.body.data).to.have.property("player_name");
+      expect(res.body.data).to.have.property("total_points");
+    }
+  });
+}
+
+docs {
+  Requires perm: scores:read
+  Same as Get Player Score, but with bypass_cache=true to skip the
+  in-process score cache and force a fresh hiscores fetch.
+  Useful for verifying that cache invalidation works end-to-end.
+}

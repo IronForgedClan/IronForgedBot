@@ -10,13 +10,10 @@ get {
   auth: none
 }
 
-headers {
-  Authorization: Bearer {{token}}
-}
-
 docs {
-  Requires perm: meta:read
-  Returns 200 when API and DB are healthy; 503 when DB is down.
+  Public endpoint — no auth required.
+  Single meta endpoint: returns API version, environment, and DB liveness.
+  Returns 200 when healthy; 503 when DB is down.
 }
 
 tests {
@@ -28,5 +25,8 @@ tests {
   test("meta present", function() {
     expect(res.body.meta).to.have.property("request_id");
     expect(res.body.meta).to.have.property("timestamp");
+  });
+  test("request_id echoed in X-Request-ID header", function() {
+    expect(res.headers["x-request-id"]).to.equal(res.body.meta.request_id);
   });
 }

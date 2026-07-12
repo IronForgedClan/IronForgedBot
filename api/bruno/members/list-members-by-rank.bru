@@ -1,0 +1,37 @@
+meta {
+  name: List Members (By Rank: Dragon)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/members?rank=Dragon
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+docs {
+  Requires perm: members:list
+  Same as List Members, with rank=Dragon to restrict to members of a given rank.
+  Other valid rank values match the RANK enum (Iron, Bronze, Steel, Mithril,
+  Adamant, Rune, Dragon, etc.).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape", function() {
+    expect(res.body.data).to.have.property("members");
+    expect(res.body.data).to.have.property("total");
+  });
+  test("all returned have rank=Dragon", function() {
+    res.body.data.members.forEach(function(m) {
+      expect(m.rank).to.equal("Dragon");
+    });
+  });
+}

@@ -16,6 +16,9 @@ headers {
 
 docs {
   Requires perm: ingots:read:transactions
+  Path params:
+    member_id - numeric value is looked up as Discord snowflake;
+                non-numeric value is looked up as internal member UUID.
   Query params:
     days  - optional, filter to last N days (1-365)
     limit - page size (1-500, default 50)

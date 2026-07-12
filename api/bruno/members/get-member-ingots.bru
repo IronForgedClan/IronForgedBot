@@ -16,6 +16,9 @@ headers {
 
 docs {
   Requires perm: ingots:read
+  Path params:
+    member_id - numeric value is looked up as Discord snowflake;
+                non-numeric value is looked up as internal member UUID.
   Returns current ingot balance for the member.
 }
 

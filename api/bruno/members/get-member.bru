@@ -17,8 +17,9 @@ headers {
 docs {
   Requires perm: members:read
   Path params:
-    discord_id - the member's Discord snowflake ID
-  Returns 404 if no member with that discord_id.
+    member_id - numeric value is looked up as Discord snowflake;
+                non-numeric value is looked up as internal member UUID.
+  Returns 404 if no member with that id.
 }
 
 tests {

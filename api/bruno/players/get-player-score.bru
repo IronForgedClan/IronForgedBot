@@ -5,19 +5,13 @@ meta {
 }
 
 get {
-  url: {{base_url}}/players/zezima/score
+  url: {{base_url}}/players/oxore/score
   body: none
   auth: none
 }
 
 headers {
   Authorization: Bearer {{token}}
-}
-
-docs {
-  Requires perm: scores:read
-  Fetches live hiscores breakdown for the given RuneScape name.
-  Returns 404 if player not found on hiscores.
 }
 
 tests {
@@ -31,4 +25,15 @@ tests {
       expect(res.body.data).to.have.property("total_points");
     }
   });
+}
+
+docs {
+  Requires perm: scores:read
+  Path params:
+    rsn - the RuneScape name (1-12 chars). 400 outside this range.
+  Query params:
+    bypass_cache - bool (default false). Skip the in-process score cache
+                   and force a fresh hiscores fetch.
+  Fetches live hiscores breakdown for the given RuneScape name.
+  Returns 404 if player not found on hiscores.
 }
