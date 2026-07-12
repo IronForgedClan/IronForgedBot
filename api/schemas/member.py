@@ -9,13 +9,12 @@ from ironforgedbot.models import Member
 
 
 class MemberSummary(BaseModel):
+    id: str
     discord_id: int
     nickname: str
     role: str
     rank: str
-    ingots: int
     joined_date: datetime | None = None
-    last_changed_date: datetime | None = None
     is_booster: bool
     is_prospect: bool
     is_blacklisted: bool
@@ -24,6 +23,7 @@ class MemberSummary(BaseModel):
     @classmethod
     def from_member(cls, member: Member) -> "MemberSummary":
         return cls(
+            id=member.id,
             discord_id=member.discord_id,
             nickname=member.nickname,
             role=(
@@ -32,9 +32,7 @@ class MemberSummary(BaseModel):
             rank=(
                 member.rank.value if isinstance(member.rank, Enum) else str(member.rank)
             ),
-            ingots=member.ingots,
             joined_date=member.joined_date,
-            last_changed_date=member.last_changed_date,
             is_booster=member.is_booster,
             is_prospect=member.is_prospect,
             is_blacklisted=member.is_blacklisted,
