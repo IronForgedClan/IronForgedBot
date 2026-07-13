@@ -10,8 +10,9 @@ from ironforgedbot.common.helpers import (
     get_text_channel,
     populate_emoji_cache,
 )
-from ironforgedbot.config import CONFIG, ENVIRONMENT
-from ironforgedbot.event_emitter import event_emitter
+from ironforgedbot.config import CONFIG
+from ironforgedcore.config import ENVIRONMENT
+from ironforgedcore.event_emitter import event_emitter
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
 from ironforgedbot.state import STATE

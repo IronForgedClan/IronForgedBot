@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 # Load environment variables before initializing logger
 load_dotenv()
 
-from ironforgedbot.logging_config import get_logger_instance
+from ironforgedcore.logging_config import get_logger_instance
 
 # Initialize logging configuration
 get_logger_instance()
@@ -17,7 +17,7 @@ import discord
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.command_tree import IronForgedCommands, IronForgedCommandTree
 from ironforgedbot.config import CONFIG
-from ironforgedbot.http import HTTP
+from ironforgedcore.http import HTTP
 from ironforgedbot.state import STATE
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 

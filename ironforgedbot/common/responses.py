@@ -9,7 +9,7 @@ from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from
 from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.config import CONFIG
-from ironforgedbot.logging_config import get_logger_instance
+from ironforgedcore.logging_config import get_logger_instance
 from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
 from ironforgedcore.database import db

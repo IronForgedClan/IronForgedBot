@@ -14,7 +14,7 @@ from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
 from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.http import HTTP
+from ironforgedcore.http import HTTP
 from ironforgedcore.models.member import Member
 from ironforgedbot.services.member_service import MemberService
 from ironforgedbot.services.score_service import get_score_service

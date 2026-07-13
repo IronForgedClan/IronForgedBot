@@ -5,7 +5,7 @@ from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_api_call
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
 from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
-from ironforgedbot.http import AsyncHttpClient, HttpResponse
+from ironforgedcore.http import AsyncHttpClient, HttpResponse
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 

@@ -12,6 +12,7 @@ dependencies = [
     "python-dotenv",
     "aiofiles",
     "python-dateutil",
+    "concurrent-log-handler",
 ]
 
 [build-system]

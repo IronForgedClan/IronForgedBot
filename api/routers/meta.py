@@ -32,7 +32,7 @@ async def health(
         "status": "ok" if db_ok else "degraded",
         "db": "ok" if db_ok else "error",
         "version": API_CONFIG.api_version,
-        "environment": API_CONFIG.base.ENVIRONMENT.value,
+        "environment": API_CONFIG.ENVIRONMENT.value,
     }
     code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
     body = ApiResponse(

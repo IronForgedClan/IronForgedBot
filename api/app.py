@@ -9,7 +9,7 @@ from api.config import API_CONFIG
 from api.database_init import initialize_database
 from api.errors import install_error_handlers
 from api.routers import ingots, members, meta, scores
-from ironforgedbot.logging_config import get_logger_instance
+from ironforgedcore.logging_config import get_logger_instance
 
 logger = logging.getLogger(__name__)
 

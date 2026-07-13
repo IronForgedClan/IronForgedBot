@@ -23,7 +23,7 @@ from ironforgedbot.common.ranks import (
     get_rank_from_points,
 )
 from ironforgedbot.common.text_formatters import text_bold, text_h2
-from ironforgedbot.http import HTTP
+from ironforgedcore.http import HTTP
 from ironforgedbot.services.service_factory import (
     create_member_service,
     create_score_history_service,

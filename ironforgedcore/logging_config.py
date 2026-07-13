@@ -5,7 +5,7 @@ from typing import Dict, Optional, Any
 
 from concurrent_log_handler import ConcurrentRotatingFileHandler
 
-from ironforgedbot.event_emitter import event_emitter
+from ironforgedcore.event_emitter import event_emitter
 
 
 class JSONFormatter(logging.Formatter):
@@ -14,7 +14,7 @@ class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_obj = {
-            "timestamp": self.formatTime(record, self.datefmt),
+            "timestamp": self.formatTime(record, datefmt=self.datefmt),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

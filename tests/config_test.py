@@ -2,7 +2,8 @@ import copy
 import unittest
 from unittest.mock import mock_open, patch
 
-from ironforgedbot.config import Config, ENVIRONMENT
+from ironforgedbot.config import Config
+from ironforgedcore.config import ENVIRONMENT
 from tests.helpers import VALID_CONFIG
 
 
@@ -15,7 +16,7 @@ class ConfigTest(unittest.TestCase):
         self.invalid_int_config["GUILD_ID"] = ""
 
     @patch.dict("os.environ", VALID_CONFIG)
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -58,7 +59,7 @@ class ConfigTest(unittest.TestCase):
                 "Configuration key 'GUILD_ID' (int) is missing or empty",
             )
 
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -73,7 +74,7 @@ class ConfigTest(unittest.TestCase):
             mock_dotenv.assert_called_once()
 
     @patch.dict("os.environ", {**VALID_CONFIG, "ENVIRONMENT": "dev"})
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -85,7 +86,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(result.ENVIRONMENT, ENVIRONMENT.DEVELOPMENT)
 
     @patch.dict("os.environ", {**VALID_CONFIG, "ENVIRONMENT": "staging"})
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -104,7 +105,7 @@ class ConfigTest(unittest.TestCase):
             "TRICK_OR_TREAT_CHANNEL_ID": "999",
         },
     )
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -117,7 +118,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(result.TRICK_OR_TREAT_CHANNEL_ID, 999)
 
     @patch.dict("os.environ", {**VALID_CONFIG, "TRICK_OR_TREAT_ENABLED": "False"})
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -132,7 +133,7 @@ class ConfigTest(unittest.TestCase):
     @patch.dict(
         "os.environ", {**VALID_CONFIG, "TRICK_OR_TREAT_COOLDOWN_SECONDS": "7200"}
     )
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -143,7 +144,7 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual(result.TRICK_OR_TREAT_COOLDOWN_SECONDS, 7200)
 
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch("builtins.open", side_effect=FileNotFoundError("versions.json not found"))
     def test_handles_missing_version_file(self, mock_file, mock_dotenv):
         with patch.dict("os.environ", self.valid_config):
@@ -169,7 +170,7 @@ class ConfigTest(unittest.TestCase):
             "CRON_SYNC_MEMBERS": "30 5,17 * * *",
         },
     )
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,
@@ -180,7 +181,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(result.CRON_SYNC_MEMBERS, "30 5,17 * * *")
 
     @patch.dict("os.environ", VALID_CONFIG)
-    @patch("ironforgedbot.config.load_dotenv")
+    @patch("ironforgedcore.config.load_dotenv")
     @patch(
         "builtins.open",
         new_callable=mock_open,

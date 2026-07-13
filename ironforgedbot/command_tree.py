@@ -26,7 +26,8 @@ from ironforgedbot.commands.eight_ball.cmd_eight_ball import cmd_eight_ball
 from ironforgedbot.commands.spin.cmd_spin import cmd_spin
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.config import CONFIG, ENVIRONMENT
+from ironforgedbot.config import CONFIG
+from ironforgedcore.config import ENVIRONMENT
 
 logger = logging.getLogger(__name__)
 

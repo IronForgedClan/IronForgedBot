@@ -7,9 +7,8 @@ from urllib.parse import urlparse
 
 import aiohttp
 
-
-from ironforgedbot.decorators.retry_on_exception import retry_on_exception
-from ironforgedbot.event_emitter import event_emitter
+from ironforgedcore.event_emitter import event_emitter
+from ironforgedcore.retry import retry_on_exception
 
 logger = logging.getLogger(__name__)
 

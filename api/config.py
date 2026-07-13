@@ -1,15 +1,14 @@
 import os
 import sys
 
-from ironforgedbot.config import CONFIG, Config
-
-from api.version import get_api_version
+from ironforgedcore.config import BaseConfig
 
 
-class ApiConfig:
-    def __init__(self, base: Config | None = None):
-        self.base: Config = base if base is not None else CONFIG
-        self.api_version: str = get_api_version()
+class ApiConfig(BaseConfig):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.api_version: str = self.versions["api"]
 
         self.API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
         self.API_PORT: int = int(os.getenv("API_PORT") or 8080)

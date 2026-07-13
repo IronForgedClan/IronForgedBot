@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.http import AsyncHttpClient
+from ironforgedcore.http import AsyncHttpClient
 from ironforgedbot.services.absent_service import AbsentMemberService
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
