@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from api.audit import ApiAuditMiddleware
 from api.config import API_CONFIG
