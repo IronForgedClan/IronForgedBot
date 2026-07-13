@@ -18,6 +18,10 @@ class ApiConfig:
         self.API_CORS_ORIGINS: list[str] = [
             o.strip() for o in origins.split(",") if o.strip()
         ]
+        trusted_hosts = os.getenv("API_TRUSTED_HOSTS", "127.0.0.1")
+        self.API_TRUSTED_HOSTS: list[str] = [
+            h.strip() for h in trusted_hosts.split(",") if h.strip()
+        ]
 
 
 try:

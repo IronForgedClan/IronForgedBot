@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from api.audit import ApiAuditMiddleware
 from api.config import API_CONFIG
@@ -32,6 +33,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(
+        ProxyHeadersMiddleware, trusted_hosts=API_CONFIG.API_TRUSTED_HOSTS
+    )
     app.add_middleware(ApiAuditMiddleware)
     install_error_handlers(app)
 

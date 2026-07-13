@@ -587,11 +587,12 @@ to any consumer.
 
 ## Configuration
 
-| Env var            | Default   | Description                                   |
-| ------------------ | --------- | --------------------------------------------- |
-| `API_HOST`         | `0.0.0.0` | Bind address.                                 |
-| `API_PORT`         | `8080`    | Listen port.                                  |
-| `API_CORS_ORIGINS` | (empty)   | Comma-separated allowed CORS origins.         |
-| `API_RATE_LIMIT`   | `30`      | Per-route per-consumer per-minute. `0` disables. |
+| Env var             | Default     | Description                                                            |
+| ------------------- | ----------- | ---------------------------------------------------------------------- |
+| `API_HOST`          | `0.0.0.0`   | Bind address.                                                          |
+| `API_PORT`          | `8080`      | Listen port.                                                           |
+| `API_TRUSTED_HOSTS` | `127.0.0.1` | Comma-separated trusted reverse-proxy IPs for X-Forwarded-For parsing. |
+| `API_CORS_ORIGINS`  | (empty)     | Comma-separated allowed CORS origins.                                  |
+| `API_RATE_LIMIT`    | `30`        | Per-route per-consumer per-minute. `0` disables.                       |
 
 See the main `README.md` Keys table for the full project env var reference.
