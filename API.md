@@ -470,10 +470,9 @@ within ±3 days of the target date. If no qualifying snapshot exists, `score` is
 
 ## Quick start
 
-1. Enable the API in `.env`:
+1. Set the API port in `.env`:
 
    ```sh
-   API_ENABLED=True
    API_PORT=8080
    ```
 
@@ -588,14 +587,11 @@ to any consumer.
 
 ## Configuration
 
-| Env var                 | Default   | Description                                                                |
-| ----------------------- | --------- | -------------------------------------------------------------------------- |
-| `API_ENABLED`           | `False`   | Master switch. Set `True` to start the API service.                        |
-| `API_HOST`              | `0.0.0.0` | Bind address.                                                              |
-| `API_PORT`              | `8080`    | Listen port.                                                               |
-| `API_AUDIT_LOG_ENABLED` | `True`    | Write `api_audit` rows.                                                    |
-| `API_DOCS_ENABLED`      | (auto)    | Expose `/docs` and `/openapi.json`. Auto-disabled when `ENVIRONMENT=prod`. |
-| `API_CORS_ORIGINS`      | (empty)   | Comma-separated allowed CORS origins.                                      |
-| `API_RATE_LIMIT`        | `30`      | Per-route per-consumer per-minute. `0` disables.                           |
+| Env var            | Default   | Description                                   |
+| ------------------ | --------- | --------------------------------------------- |
+| `API_HOST`         | `0.0.0.0` | Bind address.                                 |
+| `API_PORT`         | `8080`    | Listen port.                                  |
+| `API_CORS_ORIGINS` | (empty)   | Comma-separated allowed CORS origins.         |
+| `API_RATE_LIMIT`   | `30`      | Per-route per-consumer per-minute. `0` disables. |
 
 See the main `README.md` Keys table for the full project env var reference.

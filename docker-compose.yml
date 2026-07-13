@@ -73,7 +73,6 @@ services:
         env_file: .env
         environment:
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
-            API_ENABLED: "True"
             API_HOST: 0.0.0.0
         ports:
             - "${API_PORT:-8080}:8080"

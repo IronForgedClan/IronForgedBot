@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     get_logger_instance()
-    if API_CONFIG.API_ENABLED:
-        await initialize_database()
+    await initialize_database()
     yield
 
 
@@ -27,9 +26,9 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="IronForgedBot API",
         version=API_CONFIG.api_version,
-        docs_url="/docs" if API_CONFIG.API_DOCS_ENABLED else None,
+        docs_url=None,
         redoc_url=None,
-        openapi_url="/openapi.json" if API_CONFIG.API_DOCS_ENABLED else None,
+        openapi_url=None,
         lifespan=lifespan,
     )
 
