@@ -11,7 +11,7 @@ from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.member import MemberFilter, MemberSummary
 from ironforgedcore.services.member_service import MemberListFilter
-from ironforgedbot.services.service_factory import create_member_service
+from ironforgedcore.services.service_factory import create_member_service
 
 logger = logging.getLogger(__name__)
 

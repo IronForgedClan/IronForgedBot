@@ -16,7 +16,7 @@ from api.schemas.ingot import (
 )
 from ironforgedcore.models import Changelog
 from ironforgedcore.services.changelog_service import ChangelogService
-from ironforgedbot.services.service_factory import create_member_service
+from ironforgedcore.services.service_factory import create_member_service
 
 logger = logging.getLogger(__name__)
 
