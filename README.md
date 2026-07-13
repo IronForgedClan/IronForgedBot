@@ -259,7 +259,7 @@ Now you can modify the example `.env` file with your values.
 You will need to run the database migrations before the bot will be able to use
 the database. To do so, you can run the following command. You will need to do
 this every time the database schema changes. Migration files live inside the
-`alembic/versions` directory.
+`ironforgedcore/alembic/versions` directory.
 
 ```sh
 make migrate
@@ -417,7 +417,7 @@ specified by `LOG_DIR` (default: `./logs`). Files rotate when they reach
 ## Testing
 
 All test files live within the `tests` directory. The structure within this
-directory mirrors `ironforgedbot`.
+directory mirrors the source tree (`ironforgedcore` + `ironforgedbot` + `api`).
 
 To execute the entire test suite run:
 
