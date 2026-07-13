@@ -12,8 +12,8 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import CONTENT
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     MOCK_TRICK_OR_TREAT_DATA,
     create_mock_discord_interaction,

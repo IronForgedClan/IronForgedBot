@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.exc import IntegrityError
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models.changelog import ChangeType, Changelog
 from ironforgedcore.models.member import Member
-from ironforgedbot.services.member_service import (
+from ironforgedcore.services.member_service import (
     MEMBER_FLAGS,
     MemberListFilter,
     MemberListResult,
@@ -62,9 +62,9 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         await self.member_service.close()
         self.mock_db.close.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
-    @patch("ironforgedbot.services.member_service.normalize_discord_string")
-    @patch("ironforgedbot.services.member_service.uuid")
+    @patch("ironforgedcore.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.normalize_discord_string")
+    @patch("ironforgedcore.services.member_service.uuid")
     async def test_create_member_success(
         self, mock_uuid, mock_normalize, mock_datetime
     ):
@@ -95,7 +95,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.mock_db.flush.assert_called_once()
         self.mock_db.commit.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_discord_id_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.flush.side_effect = IntegrityError("discord_id", None, Exception())
@@ -105,7 +105,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_nickname_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.flush.side_effect = IntegrityError("nickname", None, Exception())
@@ -115,7 +115,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_unknown_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         error = IntegrityError("unknown", None, Exception())
@@ -126,7 +126,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.flush.side_effect = RuntimeError("Database error")
@@ -415,7 +415,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_success_basic(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -435,7 +435,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertGreaterEqual(self.mock_db.add.call_count, 3)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_with_ingot_reset(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         old_member = self.inactive_member
@@ -452,7 +452,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.previous_ingot_qty, 2000)
         self.assertEqual(result.new_member.ingots, 0)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_no_ingot_reset(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         old_member = self.inactive_member
@@ -468,7 +468,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.ingots_reset)
         self.assertEqual(result.new_member.ingots, 2000)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_with_rank_change(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -489,7 +489,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
                     "nonexistent-id", "nickname"
                 )
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_nickname_conflict(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = IntegrityError("nickname", None, Exception())
@@ -504,7 +504,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -519,7 +519,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_disable_member_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -545,7 +545,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(MemberNotFoundException):
                 await self.member_service.disable_member("nonexistent-id")
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_disable_member_exception_rollback(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -558,7 +558,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_nickname_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -588,7 +588,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
                     "nonexistent-id", "NewNickname"
                 )
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_nickname_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = IntegrityError("nickname", None, Exception())
@@ -603,7 +603,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_nickname_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -618,7 +618,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_rank_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -646,7 +646,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(MemberNotFoundException):
                 await self.member_service.change_rank("nonexistent-id", RANK.ADAMANT)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_rank_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -659,7 +659,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_default_rank(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -669,7 +669,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(created_member.rank, RANK.IRON)
 
     async def test_reactivate_member_preserves_same_nickname(self):
-        with patch("ironforgedbot.services.member_service.datetime") as mock_datetime:
+        with patch("ironforgedcore.services.member_service.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.fixed_datetime
 
             test_member = self.inactive_member
@@ -685,7 +685,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.mock_db.add.call_count, 2)
 
     async def test_reactivate_member_preserves_same_rank(self):
-        with patch("ironforgedbot.services.member_service.datetime") as mock_datetime:
+        with patch("ironforgedcore.services.member_service.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.fixed_datetime
 
             test_member = self.inactive_member
@@ -700,7 +700,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_db.add.call_count, 3)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_creates_multiple_changelog_entries(
         self, mock_datetime
     ):
@@ -741,7 +741,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(entry, Changelog)
             self.assertEqual(entry.change_type, ChangeType.FLAG_CHANGE)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_only_logs_changed_flags(self, mock_datetime):
         """Changelog entries only created for flags that actually change."""
         mock_datetime.now.return_value = self.fixed_datetime
@@ -773,7 +773,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         changelog_entry = self.mock_db.add.call_args_list[0][0][0]
         self.assertIn("prospect", changelog_entry.comment)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_single_flag(self, mock_datetime):
         """Single flag update works correctly."""
         mock_datetime.now.return_value = self.fixed_datetime
@@ -808,7 +808,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(changelog_entry.new_value, True)
         self.assertIn("blacklisted", changelog_entry.comment)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_no_changes(self, mock_datetime):
         """No changes returns early without modifying database."""
         mock_datetime.now.return_value = self.fixed_datetime

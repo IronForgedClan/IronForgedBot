@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedcore.database import db
 from ironforgedbot.events.member_events import MemberUpdateContext
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

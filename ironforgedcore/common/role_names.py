@@ -1,0 +1,4 @@
+BOOSTER_ROLE_NAME = "Server Booster"
+PROSPECT_ROLE_NAME = "Prospect"
+BLACKLISTED_ROLE_NAME = "Blacklisted"
+BANNED_ROLE_NAME = "Slag"

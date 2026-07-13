@@ -5,7 +5,7 @@ import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
-from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
 
 logger = logging.getLogger(__name__)

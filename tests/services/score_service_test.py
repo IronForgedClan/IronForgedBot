@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 from ironforgedbot.services.score_service import ScoreService
 from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 
 
 class TestScoreService(unittest.IsolatedAsyncioTestCase):

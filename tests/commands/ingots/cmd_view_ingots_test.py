@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models.member import Member
 from tests.helpers import (
     create_mock_discord_interaction,

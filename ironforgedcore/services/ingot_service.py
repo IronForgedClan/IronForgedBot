@@ -5,9 +5,9 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.logging_utils import log_database_operation
+from ironforgedcore.common.logging_utils import log_database_operation
 from ironforgedcore.models.changelog import Changelog, ChangeType
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

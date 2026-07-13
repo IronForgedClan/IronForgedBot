@@ -6,7 +6,7 @@ from datetime import datetime
 import discord
 from tabulate import tabulate
 
-from ironforgedbot.common.helpers import format_duration
+from ironforgedcore.common.numbers import format_duration
 from ironforgedbot.common.text_formatters import text_h2
 from ironforgedcore.database import db
 from ironforgedbot.common.logging_utils import log_command_execution

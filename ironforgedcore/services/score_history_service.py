@@ -5,12 +5,12 @@ from typing import Tuple
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.logging_utils import log_database_operation
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.logging_utils import log_database_operation
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models.member import Member
 from ironforgedcore.models.score_history import ScoreHistory
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

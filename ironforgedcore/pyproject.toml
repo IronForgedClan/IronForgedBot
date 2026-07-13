@@ -13,6 +13,7 @@ dependencies = [
     "aiofiles",
     "python-dateutil",
     "concurrent-log-handler",
+    "wom.py",
 ]
 
 [build-system]
@@ -24,4 +25,6 @@ packages = [
     "ironforgedcore",
     "ironforgedcore.models",
     "ironforgedcore.exceptions",
+    "ironforgedcore.services",
+    "ironforgedcore.common",
 ]

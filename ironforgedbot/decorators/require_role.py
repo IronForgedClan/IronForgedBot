@@ -3,7 +3,8 @@ import logging
 
 import discord
 
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import check_member_has_role
 from ironforgedbot.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ def require_role(role: ROLE, ephemeral: bool = False):
         ephemeral: Whether to defer the interaction ephemerally (default: False)
     """
 
-    from ironforgedbot.common.helpers import normalize_discord_string
+    from ironforgedcore.common.normalize import normalize_discord_string
 
     def decorator(func):
         @functools.wraps(func)

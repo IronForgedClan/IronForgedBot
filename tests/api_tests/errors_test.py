@@ -4,7 +4,7 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ironforgedbot.services.member_service import MemberNotFoundException
+from ironforgedcore.services.member_service import MemberNotFoundException
 
 
 def _build_app_with_handler() -> FastAPI:

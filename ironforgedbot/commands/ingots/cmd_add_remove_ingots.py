@@ -7,14 +7,11 @@ import discord
 from discord import app_commands
 from tabulate import tabulate
 
-from ironforgedbot.common.helpers import (
-    find_emoji,
-    validate_playername,
-)
+from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.responses import (
     build_ingot_response_embed,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import (
     text_bold,
@@ -26,7 +23,7 @@ from ironforgedbot.config import CONFIG
 from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_ingot_service
-from ironforgedbot.services.ingot_service import IngotServiceResponse
+from ironforgedcore.services.ingot_service import IngotServiceResponse
 
 logger = logging.getLogger(__name__)
 

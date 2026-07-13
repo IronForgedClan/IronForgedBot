@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import wom
 from wom import GroupRole
 
-from ironforgedbot.common.activity_check import (
+from ironforgedcore.common.activity_check import (
     build_daily_gains,
     calculate_days_of_buffer,
     check_bulk_activity,
 )
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 from tests.helpers import create_test_db_member
 
 
@@ -235,7 +235,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
-    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedcore.services.service_factory.create_member_service")
     @patch("ironforgedcore.database.db")
     async def test_loads_all_members_once_uses_dict_lookup(
         self, mock_db, mock_create_service
@@ -262,7 +262,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(results[0].is_active)
         mock_member_service.get_all_active_members.assert_called_once()
 
-    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedcore.services.service_factory.create_member_service")
     @patch("ironforgedcore.database.db")
     async def test_skips_members_not_in_db_with_warning(
         self, mock_db, mock_create_service
@@ -283,7 +283,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
         logging.disable(logging.NOTSET)
         try:
             with self.assertLogs(
-                "ironforgedbot.common.activity_check", level="WARNING"
+                "ironforgedcore.common.activity_check", level="WARNING"
             ) as cm:
                 results = await check_bulk_activity(wom_group, gains, [])
         finally:
@@ -296,7 +296,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedcore.services.service_factory.create_member_service")
     @patch("ironforgedcore.database.db")
     async def test_handles_exception_gracefully(self, mock_db, mock_create_service):
         mock_session = AsyncMock()
@@ -317,7 +317,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             await check_bulk_activity(wom_group, gains, [])
 
-    @patch("ironforgedbot.services.service_factory.create_member_service")
+    @patch("ironforgedcore.services.service_factory.create_member_service")
     @patch("ironforgedcore.database.db")
     async def test_matches_with_normalized_rsn(self, mock_db, mock_create_service):
         mock_session = AsyncMock()

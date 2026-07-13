@@ -3,11 +3,12 @@ import logging
 import discord
 from discord.ui import Modal, TextInput
 
-from ironforgedbot.common.helpers import find_emoji, normalize_discord_string
+from ironforgedbot.common.helpers import find_emoji
+from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_method_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.text_formatters import text_bold
-from ironforgedbot.services.ingot_service import IngotService
+from ironforgedcore.services.ingot_service import IngotService
 from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
 from ironforgedcore.database import db

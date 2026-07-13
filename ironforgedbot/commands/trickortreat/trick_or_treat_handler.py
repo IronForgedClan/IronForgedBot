@@ -24,8 +24,8 @@ from ironforgedbot.commands.trickortreat.types import (
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedcore.database import db
-from ironforgedbot.services.ingot_service import IngotService
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.ingot_service import IngotService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

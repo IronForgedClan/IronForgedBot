@@ -7,10 +7,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models import Member
-from ironforgedbot.services.member_service import (
+from ironforgedcore.services.member_service import (
     MemberListFilter,
     MemberListResult,
     MemberNotFoundException,
@@ -60,7 +60,7 @@ class TestListMembers(unittest.IsolatedAsyncioTestCase):
         members = [_make_member(discord_id=1), _make_member(discord_id=2)]
         service_result = MemberListResult(members=members, total=2)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.list_members",
+            "ironforgedcore.services.member_service.MemberService.list_members",
             new=AsyncMock(return_value=service_result),
         ):
             response = self.client.get("/members")
@@ -75,7 +75,7 @@ class TestListMembers(unittest.IsolatedAsyncioTestCase):
         service_result = MemberListResult(members=[], total=0)
         mock_service = AsyncMock(return_value=service_result)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.list_members",
+            "ironforgedcore.services.member_service.MemberService.list_members",
             new=mock_service,
         ):
             response = self.client.get("/members?role=Member")
@@ -88,7 +88,7 @@ class TestListMembers(unittest.IsolatedAsyncioTestCase):
         service_result = MemberListResult(members=[], total=0)
         mock_service = AsyncMock(return_value=service_result)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.list_members",
+            "ironforgedcore.services.member_service.MemberService.list_members",
             new=mock_service,
         ):
             response = self.client.get("/members?filter=booster")
@@ -102,7 +102,7 @@ class TestListMembers(unittest.IsolatedAsyncioTestCase):
         service_result = MemberListResult(members=[], total=0)
         mock_service = AsyncMock(return_value=service_result)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.list_members",
+            "ironforgedcore.services.member_service.MemberService.list_members",
             new=mock_service,
         ):
             response = self.client.get("/members?filter=banned")
@@ -116,7 +116,7 @@ class TestListMembers(unittest.IsolatedAsyncioTestCase):
         service_result = MemberListResult(members=[], total=0)
         mock_service = AsyncMock(return_value=service_result)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.list_members",
+            "ironforgedcore.services.member_service.MemberService.list_members",
             new=mock_service,
         ):
             response = self.client.get("/members?rank=Mithril")
@@ -128,7 +128,7 @@ class TestListMembers(unittest.IsolatedAsyncioTestCase):
         page_members = [_make_member(discord_id=i) for i in range(100, 150)]
         service_result = MemberListResult(members=page_members, total=250)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.list_members",
+            "ironforgedcore.services.member_service.MemberService.list_members",
             new=AsyncMock(return_value=service_result),
         ):
             response = self.client.get("/members?limit=50&offset=100")
@@ -194,7 +194,7 @@ class TestGetMember(unittest.IsolatedAsyncioTestCase):
             nickname="alice",
         )
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord",
             new=AsyncMock(return_value=member),
         ):
             response = self.client.get("/members/42")
@@ -209,7 +209,7 @@ class TestGetMember(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_member_not_found(self):
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord_or_raise",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord_or_raise",
             new=AsyncMock(
                 side_effect=MemberNotFoundException("No member with id=999999")
             ),
@@ -228,7 +228,7 @@ class TestGetMember(unittest.IsolatedAsyncioTestCase):
             nickname="bob",
         )
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord",
             new=AsyncMock(return_value=member),
         ):
             response = self.client.get("/members/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
@@ -241,7 +241,7 @@ class TestGetMember(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_member_by_internal_id_not_found(self):
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord_or_raise",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord_or_raise",
             new=AsyncMock(
                 side_effect=MemberNotFoundException(
                     "No member with id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"

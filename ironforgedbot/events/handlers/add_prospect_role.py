@@ -4,11 +4,13 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import find_emoji, get_discord_role
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, check_member_has_role
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
+from ironforgedbot.common.roles_discord import check_member_has_role
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,9 @@
 import logging
 
 from ironforgedbot.cache.score_cache import SCORE_CACHE
-from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.logging_utils import log_api_call
-from ironforgedbot.common.ranks import RANK, get_rank_from_points
+from ironforgedcore.common.normalize import normalize_discord_string
+from ironforgedcore.common.logging_utils import log_api_call
+from ironforgedcore.common.ranks import RANK, get_rank_from_points
 from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedcore.http import AsyncHttpClient, HttpResponse
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore

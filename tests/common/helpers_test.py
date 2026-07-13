@@ -4,17 +4,16 @@ from unittest.mock import Mock, patch
 
 import discord
 
+from ironforgedcore.common.numbers import calculate_percentage, render_percentage
 from ironforgedbot.common.helpers import (
-    calculate_percentage,
     find_member_by_nickname,
     datetime_to_discord_relative,
-    normalize_discord_string,
-    normalize_rsn,
-    render_percentage,
-    render_relative_time,
     validate_playername,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedcore.common.normalize import normalize_discord_string, normalize_rsn
+from ironforgedcore.common.time import render_relative_time
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import check_member_has_role
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -200,7 +199,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(render_percentage(12.4, 100), "12%")
         self.assertEqual(render_percentage(99.9, 100), ">99%")
 
-    @patch("ironforgedbot.common.helpers.datetime")
+    @patch("ironforgedcore.common.time.datetime")
     def test_render_relative_time(self, mock_datetime):
         """Test rendering of relative time is correct"""
         fixed_now = setup_time_mocks(

@@ -13,7 +13,7 @@ from ironforgedbot.common.responses import (
     send_member_no_hiscore_values,
     send_not_clan_member,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 

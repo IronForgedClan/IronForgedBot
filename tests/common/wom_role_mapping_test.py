@@ -1,9 +1,9 @@
 import unittest
 from wom import GroupRole
 
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.wom_role_mapping import (
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.wom_role_mapping import (
     WOM_TO_DISCORD_ROLE_MAPPING,
     WOM_TO_DISCORD_RANK_MAPPING,
     get_discord_role_for_wom_role,

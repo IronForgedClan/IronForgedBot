@@ -8,7 +8,7 @@ from ironforgedbot.commands.trickortreat.outcomes.backrooms import (
     BackroomsView,
     DoorOutcome,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,

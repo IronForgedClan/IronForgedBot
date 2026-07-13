@@ -1,6 +1,7 @@
 import unittest
 
-from ironforgedbot.common.ranks import RANK, GOD_ALIGNMENT, get_rank_from_member
+from ironforgedcore.common.ranks import RANK, GOD_ALIGNMENT
+from ironforgedbot.common.ranks_discord import get_rank_from_member
 from tests.helpers import create_test_member
 
 

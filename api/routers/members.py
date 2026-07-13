@@ -10,7 +10,7 @@ from api.permissions import PERM
 from api.rate_limit import rate_limit
 from api.schemas.common import ApiResponse, ResponseMeta
 from api.schemas.member import MemberFilter, MemberSummary
-from ironforgedbot.services.member_service import MemberListFilter
+from ironforgedcore.services.member_service import MemberListFilter
 from ironforgedbot.services.service_factory import create_member_service
 
 logger = logging.getLogger(__name__)

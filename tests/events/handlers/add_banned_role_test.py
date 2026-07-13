@@ -4,7 +4,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 from discord.errors import Forbidden
 
-from ironforgedbot.common.roles import ROLE, BANNED_ROLE_NAME
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import BANNED_ROLE_NAME
 from ironforgedbot.events.handlers.add_banned_role import AddBannedRoleHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from tests.helpers import (

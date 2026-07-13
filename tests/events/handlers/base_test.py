@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 from tests.helpers import create_test_member
 
 

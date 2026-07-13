@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from ironforgedcore.models.changelog import Changelog, ChangeType
 from ironforgedcore.models.member import Member
-from ironforgedbot.services.changelog_service import ChangelogService
+from ironforgedcore.services.changelog_service import ChangelogService
 
 
 class TestChangelogService(unittest.IsolatedAsyncioTestCase):

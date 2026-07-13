@@ -8,7 +8,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_menu import (
     LeaderboardMenu,
     build_leaderboard_menu,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     VALID_CONFIG,
     create_mock_discord_interaction,

@@ -4,7 +4,7 @@ import discord
 
 from ironforgedbot.common.responses import send_error_response
 from ironforgedcore.database import db
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (

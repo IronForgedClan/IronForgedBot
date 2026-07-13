@@ -1,18 +1,15 @@
 import logging
-import re
 from datetime import datetime
 from io import BytesIO
-import sys
 from typing import List, Tuple, TypedDict
 
 import discord
 import pytz
-from dateutil.relativedelta import relativedelta
 from discord import Guild, Member
 from discord.utils import get
 
 from ironforgedbot.common.constants import MAX_DISCORD_MESSAGE_SIZE, NEW_LINE, QUOTES
-from ironforgedbot.common.roles import ROLE
+from ironforgedbot.common.roles_discord import ROLE
 from ironforgedbot.config import CONFIG
 
 logger = logging.getLogger(__name__)
@@ -26,55 +23,11 @@ class EmojiCache(TypedDict):
 emojiCache: dict[str, EmojiCache] = {}
 
 
-def normalize_rsn(username: str) -> str:
-    """Normalize a RuneScape username for cross-system comparison.
-
-    OSRS treats hyphens, underscores, and spaces as equivalent in
-    player names, and comparisons are case-insensitive. Use this
-    whenever comparing a name from one system (Discord, DB, WOM,
-    hiscores) against a name from another. Never use this for storage
-    — always preserve the original casing and characters on write.
-    """
-    return username.lower().replace("-", " ").replace("_", " ")
-
-
-def normalize_discord_string(input: str) -> str:
-    """Strips string down to plaintext."""
-    emoji_pattern = re.compile(
-        "["
-        "\U0001f600-\U0001f64f"  # Emoticons
-        "\U0001f300-\U0001f5ff"  # Symbols & Pictographs
-        "\U0001f680-\U0001f6ff"  # Transport & Map Symbols
-        "\U0001f700-\U0001f77f"  # Alchemical Symbols
-        "\U0001f780-\U0001f7ff"  # Geometric Shapes Extended
-        "\U0001f800-\U0001f8ff"  # Supplemental Arrows-C
-        "\U0001f900-\U0001f9ff"  # Supplemental Symbols & Pictographs
-        "\U0001fa00-\U0001fa6f"  # Chess Symbols, Symbols & Pictographs Extended-A
-        "\U0001fa70-\U0001faff"  # Symbols & Pictographs Extended-B
-        "\U00002702-\U000027b0"  # Dingbats
-        "\U000024c2-\U0001f251"  # Enclosed characters
-        "\U00002000-\U0000201f"  # Miscellaneous Symbols
-        "\U0000fe00-\U0000fe0f"  # Variation Selectors (used with emojis)
-        "\U0001f004"  # Mahjong Tiles
-        "\U0001f0cf"  # Playing Cards
-        "\U0001f1e0-\U0001f1ff"  # Regional indicator symbols (flags)
-        "\U0001f200-\U0001f251"  # Enclosed Alphanumeric Supplement
-        "\U0001f004-\U0001f0cf"  # Mahjong Tiles, Playing Cards
-        "]+",
-        flags=re.UNICODE,
-    )
-    string_without_emojis = emoji_pattern.sub(r"", input)
-
-    # Only keep characters that are within the ASCII range
-    ascii_string = "".join([char for char in string_without_emojis if ord(char) < 128])
-
-    # Replace multiple spaces with a single space and strip leading/trailing spaces
-    return re.sub(r"\s+", " ", ascii_string).strip()
-
-
 def validate_playername(
     guild: discord.Guild, playername: str, must_be_member: bool = True
 ) -> Tuple[Member | None, str]:
+    from ironforgedcore.common.normalize import normalize_discord_string
+
     playername = normalize_discord_string(playername)
 
     if len(playername) > 12 or len(playername) < 1:
@@ -83,8 +36,6 @@ def validate_playername(
     if must_be_member:
         return find_member_by_nickname(guild, playername), playername
 
-    # If membership is optional, still attempt to grab member object.
-    # This allows correct username casing, server emojis etc
     try:
         return find_member_by_nickname(guild, playername), playername
     except ValueError:
@@ -92,6 +43,8 @@ def validate_playername(
 
 
 def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
+    from ironforgedcore.common.normalize import normalize_discord_string
+
     if not guild.members or len(guild.members) < 1:
         raise ReferenceError("Error accessing server members")
 
@@ -106,22 +59,6 @@ def find_member_by_nickname(guild: Guild, target_name: str) -> Member:
             return member
 
     raise ValueError(f"Player '**{target_name}**' is not a member of this server")
-
-
-def calculate_percentage(part, whole) -> float:
-    whole = 1 if whole == 0 else whole
-    return 100 * float(part) / float(whole)
-
-
-def render_percentage(part, whole) -> str:
-    value = calculate_percentage(part, whole)
-
-    if value < 1:
-        return "<1%"
-    if value > 99:
-        return ">99%"
-
-    return f"{round(value)}%"
 
 
 async def populate_emoji_cache(emojis: list[discord.Emoji]):
@@ -147,6 +84,8 @@ def find_emoji(target: str):
 
 
 def get_all_discord_members(guild: discord.Guild) -> List[str]:
+    from ironforgedcore.common.normalize import normalize_discord_string
+
     known_members = []
     for member in guild.members:
         if member.bot or member.nick is None or "" == member.nick:
@@ -192,26 +131,6 @@ async def reply_with_file(
     await interaction.followup.send(msg, file=discord_file)
 
 
-def render_relative_time(target: datetime) -> str:
-    delta = relativedelta(datetime.now().astimezone(), target)
-
-    if delta.years > 0:
-        return f"{delta.years} year{'s' if delta.years > 1 else ''} ago"
-    elif delta.months > 0:
-        return f"{delta.months} month{'s' if delta.months > 1 else ''} ago"
-    elif delta.days > 6:
-        weeks = delta.days // 7
-        return f"{weeks} week{'s' if weeks > 1 else ''} ago"
-    elif delta.days > 0:
-        return f"{delta.days} day{'s' if delta.days > 1 else ''} ago"
-    elif delta.hours > 0:
-        return f"{delta.hours} hour{'s' if delta.hours > 1 else ''} ago"
-    elif delta.minutes > 0:
-        return f"{delta.minutes} minute{'s' if delta.minutes > 1 else ''} ago"
-    else:
-        return f"{delta.seconds} second{'s' if delta.seconds != 1 else ''} ago"
-
-
 def get_text_channel(
     guild: discord.Guild | None, channel_id: int
 ) -> discord.TextChannel | None:
@@ -236,69 +155,6 @@ def datetime_to_discord_relative(dt: datetime, format="d") -> str:
 
 def get_discord_role(guild: discord.Guild, role: ROLE) -> discord.Role | None:
     return get(guild.roles, name=role)
-
-
-def format_duration(start: float, end: float) -> str:
-    """Formats a time duration into the most relevant unit (ms, s, min, hr)."""
-    duration = end - start
-
-    if duration < 1e-3:  # Less than 1 ms
-        return f"{duration * 1e6:.2f} µs"
-    elif duration < 1:  # Less than 1 second
-        return f"{duration * 1e3:.2f} ms"
-    elif duration < 60:  # Less than 1 minute
-        return f"{duration:.2f} s"
-    elif duration < 3600:  # Less than 1 hour
-        return f"{duration / 60:.2f} min"
-    else:  # More than 1 hour
-        return f"{duration / 3600:.2f} hr"
-
-
-def deep_getsizeof(obj, seen=None):
-    size = sys.getsizeof(obj)
-    if seen is None:
-        seen = set()
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-    seen.add(obj_id)
-
-    if isinstance(obj, dict):
-        size += sum(
-            (deep_getsizeof(k, seen) + deep_getsizeof(v, seen)) for k, v in obj.items()
-        )
-    elif isinstance(obj, (list, tuple, set, frozenset)):
-        size += sum(deep_getsizeof(i, seen) for i in obj)
-
-    return size
-
-
-def build_rank_progress_bar(
-    points_total: int,
-    rank_point_threshold: int,
-    next_rank_point_threshold: int,
-    rank_icon: str,
-    next_rank_icon: str,
-) -> str:
-    """Build a visual progress bar string showing progress toward the next rank.
-
-    Args:
-        points_total: The member's current score.
-        rank_point_threshold: The point threshold for the current rank.
-        next_rank_point_threshold: The point threshold for the next rank.
-        rank_icon: Emoji for the current rank.
-        next_rank_icon: Emoji for the next rank.
-    """
-    bar_length = 20
-    filled_char = "▰"
-    empty_char = "▱"
-    span = next_rank_point_threshold - rank_point_threshold
-    progress = points_total - rank_point_threshold
-    ratio = max(0.0, min(1.0, progress / span)) if span > 0 else 1.0
-    filled = round(ratio * bar_length)
-    bar = filled_char * filled + empty_char * (bar_length - filled)
-    percentage = render_percentage(progress, span)
-    return f"{rank_icon} {bar} {next_rank_icon} ({percentage})"
 
 
 def build_discord_link(channel_id: int) -> str:

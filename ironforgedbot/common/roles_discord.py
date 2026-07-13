@@ -1,48 +1,16 @@
-from enum import StrEnum
+"""Discord-coupled role helpers. ROLE enum lives in ironforgedcore.common.roles."""
+
 from typing import List, Optional
 
 import discord
 
-BOOSTER_ROLE_NAME = "Server Booster"
-PROSPECT_ROLE_NAME = "Prospect"
-BLACKLISTED_ROLE_NAME = "Blacklisted"
-BANNED_ROLE_NAME = "Slag"
-
-
-class ROLE(StrEnum):
-    GUEST = "Guest"
-    APPLICANT = "Applicant"
-    MEMBER = "Member"
-    MODERATOR = "Moderator"
-    STAFF = "Staff"
-    BRIGADIER = "Brigadier"
-    ADMIRAL = "Admiral"
-    LEADERSHIP = "Leadership"  # Deprecated
-    MARSHAL = "Marshal"
-    OWNER = "Owners"
-
-    def or_higher(self):
-        """Returns all roles at this level or higher"""
-        roles = list(ROLE)
-        index = roles.index(self)
-        return [role.value for role in roles[index:]]  # slice from current to end
-
-    def or_lower(self):
-        """Returns all roles at this level or below"""
-        roles = list(ROLE)
-        index = roles.index(self)
-        return [
-            role.value for role in roles[: index + 1]
-        ]  # slice from start to current
-
-    @classmethod
-    def list(cls):
-        return list(map(lambda c: c.value, cls))
-
-    @staticmethod
-    def any():
-        """Returns all roles in a list"""
-        return list(ROLE)
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import (
+    BANNED_ROLE_NAME,
+    BLACKLISTED_ROLE_NAME,
+    BOOSTER_ROLE_NAME,
+    PROSPECT_ROLE_NAME,
+)
 
 
 def get_highest_privilage_role_from_member(member: discord.Member) -> Optional[ROLE]:

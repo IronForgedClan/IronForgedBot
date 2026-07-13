@@ -13,7 +13,7 @@ from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
 from ironforgedbot.commands.raffle.cmd_raffle import cmd_raffle
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.job_payroll import job_payroll
 

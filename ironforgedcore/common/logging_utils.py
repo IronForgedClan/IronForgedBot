@@ -1,0 +1,151 @@
+"""Pure logging utilities (no Discord dependencies)."""
+
+import functools
+import logging
+import time
+from typing import Callable, Optional, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("T")
+
+
+def log_database_operation(logger: Optional[logging.Logger] = None):
+    """Decorator to log database operations.
+
+    Args:
+        logger: Logger instance to use. If None, creates one from the function module.
+    """
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            actual_logger = (
+                logger if logger is not None else logging.getLogger(func.__module__)
+            )
+            actual_logger.debug(f"Database operation {func.__name__} started")
+
+            try:
+                result = await func(*args, **kwargs)
+                actual_logger.debug(f"Database operation {func.__name__} completed")
+                return result
+            except Exception as e:
+                actual_logger.error(
+                    f"Database operation {func.__name__} failed: {e}", exc_info=True
+                )
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+def log_service_execution(logger: Optional[logging.Logger] = None):
+    """Decorator to log service method execution."""
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        @functools.wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            actual_logger = (
+                logger if logger is not None else logging.getLogger(func.__module__)
+            )
+            start_time = time.time()
+            actual_logger.debug(f"Service method {func.__name__} started")
+
+            try:
+                result = await func(*args, **kwargs)
+                elapsed = time.time() - start_time
+                actual_logger.debug(
+                    f"Service method {func.__name__} completed in {elapsed:.2f}s"
+                )
+                return result
+            except Exception as e:
+                actual_logger.error(
+                    f"Service method {func.__name__} failed after {time.time() - start_time:.2f}s: {e}",
+                    exc_info=True,
+                )
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+def log_api_call(service_name: str, logger: Optional[logging.Logger] = None):
+    """Decorator to log external API calls.
+
+    Args:
+        service_name: Name of the external service being called
+        logger: Logger instance to use. If None, creates one from the function module.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            actual_logger = (
+                logger if logger is not None else logging.getLogger(func.__module__)
+            )
+            start_time = time.time()
+            actual_logger.debug(
+                f"API call to {service_name} via {func.__name__} started"
+            )
+
+            try:
+                result = await func(*args, **kwargs)
+                elapsed = time.time() - start_time
+                actual_logger.debug(
+                    f"API call to {service_name} completed in {elapsed:.2f}s"
+                )
+                return result
+            except Exception as e:
+                actual_logger.error(
+                    f"API call to {service_name} failed after {time.time() - start_time:.2f}s: {e}",
+                    exc_info=True,
+                )
+                raise
+
+        return wrapper
+
+    return decorator
+
+
+class LogContext:
+    """Context manager for structured logging with context."""
+
+    def __init__(self, logger: logging.Logger, operation: str, **context):
+        """Initialize log context.
+
+        Args:
+            logger: Logger instance to use
+            operation: Name of the operation being performed
+            **context: Additional context to include in logs
+        """
+        self.logger = logger
+        self.operation = operation
+        self.context = context
+        self.start_time: Optional[float] = None
+
+    def __enter__(self):
+        """Enter the context."""
+        self.start_time = time.time()
+        self.logger.info(f"Starting {self.operation}", extra={"context": self.context})
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context."""
+        if self.start_time is not None:
+            elapsed = time.time() - self.start_time
+        else:
+            elapsed = 0.0
+
+        if exc_type is None:
+            self.logger.info(
+                f"Completed {self.operation} in {elapsed:.2f}s",
+                extra={"context": self.context},
+            )
+        else:
+            self.logger.error(
+                f"Failed {self.operation} after {elapsed:.2f}s: {exc_val}",
+                extra={"context": self.context},
+                exc_info=(exc_type, exc_val, exc_tb),
+            )
+        return False  # Don't suppress exceptions

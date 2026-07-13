@@ -6,21 +6,20 @@ from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.constants import EMPTY_SPACE
-from ironforgedbot.common.helpers import (
-    build_rank_progress_bar,
-    find_emoji,
-    normalize_discord_string,
-    render_percentage,
-    validate_playername,
-)
+from ironforgedcore.common.text import build_rank_progress_bar
+from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedcore.common.normalize import normalize_discord_string
+from ironforgedcore.common.numbers import render_percentage
 from ironforgedbot.config import CONFIG
-from ironforgedbot.common.ranks import (
+from ironforgedcore.common.ranks import (
     RANK_POINTS,
     RANK,
-    get_god_alignment_from_member,
     get_next_rank_from_points,
-    get_rank_color_from_points,
     get_rank_from_points,
+)
+from ironforgedbot.common.ranks_discord import (
+    get_god_alignment_from_member,
+    get_rank_color_from_points,
 )
 from ironforgedbot.common.responses import (
     build_response_embed,
@@ -29,7 +28,8 @@ from ironforgedbot.common.responses import (
     send_not_clan_member,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLE, has_prospect_role
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import has_prospect_role
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import text_italic
 from ironforgedbot.decorators.require_role import require_role

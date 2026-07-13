@@ -1,22 +1,46 @@
-"""Service factory for consistent service instantiation patterns."""
+"""Bot-side service factory: re-exports core factories and adds bot-specific.
+
+Bot-specific services (score_service, absent_service) stay in
+ironforgedbot because they depend on bot infrastructure (cache,
+storage.data submodule, gspread Sheets).
+"""
 
 import logging
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedcore.http import AsyncHttpClient
+from ironforgedcore.services.changelog_service import ChangelogService
+from ironforgedcore.services.ingot_service import IngotService
+from ironforgedcore.services.member_service import MemberService
+from ironforgedcore.services.raffle_service import RaffleService
+from ironforgedcore.services.score_history_service import ScoreHistoryService
+from ironforgedcore.services.service_factory import (
+    create_changelog_service,
+    create_ingot_service,
+    create_member_service,
+    create_raffle_service,
+    create_score_history_service,
+    get_wom_service,
+)
+from ironforgedcore.services.wom_service import WomService
 from ironforgedbot.services.absent_service import AbsentMemberService
-from ironforgedbot.services.ingot_service import IngotService
-from ironforgedbot.services.member_service import MemberService
-from ironforgedbot.services.raffle_service import RaffleService
-from ironforgedbot.services.score_history_service import ScoreHistoryService
-from ironforgedbot.services.score_service import get_score_service, ScoreService
-from ironforgedbot.services.wom_service import WomService
+from ironforgedbot.services.score_service import ScoreService, get_score_service
+
+__all__ = [
+    "ServiceFactory",
+    "create_member_service",
+    "create_ingot_service",
+    "create_raffle_service",
+    "create_score_history_service",
+    "create_changelog_service",
+    "create_absent_service",
+    "get_score_service",
+    "get_wom_service",
+]
+
 
 logger = logging.getLogger(__name__)
-
-# Global service instances for stateless/long-lived services
-_score_service_instance: Optional[ScoreService] = None
 
 
 class ServiceFactory:
@@ -31,66 +55,33 @@ class ServiceFactory:
 
     @staticmethod
     def create_member_service(session: AsyncSession) -> MemberService:
-        """Create MemberService instance (per-session for database operations)."""
         return MemberService(session)
 
     @staticmethod
     def create_ingot_service(session: AsyncSession) -> IngotService:
-        """Create IngotService instance with proper dependency injection."""
         return IngotService(session)
 
     @staticmethod
     def create_raffle_service(session: AsyncSession) -> RaffleService:
-        """Create RaffleService instance with full dependency chain."""
         return RaffleService(session)
 
     @staticmethod
     def create_score_history_service(session: AsyncSession) -> ScoreHistoryService:
-        """Create ScoreHistoryService instance."""
         return ScoreHistoryService(session)
 
     @staticmethod
+    def create_changelog_service(session: AsyncSession) -> ChangelogService:
+        return ChangelogService(session)
+
+    @staticmethod
     def create_absent_service(session: AsyncSession) -> AbsentMemberService:
-        """Create AbsentMemberService instance."""
         return AbsentMemberService(session)
 
     @staticmethod
     def get_wom_service() -> WomService:
-        """Get WomService instance with application configuration."""
-        from ironforgedbot.services.wom_service import get_wom_service
-
         return get_wom_service()
 
 
-# Convenience functions for cleaner imports
-def create_member_service(session: AsyncSession) -> MemberService:
-    """Create MemberService instance."""
-    return ServiceFactory.create_member_service(session)
-
-
-def create_ingot_service(session: AsyncSession) -> IngotService:
-    """Create IngotService instance."""
-    return ServiceFactory.create_ingot_service(session)
-
-
-def create_raffle_service(session: AsyncSession) -> RaffleService:
-    """Create RaffleService instance."""
-    return ServiceFactory.create_raffle_service(session)
-
-
-def create_score_history_service(session: AsyncSession) -> ScoreHistoryService:
-    """Create ScoreHistoryService instance."""
-    return ServiceFactory.create_score_history_service(session)
-
-
 def create_absent_service(session: AsyncSession) -> AbsentMemberService:
-    """Create AbsentMemberService instance."""
-    return ServiceFactory.create_absent_service(session)
-
-
-def get_wom_service() -> WomService:
-    """Get WomService instance."""
-    # Delegate directly to avoid potential circular imports
-    from ironforgedbot.services.wom_service import get_wom_service as get_service
-
-    return get_service()
+    """Create AbsentMemberService instance (bot-only — uses Google Sheets)."""
+    return AbsentMemberService(session)

@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
 

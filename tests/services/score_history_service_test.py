@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from ironforgedcore.models.member import Member
 from ironforgedcore.models.score_history import ScoreHistory
-from ironforgedbot.services.score_history_service import ScoreHistoryService
+from ironforgedcore.services.score_history_service import ScoreHistoryService
 from tests.helpers import create_mock_db_session
 
 
@@ -534,7 +534,7 @@ class TestGetStaffScoreSnapshot(unittest.IsolatedAsyncioTestCase):
         self.mock_db.execute = AsyncMock(return_value=mock_result)
 
     async def test_returns_list_of_tuples(self):
-        from ironforgedbot.common.ranks import RANK
+        from ironforgedcore.common.ranks import RANK
 
         self._mock_rows([(111, "StaffA", 9000, RANK.MYTH)])
 
@@ -552,7 +552,7 @@ class TestGetStaffScoreSnapshot(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, [])
 
     async def test_returns_multiple_staff_members(self):
-        from ironforgedbot.common.ranks import RANK
+        from ironforgedcore.common.ranks import RANK
 
         rows = [
             (111, "StaffA", 9000, RANK.MYTH),
@@ -569,7 +569,7 @@ class TestGetStaffScoreSnapshot(unittest.IsolatedAsyncioTestCase):
         self.assertIn((333, "StaffC", 3000, RANK.RUNE), result)
 
     async def test_each_tuple_has_four_elements(self):
-        from ironforgedbot.common.ranks import RANK
+        from ironforgedcore.common.ranks import RANK
 
         self._mock_rows([(111, "StaffA", 9000, RANK.DRAGON)])
 

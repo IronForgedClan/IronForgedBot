@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.schemas.common import ApiError, ApiErrorResponse, ResponseMeta
-from ironforgedbot.services.member_service import MemberNotFoundException
+from ironforgedcore.services.member_service import MemberNotFoundException
 
 logger = logging.getLogger(__name__)
 

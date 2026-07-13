@@ -5,12 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from ironforgedcore.models.changelog import Changelog, ChangeType
 from ironforgedcore.models.member import Member
 from ironforgedcore.models.raffle_ticket import RaffleTicket
-from ironforgedbot.services.raffle_service import (
+from ironforgedcore.services.raffle_service import (
     RaffleService,
     RaffleServiceException,
     RaffleServiceResponse,
 )
-from ironforgedbot.services.ingot_service import IngotServiceResponse
+from ironforgedcore.services.ingot_service import IngotServiceResponse
 from tests.helpers import create_mock_db_session
 
 
@@ -235,7 +235,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         expected = RaffleServiceResponse(False, "Member could not be found", -1)
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_try_buy_ticket_insufficient_ingots(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -262,7 +262,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_try_buy_ticket_first_time_purchase_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -301,7 +301,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.commit.assert_called_once()
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_try_buy_ticket_additional_purchase_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -336,7 +336,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.mock_db.execute.call_count, 2)
         self.mock_db.commit.assert_called_once()
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_try_buy_ticket_large_quantity(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -369,7 +369,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         expected = RaffleServiceResponse(True, "500 raffle tickets purchased", 500)
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_try_buy_ticket_expensive_tickets(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -426,7 +426,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(exception.message, custom_message)
         self.assertEqual(str(exception), custom_message)
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_multiple_purchases_same_member(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -494,7 +494,7 @@ class TestRaffleService(unittest.IsolatedAsyncioTestCase):
         expected = RaffleServiceResponse(True, "1 raffle tickets purchased", 1)
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.raffle_service.datetime")
+    @patch("ironforgedcore.services.raffle_service.datetime")
     async def test_timestamp_consistency(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 

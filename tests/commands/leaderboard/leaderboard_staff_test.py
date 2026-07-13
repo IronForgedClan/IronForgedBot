@@ -11,7 +11,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_types import (
     LeaderboardConfig,
     StaffLeaderboardEntry,
 )
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 
 
 def _make_entry(

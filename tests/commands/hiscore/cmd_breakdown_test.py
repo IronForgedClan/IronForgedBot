@@ -3,8 +3,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
 from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedcore.http import HttpException
 from ironforgedcore.models.score import ScoreBreakdown, SkillScore, ActivityScore

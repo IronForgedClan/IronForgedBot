@@ -6,10 +6,7 @@ import sys
 import discord
 
 from ironforgedbot.automations import IronForgedAutomations
-from ironforgedbot.common.helpers import (
-    get_text_channel,
-    populate_emoji_cache,
-)
+from ironforgedbot.common.helpers import get_text_channel, populate_emoji_cache
 from ironforgedbot.config import CONFIG
 from ironforgedcore.config import ENVIRONMENT
 from ironforgedcore.event_emitter import event_emitter

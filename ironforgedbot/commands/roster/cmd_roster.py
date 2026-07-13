@@ -4,19 +4,19 @@ from typing import List
 import discord
 from discord import app_commands
 
-from ironforgedbot.common.helpers import (
-    normalize_discord_string,
-    reply_with_file,
-)
+from ironforgedcore.common.normalize import normalize_discord_string
+from ironforgedbot.common.helpers import reply_with_file
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.ranks import RANK, get_rank_from_member
+from ironforgedcore.common.ranks import RANK
+from ironforgedbot.common.ranks_discord import get_rank_from_member
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import check_member_has_role, has_prospect_role
 from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedcore.http import HTTP
 from ironforgedcore.models.member import Member
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)

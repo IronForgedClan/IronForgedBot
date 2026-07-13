@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import discord
 from tabulate import tabulate
 
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.services.ingot_service import IngotServiceResponse
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.services.ingot_service import IngotServiceResponse
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,

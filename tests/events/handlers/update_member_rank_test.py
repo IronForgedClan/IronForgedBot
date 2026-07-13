@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.events.handlers.update_member_rank import UpdateMemberRankHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from tests.helpers import create_test_db_member, create_test_member

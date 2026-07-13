@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models import Changelog, Member
 from ironforgedcore.models.changelog import ChangeType
-from ironforgedbot.services.member_service import MemberNotFoundException
+from ironforgedcore.services.member_service import MemberNotFoundException
 
 from tests.api_tests.helpers import build_test_app, build_test_client, make_consumer
 
@@ -77,7 +77,7 @@ class TestGetMemberIngots(unittest.IsolatedAsyncioTestCase):
     async def test_returns_balance(self):
         member = _make_member(discord_id=42, ingots=500)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord",
             new=AsyncMock(return_value=member),
         ):
             response = self.client.get("/members/42/ingots")
@@ -90,7 +90,7 @@ class TestGetMemberIngots(unittest.IsolatedAsyncioTestCase):
 
     async def test_member_not_found_404(self):
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord_or_raise",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord_or_raise",
             new=AsyncMock(
                 side_effect=MemberNotFoundException("No member with id=999999")
             ),
@@ -109,7 +109,7 @@ class TestGetMemberIngots(unittest.IsolatedAsyncioTestCase):
             ingots=750,
         )
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord",
             new=AsyncMock(return_value=member),
         ):
             response = self.client.get(
@@ -157,11 +157,11 @@ class TestGetMemberIngotTransactions(unittest.IsolatedAsyncioTestCase):
             ),
         ]
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord",
             new=AsyncMock(return_value=member),
         ):
             with patch(
-                "ironforgedbot.services.changelog_service.ChangelogService.latest_ingot_transactions",
+                "ironforgedcore.services.changelog_service.ChangelogService.latest_ingot_transactions",
                 new=AsyncMock(return_value=logs),
             ):
                 response = self.client.get("/members/42/ingots/transactions")
@@ -186,11 +186,11 @@ class TestGetMemberIngotTransactions(unittest.IsolatedAsyncioTestCase):
     async def test_passes_days_param(self):
         member = _make_member(discord_id=42)
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_id_or_discord",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_id_or_discord",
             new=AsyncMock(return_value=member),
         ):
             with patch(
-                "ironforgedbot.services.changelog_service.ChangelogService.latest_ingot_transactions",
+                "ironforgedcore.services.changelog_service.ChangelogService.latest_ingot_transactions",
                 new=AsyncMock(return_value=[]),
             ) as mock_tx:
                 response = self.client.get("/members/42/ingots/transactions?days=30")

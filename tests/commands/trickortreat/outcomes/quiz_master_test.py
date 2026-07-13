@@ -7,7 +7,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     QUIZ_CORRECT_MIN,
     QUIZ_PENALTY_CHANCE,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -81,7 +81,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             self.assertLessEqual(amount, QUIZ_CORRECT_MAX)
 
     @patch("ironforgedcore.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedcore.services.member_service.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.choice")
     @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.random")
     @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.randrange")
@@ -139,7 +139,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
             self.assertLess(amount, 0)
 
     @patch("ironforgedcore.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedcore.services.member_service.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.choice")
     @patch("ironforgedbot.commands.trickortreat.outcomes.quiz_master.random.random")
     async def test_wrong_answer_no_penalty(
@@ -192,7 +192,7 @@ class TestQuizMasterOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(formatted, str)
 
     @patch("ironforgedcore.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedcore.services.member_service.MemberService")
     async def test_quiz_view_timeout(self, mock_member_service_class, mock_db):
         """Test that quiz view handles timeout correctly."""
         handler = create_test_trick_or_treat_handler()

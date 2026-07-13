@@ -3,10 +3,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 from ironforgedcore.models import Member
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
-from ironforgedbot.services.member_service import MemberNotFoundException
+from ironforgedcore.services.member_service import MemberNotFoundException
 
 from api.schemas.score import ScoreHistoryQueryParams
 
@@ -121,11 +121,11 @@ class TestGetPlayerScoreHistory(unittest.IsolatedAsyncioTestCase):
     async def test_returns_history(self):
         member = _make_member_with_rsn()
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_rsn",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_rsn",
             new=AsyncMock(return_value=member),
         ):
             with patch(
-                "ironforgedbot.services.score_history_service.ScoreHistoryService.get_score_history",
+                "ironforgedcore.services.score_history_service.ScoreHistoryService.get_score_history",
                 new=AsyncMock(return_value={7: 100, 30: 200, 90: None}),
             ):
                 response = self.client.get("/players/zezima/score-history?days=7,30,90")
@@ -137,7 +137,7 @@ class TestGetPlayerScoreHistory(unittest.IsolatedAsyncioTestCase):
 
     async def test_member_not_found_404(self):
         with patch(
-            "ironforgedbot.services.member_service.MemberService.get_member_by_rsn_or_raise",
+            "ironforgedcore.services.member_service.MemberService.get_member_by_rsn_or_raise",
             new=AsyncMock(
                 side_effect=MemberNotFoundException("No member with rsn=ghost")
             ),

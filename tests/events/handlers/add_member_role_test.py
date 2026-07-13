@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.events.handlers.add_member_role import AddMemberRoleHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
-from ironforgedbot.services.member_service import (
+from ironforgedcore.services.member_service import (
     MemberServiceReactivateResponse,
     UniqueNicknameViolation,
 )
@@ -266,7 +266,7 @@ class TestAddMemberRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.events.handlers.add_member_role.get_rank_from_member")
     async def test_execute_god_alignment_maps_to_god_rank(self, mock_get_rank):
         """God alignment ranks are mapped to GOD rank."""
-        from ironforgedbot.common.ranks import GOD_ALIGNMENT
+        from ironforgedcore.common.ranks import GOD_ALIGNMENT
 
         mock_get_rank.return_value = GOD_ALIGNMENT.ZAMORAK
         self.mock_service.get_member_by_discord_id = AsyncMock(return_value=None)

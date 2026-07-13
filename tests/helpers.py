@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, Mock
 
 import discord
 from sqlalchemy.ext.asyncio import AsyncSession
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK, get_activity_threshold_for_rank
 
 VALID_CONFIG = {
     "TEMP_DIR": "/tmp",
@@ -599,7 +599,7 @@ def validate_role_mappings() -> list[str]:
     Returns:
         List of validation error messages (empty if valid)
     """
-    from ironforgedbot.common.wom_role_mapping import (
+    from ironforgedcore.common.wom_role_mapping import (
         WOM_TO_DISCORD_RANK_MAPPING,
         WOM_TO_DISCORD_ROLE_MAPPING,
     )
@@ -645,7 +645,7 @@ def get_all_wom_roles_for_discord_role(discord_role: ROLE) -> list:
         List of WOM GroupRole values that map to the Discord role
     """
     from wom import GroupRole
-    from ironforgedbot.common.wom_role_mapping import WOM_TO_DISCORD_ROLE_MAPPING
+    from ironforgedcore.common.wom_role_mapping import WOM_TO_DISCORD_ROLE_MAPPING
 
     return [
         wom_role
@@ -665,7 +665,7 @@ def get_all_wom_roles_for_discord_rank(discord_rank: RANK) -> list:
         List of WOM GroupRole values that map to the Discord rank
     """
     from wom import GroupRole
-    from ironforgedbot.common.wom_role_mapping import WOM_TO_DISCORD_RANK_MAPPING
+    from ironforgedcore.common.wom_role_mapping import WOM_TO_DISCORD_RANK_MAPPING
 
     return [
         wom_role

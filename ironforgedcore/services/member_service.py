@@ -8,10 +8,10 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.helpers import normalize_discord_string, normalize_rsn
-from ironforgedbot.common.logging_utils import log_database_operation
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.normalize import normalize_discord_string, normalize_rsn
+from ironforgedcore.common.logging_utils import log_database_operation
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models.changelog import Changelog, ChangeType
 from ironforgedcore.models.member import Member
 

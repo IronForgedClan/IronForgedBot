@@ -1,8 +1,8 @@
 from typing import Dict, Optional
 from wom import GroupRole
 
-from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 
 WOM_TO_DISCORD_ROLE_MAPPING: Dict[GroupRole, ROLE] = {
     # Prospect (Dogsbody maps to MEMBER role; is_prospect flag is set separately)

@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, Mock
 
 import discord
 
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
 from ironforgedbot.events.handlers.remove_prospect_role import RemoveProspectRoleHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from tests.helpers import create_test_db_member, create_test_member

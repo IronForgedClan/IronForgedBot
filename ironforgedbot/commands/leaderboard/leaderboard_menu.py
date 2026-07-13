@@ -2,7 +2,7 @@ import discord
 from reactionmenu import ViewButton, ViewMenu
 
 from ironforgedbot.commands.leaderboard.leaderboard_embeds import _EMBED_TIMEOUT
-from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedcore.common.normalize import normalize_discord_string
 
 
 class LeaderboardMenu(ViewMenu):

@@ -7,7 +7,7 @@ import time
 import discord
 
 from ironforgedcore.database import db
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 COMMAND_PRICE_DATA_FILE = "data/command_price.json"

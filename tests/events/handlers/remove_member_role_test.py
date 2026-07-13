@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 from discord.errors import Forbidden
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.events.handlers.remove_member_role import RemoveMemberRoleHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from tests.helpers import create_test_db_member, create_test_member

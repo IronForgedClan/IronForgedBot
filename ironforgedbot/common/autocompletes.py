@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands
 
-from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedcore.common.normalize import normalize_discord_string
 
 
 async def role_autocomplete(

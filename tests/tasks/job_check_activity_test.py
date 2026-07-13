@@ -7,7 +7,7 @@ import discord
 import wom
 from wom import GroupRole
 
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.services.wom_service import (
     WomRateLimitError,
     WomServiceError,
 )
@@ -17,8 +17,8 @@ from ironforgedbot.tasks.job_check_activity import (
     _find_inactive_users,
     _sort_results_safely,
 )
-from ironforgedbot.common.activity_check import ActivityCheckResult
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.activity_check import ActivityCheckResult
+from ironforgedcore.common.roles import ROLE
 
 
 def create_mock_activity_result(

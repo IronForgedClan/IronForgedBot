@@ -7,12 +7,12 @@ from sqlalchemy import Sequence, delete, func, select, update, values
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import session
 
-from ironforgedbot.common.logging_utils import log_database_operation
+from ironforgedcore.common.logging_utils import log_database_operation
 from ironforgedcore.models.changelog import Changelog, ChangeType
 from ironforgedcore.models.member import Member
 from ironforgedcore.models.raffle_ticket import RaffleTicket
-from ironforgedbot.services.ingot_service import IngotService
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.ingot_service import IngotService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

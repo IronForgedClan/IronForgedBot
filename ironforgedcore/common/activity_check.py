@@ -13,9 +13,9 @@ from wom.models import (
     SnapshotTimelineEntry,
 )
 
-from ironforgedbot.common.helpers import normalize_rsn
-from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
-from ironforgedbot.common.wom_role_mapping import (
+from ironforgedcore.common.normalize import normalize_rsn
+from ironforgedcore.common.ranks import RANK, get_activity_threshold_for_rank
+from ironforgedcore.common.wom_role_mapping import (
     get_discord_role_for_wom_role,
     get_display_name_for_wom_role,
 )
@@ -330,7 +330,7 @@ async def check_bulk_activity(
         List of ActivityCheckResult for all members
     """
     from ironforgedcore.database import db
-    from ironforgedbot.services.service_factory import create_member_service
+    from ironforgedcore.services.service_factory import create_member_service
 
     results = []
 
