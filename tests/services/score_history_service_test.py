@@ -2,8 +2,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.models.member import Member
-from ironforgedbot.models.score_history import ScoreHistory
+from ironforgedcore.models.member import Member
+from ironforgedcore.models.score_history import ScoreHistory
 from ironforgedbot.services.score_history_service import ScoreHistoryService
 from tests.helpers import create_mock_db_session
 

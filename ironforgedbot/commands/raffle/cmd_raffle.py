@@ -14,7 +14,7 @@ from ironforgedbot.decorators.require_channel import require_channel
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

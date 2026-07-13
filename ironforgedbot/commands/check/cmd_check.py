@@ -21,7 +21,7 @@ from ironforgedbot.common.ranks import get_rank_from_member
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import (
     create_absent_service,

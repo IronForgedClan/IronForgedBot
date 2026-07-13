@@ -9,7 +9,7 @@ from ironforgedbot.common.roles import (
     PROSPECT_ROLE_NAME,
     is_member_banned_by_role,
 )
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.common.helpers import (
     datetime_to_discord_relative,
     find_emoji,

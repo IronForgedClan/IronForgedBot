@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models import Changelog, Member
-from ironforgedbot.models.changelog import ChangeType
+from ironforgedcore.models import Changelog, Member
+from ironforgedcore.models.changelog import ChangeType
 from ironforgedbot.services.member_service import MemberNotFoundException
 
 from tests.api_tests.helpers import build_test_app, build_test_client, make_consumer

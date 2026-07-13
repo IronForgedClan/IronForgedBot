@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.models.absent_member import AbsentMember
-from ironforgedbot.models.member import Member
+from ironforgedcore.models.absent_member import AbsentMember
+from ironforgedcore.models.member import Member
 from ironforgedbot.services.absent_service import AbsentMemberService
 
 

@@ -19,7 +19,7 @@ from ironforgedbot.common.helpers import (
 )
 from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.services.service_factory import (
     create_absent_service,
 )

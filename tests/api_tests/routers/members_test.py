@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models import Member
+from ironforgedcore.models import Member
 from ironforgedbot.services.member_service import (
     MemberListFilter,
     MemberListResult,

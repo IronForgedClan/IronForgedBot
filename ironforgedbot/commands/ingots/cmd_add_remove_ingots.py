@@ -23,7 +23,7 @@ from ironforgedbot.common.text_formatters import (
     text_italic,
 )
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_ingot_service
 from ironforgedbot.services.ingot_service import IngotServiceResponse

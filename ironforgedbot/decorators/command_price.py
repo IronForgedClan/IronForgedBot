@@ -6,7 +6,7 @@ import time
 
 import discord
 
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)

@@ -12,8 +12,8 @@ from ironforgedbot.common.helpers import normalize_discord_string, normalize_rsn
 from ironforgedbot.common.logging_utils import log_database_operation
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models.changelog import Changelog, ChangeType
-from ironforgedbot.models.member import Member
+from ironforgedcore.models.changelog import Changelog, ChangeType
+from ironforgedcore.models.member import Member
 
 
 class UniqueNicknameViolation(Exception):

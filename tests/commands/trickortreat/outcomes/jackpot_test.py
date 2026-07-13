@@ -34,7 +34,7 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("already claimed", embed.description.lower())
 
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
     async def test_result_jackpot_success(

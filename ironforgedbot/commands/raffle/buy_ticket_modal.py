@@ -10,7 +10,7 @@ from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

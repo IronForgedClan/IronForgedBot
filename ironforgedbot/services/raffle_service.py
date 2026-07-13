@@ -8,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import session
 
 from ironforgedbot.common.logging_utils import log_database_operation
-from ironforgedbot.models.changelog import Changelog, ChangeType
-from ironforgedbot.models.member import Member
-from ironforgedbot.models.raffle_ticket import RaffleTicket
+from ironforgedcore.models.changelog import Changelog, ChangeType
+from ironforgedcore.models.member import Member
+from ironforgedcore.models.raffle_ticket import RaffleTicket
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.member_service import MemberService
 

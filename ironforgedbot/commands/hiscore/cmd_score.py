@@ -31,11 +31,11 @@ from ironforgedbot.common.responses import (
 )
 from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
-from ironforgedbot.models.score import ScoreBreakdown
+from ironforgedcore.models.score import ScoreBreakdown
 from ironforgedbot.services.score_history_service import ScoreHistoryService
 from ironforgedbot.services.score_service import get_score_service
 

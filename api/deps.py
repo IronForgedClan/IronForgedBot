@@ -3,7 +3,7 @@ from typing import AsyncGenerator
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 from api.auth import verify_bearer
 from api.models import ApiConsumer

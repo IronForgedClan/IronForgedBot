@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models import Member
+from ironforgedcore.models import Member
 
 
 class MemberSummary(BaseModel):

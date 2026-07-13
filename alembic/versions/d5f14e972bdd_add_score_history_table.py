@@ -11,7 +11,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from ironforgedbot.models.decorators import UTCDateTime
+from ironforgedcore.models.decorators import UTCDateTime
 
 # revision identifiers, used by Alembic.
 revision: str = "d5f14e972bdd"

@@ -1,6 +1,6 @@
 import logging
 
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

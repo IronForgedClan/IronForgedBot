@@ -11,7 +11,7 @@ from ironforgedbot.common.roles import (
     BLACKLISTED_ROLE_NAME,
     BANNED_ROLE_NAME,
 )
-from ironforgedbot.models.member import Member
+from ironforgedcore.models.member import Member
 from ironforgedbot.services.member_service import (
     UniqueDiscordIdVolation,
     UniqueNicknameViolation,

@@ -1,0 +1,26 @@
+[project]
+name = "ironforgedcore"
+version = "0.1.0"
+description = "Shared database, models, services, and business logic for IronForgedBot and its API"
+requires-python = ">=3.13"
+dependencies = [
+    "sqlalchemy[asyncio]",
+    "aiomysql",
+    "alembic",
+    "pydantic",
+    "aiohttp",
+    "python-dotenv",
+    "aiofiles",
+    "python-dateutil",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+    "ironforgedcore",
+    "ironforgedcore.models",
+    "ironforgedcore.exceptions",
+]

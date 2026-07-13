@@ -6,9 +6,9 @@ import discord
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
 from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HttpException
-from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
+from ironforgedcore.models.score import ScoreBreakdown, SkillScore, ActivityScore
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,

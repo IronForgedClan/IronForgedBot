@@ -14,7 +14,7 @@ from ironforgedbot.common.roles import (
     get_member_flags_from_discord,
     get_flag_changes,
 )
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.services.member_service import (
     MemberService,
     UniqueDiscordIdVolation,

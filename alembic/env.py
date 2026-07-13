@@ -9,7 +9,7 @@ from sqlalchemy.engine import Connection
 
 from alembic import context
 
-from ironforgedbot.models import Base
+from ironforgedcore.models import Base
 
 from api.models import ApiAudit, ApiConsumer  # noqa: F401
 

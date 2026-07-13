@@ -16,7 +16,7 @@ from api.http_utils import (
     get_client_ip,
 )
 from api.models import ApiAudit
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

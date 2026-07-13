@@ -2,10 +2,10 @@ from datetime import datetime, timezone
 import uuid
 from sqlalchemy import BigInteger, Boolean, String, Enum
 from sqlalchemy.orm import Mapped, mapped_column
+from ironforgedcore.database import Base
+from ironforgedcore.models.decorators import UTCDateTime
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.database.database import Base
-from ironforgedbot.models.decorators import UTCDateTime
 
 
 class Member(Base):

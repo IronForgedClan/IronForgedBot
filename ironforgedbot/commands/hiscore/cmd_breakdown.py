@@ -33,9 +33,9 @@ from ironforgedbot.common.roles import ROLE, has_prospect_role
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import text_italic
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import HTTP, HttpException
-from ironforgedbot.models.score import ActivityScore, ScoreBreakdown
+from ironforgedcore.models.score import ActivityScore, ScoreBreakdown
 from ironforgedbot.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)

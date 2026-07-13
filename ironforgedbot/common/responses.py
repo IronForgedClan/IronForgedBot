@@ -12,7 +12,7 @@ from ironforgedbot.config import CONFIG
 from ironforgedbot.logging_config import get_logger_instance
 from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

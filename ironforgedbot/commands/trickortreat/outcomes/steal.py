@@ -10,7 +10,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     LOW_INGOT_MIN,
 )
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.services.member_service import MemberService
 
 if TYPE_CHECKING:

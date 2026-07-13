@@ -236,7 +236,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.services.service_factory.create_member_service")
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     async def test_loads_all_members_once_uses_dict_lookup(
         self, mock_db, mock_create_service
     ):
@@ -263,7 +263,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
         mock_member_service.get_all_active_members.assert_called_once()
 
     @patch("ironforgedbot.services.service_factory.create_member_service")
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     async def test_skips_members_not_in_db_with_warning(
         self, mock_db, mock_create_service
     ):
@@ -297,7 +297,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("ironforgedbot.services.service_factory.create_member_service")
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     async def test_handles_exception_gracefully(self, mock_db, mock_create_service):
         mock_session = AsyncMock()
         mock_ctx = AsyncMock()
@@ -318,7 +318,7 @@ class TestCheckBulkActivity(unittest.IsolatedAsyncioTestCase):
             await check_bulk_activity(wom_group, gains, [])
 
     @patch("ironforgedbot.services.service_factory.create_member_service")
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     async def test_matches_with_normalized_rsn(self, mock_db, mock_create_service):
         mock_session = AsyncMock()
         mock_ctx = AsyncMock()

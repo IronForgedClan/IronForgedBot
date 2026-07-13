@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
+from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 
 
 class SkillScoreSchema(BaseModel):

@@ -8,8 +8,8 @@ from tabulate import tabulate
 from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_h2
-from ironforgedbot.database.database import db
-from ironforgedbot.models.member import Member
+from ironforgedcore.database import db
+from ironforgedcore.models.member import Member
 from ironforgedbot.services.ingot_service import IngotService
 from ironforgedbot.services.service_factory import (
     create_ingot_service,

@@ -6,8 +6,8 @@ from sqlalchemy.exc import IntegrityError
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models.changelog import ChangeType, Changelog
-from ironforgedbot.models.member import Member
+from ironforgedcore.models.changelog import ChangeType, Changelog
+from ironforgedcore.models.member import Member
 from ironforgedbot.services.member_service import (
     MEMBER_FLAGS,
     MemberListFilter,

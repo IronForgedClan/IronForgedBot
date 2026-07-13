@@ -9,7 +9,7 @@ from api.permissions import KNOWN_PERM_NAMES
 from api.tokens import hash_token
 
 try:
-    from ironforgedbot.database.database import db
+    from ironforgedcore.database import db
 except RuntimeError:
     db = None
 

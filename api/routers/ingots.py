@@ -14,7 +14,7 @@ from api.schemas.ingot import (
     IngotTransaction,
     IngotTransactionsResponse,
 )
-from ironforgedbot.models import Changelog
+from ironforgedcore.models import Changelog
 from ironforgedbot.services.changelog_service import ChangelogService
 from ironforgedbot.services.service_factory import create_member_service
 

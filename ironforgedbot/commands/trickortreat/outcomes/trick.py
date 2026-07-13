@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import discord
 
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.services.member_service import MemberService
 
 if TYPE_CHECKING:

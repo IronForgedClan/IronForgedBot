@@ -9,8 +9,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ironforgedbot.database.database import Base
-from ironforgedbot.models.decorators import UTCDateTime
+from ironforgedcore.database import Base
+from ironforgedcore.models.decorators import UTCDateTime
 
 
 class ApiAudit(Base):

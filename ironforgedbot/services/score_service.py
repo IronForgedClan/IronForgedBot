@@ -4,9 +4,9 @@ from ironforgedbot.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_api_call
 from ironforgedbot.common.ranks import RANK, get_rank_from_points
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedbot.http import AsyncHttpClient, HttpResponse
-from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
+from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)

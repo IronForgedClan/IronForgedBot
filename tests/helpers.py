@@ -441,7 +441,7 @@ def create_test_member_with_scores(
 
 def create_test_score_breakdown(skills_count=2, activities_count=2):
     """Creates real ScoreBreakdown object for cache serialization testing."""
-    from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
+    from ironforgedcore.models.score import ScoreBreakdown, SkillScore, ActivityScore
 
     skills = []
     for i in range(skills_count):

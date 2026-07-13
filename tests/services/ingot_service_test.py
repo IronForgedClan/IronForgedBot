@@ -2,8 +2,8 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.models.changelog import Changelog, ChangeType
-from ironforgedbot.models.member import Member
+from ironforgedcore.models.changelog import Changelog, ChangeType
+from ironforgedcore.models.member import Member
 from ironforgedbot.services.ingot_service import IngotService, IngotServiceResponse
 from tests.helpers import create_mock_db_session
 

@@ -19,9 +19,9 @@ from ironforgedbot.common.responses import (
 from ironforgedbot.common.text_formatters import text_code_block
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.models.changelog import Changelog
+from ironforgedcore.models.changelog import Changelog
 from ironforgedbot.services.changelog_service import ChangelogService
 from ironforgedbot.services.member_service import MemberService
 

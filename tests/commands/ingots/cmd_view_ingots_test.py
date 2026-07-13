@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.common.ranks import RANK
 from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models.member import Member
+from ironforgedcore.models.member import Member
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -287,7 +287,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     ):
         """Test that transactions are displayed when available."""
         from datetime import datetime, timezone
-        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedcore.models.changelog import Changelog, ChangeType
 
         mock_transactions = [
             Changelog(
@@ -428,7 +428,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     def test_format_transaction_with_none_comment(self):
         """Test format_transaction handles None comment as an empty string."""
         from datetime import datetime, timezone
-        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedcore.models.changelog import Changelog, ChangeType
         from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
 
         changelog = Changelog(
@@ -449,7 +449,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     def test_format_transaction_add_ingots(self):
         """Test format_transaction with ADD_INGOTS."""
         from datetime import datetime, timezone
-        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedcore.models.changelog import Changelog, ChangeType
         from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
 
         changelog = Changelog(
@@ -470,7 +470,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     def test_format_transaction_remove_ingots(self):
         """Test format_transaction with REMOVE_INGOTS."""
         from datetime import datetime, timezone
-        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedcore.models.changelog import Changelog, ChangeType
         from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
 
         changelog = Changelog(
@@ -491,7 +491,7 @@ class TestCmdViewIngots(unittest.IsolatedAsyncioTestCase):
     def test_format_transaction_with_none_values(self):
         """Test format_transaction handles None values correctly."""
         from datetime import datetime, timezone
-        from ironforgedbot.models.changelog import Changelog, ChangeType
+        from ironforgedcore.models.changelog import Changelog, ChangeType
         from ironforgedbot.commands.ingots.cmd_view_ingots import format_transaction
 
         changelog = Changelog(

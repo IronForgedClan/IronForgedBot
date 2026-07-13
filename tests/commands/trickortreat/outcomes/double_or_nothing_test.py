@@ -27,7 +27,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self.interaction = create_mock_discord_interaction(user=self.test_user)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.STATE")
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     async def test_result_double_or_nothing_creates_offer(
         self, mock_member_service_class, mock_db, mock_state
@@ -68,7 +68,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         user_id_str = str(self.test_user.id)
         self.assertIn(user_id_str, mock_state.state["double_or_nothing_offers"])
 
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     async def test_process_double_or_nothing_win(
         self, mock_member_service_class, mock_db
@@ -106,7 +106,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, discord.Embed)
         self.assertIn("won", result.description.lower())
 
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     async def test_process_double_or_nothing_lose(
         self, mock_member_service_class, mock_db
@@ -144,7 +144,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(result, discord.Embed)
         self.assertIn("lost", result.description.lower())
 
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     async def test_double_or_nothing_keep_callback(
         self, mock_member_service_class, mock_db
@@ -181,7 +181,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         embed = edit_call_kwargs["embed"]
         self.assertIn("kept", embed.description.lower())
 
-    @patch("ironforgedbot.database.database.db")
+    @patch("ironforgedcore.database.db")
     @patch("ironforgedbot.services.member_service.MemberService")
     async def test_double_or_nothing_timeout(self, mock_member_service_class, mock_db):
         """Test that double-or-nothing view times out correctly."""

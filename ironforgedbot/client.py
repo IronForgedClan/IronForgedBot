@@ -15,7 +15,7 @@ from ironforgedbot.event_emitter import event_emitter
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
 from ironforgedbot.state import STATE
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 # Import handlers to trigger self-registration
 import ironforgedbot.events.handlers  # noqa: F401

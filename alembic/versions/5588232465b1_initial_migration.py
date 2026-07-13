@@ -8,7 +8,7 @@ Create Date: 2025-07-28 18:59:03.455915
 
 from typing import Sequence, Union
 
-from ironforgedbot.models.decorators import UTCDateTime
+from ironforgedcore.models.decorators import UTCDateTime
 
 from alembic import op
 import sqlalchemy as sa

@@ -329,7 +329,7 @@ async def check_bulk_activity(
     Returns:
         List of ActivityCheckResult for all members
     """
-    from ironforgedbot.database.database import db
+    from ironforgedcore.database import db
     from ironforgedbot.services.service_factory import create_member_service
 
     results = []

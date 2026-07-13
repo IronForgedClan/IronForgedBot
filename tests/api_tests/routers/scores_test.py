@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.ranks import RANK
-from ironforgedbot.models import Member
-from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
+from ironforgedcore.models import Member
+from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedbot.services.member_service import MemberNotFoundException
 
 from api.schemas.score import ScoreHistoryQueryParams
@@ -83,7 +83,7 @@ class TestGetPlayerScore(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(body["data"]["bosses"]), 1)
 
     async def test_hiscores_not_found_404(self):
-        from ironforgedbot.exceptions.score_exceptions import HiscoresNotFound
+        from ironforgedcore.exceptions.score_exceptions import HiscoresNotFound
 
         with patch(
             "ironforgedbot.services.score_service.get_score_service"

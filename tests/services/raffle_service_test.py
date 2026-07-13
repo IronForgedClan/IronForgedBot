@@ -2,9 +2,9 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.models.changelog import Changelog, ChangeType
-from ironforgedbot.models.member import Member
-from ironforgedbot.models.raffle_ticket import RaffleTicket
+from ironforgedcore.models.changelog import Changelog, ChangeType
+from ironforgedcore.models.member import Member
+from ironforgedcore.models.raffle_ticket import RaffleTicket
 from ironforgedbot.services.raffle_service import (
     RaffleService,
     RaffleServiceException,

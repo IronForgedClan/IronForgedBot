@@ -14,7 +14,7 @@ from api.schemas.score import (
     ScoreHistoryQueryParams,
     ScoreHistoryResponse,
 )
-from ironforgedbot.exceptions.score_exceptions import HiscoresNotFound
+from ironforgedcore.exceptions.score_exceptions import HiscoresNotFound
 from ironforgedbot.http import HTTP
 from ironforgedbot.services import score_service as score_service_module
 from ironforgedbot.services.service_factory import (

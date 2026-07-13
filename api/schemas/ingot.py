@@ -4,7 +4,7 @@ from enum import Enum
 from pydantic import BaseModel
 
 from api.schemas.member import MemberRef
-from ironforgedbot.models import Changelog, Member
+from ironforgedcore.models import Changelog, Member
 
 
 class IngotTransaction(BaseModel):

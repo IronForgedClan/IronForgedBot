@@ -8,7 +8,7 @@ from tabulate import tabulate
 
 from ironforgedbot.common.helpers import format_duration
 from ironforgedbot.common.text_formatters import text_h2
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.services.absent_service import AbsentMemberService
 

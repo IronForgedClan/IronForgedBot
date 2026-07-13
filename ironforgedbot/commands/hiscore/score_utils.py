@@ -1,4 +1,4 @@
-from ironforgedbot.models.score import ScoreBreakdown
+from ironforgedcore.models.score import ScoreBreakdown
 
 
 def _calculate_points(data: ScoreBreakdown) -> tuple[int, int, int]:

@@ -19,7 +19,7 @@ from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedbot.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_code_block
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.services.wom_service import (

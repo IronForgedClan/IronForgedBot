@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.services.member_service import MemberService
 
