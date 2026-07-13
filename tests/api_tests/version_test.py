@@ -8,17 +8,23 @@ class TestGetApiVersion(unittest.TestCase):
     def test_reads_from_file(self):
         from api.version import get_api_version
 
-        with patch("builtins.open", mock_open(read_data="1.2.3\n")) as mock_file:
+        with patch(
+            "builtins.open",
+            mock_open(read_data='{"bot": "0.0.0", "api": "1.2.3"}'),
+        ) as mock_file:
             result = get_api_version()
             self.assertEqual(result, "1.2.3")
             mock_file.assert_called_once()
 
-    def test_strips_whitespace(self):
+    def test_returns_api_field_value(self):
         from api.version import get_api_version
 
-        with patch("builtins.open", mock_open(read_data="  0.1.0  \n")):
+        with patch(
+            "builtins.open",
+            mock_open(read_data='{"bot": "0.0.0", "api": "  0.1.0  "}'),
+        ):
             result = get_api_version()
-            self.assertEqual(result, "0.1.0")
+            self.assertEqual(result, "  0.1.0  ")
 
     def test_reads_actual_version_file(self):
         from api.version import get_api_version

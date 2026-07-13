@@ -1,6 +1,7 @@
 <h1 align="center">Iron Forged Bot</h1>
 <p align="center">
-<img alt="Latest Version" src="https://img.shields.io/github/v/tag/IronForgedClan/IronForgedBot?sort=semver&label=version&color=%20%2361ad38">
+<img alt="Bot Version" src="https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/IronForgedClan/IronForgedBot/main/versions.json&query=$.bot&label=bot&color=%20%2361ad38">
+<img alt="API Version" src="https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/IronForgedClan/IronForgedBot/main/versions.json&query=$.api&label=api&color=blue">
 <a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
@@ -224,7 +225,7 @@ Now you can modify the example `.env` file with your values.
 | BOT_COMMANDS_CHANNEL_ID         | The unique ID of the bot commands channel.                                                                         | Your own Discord server channel: right click, "Copy Channel ID".     |
 | RANKINGS_CHANNEL_ID             | The unique ID of the rankings/scoring information channel.                                                         | Your own Discord server channel: right click, "Copy Channel ID".     |
 | BOT_CHANGELOG_CHANNEL_ID        | The unique ID of the bot changelog channel.                                                                        | Your own Discord server channel: right click, "Copy Channel ID".     |
-| CREATE_TICKET_CHANNEL_ID        | The unique ID of the channel where users submit feedback or support tickets.                                        | Your own Discord server channel: right click, "Copy Channel ID".     |
+| CREATE_TICKET_CHANNEL_ID        | The unique ID of the channel where users submit feedback or support tickets.                                       | Your own Discord server channel: right click, "Copy Channel ID".     |
 | DB_ROOT                         | The password used by the root database account.                                                                    | Generate a secure password.                                          |
 | DB_USER                         | The name of the user account the bot will use to access the database.                                              | Any value. Eg: test_user                                             |
 | DB_PASS                         | The password of the account the bot will use to access the database.                                               | Generate a secure password.                                          |
@@ -241,6 +242,11 @@ Now you can modify the example `.env` file with your values.
 | CRON_CHECK_DISCREPANCIES        | Discrepancy check schedule. Default: `0 0 * * 0` (Sunday 0:00 UTC)                                                 | Standard cron format                                                 |
 | CRON_CLEAR_CACHES               | Cache cleanup schedule. Default: `*/10 * * * *` (every 10 minutes)                                                 | Standard cron format                                                 |
 | CRON_PAYROLL                    | Monthly payroll schedule. Default: `0 6 1 * *` (1st of month at 6:00 UTC)                                          | Standard cron format                                                 |
+| API_HOST                        | Bind address for the API. Default: `0.0.0.0`.                                                                      | Any valid host.                                                      |
+| API_PORT                        | Port the API listens on. Default: `8080`.                                                                          | Integer 1-65535.                                                     |
+| API_RATE_LIMIT                  | Per-consumer request limit. Default: `30`.                                                                         | Integer. `0` disables.                                               |
+| API_TRUSTED_HOSTS               | Comma-separated trusted reverse-proxy IPs for X-Forwarded-For parsing. Default: `127.0.0.1`.                       | Comma-separated IPs.                                                 |
+| API_CORS_ORIGINS                | Comma-separated allowed CORS origins. Default empty (no CORS).                                                     | Comma-separated URLs.                                                |
 
 > [!NOTE]
 > All scheduled jobs run in UTC timezone. Cron schedules use standard cron
@@ -333,11 +339,27 @@ view its source command and try running that instead.
   Stops containers, removes project containers and images, and prunes unused
   Docker resources to free up disk space.
 
+- `make up-full`\
+  Starts the database, bot, and public API together (uses the `full` profile).
+
+- `make api-up` / `make api-down` / `make api-logs` / `make api-shell`\
+  Start, stop, tail logs, or open a shell in just the API container.
+
+- `make api-consumer-interactive`\
+  Walk through creating, perm-granting/revoking, enabling/disabling, rotating,
+  and deleting API consumers, with a guided prompt flow. Available perms are
+  read from `api/permissions.py:KNOWN_PERMS` so the menu stays in sync with the
+  code.
+
+- `make api-consumer-list`\
+  Print a table of all registered API consumers and their current perms (for
+  scripting).
+
 ## API
 
 A REST API exposing various member data points to authenticated consumers. Runs
-as a separate process in the same Docker container when `API_ENABLED=True`. See
-[API.md](./API.md) for full documentation.
+as a separate process in the same Docker container. See [API.md](./API.md) for
+full documentation.
 
 ## Tooling
 

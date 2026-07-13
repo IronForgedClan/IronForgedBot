@@ -1,4 +1,5 @@
 import enum
+import json
 import logging
 import os
 import sys
@@ -96,8 +97,8 @@ class Config:
                 raise ValueError(f"Configuration key '{key}' (int) is missing or empty")
 
     def get_bot_version(self) -> str:
-        with open("VERSION", "r") as file:
-            return file.read().strip()
+        with open("versions.json", "r") as file:
+            return json.load(file)["bot"]
 
 
 try:

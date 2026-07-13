@@ -24,7 +24,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+        run: echo "VERSION=$(jq -r .bot versions.json)" >> $GITHUB_ENV
 
       - name: Get latest Git tag
         id: get_latest_tag

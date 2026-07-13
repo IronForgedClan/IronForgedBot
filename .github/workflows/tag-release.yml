@@ -26,10 +26,10 @@ jobs:
                   token: ${{ steps.app-token.outputs.token }}
                   submodules: recursive
 
-            - name: Read version from VERSION file
+            - name: Read version from versions.json
               id: read_version
               run: |
-                  VERSION=$(cat VERSION)
+                  VERSION=$(jq -r .bot versions.json)
                   echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
             - name: Get latest Git tag
