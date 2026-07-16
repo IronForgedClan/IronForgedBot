@@ -5,7 +5,7 @@ import time
 import pickle
 import zlib
 
-from ironforgedbot.cache.score_cache import ScoreCache, SCORE_CACHE
+from ironforgedcore.cache.score_cache import ScoreCache, SCORE_CACHE
 from tests.helpers import create_test_score_breakdown, setup_time_mocks
 
 
@@ -96,7 +96,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
         decompressed = pickle.loads(zlib.decompress(stored_data))
         self.assertEqual(len(decompressed.skills), 3)
 
-    @patch("ironforgedbot.cache.score_cache.deep_getsizeof")
+    @patch("ironforgedcore.cache.score_cache.deep_getsizeof")
     @patch("time.time")
     async def test_clean_expired_entries(self, mock_time, mock_getsizeof):
         """Test cleaning expired entries and size calculation"""
@@ -156,7 +156,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
         mock_time.return_value = 1080.0  # old_player expired, new_player still valid
 
         with patch(
-            "ironforgedbot.cache.score_cache.deep_getsizeof", side_effect=[2048, 1024]
+            "ironforgedcore.cache.score_cache.deep_getsizeof", side_effect=[2048, 1024]
         ):
             result = await self.cache.clean()
 
@@ -215,7 +215,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
         mock_time.return_value = 1000.0
 
         # Test with empty cache
-        with patch("ironforgedbot.cache.score_cache.deep_getsizeof", return_value=0):
+        with patch("ironforgedcore.cache.score_cache.deep_getsizeof", return_value=0):
             result = await self.cache.clean()
             self.assertIsNone(result)
 
@@ -224,7 +224,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
         mock_time.return_value = 1100.0  # Expire entry
 
         with patch(
-            "ironforgedbot.cache.score_cache.deep_getsizeof", side_effect=[0, 0]
+            "ironforgedcore.cache.score_cache.deep_getsizeof", side_effect=[0, 0]
         ):
             result = await self.cache.clean()
             self.assertIsNotNone(result)
@@ -245,7 +245,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(result)
             self.assertEqual(len(result.skills), i + 1)
 
-    @patch("ironforgedbot.cache.score_cache.logger.debug")
+    @patch("ironforgedcore.cache.score_cache.logger.debug")
     @patch("time.time")
     async def test_cleanup_logging(self, mock_time, mock_logging):
         """Test that cleanup operations are properly logged"""
@@ -255,7 +255,7 @@ class TestScoreCache(unittest.IsolatedAsyncioTestCase):
         mock_time.return_value = 1100.0  # Expire entry
 
         with patch(
-            "ironforgedbot.cache.score_cache.deep_getsizeof", side_effect=[1024, 512]
+            "ironforgedcore.cache.score_cache.deep_getsizeof", side_effect=[1024, 512]
         ):
             result = await self.cache.clean()
 

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from ironforgedbot.services.score_service import ScoreService
+from ironforgedcore.services.score_service import ScoreService
 from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 from ironforgedcore.common.ranks import RANK
@@ -109,8 +109,8 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertIn("hiscore_oldschool", self.score_service.hiscores_url)
         self.assertEqual(self.score_service.level_99_xp, 13_034_431)
 
-    @patch("ironforgedbot.services.score_service.SCORE_CACHE")
-    @patch("ironforgedbot.services.score_service.normalize_discord_string")
+    @patch("ironforgedcore.services.score_service.SCORE_CACHE")
+    @patch("ironforgedcore.services.score_service.normalize_discord_string")
     async def test_get_player_score_cache_hit(self, mock_normalize, mock_cache):
         """Test get_player_score returns cached data when available"""
         player_name = "TestPlayer"
@@ -125,12 +125,12 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         mock_cache.get.assert_called_once_with(player_name)
         self.mock_http.get.assert_not_called()
 
-    @patch("ironforgedbot.services.score_service.SCORE_CACHE")
-    @patch("ironforgedbot.services.score_service.normalize_discord_string")
-    @patch("ironforgedbot.storage.data.SKILLS")
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.RAIDS")
-    @patch("ironforgedbot.storage.data.BOSSES")
+    @patch("ironforgedcore.services.score_service.SCORE_CACHE")
+    @patch("ironforgedcore.services.score_service.normalize_discord_string")
+    @patch("ironforgedcore.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.BOSSES")
     async def test_get_player_score_cache_miss_with_valid_response(
         self,
         mock_bosses,
@@ -166,8 +166,8 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         mock_cache.set.assert_called_once()
         self.mock_http.get.assert_called_once()
 
-    @patch("ironforgedbot.services.score_service.SCORE_CACHE")
-    @patch("ironforgedbot.services.score_service.normalize_discord_string")
+    @patch("ironforgedcore.services.score_service.SCORE_CACHE")
+    @patch("ironforgedcore.services.score_service.normalize_discord_string")
     async def test_get_player_score_404_error(self, mock_normalize, mock_cache):
         """Test get_player_score raises HiscoresNotFound for 404 response"""
         player_name = "NonExistentPlayer"
@@ -179,8 +179,8 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HiscoresNotFound):
             await self.score_service.get_player_score(player_name)
 
-    @patch("ironforgedbot.services.score_service.SCORE_CACHE")
-    @patch("ironforgedbot.services.score_service.normalize_discord_string")
+    @patch("ironforgedcore.services.score_service.SCORE_CACHE")
+    @patch("ironforgedcore.services.score_service.normalize_discord_string")
     async def test_get_player_score_server_error(self, mock_normalize, mock_cache):
         """Test get_player_score raises HiscoresError for server errors"""
         player_name = "TestPlayer"
@@ -194,12 +194,12 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("Unexpected response code 500", str(context.exception))
 
-    @patch("ironforgedbot.services.score_service.SCORE_CACHE")
-    @patch("ironforgedbot.services.score_service.normalize_discord_string")
-    @patch("ironforgedbot.storage.data.SKILLS")
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.RAIDS")
-    @patch("ironforgedbot.storage.data.BOSSES")
+    @patch("ironforgedcore.services.score_service.SCORE_CACHE")
+    @patch("ironforgedcore.services.score_service.normalize_discord_string")
+    @patch("ironforgedcore.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.BOSSES")
     async def test_get_player_score_bypass_cache(
         self,
         mock_bosses,
@@ -235,7 +235,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
     def test_process_skills_no_skills_data(self):
         """Test _process_skills raises RuntimeError when SKILLS is None"""
-        with patch("ironforgedbot.services.score_service.SKILLS", None):
+        with patch("ironforgedcore.services.score_service.SKILLS", None):
             with self.assertRaises(RuntimeError) as context:
                 self.score_service._process_skills(self.sample_response_data)
 
@@ -251,7 +251,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(RuntimeError):
             self.score_service._process_skills({"skills": None})
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_valid_data(self, mock_skills):
         """Test _process_skills with valid skill data"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -262,7 +262,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         skill_names = [skill.name for skill in result]
         self.assertNotIn("Overall", skill_names)
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_skips_overall(self, mock_skills):
         """Test _process_skills skips Overall skill"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -272,7 +272,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         skill_names = [skill.name for skill in result]
         self.assertNotIn("Overall", skill_names)
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_handles_missing_skill(self, mock_skills):
         """Test _process_skills handles skills not in SKILLS config"""
         mock_skills.__iter__.return_value = iter([])  # Empty config
@@ -300,7 +300,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, [])
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_level_below_99(self, mock_skills):
         """Test _process_skills calculates points correctly for level < 99"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -321,7 +321,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         # Points = xp / xp_per_point = 3500000 / 100000 = 35
         self.assertEqual(skill.points, 35)
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_level_99_plus(self, mock_skills):
         """Test _process_skills calculates points correctly for level >= 99"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -347,7 +347,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         expected_points = int(13034431 / 100000) + int((15000000 - 13034431) / 300000)
         self.assertEqual(skill.points, expected_points)
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_minimum_level_and_xp(self, mock_skills):
         """Test _process_skills handles minimum level and XP values"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -364,7 +364,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(skill.xp, 0)  # Should be minimum 0
         self.assertEqual(skill.points, 0)  # 0 XP should give 0 points
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_creates_correct_skillscore_objects(self, mock_skills):
         """Test _process_skills creates SkillScore objects with correct attributes"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -391,17 +391,17 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
     def test_process_activities_no_activity_data(self):
         """Test _process_activities raises RuntimeError when activity data is None"""
-        with patch("ironforgedbot.services.score_service.CLUES", None), patch(
-            "ironforgedbot.services.score_service.BOSSES", None
-        ), patch("ironforgedbot.services.score_service.RAIDS", None):
+        with patch("ironforgedcore.services.score_service.CLUES", None), patch(
+            "ironforgedcore.services.score_service.BOSSES", None
+        ), patch("ironforgedcore.services.score_service.RAIDS", None):
             with self.assertRaises(RuntimeError) as context:
                 self.score_service._process_activities(self.sample_response_data)
 
             self.assertEqual(str(context.exception), "Unable to read activity data")
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_valid_data(self, mock_raids, mock_bosses, mock_clues):
         """Test _process_activities with valid activity data"""
         mock_clues.__iter__.return_value = iter(self.sample_clues_config)
@@ -416,9 +416,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(raids, list)
         self.assertIsInstance(bosses, list)
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_boss_zero_kc_filtered(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -442,9 +442,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(bosses), 0)  # Should be filtered out
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_negative_kc_becomes_zero(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -470,9 +470,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(clues[0].kc, 0)
         self.assertEqual(clues[0].points, 0)
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_display_name_handling(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -492,9 +492,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(raids), 1)
         self.assertEqual(raids[0].display_name, None)
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_creates_correct_activityscore_objects(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -522,7 +522,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(clue.kc, 1000)
         self.assertEqual(clue.points, 100)  # 1000 / 10
 
-    @patch("ironforgedbot.services.score_service.normalize_discord_string")
+    @patch("ironforgedcore.services.score_service.normalize_discord_string")
     async def test_get_player_points_total(self, mock_normalize):
         """Test get_player_points_total calculates total correctly"""
         player_name = "TestPlayer"
@@ -575,7 +575,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result, 425)  # 100 + 200 + 50 + 75
 
-    @patch("ironforgedbot.services.score_service.get_rank_from_points")
+    @patch("ironforgedcore.services.score_service.get_rank_from_points")
     async def test_get_rank(self, mock_get_rank_from_points):
         """Test get_rank returns correct rank based on points"""
         player_name = "TestPlayer"
@@ -611,7 +611,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.score_service.hiscores_url, expected_url)
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_with_string_level_and_xp(self, mock_skills):
         """Test _process_skills handles string values for level and XP"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -635,9 +635,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(skill.level, 70)  # Should be converted to int
         self.assertEqual(skill.xp, 800000)  # Should be converted to int
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_with_string_score(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -662,9 +662,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(clues), 1)
         self.assertEqual(clues[0].kc, 1000)  # Should be converted to int
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_handles_negative_one_scores(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -690,7 +690,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raids[0].kc, 0)
         self.assertEqual(raids[0].points, 0)
 
-    @patch("ironforgedbot.storage.data.SKILLS")
+    @patch("ironforgedcore.storage.data.SKILLS")
     def test_process_skills_with_very_high_xp(self, mock_skills):
         """Test _process_skills handles very high XP values correctly"""
         mock_skills.__iter__.return_value = iter(self.sample_skills_config)
@@ -722,9 +722,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         expected_points = int(13034431 / 100000) + int((25000000 - 13034431) / 300000)
         self.assertEqual(skill.points, expected_points)
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_with_realistic_high_scores(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -751,9 +751,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(clue.kc, 3570)
         self.assertEqual(clue.points, 357)  # 3570 / 10
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_handles_negative_one_api_values(
         self, mock_raids, mock_bosses, mock_clues
     ):
@@ -780,9 +780,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raid.kc, 0)  # max(-1, 0) = 0
         self.assertEqual(raid.points, 0)  # max(0 / 0.4, 0) = 0
 
-    @patch("ironforgedbot.storage.data.CLUES")
-    @patch("ironforgedbot.storage.data.BOSSES")
-    @patch("ironforgedbot.storage.data.RAIDS")
+    @patch("ironforgedcore.storage.data.CLUES")
+    @patch("ironforgedcore.storage.data.BOSSES")
+    @patch("ironforgedcore.storage.data.RAIDS")
     def test_process_activities_with_float_kc_per_point(
         self, mock_raids, mock_bosses, mock_clues
     ):

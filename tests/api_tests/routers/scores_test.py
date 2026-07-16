@@ -65,7 +65,7 @@ class TestGetPlayerScore(unittest.IsolatedAsyncioTestCase):
     async def test_returns_player_score(self):
         breakdown = _make_breakdown()
         with patch(
-            "ironforgedbot.services.score_service.get_score_service"
+            "ironforgedcore.services.score_service.get_score_service"
         ) as mock_get_svc:
             mock_svc = MagicMock()
             mock_svc.get_player_score = AsyncMock(return_value=breakdown)
@@ -86,7 +86,7 @@ class TestGetPlayerScore(unittest.IsolatedAsyncioTestCase):
         from ironforgedcore.exceptions.score_exceptions import HiscoresNotFound
 
         with patch(
-            "ironforgedbot.services.score_service.get_score_service"
+            "ironforgedcore.services.score_service.get_score_service"
         ) as mock_get_svc:
             mock_svc = MagicMock()
             mock_svc.get_player_score = AsyncMock(side_effect=HiscoresNotFound())
