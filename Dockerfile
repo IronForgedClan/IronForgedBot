@@ -51,3 +51,8 @@ COPY --chown=botuser:botuser . .
 USER botuser
 
 CMD ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
+
+# api-dev: dev deps + uvicorn auto-reload for the API service
+FROM dev AS api-dev
+
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]

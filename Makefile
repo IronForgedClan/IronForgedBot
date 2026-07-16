@@ -1,13 +1,10 @@
-.PHONY: up up-prod up-full down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod api-up api-down api-logs api-shell api-manage
+.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod api-up api-down api-logs api-shell api-up-prod api-down-prod api-logs-prod api-shell-prod api-manage
 
 up:
-	docker compose up db bot
+	docker compose up db bot api
 
 up-prod:
-	docker compose up db bot_prod
-
-up-full:
-	docker compose --profile full up db bot_prod api
+	docker compose up db bot_prod api_prod
 
 down:
 	docker compose down
@@ -31,16 +28,16 @@ downgrade:
 	docker compose run --rm bot python -m alembic -c ironforgedcore/alembic.ini downgrade -1
 
 build-dev:
-	docker compose build bot
+	docker compose build bot api
 
 build-prod:
-	docker compose build bot_prod
+	docker compose build bot_prod api_prod
 
 rmi-dev:
-	docker rmi ironforgedbot:dev
+	docker rmi ironforgedbot:dev ironforgedapi:dev
 
 rmi-prod:
-	docker rmi ironforgedbot:prod
+	docker rmi ironforgedbot:prod ironforgedapi:prod
 
 update-deps:
 	docker compose run --rm bot python -m piptools compile --upgrade requirements.in
@@ -63,6 +60,18 @@ api-logs:
 api-shell:
 	docker compose exec api /bin/sh
 
+api-up-prod:
+	docker compose up -d api_prod
+
+api-down-prod:
+	docker compose stop api_prod
+
+api-logs-prod:
+	docker compose logs -f api_prod
+
+api-shell-prod:
+	docker compose exec api_prod /bin/sh
+
 api-manage:
 	docker compose run --rm bot python scripts/manage_api_consumers.py interactive
 
@@ -77,4 +86,3 @@ clean:
 	@echo "Pruning unused Docker resources..."
 	docker system prune -f --volumes
 	@echo "Cleanup complete!"
-
