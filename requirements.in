@@ -22,3 +22,4 @@ PyYAML
 fastapi
 uvicorn[standard]
 pydantic
+ironforgedcore @ git+https://github.com/ironforgedclan/ironforgedcore.git@v0.1.0

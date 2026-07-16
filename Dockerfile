@@ -37,7 +37,6 @@ FROM runner AS bot-prod
 COPY --from=builder /install /usr/local
 COPY --chown=botuser:botuser main.py ./
 COPY --chown=botuser:botuser ironforgedbot ./ironforgedbot
-COPY --chown=botuser:botuser ironforgedcore ./ironforgedcore
 
 CMD ["python", "main.py"]
 
@@ -46,7 +45,6 @@ FROM runner AS api-prod
 
 COPY --from=builder /install /usr/local
 COPY --chown=botuser:botuser api ./api
-COPY --chown=botuser:botuser ironforgedcore ./ironforgedcore
 
 CMD ["python", "-m", "api.main"]
 

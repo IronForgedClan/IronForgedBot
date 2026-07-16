@@ -36,5 +36,4 @@ service.json.live
 service.json.staging
 pyrightconfig.json
 LICENSE
-ironforgedcore/pyproject.toml
 README.md

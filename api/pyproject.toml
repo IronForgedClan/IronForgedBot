@@ -3,7 +3,9 @@ name = "ironforgedapi"
 version = "1.0.0"
 description = "REST API for the Iron Forged Old School RuneScape clan"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "ironforgedcore @ git+https://github.com/ironforgedclan/ironforgedcore.git@v0.1.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
