@@ -1,6 +1,7 @@
 import os
 import sys
 
+from api import __version__
 from ironforgedcore.config import BaseConfig
 
 
@@ -8,7 +9,7 @@ class ApiConfig(BaseConfig):
     def __init__(self) -> None:
         super().__init__()
 
-        self.api_version: str = self.versions["api"]
+        self.api_version: str = __version__
 
         self.API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
         self.API_PORT: int = int(os.getenv("API_PORT") or 8080)

@@ -22,8 +22,6 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    get_logger_instance()
-
     app = FastAPI(
         title="IronForgedBot API",
         version=API_CONFIG.api_version,

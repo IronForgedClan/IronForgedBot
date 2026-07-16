@@ -1,4 +1,4 @@
-.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod api-up api-down api-logs api-shell api-up-prod api-down-prod api-logs-prod api-shell-prod api-manage
+.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod api-up api-down api-logs api-shell api-up-prod api-down-prod api-logs-prod api-shell-prod api-consumer-interactive api-consumer-list
 
 up:
 	docker compose up db bot api
@@ -72,8 +72,11 @@ api-logs-prod:
 api-shell-prod:
 	docker compose exec api_prod /bin/sh
 
-api-manage:
+api-consumer-interactive:
 	docker compose run --rm bot python scripts/manage_api_consumers.py interactive
+
+api-consumer-list:
+	docker compose run --rm bot python scripts/manage_api_consumers.py list
 
 clean:
 	@echo "Stopping containers..."

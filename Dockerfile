@@ -38,7 +38,6 @@ COPY --from=builder /install /usr/local
 COPY --chown=botuser:botuser main.py ./
 COPY --chown=botuser:botuser ironforgedbot ./ironforgedbot
 COPY --chown=botuser:botuser ironforgedcore ./ironforgedcore
-COPY --chown=botuser:botuser versions.json ./
 
 CMD ["python", "main.py"]
 
@@ -48,7 +47,6 @@ FROM runner AS api-prod
 COPY --from=builder /install /usr/local
 COPY --chown=botuser:botuser api ./api
 COPY --chown=botuser:botuser ironforgedcore ./ironforgedcore
-COPY --chown=botuser:botuser versions.json ./
 
 CMD ["python", "-m", "api.main"]
 

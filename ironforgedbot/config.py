@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 
+from ironforgedbot import __version__
 from ironforgedcore.config import BaseConfig
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ class Config(BaseConfig):
     def __init__(self) -> None:
         super().__init__()
 
-        self.BOT_VERSION: str = self.versions["bot"]
+        self.BOT_VERSION: str = __version__
         self.TEMP_DIR: str = os.getenv("TEMP_DIR", "./temp")
         self.SHEET_ID: str = os.getenv("SHEET_ID", "")
         self.GUILD_ID: int = int(os.getenv("GUILD_ID") or 0)

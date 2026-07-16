@@ -39,7 +39,9 @@ jobs:
 
             - name: Read version
               id: version
-              run: echo "VERSION=$(jq -r .bot versions.json)" >> $GITHUB_ENV
+              run: |
+                  VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("ironforgedbot/pyproject.toml","rb"))["project"]["version"])')
+                  echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
             - name: Send warning message
               env:

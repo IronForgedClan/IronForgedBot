@@ -33,7 +33,9 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "VERSION=$(jq -r .bot versions.json)" >> $GITHUB_ENV
+        run: |
+          VERSION=$(python3 -c 'import tomllib; print(tomllib.load(open("ironforgedbot/pyproject.toml","rb"))["project"]["version"])')
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -44,7 +46,7 @@ jobs:
 
       - name: Build staging image
         run: |
-          docker build --target prod -t ${{ env.IMAGE_NAME }}:${{ env.VERSION }} .
+          docker build --target bot-prod -t ${{ env.IMAGE_NAME }}:${{ env.VERSION }} .
           docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:staging
 
       - name: Push images to registry
