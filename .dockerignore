@@ -5,7 +5,12 @@ tests/
 data/
 init-db/
 
+docs/
+models/
+analytics/
+
 *.json
+!versions.json
 *.live
 *.staging
 *.lock
@@ -18,7 +23,6 @@ Dockerfile
 Makefile
 requirements.in
 requirements-dev.in
-
 run_tests.py
 
 .env
@@ -27,3 +31,11 @@ run_tests.py
 .direnv
 .devenv
 .envrc
+
+state.json
+service.json.live
+service.json.staging
+pyrightconfig.json
+LICENSE
+ironforgedcore/pyproject.toml
+README.md

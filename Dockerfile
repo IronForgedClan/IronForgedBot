@@ -1,4 +1,4 @@
-# builder: compile all prod wheels (needs gcc + mysql headers)
+# builder: compile all prod wheels
 FROM python:3.13-alpine AS builder
 
 RUN apk add --no-cache \
@@ -20,8 +20,8 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
     find /install -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
     rm -rf /install/lib/python3.13/site-packages/pip
 
-# prod: clean Alpine image, runtime-only MySQL lib, no compilers
-FROM python:3.13-alpine AS prod
+# runner: clean Alpine + mariadb-connector-c + botuser, shared by prod images
+FROM python:3.13-alpine AS runner
 
 RUN apk add --no-cache mariadb-connector-c
 
@@ -29,13 +29,30 @@ RUN adduser -D botuser
 RUN mkdir /app && chown botuser:botuser /app
 WORKDIR /app
 
-COPY --from=builder /install /usr/local
-COPY --chown=botuser:botuser . .
-
 USER botuser
+
+# bot-prod: bot + core only
+FROM runner AS bot-prod
+
+COPY --from=builder /install /usr/local
+COPY --chown=botuser:botuser main.py ./
+COPY --chown=botuser:botuser ironforgedbot ./ironforgedbot
+COPY --chown=botuser:botuser ironforgedcore ./ironforgedcore
+COPY --chown=botuser:botuser versions.json ./
+
 CMD ["python", "main.py"]
 
-# dev: builder + dev dependencies + file watcher
+# api-prod: api + core only
+FROM runner AS api-prod
+
+COPY --from=builder /install /usr/local
+COPY --chown=botuser:botuser api ./api
+COPY --chown=botuser:botuser ironforgedcore ./ironforgedcore
+COPY --chown=botuser:botuser versions.json ./
+
+CMD ["python", "-m", "api.main"]
+
+# dev: builder + dev dependencies + file watcher + full copy for self-contained dev
 FROM builder AS dev
 
 COPY requirements-dev.txt .
