@@ -16,7 +16,7 @@ from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedbot.common.helpers import find_emoji
-from ironforgedbot.storage.data import BOSSES, SKILLS
+from ironforgedcore.storage.data import BOSSES, SKILLS
 
 logger = logging.getLogger(__name__)
 

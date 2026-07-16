@@ -19,7 +19,7 @@ from ironforgedbot.command_tree import IronForgedCommands, IronForgedCommandTree
 from ironforgedbot.config import CONFIG
 from ironforgedcore.http import HTTP
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
+from ironforgedcore.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)
 

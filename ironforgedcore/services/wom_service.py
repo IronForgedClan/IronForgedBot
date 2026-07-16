@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from typing import List, NoReturn, Tuple
 
 import wom
@@ -11,8 +12,6 @@ from wom.models import (
     PlayerGains,
     SnapshotTimelineEntry,
 )
-
-from ironforgedbot.config import CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -52,13 +51,16 @@ class WomService:
         Args:
             base_url: Optional API base URL override (e.g. for LTM trackers).
                       Defaults to the standard WOM API.
-            group_id: Optional group ID override. Defaults to CONFIG.WOM_GROUP_ID.
+            group_id: Optional group ID override. Defaults to WOM_GROUP_ID env var.
         """
-        if not CONFIG.WOM_API_KEY:
+        api_key = os.getenv("WOM_API_KEY", "")
+        if not api_key:
             raise WomServiceError("WOM_API_KEY not configured")
 
-        self.api_key = CONFIG.WOM_API_KEY
-        self.group_id = group_id if group_id is not None else CONFIG.WOM_GROUP_ID
+        self.api_key = api_key
+        self.group_id = (
+            group_id if group_id is not None else int(os.getenv("WOM_GROUP_ID", "0"))
+        )
         self.base_url = base_url
         self._client: wom.Client | None = None
 

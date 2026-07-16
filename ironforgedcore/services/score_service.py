@@ -1,13 +1,13 @@
 import logging
 
-from ironforgedbot.cache.score_cache import SCORE_CACHE
+from ironforgedcore.cache.score_cache import SCORE_CACHE
 from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedcore.common.logging_utils import log_api_call
 from ironforgedcore.common.ranks import RANK, get_rank_from_points
 from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
 from ironforgedcore.http import AsyncHttpClient, HttpResponse
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
-from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
+from ironforgedcore.storage.data import BOSSES, CLUES, RAIDS, SKILLS
 
 logger = logging.getLogger(__name__)
 

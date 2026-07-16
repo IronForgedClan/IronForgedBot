@@ -1,4 +1,4 @@
-from ironforgedbot.storage.data import BOSSES, SKILLS, RAIDS
+from ironforgedcore.storage.data import BOSSES, SKILLS, RAIDS
 
 
 def get_sotw_options() -> list[str]:

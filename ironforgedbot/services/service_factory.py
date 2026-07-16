@@ -1,8 +1,7 @@
 """Bot-side service factory: re-exports core factories and adds bot-specific.
 
-Bot-specific services (score_service, absent_service) stay in
-ironforgedbot because they depend on bot infrastructure (cache,
-storage.data submodule, gspread Sheets).
+Bot-only `absent_service` stays in ironforgedbot because it depends on
+gspread Sheets.
 """
 
 import logging
@@ -23,9 +22,9 @@ from ironforgedcore.services.service_factory import (
     create_score_history_service,
     get_wom_service,
 )
+from ironforgedcore.services.score_service import ScoreService, get_score_service
 from ironforgedcore.services.wom_service import WomService
 from ironforgedbot.services.absent_service import AbsentMemberService
-from ironforgedbot.services.score_service import ScoreService, get_score_service
 
 __all__ = [
     "ServiceFactory",

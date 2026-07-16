@@ -17,7 +17,7 @@ from ironforgedbot.decorators.require_role import require_role
 from ironforgedcore.http import HTTP
 from ironforgedcore.models.member import Member
 from ironforgedcore.services.member_service import MemberService
-from ironforgedbot.services.score_service import get_score_service
+from ironforgedcore.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 

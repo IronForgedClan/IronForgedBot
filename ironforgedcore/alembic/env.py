@@ -10,8 +10,8 @@ from sqlalchemy.engine import Connection
 from alembic import context
 
 from ironforgedcore.models import Base
-
-from api.models import ApiAudit, ApiConsumer  # noqa: F401
+from ironforgedcore.models.api_audit import ApiAudit  # noqa: F401
+from ironforgedcore.models.api_consumer import ApiConsumer  # noqa: F401
 
 config = context.config
 fileConfig(config.config_file_name)

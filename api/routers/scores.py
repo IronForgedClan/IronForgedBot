@@ -16,9 +16,9 @@ from api.schemas.score import (
 )
 from ironforgedcore.exceptions.score_exceptions import HiscoresNotFound
 from ironforgedcore.http import HTTP
-from ironforgedbot.services import (
+from ironforgedcore.services import (
     score_service as score_service_module,
-)  # noqa: E402  -- bot-only service (uses cache + storage.data)
+)
 from ironforgedcore.services.service_factory import (
     create_member_service,
     create_score_history_service,
