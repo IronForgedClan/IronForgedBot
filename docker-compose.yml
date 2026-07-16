@@ -42,7 +42,7 @@ services:
     bot_prod:
         build:
             context: .
-            target: prod
+            target: bot-prod
         image: ironforgedbot:prod
         restart: unless-stopped
         depends_on:
@@ -84,7 +84,7 @@ services:
     api_prod:
         build:
             context: .
-            target: prod
+            target: api-prod
         image: ironforgedapi:prod
         restart: unless-stopped
         working_dir: /app
