@@ -59,51 +59,6 @@ services:
         networks:
             - ironforged-network
 
-    api:
-        build:
-            context: .
-            target: api-dev
-        image: ironforgedapi:dev
-        restart: unless-stopped
-        depends_on:
-            db:
-                condition: service_healthy
-        env_file: .env
-        environment:
-            DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
-            API_HOST: 0.0.0.0
-        ports:
-            - "127.0.0.1:${API_PORT:-8080}:8080"
-        volumes:
-            - .:/app
-            - ./data:/app/data:ro
-            - ./logs:/app/logs
-        networks:
-            - ironforged-network
-
-    api_prod:
-        build:
-            context: .
-            target: api-prod
-        image: ironforgedapi:prod
-        restart: unless-stopped
-        working_dir: /app
-        command: ["python", "-m", "api.main"]
-        depends_on:
-            db:
-                condition: service_healthy
-        env_file: .env
-        environment:
-            DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
-            API_HOST: 0.0.0.0
-        ports:
-            - "127.0.0.1:${API_PORT:-8080}:8080"
-        volumes:
-            - ./data:/app/data:ro
-            - ./logs:/app/logs
-        networks:
-            - ironforged-network
-
 volumes:
     mariadb_data:
 
@@ -111,4 +66,3 @@ networks:
     ironforged-network:
         name: ironforged-network
         driver: bridge
-

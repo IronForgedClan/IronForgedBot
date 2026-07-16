@@ -80,7 +80,7 @@ jobs:
               run: |
                 ssh $SSH_USER@$SSH_HOST "
                 cd $BOT_DIR
-                /bin/bash deploy.sh ${{ inputs.environment }}
+                /bin/bash deploy.sh ${{ inputs.environment }} bot
                 "
 
             - name: Send success message

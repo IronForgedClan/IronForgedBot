@@ -241,11 +241,6 @@ Now you can modify the example `.env` file with your values.
 | CRON_CHECK_DISCREPANCIES        | Discrepancy check schedule. Default: `0 0 * * 0` (Sunday 0:00 UTC)                                                 | Standard cron format                                                 |
 | CRON_CLEAR_CACHES               | Cache cleanup schedule. Default: `*/10 * * * *` (every 10 minutes)                                                 | Standard cron format                                                 |
 | CRON_PAYROLL                    | Monthly payroll schedule. Default: `0 6 1 * *` (1st of month at 6:00 UTC)                                          | Standard cron format                                                 |
-| API_HOST                        | Bind address for the API. Default: `0.0.0.0`.                                                                      | Any valid host.                                                      |
-| API_PORT                        | Port the API listens on. Default: `8080`.                                                                          | Integer 1-65535.                                                     |
-| API_RATE_LIMIT                  | Per-consumer request limit. Default: `30`.                                                                         | Integer. `0` disables.                                               |
-| API_TRUSTED_HOSTS               | Comma-separated trusted reverse-proxy IPs for X-Forwarded-For parsing. Default: `127.0.0.1`.                       | Comma-separated IPs.                                                 |
-| API_CORS_ORIGINS                | Comma-separated allowed CORS origins. Default empty (no CORS).                                                     | Comma-separated URLs.                                                |
 
 > [!NOTE]
 > All scheduled jobs run in UTC timezone. Cron schedules use standard cron
@@ -303,7 +298,13 @@ view its source command and try running that instead.
 ### Commands
 
 - `make up`\
-  Starts the containers using `docker compose up`.
+  Starts the database, bot (dev), and API (dev) together. Dev services mount
+  the source tree so code changes are picked up live — the bot uses
+  `watchmedo` for auto-restart, the API uses `uvicorn --reload`.
+
+- `make up-prod`\
+  Starts the database, bot, and API from their built prod images. Use this
+  to verify a production build without the dev mount.
 
 - `make down`\
   Stops and removes the containers.
@@ -338,11 +339,13 @@ view its source command and try running that instead.
   Stops containers, removes project containers and images, and prunes unused
   Docker resources to free up disk space.
 
-- `make up-full`\
-  Starts the database, bot, and public API together (uses the `full` profile).
-
 - `make api-up` / `make api-down` / `make api-logs` / `make api-shell`\
-  Start, stop, tail logs, or open a shell in just the API container.
+  Start, stop, tail logs, or open a shell in the dev API container (mounted
+  code, `uvicorn --reload`).
+
+- `make api-up-prod` / `make api-down-prod` / `make api-logs-prod` / `make api-shell-prod`\
+  Same as above but against the built prod API image, for verifying prod
+  behavior in isolation.
 
 - `make api-consumer-interactive`\
   Walk through creating, perm-granting/revoking, enabling/disabling, rotating,
@@ -353,12 +356,6 @@ view its source command and try running that instead.
 - `make api-consumer-list`\
   Print a table of all registered API consumers and their current perms (for
   scripting).
-
-## API
-
-A REST API exposing various member data points to authenticated consumers. Runs
-as a separate process in the same Docker container. See [API.md](./API.md) for
-full documentation.
 
 ## Tooling
 

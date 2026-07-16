@@ -1,10 +1,10 @@
-.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod api-up api-down api-logs api-shell api-up-prod api-down-prod api-logs-prod api-shell-prod api-consumer-interactive api-consumer-list
+.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod
 
 up:
-	docker compose up db bot api
+	docker compose up db bot
 
 up-prod:
-	docker compose up db bot_prod api_prod
+	docker compose up db bot_prod
 
 down:
 	docker compose down
@@ -19,25 +19,25 @@ shell:
 	docker compose run --rm bot /bin/sh
 
 migrate:
-	docker compose run --rm bot python -m alembic -c ironforgedcore/alembic.ini upgrade head
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.13/site-packages/ironforgedcore/alembic.ini upgrade head
 
 revision:
-	docker compose run --rm bot python -m alembic -c ironforgedcore/alembic.ini revision --autogenerate -m "$(DESC)"
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.13/site-packages/ironforgedcore/alembic.ini revision --autogenerate -m "$(DESC)"
 
 downgrade:
-	docker compose run --rm bot python -m alembic -c ironforgedcore/alembic.ini downgrade -1
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.13/site-packages/ironforgedcore/alembic.ini downgrade -1
 
 build-dev:
-	docker compose build bot api
+	docker compose build bot
 
 build-prod:
-	docker compose build bot_prod api_prod
+	docker compose build bot_prod
 
 rmi-dev:
-	docker rmi ironforgedbot:dev ironforgedapi:dev
+	docker rmi ironforgedbot:dev
 
 rmi-prod:
-	docker rmi ironforgedbot:prod ironforgedapi:prod
+	docker rmi ironforgedbot:prod
 
 update-deps:
 	docker compose run --rm bot python -m piptools compile --upgrade requirements.in
@@ -47,36 +47,6 @@ update-deps:
 update-data:
 	git submodule update --remote data
 	@echo "Data submodule updated to latest commit"
-
-api-up:
-	docker compose up -d api
-
-api-down:
-	docker compose stop api
-
-api-logs:
-	docker compose logs -f api
-
-api-shell:
-	docker compose exec api /bin/sh
-
-api-up-prod:
-	docker compose up -d api_prod
-
-api-down-prod:
-	docker compose stop api_prod
-
-api-logs-prod:
-	docker compose logs -f api_prod
-
-api-shell-prod:
-	docker compose exec api_prod /bin/sh
-
-api-consumer-interactive:
-	docker compose run --rm bot python scripts/manage_api_consumers.py interactive
-
-api-consumer-list:
-	docker compose run --rm bot python scripts/manage_api_consumers.py list
 
 clean:
 	@echo "Stopping containers..."

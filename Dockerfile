@@ -31,7 +31,7 @@ WORKDIR /app
 
 USER botuser
 
-# bot-prod: bot + core only
+# bot-prod: bot only
 FROM runner AS bot-prod
 
 COPY --from=builder /install /usr/local
@@ -39,14 +39,6 @@ COPY --chown=botuser:botuser main.py ./
 COPY --chown=botuser:botuser ironforgedbot ./ironforgedbot
 
 CMD ["python", "main.py"]
-
-# api-prod: api + core only
-FROM runner AS api-prod
-
-COPY --from=builder /install /usr/local
-COPY --chown=botuser:botuser api ./api
-
-CMD ["python", "-m", "api.main"]
 
 # dev: builder + dev dependencies + file watcher + full copy for self-contained dev
 FROM builder AS dev
@@ -64,8 +56,3 @@ COPY --chown=botuser:botuser . .
 USER botuser
 
 CMD ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "python", "main.py"]
-
-# api-dev: dev deps + uvicorn auto-reload for the API service
-FROM dev AS api-dev
-
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
