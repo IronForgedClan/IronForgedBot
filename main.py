@@ -28,7 +28,15 @@ logger = logging.getLogger(__name__)
 def init_bot() -> None:
     load_and_set("data")
 
-    if CONFIG and STATE and HTTP and data.BOSSES and data.CLUES and data.RAIDS and data.SKILLS:
+    if (
+        CONFIG
+        and STATE
+        and HTTP
+        and data.BOSSES
+        and data.CLUES
+        and data.RAIDS
+        and data.SKILLS
+    ):
         logger.info("Requirements loaded")
 
     create_temp_dir(CONFIG.TEMP_DIR)

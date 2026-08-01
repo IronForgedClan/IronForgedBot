@@ -4,7 +4,9 @@ from ironforgedcore.storage import data
 def get_sotw_options() -> list[str]:
     """Get clean list of SOTW options"""
     exclusions = ["attack", "strength", "defence", "hitpoints", "ranged", "magic"]
-    return sorted([s["name"] for s in data.SKILLS if s["name"].lower() not in exclusions])
+    return sorted(
+        [s["name"] for s in data.SKILLS if s["name"].lower() not in exclusions]
+    )
 
 
 def get_botw_options() -> list[str]:
