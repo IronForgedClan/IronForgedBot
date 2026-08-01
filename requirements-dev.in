@@ -1,5 +1,0 @@
-black
-pip-tools
-watchdog[watchmedo]
-httpx2
-ironforgedcore @ git+https://github.com/ironforgedclan/ironforgedcore.git@v0.1.0

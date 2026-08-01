@@ -20,16 +20,12 @@ docker-compose.yml
 Dockerfile
 .dockerignore
 Makefile
-requirements.in
-requirements-dev.in
 run_tests.py
 
 .env
 .gitignore
 .editorconfig
 .direnv
-.devenv
-.envrc
 
 state.json
 service.json.live

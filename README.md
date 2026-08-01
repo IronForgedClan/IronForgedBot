@@ -329,8 +329,8 @@ view its source command and try running that instead.
   Reverts the most recent database migration.
 
 - `make update-deps`\
-  Updates all project dependencies to their latest versions and rebuilds the
-  container.
+  Upgrades all project dependencies to their latest versions and rebuilds the
+  dev container.
 
 - `make update-data`\
   Updates the data submodule to the latest commit from the private repository.
@@ -381,10 +381,11 @@ source .venv/bin/activate
 
 ### Requirements
 
-The project requirements are listed in `requirements.txt` file. To install, run:
+The project requirements are declared in `ironforgedbot/pyproject.toml`. To
+install, run:
 
 ```sh
-pip install -r requirements.txt
+pip install -e ./ironforgedbot[dev]
 ```
 
 ## Logs
