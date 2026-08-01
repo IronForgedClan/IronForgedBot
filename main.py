@@ -19,7 +19,8 @@ from ironforgedbot.command_tree import IronForgedCommands, IronForgedCommandTree
 from ironforgedbot.config import CONFIG
 from ironforgedcore.http import HTTP
 from ironforgedbot.state import STATE
-from ironforgedcore.storage.data import BOSSES, CLUES, RAIDS, SKILLS, load_and_set
+from ironforgedcore.storage.data import load_and_set
+from ironforgedcore.storage import data
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,15 @@ logger = logging.getLogger(__name__)
 def init_bot() -> None:
     load_and_set("data")
 
-    if CONFIG and STATE and HTTP and BOSSES and CLUES and RAIDS and SKILLS:
+    if (
+        CONFIG
+        and STATE
+        and HTTP
+        and data.BOSSES
+        and data.CLUES
+        and data.RAIDS
+        and data.SKILLS
+    ):
         logger.info("Requirements loaded")
 
     create_temp_dir(CONFIG.TEMP_DIR)
