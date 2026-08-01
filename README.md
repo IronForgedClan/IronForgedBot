@@ -329,8 +329,8 @@ view its source command and try running that instead.
   Reverts the most recent database migration.
 
 - `make update-deps`\
-  Upgrades all project dependencies to their latest versions and rebuilds the
-  dev container.
+  Resolves the latest dependency versions into `ironforgedbot/uv.lock` and
+  rebuilds the dev container.
 
 - `make update-data`\
   Updates the data submodule to the latest commit from the private repository.
@@ -381,12 +381,24 @@ source .venv/bin/activate
 
 ### Requirements
 
-The project requirements are declared in `ironforgedbot/pyproject.toml`. To
-install, run:
+The project dependencies are declared in `ironforgedbot/pyproject.toml` and
+pinned via `ironforgedbot/uv.lock`. The project uses
+[uv](https://docs.astral.sh/uv/) as its package manager.
+
+Install uv on your host:
 
 ```sh
-pip install -e ./ironforgedbot[dev]
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+To install dependencies and create a virtual environment:
+
+```sh
+uv sync
+```
+
+To add or remove a dependency, edit `ironforgedbot/pyproject.toml` and re-run
+`uv lock` from inside the `ironforgedbot/` directory.
 
 ## Logs
 

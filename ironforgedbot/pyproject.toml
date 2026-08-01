@@ -36,6 +36,7 @@ dev = [
     "black",
     "watchdog[watchmedo]",
     "httpx2",
+    "uv",
 ]
 
 [build-system]

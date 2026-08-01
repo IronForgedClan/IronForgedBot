@@ -40,8 +40,7 @@ rmi-prod:
 	docker rmi ironforgedbot:prod
 
 update-deps:
-	docker compose run --rm bot python -m piptools compile --upgrade requirements.in
-	docker compose run --rm bot python -m piptools compile --upgrade requirements-dev.in -o requirements-dev.txt
+	uv lock --directory ironforgedbot --upgrade
 	docker compose build bot
 
 update-data:

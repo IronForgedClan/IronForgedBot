@@ -12,13 +12,13 @@ RUN apk add --no-cache \
     libffi-dev \
     git
 
-RUN pip install --no-cache-dir --upgrade pip
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /build
 
 COPY ironforgedbot ./ironforgedbot
-RUN pip install --no-cache-dir ./ironforgedbot \
- && pip install --no-cache-dir "./ironforgedbot[dev]" \
+RUN uv pip install --system ./ironforgedbot \
+ && uv pip install --system "./ironforgedbot[dev]" \
  && find /usr/local -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
     find /usr/local -name '*.dist-info' -exec rm -rf {} + 2>/dev/null; \
     find /usr/local -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
