@@ -32,7 +32,7 @@ jobs:
               run: uv lock --check --directory ironforgedbot
 
             - name: Install dependencies
-              run: uv sync --directory ironforgedbot --extra dev
+              run: uv sync --project ironforgedbot --extra dev
 
             - name: Run tests
-              run: uv run --directory ironforgedbot python run_tests.py
+              run: uv run --project ironforgedbot python run_tests.py
