@@ -10,10 +10,10 @@ down:
 	docker compose down
 
 test:
-	docker compose run --rm bot python run_tests.py
+	docker compose run --rm --no-deps bot python run_tests.py
 
 format:
-	docker compose run --rm bot python -m black .
+	docker compose run --rm --no-deps bot python -m black .
 
 shell:
 	docker compose run --rm bot /bin/sh
