@@ -91,10 +91,10 @@ class MainTest(unittest.IsolatedAsyncioTestCase):
     @patch("main.CONFIG")
     @patch("main.STATE")
     @patch("main.HTTP")
-    @patch("main.BOSSES")
-    @patch("main.CLUES")
-    @patch("main.RAIDS")
-    @patch("main.SKILLS")
+    @patch("main.data.BOSSES")
+    @patch("main.data.CLUES")
+    @patch("main.data.RAIDS")
+    @patch("main.data.SKILLS")
     def test_init_bot_initializes_all_components(
         self,
         mock_skills,
@@ -140,9 +140,9 @@ class MainTest(unittest.IsolatedAsyncioTestCase):
         mock_config.BOT_TOKEN = "test_token"
 
         with patch("main.STATE", None), patch("main.HTTP", Mock()), patch(
-            "main.BOSSES", Mock()
-        ), patch("main.CLUES", Mock()), patch("main.RAIDS", Mock()), patch(
-            "main.SKILLS", Mock()
+            "main.data.BOSSES", Mock()
+        ), patch("main.data.CLUES", Mock()), patch("main.data.RAIDS", Mock()), patch(
+            "main.data.SKILLS", Mock()
         ):
 
             mock_intents = Mock()
