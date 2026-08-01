@@ -10,7 +10,8 @@ down:
 	docker compose down
 
 test:
-	docker compose run --rm --no-deps bot python run_tests.py
+	uv sync --directory ironforgedbot --extra dev
+	uv run --directory ironforgedbot python run_tests.py
 
 format:
 	docker compose run --rm --no-deps bot python -m black .
