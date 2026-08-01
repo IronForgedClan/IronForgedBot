@@ -235,7 +235,7 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
     def test_process_skills_no_skills_data(self):
         """Test _process_skills raises RuntimeError when SKILLS is None"""
-        with patch("ironforgedcore.services.score_service.SKILLS", None):
+        with patch("ironforgedcore.storage.data.SKILLS", None):
             with self.assertRaises(RuntimeError) as context:
                 self.score_service._process_skills(self.sample_response_data)
 
@@ -391,9 +391,9 @@ class TestScoreService(unittest.IsolatedAsyncioTestCase):
 
     def test_process_activities_no_activity_data(self):
         """Test _process_activities raises RuntimeError when activity data is None"""
-        with patch("ironforgedcore.services.score_service.CLUES", None), patch(
-            "ironforgedcore.services.score_service.BOSSES", None
-        ), patch("ironforgedcore.services.score_service.RAIDS", None):
+        with patch("ironforgedcore.storage.data.CLUES", None), patch(
+            "ironforgedcore.storage.data.BOSSES", None
+        ), patch("ironforgedcore.storage.data.RAIDS", None):
             with self.assertRaises(RuntimeError) as context:
                 self.score_service._process_activities(self.sample_response_data)
 

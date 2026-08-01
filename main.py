@@ -19,12 +19,14 @@ from ironforgedbot.command_tree import IronForgedCommands, IronForgedCommandTree
 from ironforgedbot.config import CONFIG
 from ironforgedcore.http import HTTP
 from ironforgedbot.state import STATE
-from ironforgedcore.storage.data import BOSSES, CLUES, RAIDS, SKILLS
+from ironforgedcore.storage.data import BOSSES, CLUES, RAIDS, SKILLS, load_and_set
 
 logger = logging.getLogger(__name__)
 
 
 def init_bot() -> None:
+    load_and_set("data")
+
     if CONFIG and STATE and HTTP and BOSSES and CLUES and RAIDS and SKILLS:
         logger.info("Requirements loaded")
 
