@@ -10,8 +10,8 @@ down:
 	docker compose down
 
 test:
-	uv sync --directory ironforgedbot --extra dev
-	uv run --directory ironforgedbot python run_tests.py
+	uv sync --project ironforgedbot --extra dev
+	uv run --project ironforgedbot python run_tests.py
 
 format:
 	docker compose run --rm --no-deps bot python -m black .
@@ -58,4 +58,14 @@ clean:
 	$(MAKE) rmi-prod
 	@echo "Pruning unused Docker resources..."
 	docker system prune -f --volumes
+	@echo "Removing local build artifacts..."
+	rm -rf dist/ build/ *.egg-info
+	find . -type d -name "*.egg-info" \
+		-not -path "./.venv/*" \
+		-not -path "./.devenv/*" \
+		-exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "__pycache__" \
+		-not -path "./.venv/*" \
+		-not -path "./.devenv/*" \
+		-exec rm -rf {} + 2>/dev/null || true
 	@echo "Cleanup complete!"
