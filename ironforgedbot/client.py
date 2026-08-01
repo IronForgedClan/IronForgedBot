@@ -56,12 +56,9 @@ class DiscordClient(discord.Client):
         self.upload = upload
         self.guild = guild
         self.automations = None
-        self.loop = asyncio.get_event_loop()
+        self.loop = None  # bound in setup_hook
         self._emoji_cache_loaded = False
         self._setup_complete = False
-
-        signal.signal(signal.SIGINT, self.handle_signal)
-        signal.signal(signal.SIGTERM, self.handle_signal)
 
     @property
     def tree(self):
@@ -74,7 +71,10 @@ class DiscordClient(discord.Client):
     def handle_signal(self, signum, frame):
         """Signal handler to initiate shutdown."""
         logger.info(f"Received signal {signum}, initiating shutdown...")
-        self.loop.call_soon_threadsafe(self.loop.create_task, self.graceful_shutdown())
+        if self.loop is not None:
+            self.loop.call_soon_threadsafe(
+                self.loop.create_task, self.graceful_shutdown()
+            )
 
     def is_discord_internal_task(self, task):
         """Check if task is an internal discord.Client task."""
@@ -135,6 +135,20 @@ class DiscordClient(discord.Client):
         """Called only once when the bot starts up, before connecting to Discord."""
         if self._setup_complete:
             return
+
+        self.loop = asyncio.get_running_loop()
+        self.loop.add_signal_handler(
+            signal.SIGINT,
+            lambda: self.loop.call_soon_threadsafe(
+                self.loop.create_task, self.graceful_shutdown()
+            ),
+        )
+        self.loop.add_signal_handler(
+            signal.SIGTERM,
+            lambda: self.loop.call_soon_threadsafe(
+                self.loop.create_task, self.graceful_shutdown()
+            ),
+        )
 
         await STATE.load_state()
 
