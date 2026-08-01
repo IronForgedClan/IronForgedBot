@@ -16,7 +16,7 @@ from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedbot.common.helpers import find_emoji
-from ironforgedcore.storage.data import BOSSES, SKILLS
+from ironforgedcore.storage import data
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +144,7 @@ class AdminMenuView(View):
         options = get_sotw_options()
 
         async def on_result(interaction, file, winner):
-            skill = next((s for s in SKILLS if s["name"] == winner), None)
+            skill = next((s for s in data.SKILLS if s["name"] == winner), None)
             emoji = find_emoji(skill["emoji_key"]) if skill else "🎉"
 
             await send_spin_result(
@@ -178,7 +178,7 @@ class AdminMenuView(View):
 
         async def on_result(interaction, file, winner):
             boss_name = winner.split(" or ")[0]
-            boss = next((b for b in BOSSES if b["name"] == boss_name), None)
+            boss = next((b for b in data.BOSSES if b["name"] == boss_name), None)
             emoji = find_emoji(boss["emoji_key"]) if boss else "🎉"
 
             await send_spin_result(
