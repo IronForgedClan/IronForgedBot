@@ -25,6 +25,8 @@ jobs:
 
             - name: Install uv
               uses: astral-sh/setup-uv@v1
+              with:
+                  version: "0.12.1"
 
             - name: Check lock is in sync
               run: uv lock --check --directory ironforgedbot
