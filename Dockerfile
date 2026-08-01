@@ -1,5 +1,5 @@
 # builder: install prod wheels into the default location (/usr/local)
-FROM python:3.13-alpine AS builder
+FROM python:3.14-alpine AS builder
 
 RUN apk add --no-cache \
     mariadb-dev \
@@ -21,10 +21,10 @@ RUN uv pip install --system ./ironforgedbot \
  && uv pip install --system "./ironforgedbot[dev]" \
  && find /usr/local -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
     find /usr/local -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
-    rm -rf /usr/local/lib/python3.13/site-packages/pip
+    rm -rf /usr/local/lib/python3.14/site-packages/pip
 
 # runner: clean Alpine + mariadb-connector-c + botuser, shared by prod images
-FROM python:3.13-alpine AS runner
+FROM python:3.14-alpine AS runner
 
 RUN apk add --no-cache mariadb-connector-c
 

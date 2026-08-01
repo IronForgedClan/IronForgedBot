@@ -19,13 +19,13 @@ shell:
 	docker compose run --rm bot /bin/sh
 
 migrate:
-	docker compose run --rm bot python -m alembic -c /install/lib/python3.13/site-packages/ironforgedcore/alembic.ini upgrade head
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.14/site-packages/ironforgedcore/alembic.ini upgrade head
 
 revision:
-	docker compose run --rm bot python -m alembic -c /install/lib/python3.13/site-packages/ironforgedcore/alembic.ini revision --autogenerate -m "$(DESC)"
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.14/site-packages/ironforgedcore/alembic.ini revision --autogenerate -m "$(DESC)"
 
 downgrade:
-	docker compose run --rm bot python -m alembic -c /install/lib/python3.13/site-packages/ironforgedcore/alembic.ini downgrade -1
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.14/site-packages/ironforgedcore/alembic.ini downgrade -1
 
 build-dev:
 	docker compose build bot
