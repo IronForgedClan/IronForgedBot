@@ -6,7 +6,7 @@ from ironforgedbot.commands.admin.admin_menu_view import AdminMenuView
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators.require_role import require_role
 

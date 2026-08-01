@@ -31,7 +31,9 @@ services:
         depends_on:
             db:
                 condition: service_healthy
-        env_file: .env
+        env_file:
+            - path: .env
+              required: false
         environment:
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
         volumes:
@@ -42,13 +44,15 @@ services:
     bot_prod:
         build:
             context: .
-            target: prod
+            target: bot-prod
         image: ironforgedbot:prod
         restart: unless-stopped
         depends_on:
             db:
                 condition: service_healthy
-        env_file: .env
+        env_file:
+            - path: .env
+              required: false
         environment:
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
         volumes:
@@ -66,4 +70,3 @@ networks:
     ironforged-network:
         name: ironforged-network
         driver: bridge
-

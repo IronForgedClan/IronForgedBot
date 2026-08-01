@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.activity_check import ActivityCheckResult
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.common.activity_check import ActivityCheckResult
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.services.wom_service import (
     WomRateLimitError,
     WomServiceError,
     WomTimeoutError,

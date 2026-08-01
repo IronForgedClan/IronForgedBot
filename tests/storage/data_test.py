@@ -3,7 +3,7 @@ import unittest
 from typing import NotRequired, TypedDict
 from unittest.mock import mock_open, patch
 
-from ironforgedbot.storage.data import load_json_data
+from ironforgedcore.storage.data import load_json_data
 
 
 class TestActivity(TypedDict):

@@ -1,8 +1,9 @@
 import copy
 import unittest
-from unittest.mock import mock_open, patch
+from unittest.mock import patch
 
-from ironforgedbot.config import Config, ENVIRONMENT
+from ironforgedbot.config import Config
+from ironforgedcore.config import ENVIRONMENT
 from tests.helpers import VALID_CONFIG
 
 
@@ -15,9 +16,8 @@ class ConfigTest(unittest.TestCase):
         self.invalid_int_config["GUILD_ID"] = ""
 
     @patch.dict("os.environ", VALID_CONFIG)
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_creates_config_with_valid_environment(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_creates_config_with_valid_environment(self, mock_dotenv):
         result = Config()
 
         self.assertIsNotNone(result)
@@ -30,8 +30,6 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(
             result.AUTOMATION_CHANNEL_ID, int(VALID_CONFIG["AUTOMATION_CHANNEL_ID"])
         )
-        self.assertEqual(result.BOT_VERSION, "1.0.0")
-        mock_file.assert_called_once_with("VERSION", "r")
         mock_dotenv.assert_called_once()
 
     def test_raises_value_error_for_empty_string_field(self):
@@ -54,28 +52,16 @@ class ConfigTest(unittest.TestCase):
                 "Configuration key 'GUILD_ID' (int) is missing or empty",
             )
 
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="2.1.5")
-    def test_reads_version_from_file(self, mock_file, mock_dotenv):
-        with patch.dict("os.environ", self.valid_config):
-            result = Config()
-
-            self.assertEqual(result.BOT_VERSION, "2.1.5")
-            mock_file.assert_called_once_with("VERSION", "r")
-            mock_dotenv.assert_called_once()
-
     @patch.dict("os.environ", {**VALID_CONFIG, "ENVIRONMENT": "dev"})
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_sets_development_environment(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_sets_development_environment(self, mock_dotenv):
         result = Config()
 
         self.assertEqual(result.ENVIRONMENT, ENVIRONMENT.DEVELOPMENT)
 
     @patch.dict("os.environ", {**VALID_CONFIG, "ENVIRONMENT": "staging"})
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_sets_staging_environment(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_sets_staging_environment(self, mock_dotenv):
         result = Config()
 
         self.assertEqual(result.ENVIRONMENT, ENVIRONMENT.STAGING)
@@ -88,18 +74,16 @@ class ConfigTest(unittest.TestCase):
             "TRICK_OR_TREAT_CHANNEL_ID": "999",
         },
     )
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_enables_trick_or_treat_feature(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_enables_trick_or_treat_feature(self, mock_dotenv):
         result = Config()
 
         self.assertTrue(result.TRICK_OR_TREAT_ENABLED)
         self.assertEqual(result.TRICK_OR_TREAT_CHANNEL_ID, 999)
 
     @patch.dict("os.environ", {**VALID_CONFIG, "TRICK_OR_TREAT_ENABLED": "False"})
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_disables_trick_or_treat_feature(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_disables_trick_or_treat_feature(self, mock_dotenv):
         result = Config()
 
         self.assertFalse(result.TRICK_OR_TREAT_ENABLED)
@@ -108,21 +92,11 @@ class ConfigTest(unittest.TestCase):
     @patch.dict(
         "os.environ", {**VALID_CONFIG, "TRICK_OR_TREAT_COOLDOWN_SECONDS": "7200"}
     )
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_sets_trick_or_treat_cooldown(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_sets_trick_or_treat_cooldown(self, mock_dotenv):
         result = Config()
 
         self.assertEqual(result.TRICK_OR_TREAT_COOLDOWN_SECONDS, 7200)
-
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", side_effect=FileNotFoundError("VERSION file not found"))
-    def test_handles_missing_version_file(self, mock_file, mock_dotenv):
-        with patch.dict("os.environ", self.valid_config):
-            with self.assertRaises(FileNotFoundError):
-                Config()
-
-            mock_file.assert_called_with("VERSION", "r")
 
     def test_validates_all_required_fields(self):
         missing_token_config = self.valid_config.copy()
@@ -141,21 +115,16 @@ class ConfigTest(unittest.TestCase):
             "CRON_SYNC_MEMBERS": "30 5,17 * * *",
         },
     )
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_loads_custom_cron_schedule(self, mock_file, mock_dotenv):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_loads_custom_cron_schedule(self, mock_dotenv):
         result = Config()
         self.assertEqual(result.CRON_SYNC_MEMBERS, "30 5,17 * * *")
 
     @patch.dict("os.environ", VALID_CONFIG)
-    @patch("ironforgedbot.config.load_dotenv")
-    @patch("builtins.open", new_callable=mock_open, read_data="1.0.0")
-    def test_uses_default_cron_schedule_when_not_specified(
-        self, mock_file, mock_dotenv
-    ):
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_uses_default_cron_schedule_when_not_specified(self, mock_dotenv):
         result = Config()
 
-        # Verify defaults match current hard-coded values (converted to cron format)
         self.assertEqual(result.CRON_SYNC_MEMBERS, "50 3,15 * * *")
         self.assertEqual(result.CRON_REFRESH_RANKS, "10 4,16 * * *")
         self.assertEqual(result.CRON_CHECK_ACTIVITY, "0 1 * * 1")

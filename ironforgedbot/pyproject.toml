@@ -1,0 +1,47 @@
+[project]
+name = "ironforgedbot"
+version = "5.0.0"
+description = "Discord bot for the Iron Forged Old School RuneScape clan"
+requires-python = ">=3.14"
+dependencies = [
+    "ironforgedcore @ git+https://github.com/ironforgedclan/ironforgedcore.git@v1.0.0",
+    "python-dotenv",
+    "discord.py",
+    "requests",
+    "gspread",
+    "google-auth",
+    "pytz",
+    "StrEnum",
+    "apscheduler",
+    "reactionmenu",
+    "wom.py",
+    "concurrent-log-handler",
+    "python-dateutil",
+    "aiohttp",
+    "aiofiles",
+    "tabulate",
+    "Pillow",
+    "sqlalchemy[asyncio]",
+    "aiomysql",
+    "alembic",
+    "audioop-lts",
+    "PyYAML",
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "watchdog[watchmedo]",
+    "httpx2",
+    "uv",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ironforgedbot*"]

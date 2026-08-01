@@ -6,8 +6,8 @@ import discord
 from discord import app_commands
 
 from ironforgedbot.common.autocompletes import role_autocomplete
-from ironforgedbot.common.helpers import normalize_discord_string
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.normalize import normalize_discord_string
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold, text_h2
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.decorators.require_role import require_role

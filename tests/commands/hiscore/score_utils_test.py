@@ -1,7 +1,7 @@
 import unittest
 
 from ironforgedbot.commands.hiscore.score_utils import _calculate_points
-from ironforgedbot.models.score import ActivityScore, ScoreBreakdown, SkillScore
+from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 
 
 class TestCalculatePoints(unittest.TestCase):

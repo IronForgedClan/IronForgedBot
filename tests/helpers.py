@@ -2,9 +2,11 @@ import functools
 import itertools
 from typing import Any, List, Optional
 from unittest.mock import AsyncMock, Mock
+
 import discord
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.common.ranks import RANK, get_activity_threshold_for_rank
+from sqlalchemy.ext.asyncio import AsyncSession
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK, get_activity_threshold_for_rank
 
 VALID_CONFIG = {
     "TEMP_DIR": "/tmp",
@@ -155,6 +157,17 @@ async def get_url_status_code(session, url, timeout=5):
         return str(e)
 
 
+def create_mock_db_session() -> AsyncMock:
+    """Build a mock AsyncSession with the correct sync/async method split.
+
+    AsyncMock(spec=AsyncSession) makes sync session methods (add, merge,
+    expire, ...) return sync MagicMock, and async methods (commit,
+    execute, flush, refresh, delete, rollback, ...) return AsyncMock.
+    Use this anywhere a test needs to mock a database session.
+    """
+    return AsyncMock(spec=AsyncSession)
+
+
 def setup_database_service_mocks(
     mock_db, mock_service_factory, mock_service_instance=None
 ):
@@ -165,7 +178,7 @@ def setup_database_service_mocks(
         mock_service_factory: Mock of the service factory function (e.g., create_ingot_service)
         mock_service_instance: Optional mock service instance to return
     """
-    mock_session = AsyncMock()
+    mock_session = create_mock_db_session()
 
     # Set up the async context manager pattern
     mock_context_manager = AsyncMock()
@@ -428,7 +441,7 @@ def create_test_member_with_scores(
 
 def create_test_score_breakdown(skills_count=2, activities_count=2):
     """Creates real ScoreBreakdown object for cache serialization testing."""
-    from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
+    from ironforgedcore.models.score import ScoreBreakdown, SkillScore, ActivityScore
 
     skills = []
     for i in range(skills_count):
@@ -586,7 +599,7 @@ def validate_role_mappings() -> list[str]:
     Returns:
         List of validation error messages (empty if valid)
     """
-    from ironforgedbot.common.wom_role_mapping import (
+    from ironforgedcore.common.wom_role_mapping import (
         WOM_TO_DISCORD_RANK_MAPPING,
         WOM_TO_DISCORD_ROLE_MAPPING,
     )
@@ -632,7 +645,7 @@ def get_all_wom_roles_for_discord_role(discord_role: ROLE) -> list:
         List of WOM GroupRole values that map to the Discord role
     """
     from wom import GroupRole
-    from ironforgedbot.common.wom_role_mapping import WOM_TO_DISCORD_ROLE_MAPPING
+    from ironforgedcore.common.wom_role_mapping import WOM_TO_DISCORD_ROLE_MAPPING
 
     return [
         wom_role
@@ -652,7 +665,7 @@ def get_all_wom_roles_for_discord_rank(discord_rank: RANK) -> list:
         List of WOM GroupRole values that map to the Discord rank
     """
     from wom import GroupRole
-    from ironforgedbot.common.wom_role_mapping import WOM_TO_DISCORD_RANK_MAPPING
+    from ironforgedcore.common.wom_role_mapping import WOM_TO_DISCORD_RANK_MAPPING
 
     return [
         wom_role

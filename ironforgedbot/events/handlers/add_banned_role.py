@@ -5,12 +5,13 @@ from discord.errors import Forbidden
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import get_discord_role
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import BLACKLISTED_ROLE_NAME, ROLE, BANNED_ROLE_NAME
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.role_names import BLACKLISTED_ROLE_NAME, BANNED_ROLE_NAME
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

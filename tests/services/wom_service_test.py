@@ -1,10 +1,11 @@
+import os
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 from types import SimpleNamespace
 
 import wom
 
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.services.wom_service import (
     WomService,
     WomServiceError,
     WomRateLimitError,
@@ -18,15 +19,19 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        # Mock CONFIG to have valid values
-        self.config_patcher = patch("ironforgedbot.services.wom_service.CONFIG")
-        self.mock_config = self.config_patcher.start()
-        self.mock_config.WOM_API_KEY = "test_api_key"
-        self.mock_config.WOM_GROUP_ID = 12345
+        self._saved_env = {}
+        for key in ("WOM_API_KEY", "WOM_GROUP_ID"):
+            self._saved_env[key] = os.environ.pop(key, None)
+        os.environ["WOM_API_KEY"] = "test_api_key"
+        os.environ["WOM_GROUP_ID"] = "12345"
 
     def tearDown(self):
         """Clean up after tests."""
-        self.config_patcher.stop()
+        for key, value in self._saved_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
     def test_init_with_valid_config(self):
         """Test WomService initialization with valid configuration."""
@@ -50,7 +55,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
     def test_init_with_missing_api_key(self):
         """Test WomService initialization with missing API key."""
-        self.mock_config.WOM_API_KEY = ""
+        os.environ["WOM_API_KEY"] = ""
 
         with self.assertRaises(WomServiceError) as cm:
             WomService()
@@ -67,7 +72,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
         service.close.assert_called_once()
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_client_without_base_url(self, mock_client_class):
         """Test _get_client does not pass api_base_url when base_url is None."""
         mock_client = AsyncMock()
@@ -80,7 +85,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
             api_key="test_api_key", user_agent="IronForged"
         )
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_client_with_base_url(self, mock_client_class):
         """Test _get_client passes api_base_url when base_url is set."""
         mock_client = AsyncMock()
@@ -95,7 +100,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
             api_base_url="https://api.wiseoldman.net/league",
         )
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_group_gains_single_call(self, mock_client_class):
         """Test _get_group_gains makes a single API call without pagination."""
         mock_client = AsyncMock()
@@ -120,7 +125,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
             period=wom.Period.Month,
         )
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_group_gains_api_error(self, mock_client_class):
         """Test _get_group_gains raises WomServiceError on API failure."""
         mock_client = AsyncMock()
@@ -138,7 +143,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIn("WOM API error", str(cm.exception))
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_monthly_activity_data_success(self, mock_client_class):
         """Test successful monthly activity data retrieval."""
         mock_client = AsyncMock()
@@ -173,7 +178,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("limit", call_kwargs[1])
         self.assertNotIn("offset", call_kwargs[1])
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_monthly_activity_data_rate_limit_error(self, mock_client_class):
         """Test rate limit error handling."""
         mock_client = AsyncMock()
@@ -189,7 +194,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(WomServiceError):
             await service.get_monthly_activity_data()
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_group_membership_data_success(self, mock_client_class):
         """Test successful group membership data retrieval."""
         mock_client = AsyncMock()
@@ -210,7 +215,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, mock_group_details)
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_player_name_history_success(self, mock_client_class):
         """Test successful player name history retrieval."""
         mock_client = AsyncMock()
@@ -230,7 +235,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, mock_name_changes)
         mock_client.players.get_name_changes.assert_called_once_with("TestPlayer")
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_get_player_name_history_error(self, mock_client_class):
         """Test player name history error handling."""
         mock_client = AsyncMock()
@@ -267,7 +272,7 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
         service = WomService()
         service._client = mock_client
 
-        with patch("ironforgedbot.services.wom_service.logger") as mock_logger:
+        with patch("ironforgedcore.services.wom_service.logger") as mock_logger:
             await service.close()
 
         mock_client.close.assert_called_once()
@@ -286,12 +291,22 @@ class TestWomService(unittest.IsolatedAsyncioTestCase):
 class TestGetWomService(unittest.TestCase):
     """Test the get_wom_service function."""
 
-    @patch("ironforgedbot.services.wom_service.CONFIG")
-    def test_get_wom_service_success(self, mock_config):
-        """Test successful service creation."""
-        mock_config.WOM_API_KEY = "test_key"
-        mock_config.WOM_GROUP_ID = 12345
+    def setUp(self):
+        self._saved_env = {}
+        for key in ("WOM_API_KEY", "WOM_GROUP_ID"):
+            self._saved_env[key] = os.environ.pop(key, None)
+        os.environ["WOM_API_KEY"] = "test_key"
+        os.environ["WOM_GROUP_ID"] = "12345"
 
+    def tearDown(self):
+        for key, value in self._saved_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_get_wom_service_success(self):
+        """Test successful service creation."""
         service = get_wom_service()
 
         self.assertIsInstance(service, WomService)
@@ -299,11 +314,10 @@ class TestGetWomService(unittest.TestCase):
         self.assertEqual(service.group_id, 12345)
         self.assertIsNone(service.base_url)
 
-    @patch("ironforgedbot.services.wom_service.CONFIG")
-    def test_get_wom_service_missing_config(self, mock_config):
+    def test_get_wom_service_missing_config(self):
         """Test service creation with missing configuration."""
-        mock_config.WOM_API_KEY = ""
-        mock_config.WOM_GROUP_ID = 12345
+        os.environ["WOM_API_KEY"] = ""
+        os.environ["WOM_GROUP_ID"] = "12345"
 
         with self.assertRaises(WomServiceError):
             get_wom_service()
@@ -334,15 +348,20 @@ class TestGetPlayerSnapshotTimeline(unittest.IsolatedAsyncioTestCase):
     """Tests for WomService.get_player_snapshot_timeline."""
 
     def setUp(self):
-        self.config_patcher = patch("ironforgedbot.services.wom_service.CONFIG")
-        self.mock_config = self.config_patcher.start()
-        self.mock_config.WOM_API_KEY = "test_api_key"
-        self.mock_config.WOM_GROUP_ID = 12345
+        self._saved_env = {}
+        for key in ("WOM_API_KEY", "WOM_GROUP_ID"):
+            self._saved_env[key] = os.environ.pop(key, None)
+        os.environ["WOM_API_KEY"] = "test_api_key"
+        os.environ["WOM_GROUP_ID"] = "12345"
 
     def tearDown(self):
-        self.config_patcher.stop()
+        for key, value in self._saved_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_success_returns_snapshot_list(self, mock_client_class):
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
@@ -362,7 +381,7 @@ class TestGetPlayerSnapshotTimeline(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, fake_snapshots)
         mock_client.players.get_snapshots_timeline.assert_called_once()
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_api_error_raises_wom_service_error(self, mock_client_class):
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
@@ -376,7 +395,7 @@ class TestGetPlayerSnapshotTimeline(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(WomServiceError):
             await service.get_player_snapshot_timeline("unknownplayer")
 
-    @patch("ironforgedbot.services.wom_service.wom.Client")
+    @patch("ironforgedcore.services.wom_service.wom.Client")
     async def test_timeout_raises_wom_timeout_error(self, mock_client_class):
         import asyncio
 

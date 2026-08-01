@@ -5,25 +5,22 @@ import discord
 from discord import app_commands
 from tabulate import tabulate
 
-from ironforgedbot.common.helpers import (
-    find_emoji,
-    normalize_discord_string,
-    validate_playername,
-)
-from ironforgedbot.common.ranks import get_rank_from_member
+from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedcore.common.normalize import normalize_discord_string
+from ironforgedbot.common.ranks_discord import get_rank_from_member
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import (
     build_ingot_response_embed,
     send_error_response,
 )
 from ironforgedbot.common.text_formatters import text_code_block
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.models.changelog import Changelog
-from ironforgedbot.services.changelog_service import ChangelogService
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.models.changelog import Changelog
+from ironforgedcore.services.changelog_service import ChangelogService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

@@ -10,22 +10,23 @@ down:
 	docker compose down
 
 test:
-	docker compose run --rm bot python run_tests.py
+	uv sync --project ironforgedbot --extra dev
+	uv run --project ironforgedbot python run_tests.py
 
 format:
-	docker compose run --rm bot python -m black .
+	docker compose run --rm --no-deps bot python -m black .
 
 shell:
 	docker compose run --rm bot /bin/sh
 
 migrate:
-	docker compose run --rm bot python -m alembic upgrade head
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.14/site-packages/ironforgedcore/alembic.ini upgrade head
 
 revision:
-	docker compose run --rm bot python -m alembic revision --autogenerate -m "$(DESC)"
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.14/site-packages/ironforgedcore/alembic.ini revision --autogenerate -m "$(DESC)"
 
 downgrade:
-	docker compose run --rm bot python -m alembic downgrade -1
+	docker compose run --rm bot python -m alembic -c /install/lib/python3.14/site-packages/ironforgedcore/alembic.ini downgrade -1
 
 build-dev:
 	docker compose build bot
@@ -40,8 +41,7 @@ rmi-prod:
 	docker rmi ironforgedbot:prod
 
 update-deps:
-	docker compose run --rm bot python -m piptools compile --upgrade requirements.in
-	docker compose run --rm bot python -m piptools compile --upgrade requirements-dev.in -o requirements-dev.txt
+	uv lock --directory ironforgedbot --upgrade
 	docker compose build bot
 
 update-data:
@@ -58,5 +58,14 @@ clean:
 	$(MAKE) rmi-prod
 	@echo "Pruning unused Docker resources..."
 	docker system prune -f --volumes
+	@echo "Removing local build artifacts..."
+	rm -rf dist/ build/ *.egg-info
+	find . -type d -name "*.egg-info" \
+		-not -path "./.venv/*" \
+		-not -path "./.devenv/*" \
+		-exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "__pycache__" \
+		-not -path "./.venv/*" \
+		-not -path "./.devenv/*" \
+		-exec rm -rf {} + 2>/dev/null || true
 	@echo "Cleanup complete!"
-

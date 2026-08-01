@@ -8,7 +8,7 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import build_discord_link, find_emoji
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_code_block
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators.require_role import require_role

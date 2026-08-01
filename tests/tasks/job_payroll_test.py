@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.tasks.job_payroll import (
     get_payment_month,
     pay_group,

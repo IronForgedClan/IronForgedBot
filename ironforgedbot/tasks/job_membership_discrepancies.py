@@ -7,11 +7,10 @@ from wom import GroupRole
 from ironforgedbot.common.helpers import (
     fit_log_lines_into_discord_messages,
     get_all_discord_members,
-    normalize_discord_string,
-    normalize_rsn,
 )
+from ironforgedcore.common.normalize import normalize_discord_string, normalize_rsn
 from ironforgedbot.common.logging_utils import log_task_execution
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.services.wom_service import (
     get_wom_service,
     WomServiceError,
     WomRateLimitError,

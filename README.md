@@ -1,6 +1,6 @@
 <h1 align="center">Iron Forged Bot</h1>
 <p align="center">
-<img alt="Latest Version" src="https://img.shields.io/github/v/tag/IronForgedClan/IronForgedBot?sort=semver&label=version&color=%20%2361ad38">
+<img alt="Bot Version" src="https://img.shields.io/github/v/release/IronForgedClan/IronForgedBot?include_prereleases&label=bot&color=%20%2361ad38">
 <a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
@@ -224,7 +224,7 @@ Now you can modify the example `.env` file with your values.
 | BOT_COMMANDS_CHANNEL_ID         | The unique ID of the bot commands channel.                                                                         | Your own Discord server channel: right click, "Copy Channel ID".     |
 | RANKINGS_CHANNEL_ID             | The unique ID of the rankings/scoring information channel.                                                         | Your own Discord server channel: right click, "Copy Channel ID".     |
 | BOT_CHANGELOG_CHANNEL_ID        | The unique ID of the bot changelog channel.                                                                        | Your own Discord server channel: right click, "Copy Channel ID".     |
-| CREATE_TICKET_CHANNEL_ID        | The unique ID of the channel where users submit feedback or support tickets.                                        | Your own Discord server channel: right click, "Copy Channel ID".     |
+| CREATE_TICKET_CHANNEL_ID        | The unique ID of the channel where users submit feedback or support tickets.                                       | Your own Discord server channel: right click, "Copy Channel ID".     |
 | DB_ROOT                         | The password used by the root database account.                                                                    | Generate a secure password.                                          |
 | DB_USER                         | The name of the user account the bot will use to access the database.                                              | Any value. Eg: test_user                                             |
 | DB_PASS                         | The password of the account the bot will use to access the database.                                               | Generate a secure password.                                          |
@@ -253,7 +253,7 @@ Now you can modify the example `.env` file with your values.
 You will need to run the database migrations before the bot will be able to use
 the database. To do so, you can run the following command. You will need to do
 this every time the database schema changes. Migration files live inside the
-`alembic/versions` directory.
+`ironforgedcore/alembic/versions` directory.
 
 ```sh
 make migrate
@@ -298,7 +298,13 @@ view its source command and try running that instead.
 ### Commands
 
 - `make up`\
-  Starts the containers using `docker compose up`.
+  Starts the database, bot (dev), and API (dev) together. Dev services mount
+  the source tree so code changes are picked up live — the bot uses
+  `watchmedo` for auto-restart, the API uses `uvicorn --reload`.
+
+- `make up-prod`\
+  Starts the database, bot, and API from their built prod images. Use this
+  to verify a production build without the dev mount.
 
 - `make down`\
   Stops and removes the containers.
@@ -323,8 +329,8 @@ view its source command and try running that instead.
   Reverts the most recent database migration.
 
 - `make update-deps`\
-  Updates all project dependencies to their latest versions and rebuilds the
-  container.
+  Resolves the latest dependency versions into `ironforgedbot/uv.lock` and
+  rebuilds the dev container.
 
 - `make update-data`\
   Updates the data submodule to the latest commit from the private repository.
@@ -332,6 +338,24 @@ view its source command and try running that instead.
 - `make clean`\
   Stops containers, removes project containers and images, and prunes unused
   Docker resources to free up disk space.
+
+- `make api-up` / `make api-down` / `make api-logs` / `make api-shell`\
+  Start, stop, tail logs, or open a shell in the dev API container (mounted
+  code, `uvicorn --reload`).
+
+- `make api-up-prod` / `make api-down-prod` / `make api-logs-prod` / `make api-shell-prod`\
+  Same as above but against the built prod API image, for verifying prod
+  behavior in isolation.
+
+- `make api-consumer-interactive`\
+  Walk through creating, perm-granting/revoking, enabling/disabling, rotating,
+  and deleting API consumers, with a guided prompt flow. Available perms are
+  read from `api/permissions.py:KNOWN_PERMS` so the menu stays in sync with the
+  code.
+
+- `make api-consumer-list`\
+  Print a table of all registered API consumers and their current perms (for
+  scripting).
 
 ## Tooling
 
@@ -357,11 +381,24 @@ source .venv/bin/activate
 
 ### Requirements
 
-The project requirements are listed in `requirements.txt` file. To install, run:
+The project dependencies are declared in `ironforgedbot/pyproject.toml` and
+pinned via `ironforgedbot/uv.lock`. The project uses
+[uv](https://docs.astral.sh/uv/) as its package manager.
+
+Install uv on your host:
 
 ```sh
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+
+To install dependencies and create a virtual environment:
+
+```sh
+uv sync
+```
+
+To add or remove a dependency, edit `ironforgedbot/pyproject.toml` and re-run
+`uv lock` from inside the `ironforgedbot/` directory.
 
 ## Logs
 
@@ -389,7 +426,7 @@ specified by `LOG_DIR` (default: `./logs`). Files rotate when they reach
 ## Testing
 
 All test files live within the `tests` directory. The structure within this
-directory mirrors `ironforgedbot`.
+directory mirrors the source tree (`ironforgedcore` + `ironforgedbot` + `api`).
 
 To execute the entire test suite run:
 

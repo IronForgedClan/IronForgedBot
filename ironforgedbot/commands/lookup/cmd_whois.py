@@ -5,13 +5,14 @@ from discord import app_commands
 
 from wom import NameChangeStatus
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
-from ironforgedbot.common.helpers import render_relative_time, validate_playername
+from ironforgedcore.common.time import render_relative_time
+from ironforgedbot.common.helpers import validate_playername
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_bold
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.services.wom_service import (
     get_wom_service,
     WomServiceError,
     WomRateLimitError,

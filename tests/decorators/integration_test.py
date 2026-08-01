@@ -2,7 +2,7 @@ import time
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.decorators.require_channel import require_channel
 from ironforgedbot.decorators.require_role import require_role
 from tests.helpers import (
@@ -42,7 +42,7 @@ class TestDecoratorIntegration(unittest.IsolatedAsyncioTestCase):
 
     async def test_check_member_has_role_logic(self):
         """Test the core role checking logic"""
-        from ironforgedbot.common.roles import check_member_has_role
+        from ironforgedbot.common.roles_discord import check_member_has_role
 
         # User with Member role should have access to Member commands
         member_user = create_test_member("member", [ROLE.MEMBER])

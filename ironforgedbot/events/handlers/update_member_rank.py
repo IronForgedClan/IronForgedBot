@@ -4,12 +4,14 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import find_emoji
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedbot.common.ranks_discord import get_rank_from_member
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import check_member_has_role
 from ironforgedbot.events.handlers.base import BaseMemberUpdateHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
 

@@ -3,16 +3,16 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import (
-    ROLE,
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import (
     BOOSTER_ROLE_NAME,
     PROSPECT_ROLE_NAME,
     BLACKLISTED_ROLE_NAME,
     BANNED_ROLE_NAME,
 )
-from ironforgedbot.models.member import Member
-from ironforgedbot.services.member_service import (
+from ironforgedcore.models.member import Member
+from ironforgedcore.services.member_service import (
     UniqueDiscordIdVolation,
     UniqueNicknameViolation,
 )
@@ -25,7 +25,7 @@ from tests.helpers import (
 )
 
 with patch(
-    "ironforgedbot.common.helpers.normalize_discord_string", side_effect=lambda x: x
+    "ironforgedcore.common.normalize.normalize_discord_string", side_effect=lambda x: x
 ):
     from ironforgedbot.commands.admin.sync_members import sync_members
 

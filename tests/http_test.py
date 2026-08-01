@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
 
-from ironforgedbot.http import AsyncHttpClient, HttpException, HttpResponse
+from ironforgedcore.http import AsyncHttpClient, HttpException, HttpResponse
 
 
 class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
@@ -30,7 +30,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(client.session)
         self.assertIsNotNone(client._session_lock)
 
-    @patch("ironforgedbot.http.event_emitter")
+    @patch("ironforgedcore.http.event_emitter")
     def test_event_emitter_cleanup_handler_registered(self, mock_event_emitter):
         """Test that cleanup handler is registered with event emitter."""
         client = AsyncHttpClient()
@@ -423,7 +423,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
     # JSON fallback test removed - functionality not needed
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_server_error_500_raises_http_exception(self, mock_sleep):
         """Test that server error (500) raises HttpException."""
         mock_response = AsyncMock()
@@ -447,7 +447,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("A remote server error occurred: 500", str(context.exception))
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_server_error_502_raises_http_exception(self, mock_sleep):
         """Test that server error (502) raises HttpException."""
         mock_response = AsyncMock()
@@ -471,7 +471,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("A remote server error occurred: 502", str(context.exception))
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_timeout_408_raises_http_exception(self, mock_sleep):
         """Test that timeout (408) raises HttpException."""
         mock_response = AsyncMock()
@@ -494,7 +494,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
             self.assertIn("No response from remote server: 408", str(context.exception))
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_rate_limit_429_raises_http_exception(self, mock_sleep):
         """Test that rate limit (429) raises HttpException."""
         mock_response = AsyncMock()
@@ -519,7 +519,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
                 "Rate limited or timed out response: 429", str(context.exception)
             )
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_connection_error_raises_http_exception(self, mock_sleep):
         """Test that connection error raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -535,7 +535,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 self.assertIn("Connection failed", str(context.exception))
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_client_timeout_raises_http_exception(self, mock_sleep):
         """Test that client timeout raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -549,7 +549,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(aiohttp.ServerTimeoutError):
                     await self.client.get(self.test_url)
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_generic_client_error_raises_http_exception(self, mock_sleep):
         """Test that generic client error raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -565,7 +565,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 self.assertIn("Generic client error", str(context.exception))
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_unexpected_error_raises_http_exception(self, mock_sleep):
         """Test that unexpected error raises HttpException."""
         with patch.object(self.client, "_initialize_session"):
@@ -579,7 +579,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 self.assertIn("Unexpected error", str(context.exception))
 
-    @patch("ironforgedbot.decorators.retry_on_exception.asyncio.sleep")
+    @patch("ironforgedcore.retry.asyncio.sleep")
     async def test_get_response_body_read_error_raises_http_exception(self, mock_sleep):
         """Test that response body read error raises HttpException."""
         mock_response = AsyncMock()
@@ -1116,7 +1116,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
             # Session initialization should be called
             self.assertGreaterEqual(mock_init.call_count, 1)
 
-    @patch("ironforgedbot.http.asyncio.sleep")
+    @patch("ironforgedcore.http.asyncio.sleep")
     async def test_rate_limiting_enforces_minimum_delay(self, mock_sleep):
         """Test that rate limiting enforces minimum delay between requests to same host."""
         url = "https://example.com/api"
@@ -1124,7 +1124,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         # Manually set last request time to simulate rapid requests
         self.client._last_request_time["example.com"] = 0.0
 
-        with patch("ironforgedbot.http.time.time") as mock_time:
+        with patch("ironforgedcore.http.time.time") as mock_time:
             # Current time is 0.1s after last request
             mock_time.side_effect = [0.1, 0.1]
 
@@ -1135,12 +1135,12 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
     async def test_rate_limiting_different_hosts_no_delay(self):
         """Test that rate limiting doesn't apply delays between different hosts."""
-        with patch("ironforgedbot.http.asyncio.sleep") as mock_sleep:
+        with patch("ironforgedcore.http.asyncio.sleep") as mock_sleep:
             # Set up timing for different hosts
             self.client._last_request_time["first.com"] = 0.0
             # Don't set anything for "different.com" - it should get default of 0
 
-            with patch("ironforgedbot.http.time.time") as mock_time:
+            with patch("ironforgedcore.http.time.time") as mock_time:
                 mock_time.return_value = 2.0  # Well past the 1s limit for both hosts
 
                 # Request to different host should not be rate limited
@@ -1148,7 +1148,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
 
                 mock_sleep.assert_not_called()  # No delays when enough time has passed
 
-    @patch("ironforgedbot.http.asyncio.sleep")
+    @patch("ironforgedcore.http.asyncio.sleep")
     async def test_rate_limiting_bypassed_after_sufficient_delay(self, mock_sleep):
         """Test that rate limiting is bypassed when sufficient time has passed."""
         url = "https://example.com/api"
@@ -1156,7 +1156,7 @@ class TestAsyncHttpClient(unittest.IsolatedAsyncioTestCase):
         # Set previous request time
         self.client._last_request_time["example.com"] = 0.0
 
-        with patch("ironforgedbot.http.time.time") as mock_time:
+        with patch("ironforgedcore.http.time.time") as mock_time:
             # Current time is 1.5s after last request (> 1s minimum)
             mock_time.side_effect = [1.5, 1.5]
 
@@ -1247,7 +1247,7 @@ class TestHttpException(unittest.TestCase):
 class TestGlobalHttpInstance(unittest.TestCase):
     """Test the global HTTP instance creation."""
 
-    @patch("ironforgedbot.http.AsyncHttpClient")
+    @patch("ironforgedcore.http.AsyncHttpClient")
     def test_global_http_instance_creation(self, mock_client_class):
         """Test global HTTP instance is created successfully."""
         mock_instance = Mock()
@@ -1255,22 +1255,22 @@ class TestGlobalHttpInstance(unittest.TestCase):
 
         # The HTTP global instance is created at import time
         # Since it's already imported, we need to simulate the creation
-        from ironforgedbot.http import HTTP
+        from ironforgedcore.http import HTTP
 
         # Verify that an instance exists
         self.assertIsNotNone(HTTP)
 
     @patch("sys.exit")
-    @patch("ironforgedbot.http.logger")
+    @patch("ironforgedcore.http.logger")
     def test_global_http_instance_initialization_error_exits(
         self, mock_logger, mock_exit
     ):
         """Test that initialization error causes system exit."""
         # This test verifies the error handling logic exists in the module
         # Since we can't easily mock the import-time creation, we test the pattern
-        import ironforgedbot.http
+        import ironforgedcore.http
 
         # The try/except block exists in the module for error handling
         # We can't easily test the exact flow without complex module reloading
         # Instead verify the HTTP instance was created successfully
-        self.assertIsNotNone(ironforgedbot.http.HTTP)
+        self.assertIsNotNone(ironforgedcore.http.HTTP)

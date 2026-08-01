@@ -6,7 +6,7 @@ from typing import TypedDict
 
 import aiofiles
 
-from ironforgedbot.event_emitter import event_emitter
+from ironforgedcore.event_emitter import event_emitter
 
 logger = logging.getLogger(__name__)
 

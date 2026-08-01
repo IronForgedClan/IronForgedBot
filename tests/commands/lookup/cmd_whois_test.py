@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 from wom import NameChangeStatus
 
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     mock_require_role,
     create_mock_discord_interaction,
@@ -179,7 +179,7 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_whois_wom_service_error(
         self, mock_validate_playername, mock_get_wom_service, mock_send_error
     ):
-        from ironforgedbot.services.wom_service import WomServiceError
+        from ironforgedcore.services.wom_service import WomServiceError
 
         mock_validate_playername.return_value = (self.mock_member, "TestPlayer")
         mock_wom_service = AsyncMock()
@@ -202,7 +202,7 @@ class TestCmdWhois(unittest.IsolatedAsyncioTestCase):
     async def test_cmd_whois_rate_limit_error(
         self, mock_validate_playername, mock_get_wom_service, mock_send_error
     ):
-        from ironforgedbot.services.wom_service import WomRateLimitError
+        from ironforgedcore.services.wom_service import WomRateLimitError
 
         mock_validate_playername.return_value = (self.mock_member, "TestPlayer")
         mock_wom_service = AsyncMock()

@@ -9,9 +9,9 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     HIGH_INGOT_MAX,
     LOW_INGOT_MIN,
 )
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.database.database import db
-from ironforgedbot.services.member_service import MemberService
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.database import db
+from ironforgedcore.services.member_service import MemberService
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (

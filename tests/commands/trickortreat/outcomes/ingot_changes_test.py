@@ -8,7 +8,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     LOW_INGOT_MAX,
     LOW_INGOT_MIN,
 )
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,

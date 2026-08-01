@@ -4,18 +4,19 @@ from typing import Dict
 
 import discord
 
-from ironforgedbot.common.helpers import normalize_discord_string
+from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK, get_rank_from_member
-from ironforgedbot.common.roles import (
-    ROLE,
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedbot.common.ranks_discord import get_rank_from_member
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import (
     check_member_has_role,
     get_highest_privilage_role_from_member,
     get_member_flags_from_discord,
     get_flag_changes,
 )
-from ironforgedbot.database.database import db
-from ironforgedbot.services.member_service import (
+from ironforgedcore.database import db
+from ironforgedcore.services.member_service import (
     MemberService,
     UniqueDiscordIdVolation,
     UniqueNicknameViolation,

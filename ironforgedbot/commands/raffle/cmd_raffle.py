@@ -3,18 +3,17 @@ import logging
 import discord
 
 from ironforgedbot.commands.raffle.raffle_menu_view import RaffleMenuView
-from ironforgedbot.common.helpers import (
-    find_emoji,
-)
+from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLE, check_member_has_role
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import check_member_has_role
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators.require_channel import require_channel
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_raffle_service
 from ironforgedbot.state import STATE
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

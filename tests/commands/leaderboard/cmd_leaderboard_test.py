@@ -6,7 +6,7 @@ import discord
 
 from ironforgedbot.commands.leaderboard.leaderboard_registry import LEADERBOARD_TYPES
 from ironforgedbot.commands.leaderboard.leaderboard_types import LeaderboardEntry
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     VALID_CONFIG,
     create_mock_discord_interaction,

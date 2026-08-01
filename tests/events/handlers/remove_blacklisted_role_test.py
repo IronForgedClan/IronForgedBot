@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, Mock
 
 import discord
 
-from ironforgedbot.common.roles import ROLE, BLACKLISTED_ROLE_NAME
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import BLACKLISTED_ROLE_NAME
 from ironforgedbot.events.handlers.remove_blacklisted_role import (
     RemoveBlacklistedRoleHandler,
 )

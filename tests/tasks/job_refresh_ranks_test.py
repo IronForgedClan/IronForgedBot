@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.services.score_service import HiscoresNotFound
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.exceptions.score_exceptions import HiscoresNotFound
 from ironforgedbot.tasks.job_refresh_ranks import (
     build_missing_member_message,
     build_hiscores_not_found_message,

@@ -2,8 +2,8 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.trickortreat.outcomes import jackpot
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_db_member,
@@ -34,8 +34,8 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("already claimed", embed.description.lower())
 
-    @patch("ironforgedbot.database.database.db")
-    @patch("ironforgedbot.services.member_service.MemberService")
+    @patch("ironforgedcore.database.db")
+    @patch("ironforgedcore.services.member_service.MemberService")
     @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
     async def test_result_jackpot_success(
         self, mock_state, mock_member_service_class, mock_db

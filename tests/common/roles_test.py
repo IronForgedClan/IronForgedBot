@@ -3,12 +3,14 @@ from unittest.mock import Mock
 
 import discord
 
-from ironforgedbot.common.roles import (
-    ROLE,
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import (
     BANNED_ROLE_NAME,
     BOOSTER_ROLE_NAME,
     PROSPECT_ROLE_NAME,
     BLACKLISTED_ROLE_NAME,
+)
+from ironforgedbot.common.roles_discord import (
     check_member_has_role,
     get_highest_privilage_role_from_member,
     member_has_any_roles,

@@ -274,7 +274,7 @@ class MembershipDiscrepanciesTaskTest(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.tasks.job_membership_discrepancies.get_wom_service")
     async def test_get_valid_wom_members_handles_wom_error(self, mock_get_wom_service):
-        from ironforgedbot.services.wom_service import WomServiceError
+        from ironforgedcore.services.wom_service import WomServiceError
 
         mock_wom_service = AsyncMock()
         mock_wom_service.get_group_membership_data.side_effect = WomServiceError(

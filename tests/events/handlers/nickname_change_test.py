@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, Mock, patch
 import discord
 from discord.errors import Forbidden
 
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.events.handlers.nickname_change import NicknameChangeHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
-from ironforgedbot.services.member_service import UniqueNicknameViolation
+from ironforgedcore.services.member_service import UniqueNicknameViolation
 from tests.helpers import create_test_db_member, create_test_member
 
 

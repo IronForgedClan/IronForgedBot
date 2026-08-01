@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, Mock
 
 import discord
 
-from ironforgedbot.common.roles import ROLE, BOOSTER_ROLE_NAME
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import BOOSTER_ROLE_NAME
 from ironforgedbot.events.handlers.add_booster_role import AddBoosterRoleHandler
 from ironforgedbot.events.member_events import MemberUpdateContext
 from tests.helpers import create_test_db_member, create_test_member

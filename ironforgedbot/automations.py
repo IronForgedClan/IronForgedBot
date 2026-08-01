@@ -8,7 +8,7 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from ironforgedbot.cache.score_cache import SCORE_CACHE
+from ironforgedcore.cache.score_cache import SCORE_CACHE
 from ironforgedbot.common.helpers import get_text_channel
 from ironforgedbot.config import CONFIG
 from ironforgedbot.tasks.job_check_activity import (

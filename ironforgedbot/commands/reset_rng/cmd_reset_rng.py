@@ -7,7 +7,7 @@ import discord
 
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.decorators.command_price import command_price
 from ironforgedbot.decorators.require_role import require_role
 

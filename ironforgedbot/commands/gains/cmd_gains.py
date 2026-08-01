@@ -8,21 +8,18 @@ import discord
 from discord import app_commands
 from tabulate import tabulate
 
-from ironforgedbot.common.activity_check import build_daily_gains
+from ironforgedcore.common.activity_check import build_daily_gains
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
-from ironforgedbot.common.helpers import (
-    find_emoji,
-    normalize_discord_string,
-    validate_playername,
-)
+from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.text_formatters import text_code_block
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_member_service
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.services.wom_service import (
     WomRateLimitError,
     WomServiceError,
     WomTimeoutError,

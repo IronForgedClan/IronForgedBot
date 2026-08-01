@@ -13,7 +13,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_types import (
     LeaderboardEntry,
     StaffLeaderboardEntry,
 )
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 from tests.helpers import VALID_CONFIG
 
 

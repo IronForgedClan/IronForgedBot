@@ -4,11 +4,12 @@ from unittest.mock import ANY, AsyncMock, Mock, patch
 import discord
 
 from ironforgedbot.common.constants import EMPTY_SPACE
-from ironforgedbot.common.ranks import GOD_ALIGNMENT, RANK
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
-from ironforgedbot.http import HttpException
-from ironforgedbot.models.score import ScoreBreakdown, SkillScore, ActivityScore
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
+from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedcore.http import HttpException
+from ironforgedcore.models.score import ScoreBreakdown, SkillScore, ActivityScore
 from tests.helpers import (
     create_mock_discord_interaction,
     create_test_member,
@@ -24,7 +25,7 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
         )
         from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 
-from ironforgedbot.common.helpers import build_rank_progress_bar
+from ironforgedcore.common.text import build_rank_progress_bar
 
 
 def _make_embed_mock() -> Mock:
@@ -81,7 +82,7 @@ class TestBuildRankProgressBar(unittest.TestCase):
 
     def test_includes_percentage(self):
         with patch(
-            "ironforgedbot.common.helpers.render_percentage",
+            "ironforgedcore.common.numbers.render_percentage",
             return_value="50%",
         ):
             result = build_rank_progress_bar(500, 0, 1000, ":iron:", ":mithril:")

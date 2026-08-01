@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 # Load environment variables before initializing logger
 load_dotenv()
 
-from ironforgedbot.logging_config import get_logger_instance
+from ironforgedcore.logging_config import get_logger_instance
 
 # Initialize logging configuration
 get_logger_instance()
@@ -17,14 +17,16 @@ import discord
 from ironforgedbot.client import DiscordClient
 from ironforgedbot.command_tree import IronForgedCommands, IronForgedCommandTree
 from ironforgedbot.config import CONFIG
-from ironforgedbot.http import HTTP
+from ironforgedcore.http import HTTP
 from ironforgedbot.state import STATE
-from ironforgedbot.storage.data import BOSSES, CLUES, RAIDS, SKILLS
+from ironforgedcore.storage.data import BOSSES, CLUES, RAIDS, SKILLS, load_and_set
 
 logger = logging.getLogger(__name__)
 
 
 def init_bot() -> None:
+    load_and_set("data")
+
     if CONFIG and STATE and HTTP and BOSSES and CLUES and RAIDS and SKILLS:
         logger.info("Requirements loaded")
 

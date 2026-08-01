@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from ironforgedbot.decorators.retry_on_exception import retry_on_exception
+from ironforgedcore.retry import retry_on_exception
 
 
 class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
@@ -31,7 +31,7 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(func.call_count, 1)
         mock_sleep.assert_not_called()
 
-    @patch("ironforgedbot.decorators.retry_on_exception.logger", new_callable=MagicMock)
+    @patch("ironforgedcore.retry.logger", new_callable=MagicMock)
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception_retries(self, mock_sleep, mock_logger):
         func = self.create_retry_func(fail_count=2, success_msg="Success!")
@@ -44,7 +44,7 @@ class TestRetryOnExceptionDecorator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_sleep.call_count, 2)
         mock_logger.warning.assert_called()
 
-    @patch("ironforgedbot.decorators.retry_on_exception.logger", new_callable=MagicMock)
+    @patch("ironforgedcore.retry.logger", new_callable=MagicMock)
     @patch("asyncio.sleep", return_value=None)
     async def test_retry_on_exception_raises_after_max_retries(
         self, mock_sleep, mock_logger

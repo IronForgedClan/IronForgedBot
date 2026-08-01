@@ -4,7 +4,7 @@ import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import get_handler
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators.rate_limit import rate_limit
 from ironforgedbot.decorators.require_channel import require_channel

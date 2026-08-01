@@ -10,7 +10,7 @@ from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import send_error_response
 from ironforgedbot.common.text_formatters import text_bold, text_sub
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.services.service_factory import (
     create_ingot_service,
     create_member_service,

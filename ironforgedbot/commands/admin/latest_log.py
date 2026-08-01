@@ -3,7 +3,7 @@ import os
 
 import discord
 
-from ironforgedbot.logging_config import get_logger_instance
+from ironforgedcore.logging_config import get_logger_instance
 
 logger = logging.getLogger(__name__)
 

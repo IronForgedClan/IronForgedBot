@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import discord
 
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.decorators.require_role import require_role
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -32,7 +32,7 @@ class TestRequireRoleDecorator(unittest.IsolatedAsyncioTestCase):
 
         decorated_func = require_role(ROLE.LEADERSHIP)(mock_func)
 
-        from ironforgedbot.common.roles import check_member_has_role
+        from ironforgedbot.common.roles_discord import check_member_has_role
 
         self.assertTrue(
             check_member_has_role(mock_member, ROLE.LEADERSHIP, or_higher=True)

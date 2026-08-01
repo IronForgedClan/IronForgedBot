@@ -1,5 +1,5 @@
-# builder: compile all prod wheels (needs gcc + mysql headers)
-FROM python:3.13-alpine AS builder
+# builder: install prod wheels into the default location (/usr/local)
+FROM python:3.14-alpine AS builder
 
 RUN apk add --no-cache \
     mariadb-dev \
@@ -9,19 +9,22 @@ RUN apk add --no-cache \
     jpeg-dev \
     zlib-dev \
     freetype-dev \
-    libffi-dev
+    libffi-dev \
+    git
 
-RUN pip install --no-cache-dir --upgrade pip
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
- && find /install -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
-    find /install -name '*.dist-info' -exec rm -rf {} + 2>/dev/null; \
-    find /install -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
-    rm -rf /install/lib/python3.13/site-packages/pip
+WORKDIR /build
 
-# prod: clean Alpine image, runtime-only MySQL lib, no compilers
-FROM python:3.13-alpine AS prod
+COPY ironforgedbot ./ironforgedbot
+RUN uv pip install --system ./ironforgedbot \
+ && uv pip install --system "./ironforgedbot[dev]" \
+ && find /usr/local -name '__pycache__' -exec rm -rf {} + 2>/dev/null; \
+    find /usr/local -name '*.egg-info' -exec rm -rf {} + 2>/dev/null; \
+    rm -rf /usr/local/lib/python3.14/site-packages/pip
+
+# runner: clean Alpine + mariadb-connector-c + botuser, shared by prod images
+FROM python:3.14-alpine AS runner
 
 RUN apk add --no-cache mariadb-connector-c
 
@@ -29,23 +32,25 @@ RUN adduser -D botuser
 RUN mkdir /app && chown botuser:botuser /app
 WORKDIR /app
 
-COPY --from=builder /install /usr/local
-COPY --chown=botuser:botuser . .
-
 USER botuser
+
+# bot-prod: bot only
+FROM runner AS bot-prod
+
+COPY --from=builder /usr/local /usr/local
+COPY --chown=botuser:botuser main.py ./
+COPY --chown=botuser:botuser ironforgedbot ./ironforgedbot
+
 CMD ["python", "main.py"]
 
-# dev: builder + dev dependencies + file watcher
+# dev: builder + dev dependencies + file watcher + full copy for self-contained dev
 FROM builder AS dev
-
-COPY requirements-dev.txt .
-RUN pip install --no-cache-dir -r requirements-dev.txt
 
 RUN adduser -D botuser
 RUN mkdir /app && chown botuser:botuser /app
 WORKDIR /app
 
-COPY --from=builder /install /usr/local
+COPY --from=builder /usr/local /usr/local
 COPY --chown=botuser:botuser . .
 
 USER botuser

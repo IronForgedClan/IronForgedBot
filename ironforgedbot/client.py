@@ -6,16 +6,14 @@ import sys
 import discord
 
 from ironforgedbot.automations import IronForgedAutomations
-from ironforgedbot.common.helpers import (
-    get_text_channel,
-    populate_emoji_cache,
-)
-from ironforgedbot.config import CONFIG, ENVIRONMENT
-from ironforgedbot.event_emitter import event_emitter
+from ironforgedbot.common.helpers import get_text_channel, populate_emoji_cache
+from ironforgedbot.config import CONFIG
+from ironforgedcore.config import ENVIRONMENT
+from ironforgedcore.event_emitter import event_emitter
 from ironforgedbot.events.member_events import MemberUpdateContext
 from ironforgedbot.events.member_update_emitter import member_update_emitter
 from ironforgedbot.state import STATE
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 # Import handlers to trigger self-registration
 import ironforgedbot.events.handlers  # noqa: F401

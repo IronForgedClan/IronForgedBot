@@ -4,30 +4,26 @@ from typing import Optional
 import discord
 from discord import app_commands
 
-from ironforgedbot.common.activity_check import (
+from ironforgedcore.common.activity_check import (
     calculate_days_of_buffer,
     check_member_activity,
     extract_overall_xp_gained,
 )
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
-from ironforgedbot.common.helpers import (
-    find_emoji,
-    normalize_discord_string,
-    normalize_rsn,
-    validate_playername,
-)
+from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedcore.common.normalize import normalize_discord_string, normalize_rsn
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.ranks import get_rank_from_member
+from ironforgedbot.common.ranks_discord import get_rank_from_member
 from ironforgedbot.common.responses import build_response_embed, send_error_response
-from ironforgedbot.common.roles import ROLE
+from ironforgedcore.common.roles import ROLE
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import (
     create_absent_service,
     create_member_service,
 )
-from ironforgedbot.services.wom_service import (
+from ironforgedcore.services.wom_service import (
     get_wom_service,
     WomService,
     WomServiceError,

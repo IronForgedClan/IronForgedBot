@@ -4,24 +4,26 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from sqlalchemy.exc import IntegrityError
 
-from ironforgedbot.common.ranks import RANK
-from ironforgedbot.common.roles import ROLE
-from ironforgedbot.models.changelog import ChangeType, Changelog
-from ironforgedbot.models.member import Member
-from ironforgedbot.services.member_service import (
+from ironforgedcore.common.ranks import RANK
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.models.changelog import ChangeType, Changelog
+from ironforgedcore.models.member import Member
+from ironforgedcore.services.member_service import (
     MEMBER_FLAGS,
+    MemberListFilter,
+    MemberListResult,
     MemberNotFoundException,
     MemberService,
     MemberServiceReactivateResponse,
     UniqueDiscordIdVolation,
     UniqueNicknameViolation,
 )
+from tests.helpers import create_mock_db_session
 
 
 class TestMemberService(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.mock_db = AsyncMock()
-        self.mock_db.add = MagicMock()
+        self.mock_db = create_mock_db_session()
         self.mock_db.flush = AsyncMock()
         self.mock_db.commit = AsyncMock()
         self.mock_db.rollback = AsyncMock()
@@ -60,9 +62,9 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         await self.member_service.close()
         self.mock_db.close.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
-    @patch("ironforgedbot.services.member_service.normalize_discord_string")
-    @patch("ironforgedbot.services.member_service.uuid")
+    @patch("ironforgedcore.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.normalize_discord_string")
+    @patch("ironforgedcore.services.member_service.uuid")
     async def test_create_member_success(
         self, mock_uuid, mock_normalize, mock_datetime
     ):
@@ -93,7 +95,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.mock_db.flush.assert_called_once()
         self.mock_db.commit.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_discord_id_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.flush.side_effect = IntegrityError("discord_id", None, Exception())
@@ -103,7 +105,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_nickname_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.flush.side_effect = IntegrityError("nickname", None, Exception())
@@ -113,7 +115,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_unknown_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         error = IntegrityError("unknown", None, Exception())
@@ -124,7 +126,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.flush.side_effect = RuntimeError("Database error")
@@ -217,6 +219,96 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         result = await self.member_service.get_member_by_id("nonexistent-id")
 
         self.assertIsNone(result)
+
+    async def test_get_member_by_id_or_discord_digits_calls_by_discord_id(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = self.sample_member
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord("12345")
+
+        self.assertEqual(result, self.sample_member)
+        self.assertEqual(self.mock_db.execute.await_count, 1)
+
+    async def test_get_member_by_id_or_discord_uuid_calls_by_id(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = self.sample_member
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord(
+            "11111111-2222-3333-4444-555555555555"
+        )
+
+        self.assertEqual(result, self.sample_member)
+        self.assertEqual(self.mock_db.execute.await_count, 1)
+
+    async def test_get_member_by_id_or_discord_miss_returns_none(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord("99999")
+
+        self.assertIsNone(result)
+
+    async def test_get_member_by_id_or_discord_or_raise_found(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = self.sample_member
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_id_or_discord_or_raise("42")
+
+        self.assertEqual(result, self.sample_member)
+
+    async def test_get_member_by_id_or_discord_or_raise_digits_raises(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        with self.assertRaises(MemberNotFoundException) as ctx:
+            await self.member_service.get_member_by_id_or_discord_or_raise("99999")
+        self.assertIn("id=99999", str(ctx.exception))
+
+    async def test_get_member_by_id_or_discord_or_raise_uuid_raises(self):
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        self.mock_db.execute.return_value = mock_result
+
+        with self.assertRaises(MemberNotFoundException) as ctx:
+            await self.member_service.get_member_by_id_or_discord_or_raise(
+                "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+            )
+        self.assertIn("id=aaaaaaaa", str(ctx.exception))
+
+    async def test_get_member_by_rsn_or_raise_found(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [self.sample_member]
+        self.mock_db.execute.return_value = mock_result
+
+        result = await self.member_service.get_member_by_rsn_or_raise("TestUser")
+
+        self.assertEqual(result, self.sample_member)
+
+    async def test_get_member_by_rsn_or_raise_raises(self):
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        self.mock_db.execute.return_value = mock_result
+
+        with self.assertRaises(MemberNotFoundException) as ctx:
+            await self.member_service.get_member_by_rsn_or_raise("ghost")
+        self.assertIn("rsn=ghost", str(ctx.exception))
 
     async def test_get_member_by_discord_id_found(self):
         mock_result = MagicMock()
@@ -323,7 +415,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNone(result)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_success_basic(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -343,7 +435,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertGreaterEqual(self.mock_db.add.call_count, 3)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_with_ingot_reset(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         old_member = self.inactive_member
@@ -360,7 +452,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.previous_ingot_qty, 2000)
         self.assertEqual(result.new_member.ingots, 0)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_no_ingot_reset(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         old_member = self.inactive_member
@@ -376,7 +468,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.ingots_reset)
         self.assertEqual(result.new_member.ingots, 2000)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_with_rank_change(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -397,7 +489,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
                     "nonexistent-id", "nickname"
                 )
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_nickname_conflict(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = IntegrityError("nickname", None, Exception())
@@ -412,7 +504,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_reactivate_member_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -427,7 +519,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_disable_member_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -453,7 +545,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(MemberNotFoundException):
                 await self.member_service.disable_member("nonexistent-id")
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_disable_member_exception_rollback(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -466,7 +558,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_nickname_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -496,7 +588,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
                     "nonexistent-id", "NewNickname"
                 )
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_nickname_integrity_error(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = IntegrityError("nickname", None, Exception())
@@ -511,7 +603,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_nickname_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -526,7 +618,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_rank_success(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -554,7 +646,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(MemberNotFoundException):
                 await self.member_service.change_rank("nonexistent-id", RANK.ADAMANT)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_change_rank_generic_exception(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.mock_db.commit.side_effect = RuntimeError("Database error")
@@ -567,7 +659,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.mock_db.rollback.assert_called_once()
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_create_member_default_rank(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -577,7 +669,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(created_member.rank, RANK.IRON)
 
     async def test_reactivate_member_preserves_same_nickname(self):
-        with patch("ironforgedbot.services.member_service.datetime") as mock_datetime:
+        with patch("ironforgedcore.services.member_service.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.fixed_datetime
 
             test_member = self.inactive_member
@@ -593,7 +685,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.mock_db.add.call_count, 2)
 
     async def test_reactivate_member_preserves_same_rank(self):
-        with patch("ironforgedbot.services.member_service.datetime") as mock_datetime:
+        with patch("ironforgedcore.services.member_service.datetime") as mock_datetime:
             mock_datetime.now.return_value = self.fixed_datetime
 
             test_member = self.inactive_member
@@ -608,7 +700,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.mock_db.add.call_count, 3)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_creates_multiple_changelog_entries(
         self, mock_datetime
     ):
@@ -649,7 +741,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(entry, Changelog)
             self.assertEqual(entry.change_type, ChangeType.FLAG_CHANGE)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_only_logs_changed_flags(self, mock_datetime):
         """Changelog entries only created for flags that actually change."""
         mock_datetime.now.return_value = self.fixed_datetime
@@ -681,7 +773,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         changelog_entry = self.mock_db.add.call_args_list[0][0][0]
         self.assertIn("prospect", changelog_entry.comment)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_single_flag(self, mock_datetime):
         """Single flag update works correctly."""
         mock_datetime.now.return_value = self.fixed_datetime
@@ -716,7 +808,7 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(changelog_entry.new_value, True)
         self.assertIn("blacklisted", changelog_entry.comment)
 
-    @patch("ironforgedbot.services.member_service.datetime")
+    @patch("ironforgedcore.services.member_service.datetime")
     async def test_update_member_flags_no_changes(self, mock_datetime):
         """No changes returns early without modifying database."""
         mock_datetime.now.return_value = self.fixed_datetime
@@ -891,3 +983,188 @@ class TestMemberService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result), 2)
         self.assertIn(admiral, result)
         self.assertIn(marshal, result)
+
+
+class TestMemberListFilterEnum(unittest.TestCase):
+    def test_values_match_api_filter(self):
+        self.assertEqual(MemberListFilter.ACTIVE.value, "active")
+        self.assertEqual(MemberListFilter.BOOSTER.value, "booster")
+        self.assertEqual(MemberListFilter.PROSPECT.value, "prospect")
+        self.assertEqual(MemberListFilter.BLACKLISTED.value, "blacklisted")
+        self.assertEqual(MemberListFilter.BANNED.value, "banned")
+
+
+class TestListMembers(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.mock_db = AsyncMock()
+        self.mock_db.execute = AsyncMock()
+        self.member_service = MemberService(self.mock_db)
+
+        self.count_result = MagicMock()
+        self.count_result.scalar_one.return_value = 0
+        self.page_result = MagicMock()
+        self.page_result.scalars.return_value.all.return_value = []
+
+        self.sample_member = Member(
+            id="sample-id",
+            discord_id=12345,
+            active=True,
+            nickname="TestUser",
+            ingots=0,
+            rank=RANK.IRON,
+        )
+
+    def _wire_execute(self, total: int, members: list) -> None:
+        self.count_result.scalar_one.return_value = total
+        self.page_result.scalars.return_value.all.return_value = members
+        self.mock_db.execute.side_effect = [self.count_result, self.page_result]
+
+    def _page_sql(self) -> str:
+        stmt = self.mock_db.execute.call_args_list[1][0][0]
+        return str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    def _count_sql(self) -> str:
+        stmt = self.mock_db.execute.call_args_list[0][0][0]
+        return str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+    def _page_where(self) -> str:
+        sql = self._page_sql()
+        return sql.split("WHERE", 1)[1].split("LIMIT", 1)[0]
+
+    async def test_list_members_default_returns_active_only(self):
+        self._wire_execute(total=2, members=[self.sample_member])
+
+        result = await self.member_service.list_members()
+
+        self.assertIsInstance(result, MemberListResult)
+        self.assertEqual(result.total, 2)
+        self.assertEqual(result.members, [self.sample_member])
+        self.assertIn("WHERE members.active IS true", self._page_sql())
+        self.assertIn("LIMIT 100", self._page_sql())
+        self.assertIn("OFFSET 0", self._page_sql())
+
+    async def test_list_members_filter_booster_applies_active_and_flag(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.BOOSTER)
+
+        where = self._page_where()
+        self.assertIn("members.is_booster IS true", where)
+        self.assertIn("members.active IS true", where)
+
+    async def test_list_members_filter_prospect_applies_active_and_flag(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.PROSPECT)
+
+        where = self._page_where()
+        self.assertIn("members.is_prospect IS true", where)
+        self.assertIn("members.active IS true", where)
+
+    async def test_list_members_filter_blacklisted_applies_active_and_flag(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.BLACKLISTED)
+
+        where = self._page_where()
+        self.assertIn("members.is_blacklisted IS true", where)
+        self.assertIn("members.active IS true", where)
+
+    async def test_list_members_filter_banned_does_not_require_active(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(filter=MemberListFilter.BANNED)
+
+        where = self._page_where()
+        self.assertIn("members.is_banned IS true", where)
+        self.assertNotIn("members.active", where)
+
+    async def test_list_members_role_filter(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(role="Member")
+
+        where = self._page_where()
+        self.assertIn("members.role = 'MEMBER'", where)
+
+    async def test_list_members_rank_filter(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(rank="Mithril")
+
+        where = self._page_where()
+        self.assertIn("members.rank = 'MITHRIL'", where)
+
+    async def test_list_members_pagination_applies_offset_and_limit(self):
+        self._wire_execute(total=250, members=[])
+
+        await self.member_service.list_members(limit=50, offset=100)
+
+        sql = self._page_sql()
+        self.assertIn("LIMIT 50", sql)
+        self.assertIn("OFFSET 100", sql)
+
+    async def test_list_members_count_uses_same_filters_as_page(self):
+        self._wire_execute(total=5, members=[])
+
+        await self.member_service.list_members(
+            filter=MemberListFilter.BOOSTER, role="Member", limit=10, offset=0
+        )
+
+        count_sql = self._count_sql()
+        self.assertIn("is_booster", count_sql)
+        self.assertIn("members.active IS true", count_sql)
+        self.assertIn("members.role = 'MEMBER'", count_sql)
+
+    async def test_list_members_returns_total_from_count_query(self):
+        self._wire_execute(total=42, members=[self.sample_member])
+
+        result = await self.member_service.list_members()
+
+        self.assertEqual(result.total, 42)
+        self.assertEqual(len(result.members), 1)
+
+    async def test_list_members_empty_result(self):
+        self._wire_execute(total=0, members=[])
+
+        result = await self.member_service.list_members()
+
+        self.assertEqual(result.total, 0)
+        self.assertEqual(result.members, [])
+
+    async def test_list_members_combined_filters(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members(
+            filter=MemberListFilter.PROSPECT,
+            role="Member",
+            rank="Mithril",
+            limit=25,
+            offset=5,
+        )
+
+        where = self._page_where()
+        sql = self._page_sql()
+        self.assertIn("members.is_prospect IS true", where)
+        self.assertIn("members.active IS true", where)
+        self.assertIn("members.role = 'MEMBER'", where)
+        self.assertIn("members.rank = 'MITHRIL'", where)
+        self.assertIn("LIMIT 25", sql)
+        self.assertIn("OFFSET 5", sql)
+
+    async def test_list_members_default_pagination_when_unspecified(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members()
+
+        sql = self._page_sql()
+        self.assertIn("LIMIT 100", sql)
+        self.assertIn("OFFSET 0", sql)
+
+    async def test_list_members_executes_count_then_page(self):
+        self._wire_execute(total=0, members=[])
+
+        await self.member_service.list_members()
+
+        self.assertEqual(self.mock_db.execute.await_count, 2)
+        self.assertIn("count(", self._count_sql().lower())

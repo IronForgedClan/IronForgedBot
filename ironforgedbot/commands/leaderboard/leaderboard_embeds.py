@@ -7,7 +7,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_types import (
     StaffLeaderboardEntry,
 )
 from ironforgedbot.common.helpers import find_emoji
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.text_formatters import text_code_block
 

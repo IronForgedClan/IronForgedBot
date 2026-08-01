@@ -2,16 +2,16 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ironforgedbot.models.changelog import Changelog, ChangeType
-from ironforgedbot.models.member import Member
-from ironforgedbot.services.ingot_service import IngotService, IngotServiceResponse
+from ironforgedcore.models.changelog import Changelog, ChangeType
+from ironforgedcore.models.member import Member
+from ironforgedcore.services.ingot_service import IngotService, IngotServiceResponse
+from tests.helpers import create_mock_db_session
 
 
 class TestIngotService(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
-        self.mock_db = AsyncMock()
-        self.mock_db.add = MagicMock()
+        self.mock_db = create_mock_db_session()
         self.mock_db.commit = AsyncMock()
         self.mock_db.refresh = AsyncMock()
         self.mock_db.close = AsyncMock()
@@ -113,7 +113,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         expected = IngotServiceResponse(False, "Admin member could not be found", -1)
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_add_ingots_success_basic(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.ingot_service.member_service.get_member_by_discord_id.return_value = (
@@ -131,7 +131,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         self.mock_db.commit.assert_called_once()
         self.mock_db.refresh.assert_called_once_with(self.sample_member)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_add_ingots_success_with_admin(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -153,7 +153,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         expected = IngotServiceResponse(True, "Ingots added", 1250)
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_add_ingots_creates_correct_changelog(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.ingot_service.member_service.get_member_by_discord_id.return_value = (
@@ -174,7 +174,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(changelog_entry.comment, "Test add reason")
         self.assertEqual(changelog_entry.timestamp, self.fixed_datetime)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_add_ingots_default_comment(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.ingot_service.member_service.get_member_by_discord_id.return_value = (
@@ -272,7 +272,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_remove_ingots_success_basic(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.ingot_service.member_service.get_member_by_discord_id.return_value = (
@@ -290,7 +290,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         self.mock_db.commit.assert_called_once()
         self.mock_db.refresh.assert_called_once_with(self.sample_member)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_remove_ingots_success_with_admin(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -312,7 +312,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         expected = IngotServiceResponse(True, "Ingots removed", 750)
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_remove_ingots_creates_correct_changelog(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.ingot_service.member_service.get_member_by_discord_id.return_value = (
@@ -335,7 +335,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(changelog_entry.comment, "Test remove reason")
         self.assertEqual(changelog_entry.timestamp, self.fixed_datetime)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_try_remove_ingots_default_comment(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
         self.ingot_service.member_service.get_member_by_discord_id.return_value = (
@@ -397,7 +397,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result, expected)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_add_remove_sequence(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 
@@ -450,7 +450,7 @@ class TestIngotService(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result2.status)
         self.assertEqual(result2.new_total, 0)
 
-    @patch("ironforgedbot.services.ingot_service.datetime")
+    @patch("ironforgedcore.services.ingot_service.datetime")
     async def test_admin_id_stored_correctly(self, mock_datetime):
         mock_datetime.now.return_value = self.fixed_datetime
 

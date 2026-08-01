@@ -5,21 +5,20 @@ from discord import app_commands
 
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.logging_utils import log_command_execution
-from ironforgedbot.common.helpers import (
-    build_rank_progress_bar,
-    find_emoji,
-    normalize_discord_string,
-    render_percentage,
-    validate_playername,
-)
-from ironforgedbot.common.ranks import (
+from ironforgedcore.common.text import build_rank_progress_bar
+from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedcore.common.normalize import normalize_discord_string
+from ironforgedcore.common.numbers import render_percentage
+from ironforgedcore.common.ranks import (
     GOD_ALIGNMENT,
     RANK,
     RANK_POINTS,
-    get_god_alignment_from_member,
     get_next_rank_from_points,
-    get_rank_color_from_points,
     get_rank_from_points,
+)
+from ironforgedbot.common.ranks_discord import (
+    get_god_alignment_from_member,
+    get_rank_color_from_points,
 )
 from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.responses import (
@@ -29,15 +28,16 @@ from ironforgedbot.common.responses import (
     send_not_clan_member,
     send_prospect_response,
 )
-from ironforgedbot.common.roles import ROLE, check_member_has_role, has_prospect_role
+from ironforgedcore.common.roles import ROLE
+from ironforgedbot.common.roles_discord import check_member_has_role, has_prospect_role
 from ironforgedbot.config import CONFIG
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
-from ironforgedbot.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
-from ironforgedbot.http import HTTP, HttpException
-from ironforgedbot.models.score import ScoreBreakdown
-from ironforgedbot.services.score_history_service import ScoreHistoryService
-from ironforgedbot.services.score_service import get_score_service
+from ironforgedcore.exceptions.score_exceptions import HiscoresError, HiscoresNotFound
+from ironforgedcore.http import HTTP, HttpException
+from ironforgedcore.models.score import ScoreBreakdown
+from ironforgedcore.services.score_history_service import ScoreHistoryService
+from ironforgedcore.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 

@@ -5,14 +5,17 @@ import os
 import discord
 
 from ironforgedbot.common.helpers import find_emoji, get_text_channel
-from ironforgedbot.common.ranks import get_rank_color_from_points, get_rank_from_points
-from ironforgedbot.common.roles import ROLE, PROSPECT_ROLE_NAME, check_member_has_role
+from ironforgedbot.common.ranks_discord import get_rank_color_from_points
+from ironforgedcore.common.ranks import get_rank_from_points
+from ironforgedcore.common.roles import ROLE
+from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
+from ironforgedbot.common.roles_discord import check_member_has_role
 from ironforgedbot.common.text_formatters import text_bold, text_sub
 from ironforgedbot.config import CONFIG
-from ironforgedbot.logging_config import get_logger_instance
+from ironforgedcore.logging_config import get_logger_instance
 from ironforgedbot.services.service_factory import create_member_service
 from ironforgedbot.tasks.job_refresh_ranks import PROBATION_DAYS
-from ironforgedbot.database.database import db
+from ironforgedcore.database import db
 
 logger = logging.getLogger(__name__)
 

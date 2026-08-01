@@ -6,7 +6,7 @@ import discord
 from ironforgedbot.decorators.views.command_price_confirmation_view import (
     CommandPriceConfirmationView,
 )
-from ironforgedbot.services.ingot_service import IngotServiceResponse
+from ironforgedcore.services.ingot_service import IngotServiceResponse
 
 
 class TestCommandPriceConfirmationView(unittest.IsolatedAsyncioTestCase):

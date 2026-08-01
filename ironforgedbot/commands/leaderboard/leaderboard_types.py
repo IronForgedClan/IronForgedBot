@@ -3,7 +3,7 @@ from typing import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ironforgedbot.common.ranks import RANK
+from ironforgedcore.common.ranks import RANK
 
 
 @dataclass

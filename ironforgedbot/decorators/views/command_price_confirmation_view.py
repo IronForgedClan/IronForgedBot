@@ -5,8 +5,8 @@ from discord.ui import Button, View
 
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed
-from ironforgedbot.database.database import db
-from ironforgedbot.services.ingot_service import IngotService
+from ironforgedcore.database import db
+from ironforgedcore.services.ingot_service import IngotService
 
 logger = logging.getLogger(__name__)
 
