@@ -1,6 +1,15 @@
 import unittest
+from unittest.mock import patch
 
-from ironforgedbot.commands.hiscore.score_utils import _calculate_points
+import discord
+
+from ironforgedbot.commands.hiscore.score_utils import (
+    _calculate_points,
+    _resolve_rank_display,
+)
+from tests.helpers import create_test_member
+from ironforgedcore.common.ranks import GOD_ALIGNMENT, RANK
+from ironforgedcore.common.roles import ROLE
 from ironforgedcore.models.score import ActivityScore, ScoreBreakdown, SkillScore
 
 
@@ -85,3 +94,81 @@ class TestCalculatePoints(unittest.TestCase):
         self.assertEqual(skill_points, 10)
         self.assertEqual(activity_points, 20)
         self.assertEqual(points_total, 30)
+
+
+class TestResolveRankDisplay(unittest.TestCase):
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.find_emoji",
+        return_value=":saradomin:",
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.get_god_alignment_from_member",
+        return_value=GOD_ALIGNMENT.SARADOMIN,
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.get_rank_color_from_points",
+        return_value=discord.Color.blue(),
+    )
+    def test_god_rank_with_alignment(self, mock_color, mock_alignment, mock_emoji):
+        member = create_test_member("TestUser", [ROLE.MEMBER])
+
+        rank_icon, rank_color, god_alignment = _resolve_rank_display(
+            member, 25000, RANK.GOD
+        )
+
+        self.assertEqual(rank_icon, ":saradomin:")
+        self.assertEqual(rank_color, discord.Color.blue())
+        self.assertEqual(god_alignment, GOD_ALIGNMENT.SARADOMIN)
+        mock_alignment.assert_called_once_with(member)
+
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.find_emoji", return_value=":god:"
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.get_god_alignment_from_member",
+        return_value=None,
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.get_rank_color_from_points",
+        return_value=discord.Color.gold(),
+    )
+    def test_god_rank_without_alignment(self, mock_color, mock_alignment, mock_emoji):
+        member = create_test_member("TestUser", [ROLE.MEMBER])
+
+        rank_icon, rank_color, god_alignment = _resolve_rank_display(
+            member, 25000, RANK.GOD
+        )
+
+        self.assertIsNone(god_alignment)
+        self.assertEqual(rank_icon, ":god:")
+
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.find_emoji", return_value=":iron:"
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.get_rank_color_from_points",
+        return_value=discord.Color.greyple(),
+    )
+    def test_non_god_rank_returns_none_alignment(self, mock_color, mock_emoji):
+        member = create_test_member("TestUser", [ROLE.MEMBER])
+
+        rank_icon, rank_color, god_alignment = _resolve_rank_display(
+            member, 0, RANK.IRON
+        )
+
+        self.assertIsNone(god_alignment)
+        self.assertEqual(rank_icon, ":iron:")
+        self.assertEqual(rank_color, discord.Color.greyple())
+
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.find_emoji", return_value=":iron:"
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.score_utils.get_rank_color_from_points",
+        return_value=discord.Color.greyple(),
+    )
+    def test_none_member_non_god_rank(self, mock_color, mock_emoji):
+        rank_icon, rank_color, god_alignment = _resolve_rank_display(None, 0, RANK.IRON)
+
+        self.assertIsNone(god_alignment)
+        self.assertEqual(rank_icon, ":iron:")

@@ -24,7 +24,6 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
             _build_boss_embeds,
             _build_activity_embed,
             _build_rank_ladder_embed,
-            _resolve_rank_display,
             _BREAKDOWN_STATIC_DESCRIPTION,
         )
 
@@ -70,84 +69,6 @@ class TestBuildEmbedDescription(unittest.TestCase):
         result = _build_embed_description(":god:", "TestUser", 25000)
 
         self.assertIn("25,000", result)
-
-
-class TestResolveRankDisplay(unittest.TestCase):
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.find_emoji",
-        return_value=":saradomin:",
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.get_god_alignment_from_member",
-        return_value=GOD_ALIGNMENT.SARADOMIN,
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_color_from_points",
-        return_value=discord.Color.blue(),
-    )
-    def test_god_rank_with_alignment(self, mock_color, mock_alignment, mock_emoji):
-        member = create_test_member("TestUser", [ROLE.MEMBER])
-
-        rank_icon, rank_color, god_alignment = _resolve_rank_display(
-            member, 25000, RANK.GOD
-        )
-
-        self.assertEqual(rank_icon, ":saradomin:")
-        self.assertEqual(rank_color, discord.Color.blue())
-        self.assertEqual(god_alignment, GOD_ALIGNMENT.SARADOMIN)
-        mock_alignment.assert_called_once_with(member)
-
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.find_emoji", return_value=":god:"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.get_god_alignment_from_member",
-        return_value=None,
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_color_from_points",
-        return_value=discord.Color.gold(),
-    )
-    def test_god_rank_without_alignment(self, mock_color, mock_alignment, mock_emoji):
-        member = create_test_member("TestUser", [ROLE.MEMBER])
-
-        rank_icon, rank_color, god_alignment = _resolve_rank_display(
-            member, 25000, RANK.GOD
-        )
-
-        self.assertIsNone(god_alignment)
-        self.assertEqual(rank_icon, ":god:")
-
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.find_emoji", return_value=":iron:"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_color_from_points",
-        return_value=discord.Color.greyple(),
-    )
-    def test_non_god_rank_returns_none_alignment(self, mock_color, mock_emoji):
-        member = create_test_member("TestUser", [ROLE.MEMBER])
-
-        rank_icon, rank_color, god_alignment = _resolve_rank_display(
-            member, 0, RANK.IRON
-        )
-
-        self.assertIsNone(god_alignment)
-        self.assertEqual(rank_icon, ":iron:")
-        self.assertEqual(rank_color, discord.Color.greyple())
-
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.find_emoji", return_value=":iron:"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_breakdown.get_rank_color_from_points",
-        return_value=discord.Color.greyple(),
-    )
-    def test_none_member_non_god_rank(self, mock_color, mock_emoji):
-        rank_icon, rank_color, god_alignment = _resolve_rank_display(None, 0, RANK.IRON)
-
-        self.assertIsNone(god_alignment)
-        self.assertEqual(rank_icon, ":iron:")
 
 
 class TestBuildBossEmbeds(unittest.TestCase):

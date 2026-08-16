@@ -76,6 +76,12 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
     ):
         from ironforgedbot.commands.hiscore.cmd_point_progress import cmd_point_progress
 
+from ironforgedbot.commands.hiscore.cmd_point_progress import (  # noqa: E402
+    _TOP_N,
+    _build_list_embed,
+    _build_summary_embed,
+)
+
 
 def _make_embed_mock() -> Mock:
     mock_embed = Mock()
@@ -150,26 +156,338 @@ def _make_proximity_result() -> list[NextPointProgress]:
     ]
 
 
-def _summary_patches(
-    mock_get_color,
-    mock_get_rank,
-    mock_find_emoji,
-    mock_build_embed,
-    mock_get_next_rank,
-    mock_get_god_alignment,
-    summary_embed,
-    list_embed,
-    mock_render_percentage,
-    rank=RANK.IRON,
-    god_alignment=None,
-):
-    mock_get_rank.return_value = rank
-    mock_get_color.return_value = discord.Color.greyple()
-    mock_find_emoji.return_value = "<:emoji:123>"
-    mock_build_embed.side_effect = [summary_embed, list_embed]
-    mock_get_next_rank.return_value = RANK.MITHRIL
-    mock_get_god_alignment.return_value = god_alignment
-    mock_render_percentage.side_effect = lambda p, w: f"{round(p * 100)}%"
+class TestBuildSummaryEmbed(unittest.TestCase):
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
+        {"MITHRIL": 100},
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
+    )
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_non_god_rank_includes_member_total_and_next(
+        self, mock_build_embed, mock_find_emoji, mock_next_rank
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":iron:"
+        mock_next_rank.return_value = RANK.MITHRIL
+
+        result = _build_summary_embed(
+            display_name="TestUser",
+            rank_name=RANK.IRON,
+            rank_icon=":iron:",
+            rank_color=discord.Color.greyple(),
+            god_alignment=None,
+            points_total=42,
+        )
+
+        field_names = {f.name for f in result.fields if f.name}
+        self.assertIn("Member", field_names)
+        self.assertIn("Total Points", field_names)
+        self.assertIn("Points to Next Rank", field_names)
+        self.assertNotIn("God Alignment", field_names)
+
+        total_field = next(f for f in result.fields if f.name == "Total Points")
+        self.assertEqual(total_field.value, "42")
+
+        next_field = next(f for f in result.fields if f.name == "Points to Next Rank")
+        self.assertIn("Mithril", next_field.value)
+        self.assertIn("58 pts", next_field.value)
+
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
+        {"MITHRIL": 100},
+    )
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
+    )
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_member_field_uses_rank_icon_for_non_god(
+        self, mock_build_embed, mock_find_emoji, mock_next_rank
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":iron:"
+        mock_next_rank.return_value = RANK.MITHRIL
+
+        result = _build_summary_embed(
+            display_name="TestUser",
+            rank_name=RANK.IRON,
+            rank_icon=":iron:",
+            rank_color=discord.Color.greyple(),
+            god_alignment=None,
+            points_total=0,
+        )
+
+        member_field = next(f for f in result.fields if f.name == "Member")
+        self.assertIn(":iron:", member_field.value)
+        self.assertNotIn(":grass:", member_field.value)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_god_rank_aligned_uses_alignment_icon_and_value(
+        self, mock_build_embed, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.side_effect = lambda key: f"<:{key.lower()}:123>"
+
+        result = _build_summary_embed(
+            display_name="TestUser",
+            rank_name=RANK.GOD,
+            rank_icon="<:saradominist:123>",
+            rank_color=discord.Color.blue(),
+            god_alignment=GOD_ALIGNMENT.SARADOMIN,
+            points_total=25000,
+        )
+
+        member_field = next(f for f in result.fields if f.name == "Member")
+        self.assertIn(":grass:", member_field.value)
+
+        align_field = next(f for f in result.fields if f.name == "God Alignment")
+        self.assertIn("Saradominist", align_field.value)
+        self.assertIn(":saradominist:", align_field.value)
+
+        self.assertNotIn("Points to Next Rank", {f.name for f in result.fields})
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_god_rank_unaligned_uses_italic_no_emoji(
+        self, mock_build_embed, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.side_effect = lambda key: f":{key.lower()}:"
+
+        result = _build_summary_embed(
+            display_name="TestUser",
+            rank_name=RANK.GOD,
+            rank_icon=":god:",
+            rank_color=discord.Color.gold(),
+            god_alignment=None,
+            points_total=25000,
+        )
+
+        align_field = next(f for f in result.fields if f.name == "God Alignment")
+        self.assertEqual(align_field.value, "_Unaligned_")
+        self.assertNotIn(":god:", align_field.value)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_summary_embed_drops_rsn_and_current_rank(
+        self, mock_build_embed, mock_find_emoji
+    ):
+        mock_find_emoji.return_value = ":iron:"
+        mock_build_embed.return_value = _make_embed_mock()
+
+        non_god = _build_summary_embed(
+            display_name="TestUser",
+            rank_name=RANK.IRON,
+            rank_icon=":iron:",
+            rank_color=discord.Color.greyple(),
+            god_alignment=None,
+            points_total=0,
+        )
+        non_god_names = {f.name for f in non_god.fields if f.name}
+        self.assertNotIn("RSN", non_god_names)
+        self.assertNotIn("Current Rank", non_god_names)
+
+        god = _build_summary_embed(
+            display_name="TestUser",
+            rank_name=RANK.GOD,
+            rank_icon="<:saradominist:123>",
+            rank_color=discord.Color.gold(),
+            god_alignment=GOD_ALIGNMENT.SARADOMIN,
+            points_total=25000,
+        )
+        god_names = {f.name for f in god.fields if f.name}
+        self.assertNotIn("RSN", god_names)
+        self.assertNotIn("Current Rank", god_names)
+
+
+class TestBuildListEmbed(unittest.TestCase):
+    def _make_progress(self, **kwargs) -> NextPointProgress:
+        defaults = dict(
+            category="skill",
+            name="Defence",
+            display_name=None,
+            emoji_key="Defence",
+            current=200000,
+            points=2,
+            progress_percent=0.0,
+            remaining_to_next=100000,
+            unit="xp",
+        )
+        defaults.update(kwargs)
+        return NextPointProgress(**defaults)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_empty_proximity_shows_no_progress_field(
+        self, mock_build_embed, mock_render, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+
+        result = _build_list_embed([], discord.Color.greyple())
+
+        real = [f for f in result.fields if f.name]
+        self.assertEqual(len(real), 1)
+        self.assertEqual(real[0].name, "No progress yet")
+        self.assertFalse(real[0].inline)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_each_entry_is_inline_false_field(
+        self, mock_build_embed, mock_render, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":x:"
+        mock_render.return_value = "0%"
+
+        result = _build_list_embed(
+            [
+                self._make_progress(name="A"),
+                self._make_progress(name="B"),
+                self._make_progress(name="C"),
+            ],
+            discord.Color.greyple(),
+        )
+
+        self.assertEqual(len(result.fields), 3)
+        for field in result.fields:
+            self.assertFalse(field.inline)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_entry_name_prefers_display_name_for_clues(
+        self, mock_build_embed, mock_render, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":beginner_clue:"
+        mock_render.return_value = "50%"
+
+        progress = self._make_progress(
+            category="clue",
+            name="Clue Scrolls (beginner)",
+            display_name="Beginner",
+            emoji_key="Beginner_Clue",
+            progress_percent=0.5,
+            remaining_to_next=5,
+            unit="kc",
+        )
+
+        result = _build_list_embed([progress], discord.Color.greyple())
+
+        first = result.fields[0]
+        self.assertIn("Beginner", first.name)
+        self.assertNotIn("Clue Scrolls", first.name)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_entry_name_falls_back_to_name_when_no_display_name(
+        self, mock_build_embed, mock_render, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":defence:"
+        mock_render.return_value = "0%"
+
+        result = _build_list_embed([self._make_progress()], discord.Color.greyple())
+
+        first = result.fields[0]
+        self.assertIn("Defence", first.name)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_entry_value_uses_ceil_for_float_remaining(
+        self, mock_build_embed, mock_render, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":cox:"
+        mock_render.return_value = "50%"
+
+        progress = self._make_progress(
+            category="raid",
+            name="Chambers of Xeric",
+            display_name="Chambers of Xeric",
+            emoji_key="Chambers_of_Xeric",
+            current=10,
+            points=12,
+            progress_percent=0.5,
+            remaining_to_next=0.4,
+            unit="kc",
+        )
+
+        result = _build_list_embed([progress], discord.Color.greyple())
+
+        first = result.fields[0]
+        self.assertEqual(first.value, "50% (1 kc left)")
+        self.assertNotIn("e+", first.value)
+        self.assertNotIn("e-", first.value)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_entry_value_no_scientific_notation_for_large_xp(
+        self, mock_build_embed, mock_render, mock_find_emoji
+    ):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":attack:"
+        mock_render.return_value = "84%"
+
+        progress = self._make_progress(
+            category="skill",
+            name="Attack",
+            emoji_key="Attack",
+            current=17_483_000,
+            points=130,
+            progress_percent=0.84,
+            remaining_to_next=3_940,
+            unit="xp",
+        )
+
+        result = _build_list_embed([progress], discord.Color.greyple())
+
+        first = result.fields[0]
+        self.assertEqual(first.value, "84% (3,940 xp left)")
+        self.assertNotIn("e+", first.value)
+        self.assertNotIn("e-", first.value)
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    def test_entry_name_format(self, mock_build_embed, mock_render, mock_find_emoji):
+        embed = _make_embed_mock()
+        mock_build_embed.return_value = embed
+        mock_find_emoji.return_value = ":attack:"
+        mock_render.return_value = "50%"
+
+        progress = self._make_progress(
+            name="Attack",
+            emoji_key="Attack",
+            progress_percent=0.5,
+            remaining_to_next=100000,
+            unit="xp",
+        )
+
+        result = _build_list_embed([progress], discord.Color.greyple())
+
+        first = result.fields[0]
+        self.assertEqual(first.name, ":attack: Attack")
+        self.assertEqual(first.value, "50% (100,000 xp left)")
 
 
 @patch.dict("os.environ", VALID_CONFIG)
@@ -201,6 +519,52 @@ class TestCmdPointProgress(unittest.IsolatedAsyncioTestCase):
             )
         )
         return mock_score_service
+
+    def _make_clan_member_mocks(
+        self, god_alignment=None
+    ) -> tuple[AsyncMock, AsyncMock, AsyncMock, AsyncMock]:
+        """Wire up mocks for the clan-member branch.
+
+        Returns (mock_get_score_service, mock_resolve_rank, mock_summary,
+                 mock_list). mock_proximity is reachable via
+        mock_get_score_service.return_value.get_proximity_to_next_point.
+        """
+        p_get_score_service = patch(
+            "ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service"
+        )
+        mock_get_score_service = p_get_score_service.start()
+        self.addCleanup(p_get_score_service.stop)
+        mock_get_score_service.return_value = self._make_score_service_mock()
+
+        p_resolve = patch(
+            "ironforgedbot.commands.hiscore.cmd_point_progress._resolve_rank_display",
+            return_value=(":test_rank:", discord.Color.greyple(), god_alignment),
+        )
+        mock_resolve_rank = p_resolve.start()
+        self.addCleanup(p_resolve.stop)
+
+        p_rank = patch(
+            "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points",
+            return_value=RANK.IRON,
+        )
+        p_rank.start()
+        self.addCleanup(p_rank.stop)
+
+        p_summary = patch(
+            "ironforgedbot.commands.hiscore.cmd_point_progress._build_summary_embed",
+            return_value=self.summary_embed,
+        )
+        mock_summary = p_summary.start()
+        self.addCleanup(p_summary.stop)
+
+        p_list = patch(
+            "ironforgedbot.commands.hiscore.cmd_point_progress._build_list_embed",
+            return_value=self.list_embed,
+        )
+        mock_list = p_list.start()
+        self.addCleanup(p_list.stop)
+
+        return mock_get_score_service, mock_resolve_rank, mock_summary, mock_list
 
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.send_error_response")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
@@ -280,11 +644,44 @@ class TestCmdPointProgress(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.send_member_no_hiscore_values"
+    )
+    async def test_cmd_point_progress_prospect_with_no_hiscores(
+        self,
+        mock_send_no_hiscore,
+        mock_validate,
+        mock_http,
+        mock_get_score_service,
+    ):
+        mock_validate.return_value = (self.prospect_user, "ProspectUser")
+        mock_get_score_service.return_value = self._make_score_service_mock(
+            side_effect=HiscoresNotFound("No hiscores found")
+        )
+
+        await cmd_point_progress(self.interaction, "ProspectUser")
+
+        mock_send_no_hiscore.assert_called_once_with(
+            self.interaction, self.prospect_user.display_name
+        )
+
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.send_not_clan_member")
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
+    )
     async def test_cmd_point_progress_non_member_hiscores_not_found(
-        self, mock_send_not_clan, mock_validate, mock_http, mock_get_score_service
+        self,
+        mock_get_color,
+        mock_send_not_clan,
+        mock_validate,
+        mock_http,
+        mock_get_score_service,
     ):
         mock_validate.return_value = (None, "NonMember")
+        mock_get_color.return_value = discord.Color.greyple()
         mock_get_score_service.return_value = self._make_score_service_mock(
             side_effect=HiscoresNotFound("No hiscores found")
         )
@@ -292,6 +689,10 @@ class TestCmdPointProgress(unittest.IsolatedAsyncioTestCase):
         await cmd_point_progress(self.interaction, "NonMember")
 
         mock_send_not_clan.assert_called_once()
+        args, _ = mock_send_not_clan.call_args
+        self.assertEqual(args[0], self.interaction)
+        self.assertEqual(args[5], "NonMember")
+        self.assertEqual(args[4], 0)
 
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
@@ -310,22 +711,29 @@ class TestCmdPointProgress(unittest.IsolatedAsyncioTestCase):
     ):
         mock_validate.return_value = (self.prospect_user, "ProspectUser")
         mock_has_prospect_role.return_value = True
-        mock_find_emoji.return_value = ":prospect:"
+        mock_find_emoji.return_value = ":iron:"
         mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_point_progress(self.interaction, "ProspectUser")
 
         mock_send_prospect.assert_called_once()
+        args, _ = mock_send_prospect.call_args
+        self.assertEqual(args[0], self.interaction)
+        self.assertEqual(args[3], self.prospect_user)
 
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.send_not_clan_member")
+    @patch(
+        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
+    )
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
     async def test_cmd_point_progress_not_clan_member_response(
         self,
         mock_find_emoji,
+        mock_get_color,
         mock_send_not_clan,
         mock_has_prospect_role,
         mock_validate,
@@ -336,61 +744,31 @@ class TestCmdPointProgress(unittest.IsolatedAsyncioTestCase):
         mock_validate.return_value = (non_member, "NonMember")
         mock_has_prospect_role.return_value = False
         mock_find_emoji.return_value = ":iron:"
+        mock_get_color.return_value = discord.Color.greyple()
         mock_get_score_service.return_value = self._make_score_service_mock()
 
         await cmd_point_progress(self.interaction, "NonMember")
 
         mock_send_not_clan.assert_called_once()
+        args, _ = mock_send_not_clan.call_args
+        self.assertEqual(args[0], self.interaction)
+        self.assertEqual(args[5], "NonMember")
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
     async def test_cmd_point_progress_sends_two_embeds(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
+        self, mock_http, mock_validate, mock_has_prospect_role
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
-        _summary_patches(
-            mock_get_color,
-            mock_get_rank,
-            mock_find_emoji,
-            mock_build_embed,
-            mock_get_next_rank,
-            mock_get_god_alignment,
-            self.summary_embed,
-            self.list_embed,
-            mock_render_percentage,
-        )
         mock_has_prospect_role.return_value = False
-        mock_get_score_service.return_value = self._make_score_service_mock()
+
+        (
+            mock_get_score_service,
+            mock_resolve_rank,
+            mock_summary,
+            mock_list,
+        ) = self._make_clan_member_mocks()
 
         await cmd_point_progress(self.interaction, "TestUser")
 
@@ -400,461 +778,70 @@ class TestCmdPointProgress(unittest.IsolatedAsyncioTestCase):
         mock_get_score_service.return_value.get_player_score.assert_called_once_with(
             "TestUser"
         )
-        mock_get_score_service.return_value.get_proximity_to_next_point.assert_called_once()
+        mock_proximity = mock_get_score_service.return_value.get_proximity_to_next_point
+        mock_proximity.assert_called_once()
+        proximity_args, proximity_kwargs = mock_proximity.call_args
+        self.assertIsInstance(proximity_args[0], ScoreBreakdown)
+        self.assertEqual(proximity_kwargs.get("limit"), _TOP_N)
+
+        mock_resolve_rank.assert_called_once_with(self.test_user, 14, RANK.IRON)
+
+        mock_summary.assert_called_once()
+        summary_kwargs = mock_summary.call_args.kwargs
+        self.assertEqual(summary_kwargs["display_name"], self.test_user.display_name)
+        self.assertEqual(summary_kwargs["rank_name"], RANK.IRON)
+        self.assertEqual(summary_kwargs["points_total"], 14)
+        self.assertIsNone(summary_kwargs["god_alignment"])
+
+        mock_list.assert_called_once()
 
         self.interaction.followup.send.assert_called_once()
         send_kwargs = self.interaction.followup.send.call_args[1]
         self.assertIn("embeds", send_kwargs)
         self.assertEqual(len(send_kwargs["embeds"]), 2)
 
-        self.assertEqual(mock_build_embed.call_count, 2)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    async def test_summary_embed_includes_member_rsn_rank_and_points(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
+    async def test_cmd_point_progress_passes_god_alignment_to_summary(
+        self, mock_http, mock_validate, mock_has_prospect_role
     ):
         mock_validate.return_value = (self.test_user, "TestUser")
-        _summary_patches(
-            mock_get_color,
-            mock_get_rank,
-            mock_find_emoji,
-            mock_build_embed,
-            mock_get_next_rank,
-            mock_get_god_alignment,
-            self.summary_embed,
-            self.list_embed,
-            mock_render_percentage,
-        )
         mock_has_prospect_role.return_value = False
-        mock_get_score_service.return_value = self._make_score_service_mock()
+
+        (
+            _,
+            _,
+            mock_summary,
+            _,
+        ) = self._make_clan_member_mocks(god_alignment=GOD_ALIGNMENT.SARADOMIN)
 
         await cmd_point_progress(self.interaction, "TestUser")
 
-        field_names = {f.name for f in self.summary_embed.fields if f.name}
-        self.assertIn("Member", field_names)
-        self.assertIn("RSN", field_names)
-        self.assertIn("Current Rank", field_names)
-        self.assertIn("Total Points", field_names)
-        self.assertIn("Points to Next Rank", field_names)
+        summary_kwargs = mock_summary.call_args.kwargs
+        self.assertEqual(summary_kwargs["god_alignment"], GOD_ALIGNMENT.SARADOMIN)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    async def test_summary_embed_god_rank_shows_alignment(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
-    ):
-        mock_validate.return_value = (self.test_user, "TestUser")
-        _summary_patches(
-            mock_get_color,
-            mock_get_rank,
-            mock_find_emoji,
-            mock_build_embed,
-            mock_get_next_rank,
-            mock_get_god_alignment,
-            self.summary_embed,
-            self.list_embed,
-            mock_render_percentage,
-            rank=RANK.GOD,
-            god_alignment=GOD_ALIGNMENT.SARADOMIN,
-        )
-        mock_has_prospect_role.return_value = False
-        mock_get_score_service.return_value = self._make_score_service_mock()
-
-        await cmd_point_progress(self.interaction, "TestUser")
-
-        field_names = {f.name for f in self.summary_embed.fields if f.name}
-        self.assertIn("God Alignment", field_names)
-        self.assertNotIn("Points to Next Rank", field_names)
-
-        god_field = next(
-            f for f in self.summary_embed.fields if f.name == "God Alignment"
-        )
-        self.assertIn("Saradomin", god_field.value)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    async def test_list_embed_uses_render_percentage(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
-    ):
-        mock_validate.return_value = (self.test_user, "TestUser")
-        mock_render_percentage.side_effect = lambda p, w: (
-            ">99%" if p >= 1.0 else ("<1%" if p < 0.01 else f"{round(p * 100)}%")
-        )
-        mock_get_rank.return_value = RANK.IRON
-        mock_get_color.return_value = discord.Color.greyple()
-        mock_find_emoji.return_value = "<:emoji:123>"
-        mock_build_embed.side_effect = [self.summary_embed, self.list_embed]
-        mock_get_next_rank.return_value = RANK.MITHRIL
-        mock_get_god_alignment.return_value = None
-        mock_has_prospect_role.return_value = False
-
-        proximity_with_hundo = [
-            NextPointProgress(
-                category="skill",
-                name="Defence",
-                display_name=None,
-                emoji_key="Defence",
-                current=300000,
-                points=3,
-                progress_percent=1.0,
-                remaining_to_next=0,
-                unit="xp",
-            ),
-        ]
-        mock_get_score_service.return_value = self._make_score_service_mock(
-            proximity=proximity_with_hundo
-        )
-
-        await cmd_point_progress(self.interaction, "TestUser")
-
-        mock_render_percentage.assert_called()
-        first_list_field = next(f for f in self.list_embed.fields if f.name)
-        self.assertIn(">99%", first_list_field.name)
-        self.assertNotIn("100%", first_list_field.name)
-        self.assertIn("300,000xp/300,000xp", first_list_field.value)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    async def test_list_embed_no_scientific_notation_for_large_xp(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
-    ):
-        mock_validate.return_value = (self.test_user, "TestUser")
-        mock_render_percentage.return_value = "84%"
-        mock_get_rank.return_value = RANK.IRON
-        mock_get_color.return_value = discord.Color.greyple()
-        mock_find_emoji.return_value = "<:emoji:123>"
-        mock_build_embed.side_effect = [self.summary_embed, self.list_embed]
-        mock_get_next_rank.return_value = RANK.MITHRIL
-        mock_get_god_alignment.return_value = None
-        mock_has_prospect_role.return_value = False
-
-        large_xp = [
-            NextPointProgress(
-                category="skill",
-                name="Attack",
-                display_name=None,
-                emoji_key="Attack",
-                current=17_483_000,
-                points=130,
-                progress_percent=0.84,
-                remaining_to_next=3_940,
-                unit="xp",
-            ),
-        ]
-        mock_get_score_service.return_value = self._make_score_service_mock(
-            proximity=large_xp
-        )
-
-        await cmd_point_progress(self.interaction, "TestUser")
-
-        first_list_field = next(f for f in self.list_embed.fields if f.name)
-        self.assertNotIn("e+", first_list_field.value)
-        self.assertNotIn("e-", first_list_field.value)
-        self.assertIn("17,483,000xp/17,486,940xp", first_list_field.value)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    async def test_cmd_point_progress_empty_proximity(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
-    ):
-        mock_validate.return_value = (self.test_user, "TestUser")
-        _summary_patches(
-            mock_get_color,
-            mock_get_rank,
-            mock_find_emoji,
-            mock_build_embed,
-            mock_get_next_rank,
-            mock_get_god_alignment,
-            self.summary_embed,
-            self.list_embed,
-            mock_render_percentage,
-        )
-        mock_has_prospect_role.return_value = False
-        mock_get_score_service.return_value = self._make_score_service_mock(
-            proximity=[]
-        )
-
-        await cmd_point_progress(self.interaction, "TestUser")
-
-        self.interaction.followup.send.assert_called_once()
-        real_fields = [f for f in self.list_embed.fields if f.name]
-        self.assertEqual(len(real_fields), 1)
-        self.assertEqual(real_fields[0].name, "No progress yet")
-        self.assertFalse(real_fields[0].inline)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    async def test_cmd_point_progress_caps_at_ten_fields(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
-    ):
-        mock_validate.return_value = (self.test_user, "TestUser")
-        _summary_patches(
-            mock_get_color,
-            mock_get_rank,
-            mock_find_emoji,
-            mock_build_embed,
-            mock_get_next_rank,
-            mock_get_god_alignment,
-            self.summary_embed,
-            self.list_embed,
-            mock_render_percentage,
-        )
-        mock_has_prospect_role.return_value = False
-        proximity = [
-            NextPointProgress(
-                category="boss",
-                name=f"Boss{i}",
-                display_name=None,
-                emoji_key=f"Boss{i}",
-                current=10,
-                points=i,
-                progress_percent=0.5 - (i * 0.01),
-                remaining_to_next=10,
-                unit="kc",
-            )
-            for i in range(15)
-        ]
-        mock_get_score_service.return_value = self._make_score_service_mock(
-            proximity=proximity
-        )
-
-        await cmd_point_progress(self.interaction, "TestUser")
-
-        real_fields = [f for f in self.list_embed.fields if f.name]
-        self.assertEqual(len(real_fields), 15)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_score_service")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.HTTP")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.validate_playername")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.has_prospect_role")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_from_points")
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_rank_color_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_next_rank_from_points"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.get_god_alignment_from_member"
-    )
-    @patch(
-        "ironforgedbot.commands.hiscore.cmd_point_progress.RANK_POINTS",
-        {"IRON": 0, "MITHRIL": 100},
-    )
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
     async def test_cmd_point_progress_default_player_self(
-        self,
-        mock_render_percentage,
-        mock_build_embed,
-        mock_find_emoji,
-        mock_get_god_alignment,
-        mock_get_next_rank,
-        mock_get_color,
-        mock_get_rank,
-        mock_has_prospect_role,
-        mock_validate,
-        mock_http,
-        mock_get_score_service,
+        self, mock_http, mock_validate, mock_has_prospect_role
     ):
-        mock_validate.return_value = (self.test_user, "TestUser")
-        _summary_patches(
-            mock_get_color,
-            mock_get_rank,
-            mock_find_emoji,
-            mock_build_embed,
-            mock_get_next_rank,
-            mock_get_god_alignment,
-            self.summary_embed,
-            self.list_embed,
-            mock_render_percentage,
-        )
         mock_has_prospect_role.return_value = False
-        mock_get_score_service.return_value = self._make_score_service_mock()
+        mock_validate.return_value = (self.test_user, "TestUser")
+
+        (
+            mock_get_score_service,
+            _,
+            _,
+            _,
+        ) = self._make_clan_member_mocks()
 
         await cmd_point_progress(self.interaction, None)
 
         mock_validate.assert_called_once_with(
             self.interaction.guild, "TestUser", must_be_member=False
+        )
+        mock_get_score_service.return_value.get_player_score.assert_called_once_with(
+            "TestUser"
         )
