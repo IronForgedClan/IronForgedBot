@@ -16,11 +16,10 @@ from ironforgedcore.common.ranks import (
     get_next_rank_from_points,
     get_rank_from_points,
 )
-from ironforgedbot.common.ranks_discord import (
-    get_god_alignment_from_member,
-    get_rank_color_from_points,
+from ironforgedbot.commands.hiscore.score_utils import (
+    _calculate_points,
+    _resolve_rank_display,
 )
-from ironforgedbot.commands.hiscore.score_utils import _calculate_points
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
@@ -128,16 +127,13 @@ async def cmd_score(interaction: discord.Interaction, player: str | None = None)
     next_rank_point_threshold: int | None = None
     next_rank_icon: str | None = None
 
-    god_alignment = None
     god_rank_icon: str | None = None
+    rank_icon, rank_color, god_alignment = _resolve_rank_display(
+        member, points_total, rank_name
+    )
     if rank_name == RANK.GOD:
-        god_alignment = get_god_alignment_from_member(member)
-        rank_color = get_rank_color_from_points(points_total, god_alignment)
-        rank_icon = find_emoji(god_alignment or rank_name)
         god_rank_icon = find_emoji(RANK.GOD)
     else:
-        rank_color = get_rank_color_from_points(points_total)
-        rank_icon = find_emoji(rank_name)
         rank_point_threshold = RANK_POINTS[rank_name.upper()]
         next_rank_name = get_next_rank_from_points(points_total)
         next_rank_point_threshold = RANK_POINTS[next_rank_name.upper()]

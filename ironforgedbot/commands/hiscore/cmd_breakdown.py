@@ -4,7 +4,10 @@ import discord
 from discord import app_commands
 from reactionmenu import ViewButton, ViewMenu
 
-from ironforgedbot.commands.hiscore.score_utils import _calculate_points
+from ironforgedbot.commands.hiscore.score_utils import (
+    _calculate_points,
+    _resolve_rank_display,
+)
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedcore.common.text import build_rank_progress_bar
 from ironforgedbot.common.helpers import find_emoji, validate_playername
@@ -259,30 +262,6 @@ def _build_activity_embed(
             value=value_formatter(item),
         )
     return embed
-
-
-def _resolve_rank_display(
-    member: discord.Member | None,
-    points_total: int,
-    rank_name: str,
-) -> tuple[str, discord.Color, str | None]:
-    """Resolve rank icon, embed color, and god alignment for a player.
-
-    Args:
-        member: The Discord member, or None if not in the clan.
-        points_total: The player's total points.
-        rank_name: The player's current rank name.
-
-    Returns:
-        Tuple of (rank_icon, rank_color, god_alignment).
-        god_alignment is None for non-GOD ranks.
-    """
-    if rank_name == RANK.GOD:
-        god_alignment = get_god_alignment_from_member(member)
-        rank_color = get_rank_color_from_points(points_total, god_alignment)
-        rank_icon = find_emoji(god_alignment or rank_name)
-        return rank_icon, rank_color, god_alignment
-    return find_emoji(rank_name), get_rank_color_from_points(points_total), None
 
 
 @require_role(ROLE.MEMBER)
