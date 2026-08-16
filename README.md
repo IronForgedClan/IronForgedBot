@@ -14,6 +14,7 @@
 | `help`               | N/A                                                                             | Member     | Displays all active bot commands with descriptions                               |
 | `score`              | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
+| `point_progress`     | Player (str) _Optional_                                                         | Member     | Returns the top 10 skills, bosses, raids, and clues closest to gaining a point   |
 | `leaderboard`        | Leaderboard Type                                                                | Member     | Displays a paginated clan leaderboard                                            |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
 | `gains`              | Player (str) _Optional_                                                         | Member     | Returns daily XP gains over the past 30 days for the player                      |
