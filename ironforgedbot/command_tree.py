@@ -84,7 +84,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="point_progress",
-                description="Show the 10 skills, bosses, raids, and clues closest to gaining a point.",
+                description="Show the skills, bosses, raids, and clues closest to gaining a point.",
                 callback=cmd_point_progress,
             )
         )
