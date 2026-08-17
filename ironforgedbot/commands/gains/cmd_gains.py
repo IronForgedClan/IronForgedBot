@@ -6,7 +6,6 @@ from urllib.parse import quote
 
 import discord
 from discord import app_commands
-from tabulate import tabulate
 
 from ironforgedcore.common.activity_check import build_daily_gains
 from ironforgedbot.common.autocompletes import member_nickname_autocomplete
@@ -15,7 +14,7 @@ from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed, send_error_response
 from ironforgedcore.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_code_block
+from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedcore.database import db
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.services.service_factory import create_member_service
@@ -58,13 +57,13 @@ def _build_gains_table(daily: List[tuple[datetime, int]]) -> str:
     for d, xp in daily:
         running_total += xp
         rows.append((d.strftime("%Y-%m-%d"), f"{xp:,}", f"{running_total:,}"))
-    table = tabulate(
+    table = text_ascii_table(
         rows,
         headers=["Date", "XP Gained", "Total"],
-        tablefmt="github",
+        wrap_widths=[None, None, None],
         colalign=("left", "right", "right"),
     )
-    return text_code_block(table)
+    return table
 
 
 @require_role(ROLE.MEMBER)
