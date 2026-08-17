@@ -32,6 +32,7 @@ def _populate_data_module() -> None:
                 "emoji_key": "Attack",
                 "xp_per_point": 100000,
                 "xp_per_point_post_99": 300000,
+                "xp_per_hour": [{"end_xp": 200000000, "rate": 100000}],
             },
             {
                 "name": "Defence",
@@ -39,6 +40,7 @@ def _populate_data_module() -> None:
                 "emoji_key": "Defence",
                 "xp_per_point": 100000,
                 "xp_per_point_post_99": 300000,
+                "xp_per_hour": [{"end_xp": 200000000, "rate": 100000}],
             },
         ],
         clues=[
@@ -48,6 +50,7 @@ def _populate_data_module() -> None:
                 "display_order": 1,
                 "emoji_key": "Beginner_Clue",
                 "kc_per_point": 10,
+                "kc_per_hour": 20,
             },
         ],
         raids=[
@@ -56,6 +59,7 @@ def _populate_data_module() -> None:
                 "display_order": 1,
                 "emoji_key": "Chambers_of_Xeric",
                 "kc_per_point": 0.8,
+                "kc_per_hour": 2,
             },
         ],
         bosses=[
@@ -64,6 +68,7 @@ def _populate_data_module() -> None:
                 "display_order": 59,
                 "emoji_key": "Zulrah",
                 "kc_per_point": 12,
+                "kc_per_hour": 5,
             },
         ],
     )
@@ -130,6 +135,7 @@ def _make_proximity_result() -> list[NextPointProgress]:
             progress_percent=0.0,
             remaining_to_next=100000,
             unit="xp",
+            time_hours=1.0,
         ),
         NextPointProgress(
             category="boss",
@@ -141,6 +147,7 @@ def _make_proximity_result() -> list[NextPointProgress]:
             progress_percent=0.083,
             remaining_to_next=11,
             unit="kc",
+            time_hours=2.2,
         ),
         NextPointProgress(
             category="clue",
@@ -152,6 +159,7 @@ def _make_proximity_result() -> list[NextPointProgress]:
             progress_percent=0.5,
             remaining_to_next=5,
             unit="kc",
+            time_hours=0.25,
         ),
     ]
 
@@ -320,16 +328,17 @@ class TestBuildListEmbed(unittest.TestCase):
             progress_percent=0.0,
             remaining_to_next=100000,
             unit="xp",
+            time_hours=1.0,
         )
         defaults.update(kwargs)
         return NextPointProgress(**defaults)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
+    def _build(self, proximity: list[NextPointProgress]) -> str:
+        embed = _build_list_embed(proximity, discord.Color.greyple())
+        return embed.description or ""
+
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_empty_proximity_shows_no_progress_field(
-        self, mock_build_embed, mock_render, mock_find_emoji
-    ):
+    def test_empty_proximity_shows_no_progress_field(self, mock_build_embed):
         embed = _make_embed_mock()
         mock_build_embed.return_value = embed
 
@@ -340,154 +349,192 @@ class TestBuildListEmbed(unittest.TestCase):
         self.assertEqual(real[0].name, "No progress yet")
         self.assertFalse(real[0].inline)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_each_entry_is_inline_false_field(
-        self, mock_build_embed, mock_render, mock_find_emoji
-    ):
-        embed = _make_embed_mock()
-        mock_build_embed.return_value = embed
-        mock_find_emoji.return_value = ":x:"
-        mock_render.return_value = "0%"
+    def test_non_empty_list_render_as_table(self):
+        description = self._build(
+            [
+                self._make_progress(name="A"),
+                self._make_progress(name="B"),
+            ]
+        )
 
-        result = _build_list_embed(
+        self.assertIn("Entry", description)
+        self.assertIn("Next Point In", description)
+        self.assertIn("Estimate", description)
+
+    def test_table_renders_one_row_per_progress_entry(self):
+        description = self._build(
             [
                 self._make_progress(name="A"),
                 self._make_progress(name="B"),
                 self._make_progress(name="C"),
-            ],
-            discord.Color.greyple(),
+            ]
         )
 
-        self.assertEqual(len(result.fields), 3)
-        for field in result.fields:
-            self.assertFalse(field.inline)
+        parts = description.split("```")
+        inner = parts[1] if len(parts) >= 2 else ""
+        data_rows = [
+            line
+            for line in inner.split("\n")
+            if any(label in line for label in ("A", "B", "C"))
+        ]
+        self.assertEqual(len(data_rows), 3)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_entry_name_prefers_display_name_for_clues(
-        self, mock_build_embed, mock_render, mock_find_emoji
-    ):
-        embed = _make_embed_mock()
-        mock_build_embed.return_value = embed
-        mock_find_emoji.return_value = ":beginner_clue:"
-        mock_render.return_value = "50%"
+    def test_description_includes_wom_footer(self):
+        description = self._build([self._make_progress()])
 
+        self.assertIn("Wise Old Man", description)
+        self.assertIn("https://wiseoldman.net/ehb/ironman", description)
+
+    def test_row_label_prefers_display_name_for_clues(self):
         progress = self._make_progress(
             category="clue",
             name="Clue Scrolls (beginner)",
             display_name="Beginner",
             emoji_key="Beginner_Clue",
-            progress_percent=0.5,
             remaining_to_next=5,
             unit="kc",
         )
 
-        result = _build_list_embed([progress], discord.Color.greyple())
+        description = self._build([progress])
 
-        first = result.fields[0]
-        self.assertIn("Beginner", first.name)
-        self.assertNotIn("Clue Scrolls", first.name)
+        self.assertIn("Beginner", description)
+        self.assertNotIn("Clue Scrolls (beginner)", description)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_entry_name_falls_back_to_name_when_no_display_name(
-        self, mock_build_embed, mock_render, mock_find_emoji
-    ):
-        embed = _make_embed_mock()
-        mock_build_embed.return_value = embed
-        mock_find_emoji.return_value = ":defence:"
-        mock_render.return_value = "0%"
+    def test_row_label_falls_back_to_name_when_no_display_name(self):
+        description = self._build([self._make_progress()])
 
-        result = _build_list_embed([self._make_progress()], discord.Color.greyple())
+        self.assertIn("Defence", description)
 
-        first = result.fields[0]
-        self.assertIn("Defence", first.name)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_entry_value_uses_ceil_for_float_remaining(
-        self, mock_build_embed, mock_render, mock_find_emoji
-    ):
-        embed = _make_embed_mock()
-        mock_build_embed.return_value = embed
-        mock_find_emoji.return_value = ":cox:"
-        mock_render.return_value = "50%"
-
-        progress = self._make_progress(
-            category="raid",
-            name="Chambers of Xeric",
-            display_name="Chambers of Xeric",
-            emoji_key="Chambers_of_Xeric",
-            current=10,
-            points=12,
-            progress_percent=0.5,
-            remaining_to_next=0.4,
-            unit="kc",
-        )
-
-        result = _build_list_embed([progress], discord.Color.greyple())
-
-        first = result.fields[0]
-        self.assertEqual(first.value, "50% (1 kc left)")
-        self.assertNotIn("e+", first.value)
-        self.assertNotIn("e-", first.value)
-
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_entry_value_no_scientific_notation_for_large_xp(
-        self, mock_build_embed, mock_render, mock_find_emoji
-    ):
-        embed = _make_embed_mock()
-        mock_build_embed.return_value = embed
-        mock_find_emoji.return_value = ":attack:"
-        mock_render.return_value = "84%"
-
+    def test_row_remaining_no_scientific_notation_for_large_xp(self):
         progress = self._make_progress(
             category="skill",
             name="Attack",
             emoji_key="Attack",
             current=17_483_000,
             points=130,
-            progress_percent=0.84,
             remaining_to_next=3_940,
-            unit="xp",
         )
 
-        result = _build_list_embed([progress], discord.Color.greyple())
+        description = self._build([progress])
 
-        first = result.fields[0]
-        self.assertEqual(first.value, "84% (3,940 xp left)")
-        self.assertNotIn("e+", first.value)
-        self.assertNotIn("e-", first.value)
+        self.assertIn("3,940 xp", description)
+        self.assertNotIn("e+", description)
+        self.assertNotIn("e-", description)
 
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.render_percentage")
-    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
-    def test_entry_name_format(self, mock_build_embed, mock_render, mock_find_emoji):
-        embed = _make_embed_mock()
-        mock_build_embed.return_value = embed
-        mock_find_emoji.return_value = ":attack:"
-        mock_render.return_value = "50%"
-
+    def test_row_ehp_for_skill(self):
         progress = self._make_progress(
+            category="skill",
             name="Attack",
             emoji_key="Attack",
-            progress_percent=0.5,
+            time_hours=2.5,
             remaining_to_next=100000,
             unit="xp",
         )
 
-        result = _build_list_embed([progress], discord.Color.greyple())
+        description = self._build([progress])
 
-        first = result.fields[0]
-        self.assertEqual(first.name, ":attack: Attack")
-        self.assertEqual(first.value, "50% (100,000 xp left)")
+        self.assertIn("100,000 xp", description)
+        self.assertIn("2 hr 30 min ehp", description)
+
+    def test_row_ehb_for_boss(self):
+        progress = self._make_progress(
+            category="boss",
+            name="Zulrah",
+            emoji_key="Zulrah",
+            time_hours=1.0,
+            remaining_to_next=11,
+            unit="kc",
+        )
+
+        description = self._build([progress])
+
+        self.assertIn("11 kc", description)
+        self.assertIn("1 hr ehb", description)
+
+    def test_row_ehb_for_raid(self):
+        progress = self._make_progress(
+            category="raid",
+            name="Chambers of Xeric",
+            display_name="Chambers of Xeric",
+            emoji_key="Chambers_of_Xeric",
+            time_hours=24.0,
+            remaining_to_next=10,
+            unit="kc",
+        )
+
+        description = self._build([progress])
+
+        self.assertIn("10 kc", description)
+        self.assertIn("1 d ehb", description)
+
+    def test_row_ehb_for_clue(self):
+        progress = self._make_progress(
+            category="clue",
+            name="Clue Scrolls (beginner)",
+            display_name="Beginner",
+            emoji_key="Beginner_Clue",
+            time_hours=0.5,
+            remaining_to_next=5,
+            unit="kc",
+        )
+
+        description = self._build([progress])
+
+        self.assertIn("5 kc", description)
+        self.assertIn("30 min ehb", description)
+
+    def test_row_ehp_renders_dash_when_time_hours_is_none(self):
+        progress = self._make_progress(
+            category="skill",
+            name="Attack",
+            emoji_key="Attack",
+            time_hours=None,
+            remaining_to_next=100000,
+            unit="xp",
+        )
+
+        description = self._build([progress])
+
+        self.assertIn("-```", description)
+        self.assertIn("100,000 xp", description)
+
+
+class TestListEmbedUsesTextAsciiTable(unittest.TestCase):
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.text_ascii_table")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
+    @patch("ironforgedbot.commands.hiscore.cmd_point_progress.format_duration_hours")
+    def test_calls_helper_with_expected_kwargs(
+        self, mock_format, mock_build_embed, mock_table
+    ):
+        from ironforgedcore.models.score import NextPointProgress
+
+        mock_build_embed.return_value = _make_embed_mock()
+        mock_table.return_value = "rendered-table"
+        mock_format.return_value = "1 hr ehb"
+
+        _build_list_embed(
+            [
+                NextPointProgress(
+                    category="skill",
+                    name="Attack",
+                    display_name=None,
+                    emoji_key="Attack",
+                    current=100000,
+                    points=1,
+                    progress_percent=0.0,
+                    remaining_to_next=100000,
+                    unit="xp",
+                    time_hours=1.0,
+                )
+            ],
+            discord.Color.greyple(),
+        )
+
+        mock_table.assert_called_once()
+        call_kwargs = mock_table.call_args.kwargs
+        self.assertEqual(call_kwargs["headers"], ["Entry", "Next Point In", "Estimate"])
+        self.assertEqual(call_kwargs["wrap_widths"], [20, None, None])
+        self.assertEqual(call_kwargs["colalign"], ("left", "right", "right"))
 
 
 @patch.dict("os.environ", VALID_CONFIG)

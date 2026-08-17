@@ -1,6 +1,7 @@
 import unittest
 
 from ironforgedbot.common.text_formatters import (
+    text_ascii_table,
     text_bold,
     text_bold_italics,
     text_code,
@@ -110,3 +111,121 @@ class TestTextFormatters(unittest.TestCase):
         expected = f"```{value}```"
         result = text_code_block(value)
         self.assertEqual(result, expected)
+
+
+class TestTextAsciiTable(unittest.TestCase):
+    def test_default_renders_code_block_table(self):
+        result = text_ascii_table(
+            [("a", "1"), ("bb", "22")],
+            headers=["A", "B"],
+        )
+        self.assertTrue(result.startswith("```"))
+        self.assertTrue(result.endswith("```"))
+        self.assertIn("A", result)
+        self.assertIn("B", result)
+        self.assertIn("a", result)
+        self.assertIn("22", result)
+
+    def test_no_code_block_returns_raw_tabulate(self):
+        result = text_ascii_table(
+            [("a", "1")],
+            headers=["A", "B"],
+            code_block=False,
+        )
+        self.assertFalse(result.startswith("```"))
+        self.assertFalse(result.endswith("```"))
+        self.assertIn("A", result)
+
+    def test_no_wrap_passes_cells_through(self):
+        result = text_ascii_table(
+            [("short", "1")],
+            headers=["Label", "Value"],
+            code_block=False,
+        )
+        self.assertIn("short", result)
+        self.assertNotIn("short\n", result)
+
+    def test_wrap_widths_per_column(self):
+        result = text_ascii_table(
+            [("chambers of xeric", "100,000")],
+            headers=["Point", "Remaining"],
+            wrap_widths=[10, None],
+            code_block=False,
+        )
+        lines = result.split("\n")
+        same_line = [ln for ln in lines if "chambers" in ln and "of xeric" in ln]
+        self.assertEqual(
+            len(same_line),
+            0,
+            f"expected wrap to split 'chambers' and 'of xeric' across lines; got: {result!r}",
+        )
+        self.assertTrue(any("chambers" in ln for ln in lines))
+        self.assertTrue(any("of xeric" in ln for ln in lines))
+
+    def test_break_long_words_force_breaks(self):
+        long = "a" * 30
+        result = text_ascii_table(
+            [(long, "1")],
+            headers=["Label", "Value"],
+            wrap_widths=[8, None],
+            code_block=False,
+        )
+        for line in result.split("\n"):
+            if line.strip().startswith("|"):
+                first_cell = line.strip().strip("|").split("|")[0].strip()
+                if first_cell and all(c == "a" for c in first_cell):
+                    self.assertLessEqual(len(first_cell), 8)
+
+    def test_short_value_passes_through_unwrapped(self):
+        result = text_ascii_table(
+            [("Attack", "1")],
+            headers=["Skill", "Value"],
+            wrap_widths=[20, None],
+            code_block=False,
+        )
+        self.assertIn("Attack", result)
+
+    def test_tablefmt_pass_through(self):
+        result = text_ascii_table(
+            [("a", "1")],
+            headers=["A", "B"],
+            tablefmt="github",
+            code_block=False,
+        )
+        self.assertIn("|", result)
+        self.assertIn("---", result)
+
+    def test_colalign_pass_through(self):
+        result = text_ascii_table(
+            [("a", "1"), ("bb", "22")],
+            headers=["A", "B"],
+            colalign=("right", "left"),
+            code_block=False,
+        )
+        self.assertIn("a", result)
+        self.assertIn("22", result)
+
+    def test_empty_headers_yields_headerless_table(self):
+        result = text_ascii_table(
+            [("a", "1"), ("b", "2")],
+            code_block=False,
+        )
+        self.assertNotIn("| A |", result)
+
+    def test_empty_rows_renders_headers_only(self):
+        result = text_ascii_table(
+            [],
+            headers=["A", "B"],
+            code_block=False,
+        )
+        self.assertIn("A", result)
+        self.assertIn("B", result)
+
+    def test_none_value_in_wrapped_column_passes_through(self):
+        result = text_ascii_table(
+            [("", "1")],
+            headers=["Label", "Value"],
+            wrap_widths=[10, None],
+            code_block=False,
+        )
+        self.assertIn("1", result)
