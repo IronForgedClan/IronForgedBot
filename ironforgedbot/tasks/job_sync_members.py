@@ -4,13 +4,12 @@ import time
 from datetime import datetime, timezone
 
 import discord
-from tabulate import tabulate
 
 from ironforgedbot.commands.admin.sync_members import sync_members
 from ironforgedbot.common.helpers import datetime_to_discord_relative
 from ironforgedcore.common.numbers import format_duration
 from ironforgedbot.common.logging_utils import log_task_execution
-from ironforgedbot.common.text_formatters import text_h2
+from ironforgedbot.common.text_formatters import text_ascii_table, text_h2
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +40,12 @@ async def job_sync_members(
         )
         return
 
-    output_table = tabulate(
-        changes, headers=["Member", "Action", "Reason"], tablefmt="simple"
+    output_table = text_ascii_table(
+        changes,
+        headers=["Member", "Action", "Reason"],
+        wrap_widths=[None, None, None],
+        tablefmt="simple",
+        code_block=False,
     )
     discord_file = discord.File(
         fp=io.BytesIO(output_table.encode("utf-8")),

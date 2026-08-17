@@ -67,7 +67,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     )
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
-    @patch("ironforgedbot.tasks.job_check_activity.tabulate")
+    @patch("ironforgedbot.tasks.job_check_activity.text_ascii_table")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
     @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
@@ -80,7 +80,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_find_inactive,
         mock_fetch_ltm,
         mock_discord_file,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_format_duration,
         mock_datetime,
         mock_perf_counter,
@@ -118,7 +118,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             ),
         ]
 
-        mock_tabulate.return_value = "Test table output"
+        mock_text_ascii_table.return_value = "Test table output"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
 
@@ -130,9 +130,9 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             ["absentplayer"],
         )
 
-        # Verify tabulate was called with no LTM column (4-item rows)
-        self.assertTrue(mock_tabulate.called)
-        call_args = mock_tabulate.call_args
+        # Verify text_ascii_table was called with no LTM column (4-item rows)
+        self.assertTrue(mock_text_ascii_table.called)
+        call_args = mock_text_ascii_table.call_args
         rows = call_args[0][0]
         self.assertEqual(len(rows), 2)
         self.assertEqual(rows[0][0], "Player1")
@@ -155,7 +155,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     )
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
-    @patch("ironforgedbot.tasks.job_check_activity.tabulate")
+    @patch("ironforgedbot.tasks.job_check_activity.text_ascii_table")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
     @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
@@ -168,7 +168,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_find_inactive,
         mock_fetch_ltm,
         mock_discord_file,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_format_duration,
         mock_datetime,
         mock_perf_counter,
@@ -202,13 +202,13 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             ),
         ]
 
-        mock_tabulate.return_value = "Test table output"
+        mock_text_ascii_table.return_value = "Test table output"
         mock_discord_file.return_value = Mock()
 
         await job_check_activity(self.mock_report_channel)
 
-        self.assertTrue(mock_tabulate.called)
-        call_args = mock_tabulate.call_args
+        self.assertTrue(mock_text_ascii_table.called)
+        call_args = mock_text_ascii_table.call_args
         rows = call_args[0][0]
         headers = call_args[1]["headers"]
 
@@ -284,7 +284,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
     )
     @patch("ironforgedbot.tasks.job_check_activity.datetime")
     @patch("ironforgedbot.tasks.job_check_activity.format_duration")
-    @patch("ironforgedbot.tasks.job_check_activity.tabulate")
+    @patch("ironforgedbot.tasks.job_check_activity.text_ascii_table")
     @patch("ironforgedbot.tasks.job_check_activity.discord.File")
     @patch("ironforgedbot.tasks.job_check_activity._fetch_ltm_gains_for_members")
     @patch("ironforgedbot.tasks.job_check_activity._find_inactive_users")
@@ -297,7 +297,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         mock_find_inactive,
         mock_fetch_ltm,
         mock_discord_file,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_format_duration,
         mock_datetime,
         mock_perf_counter,
@@ -342,7 +342,7 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
             ),
         ]
 
-        mock_tabulate.return_value = "Test table output"
+        mock_text_ascii_table.return_value = "Test table output"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
 
@@ -354,8 +354,8 @@ class TestJobCheckActivity(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first_call[0][0], "🧗 **Activity Check:** starting...")
 
         # Verify results are sorted by XP gained (lowest to highest)
-        self.assertTrue(mock_tabulate.called)
-        call_args = mock_tabulate.call_args[0][0]
+        self.assertTrue(mock_text_ascii_table.called)
+        call_args = mock_text_ascii_table.call_args[0][0]
         self.assertEqual(len(call_args), 3)
         # Should be sorted by XP: Player1 (100k), Player3 (200k), Player2 (300k)
         self.assertEqual(call_args[0][0], "Player1")

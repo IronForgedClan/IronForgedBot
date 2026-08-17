@@ -3,11 +3,10 @@ import logging
 from datetime import datetime, timedelta
 
 import discord
-from tabulate import tabulate
 
 from ironforgedbot.common.logging_utils import log_task_execution
 from ironforgedcore.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_h2
+from ironforgedbot.common.text_formatters import text_ascii_table, text_h2
 from ironforgedcore.database import db
 from ironforgedcore.models.member import Member
 from ironforgedcore.services.ingot_service import IngotService
@@ -80,7 +79,13 @@ async def pay_group(
             ]
         )
 
-    return tabulate(output, headers=["Member", "Change", "Total"], tablefmt="github")
+    return text_ascii_table(
+        output,
+        headers=["Member", "Change", "Total"],
+        wrap_widths=[None, None, None],
+        tablefmt="github",
+        code_block=False,
+    )
 
 
 async def report_payroll(
