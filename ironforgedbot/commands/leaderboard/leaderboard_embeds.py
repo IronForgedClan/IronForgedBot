@@ -1,5 +1,4 @@
 import discord
-from tabulate import tabulate
 
 from ironforgedbot.commands.leaderboard.leaderboard_types import (
     LeaderboardConfig,
@@ -9,7 +8,7 @@ from ironforgedbot.commands.leaderboard.leaderboard_types import (
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedcore.common.ranks import RANK
 from ironforgedbot.common.responses import build_response_embed
-from ironforgedbot.common.text_formatters import text_code_block
+from ironforgedbot.common.text_formatters import text_ascii_table
 
 _PAGE_SIZE = 20
 _EMBED_TIMEOUT = 60
@@ -33,13 +32,12 @@ def _build_leaderboard_table(
         (page_offset + i + 1, entry.nickname, config.value_formatter(entry))
         for i, entry in enumerate(entries)
     ]
-    table = tabulate(
+    return text_ascii_table(
         rows,
         headers=["Rank", "Member", config.column_header],
-        tablefmt="simple",
+        wrap_widths=[None, 20, None],
         colalign=("right", "left", "right"),
     )
-    return text_code_block(table)
 
 
 def _resolve_title(config: LeaderboardConfig) -> str:
@@ -141,13 +139,13 @@ def _build_staff_rank_block(
         (global_offset + i + 1, entry.nickname, value_formatter(entry))
         for i, entry in enumerate(entries)
     ]
-    table = tabulate(
+    table = text_ascii_table(
         rows,
         headers=["Rank", "Member", column_header],
-        tablefmt="simple",
+        wrap_widths=[None, 20, None],
         colalign=("right", "left", "right"),
     )
-    return f"{heading}\n{text_code_block(table)}"
+    return f"{heading}\n{table}"
 
 
 def build_staff_leaderboard_embeds(
