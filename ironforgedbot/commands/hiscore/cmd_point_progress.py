@@ -8,13 +8,13 @@ from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.commands.hiscore.score_utils import _resolve_rank_display
 from ironforgedcore.common.normalize import normalize_discord_string
-from ironforgedcore.common.numbers import render_percentage
 from ironforgedcore.common.ranks import (
     RANK,
     RANK_POINTS,
     get_next_rank_from_points,
     get_rank_from_points,
 )
+from ironforgedcore.common.time import format_duration_hours
 from ironforgedbot.common.responses import (
     build_response_embed,
     send_error_response,
@@ -37,8 +37,9 @@ logger = logging.getLogger(__name__)
 _TOP_N = 15
 _EMBED_TITLE = "🎯 Point Progress"
 _EMBED_DESCRIPTION = (
-    "Skills, bosses, raids, and clues ranked by how close you are to "
-    "earning your next point. Items with no progress are hidden."
+    "Skills, bosses, raids, and clues ranked by shortest real time to "
+    "your next point. Items with no EHP/EHB data sort to the bottom. "
+    "Items with no progress are hidden."
 )
 
 
@@ -50,11 +51,9 @@ def _build_summary_embed(
     god_alignment: str | None,
     points_total: int,
 ) -> discord.Embed:
-    """Build the user-info summary embed (embed 1)."""
+    """Build the user-info summary embed"""
     member_icon = find_emoji("Grass") if rank_name == RANK.GOD else rank_icon
-    embed = build_response_embed(
-        f"{_EMBED_TITLE} — {display_name}", _EMBED_DESCRIPTION, rank_color
-    )
+    embed = build_response_embed(_EMBED_TITLE, _EMBED_DESCRIPTION, rank_color)
 
     embed.add_field(
         name="Member",
@@ -76,7 +75,7 @@ def _build_summary_embed(
 
         embed.add_field(name="Total Points", value=f"{points_total:,}", inline=True)
         embed.add_field(
-            name="Points to Next Rank",
+            name="Next Rank",
             value=f"{next_rank_icon} {next_rank_name} (in {points_needed:,} pts)",
             inline=True,
         )
@@ -88,19 +87,14 @@ def _build_list_embed(
     proximity: list[NextPointProgress],
     rank_color: discord.Color,
 ) -> discord.Embed:
-    """Build the top-N list embed (embed 2).
-
-    Each entry is rendered as one full-width Discord field:
-      name  = `<emoji> <display_name or name>`
-      value = `<pct> (<remaining> <unit> left)`
-    """
+    """Build the top-N list embed"""
     embed = build_response_embed("", "", rank_color)
 
     if not proximity:
         embed.add_field(
             name="No progress yet",
             value=(
-                f"{EMPTY_SPACE}This player has no qualifying XP or KC yet. "
+                "This player has no qualifying XP or KC yet. "
                 "Start grinding to populate the list."
             ),
             inline=False,
@@ -111,10 +105,11 @@ def _build_list_embed(
         icon = find_emoji(progress.emoji_key)
         label = progress.display_name or progress.name
         remaining = math.ceil(progress.remaining_to_next)
-        pct = render_percentage(progress.progress_percent, 1.0)
+        suffix = "EHP" if progress.category == "skill" else "EHB"
+        time_str = format_duration_hours(progress.time_hours, suffix)
         embed.add_field(
             name=f"{icon} {label}",
-            value=f"{pct} ({remaining:,.0f} {progress.unit} left)",
+            value=f"{EMPTY_SPACE}{remaining:,.0f} {progress.unit}{EMPTY_SPACE}_{time_str}_",
             inline=False,
         )
 
