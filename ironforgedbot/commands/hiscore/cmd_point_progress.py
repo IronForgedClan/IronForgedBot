@@ -1,5 +1,4 @@
 import logging
-import math
 
 import discord
 from discord import app_commands
@@ -34,7 +33,7 @@ from ironforgedcore.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
-_TOP_N = 25
+_TOP_N = 50
 _EMBED_TITLE = ":chart_with_upwards_trend: Point Progress"
 _EMBED_DESCRIPTION = (
     f"The top **{_TOP_N}** entries closest to gaining the next point. "
@@ -84,7 +83,7 @@ def _build_summary_embed(
 
 def _row_for_proximity(progress: NextPointProgress) -> tuple[str, str, str]:
     label = (progress.display_name or progress.name).strip()
-    remaining = f"{math.ceil(progress.remaining_to_next):,.0f} {progress.unit}"
+    remaining = f"{progress.remaining_to_next:,} {progress.unit}"
     suffix = "ehp" if progress.category == "skill" else "ehb"
     ehp_col = format_duration_hours(progress.time_hours, suffix)
     return (label, remaining, ehp_col)
