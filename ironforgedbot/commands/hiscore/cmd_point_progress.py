@@ -4,7 +4,6 @@ import math
 import discord
 from discord import app_commands
 
-from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.commands.hiscore.score_utils import _resolve_rank_display
 from ironforgedcore.common.normalize import normalize_discord_string
@@ -22,6 +21,7 @@ from ironforgedbot.common.responses import (
     send_not_clan_member,
     send_prospect_response,
 )
+from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.ranks_discord import get_rank_color_from_points
 from ironforgedbot.common.roles_discord import check_member_has_role, has_prospect_role
@@ -34,12 +34,11 @@ from ironforgedcore.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
-_TOP_N = 15
-_EMBED_TITLE = "🎯 Point Progress"
+_TOP_N = 25
+_EMBED_TITLE = ":chart_with_upwards_trend: Point Progress"
 _EMBED_DESCRIPTION = (
-    "Skills, bosses, raids, and clues ranked by shortest real time to "
-    "your next point. Items with no EHP/EHB data sort to the bottom. "
-    "Items with no progress are hidden."
+    f"The top **{_TOP_N}** entries closest to gaining the next point. "
+    "Ordered by the estimated time to complete."
 )
 
 
@@ -83,14 +82,21 @@ def _build_summary_embed(
     return embed
 
 
+def _row_for_proximity(progress: NextPointProgress) -> tuple[str, str, str]:
+    label = (progress.display_name or progress.name).strip()
+    remaining = f"{math.ceil(progress.remaining_to_next):,.0f} {progress.unit}"
+    suffix = "ehp" if progress.category == "skill" else "ehb"
+    ehp_col = format_duration_hours(progress.time_hours, suffix)
+    return (label, remaining, ehp_col)
+
+
 def _build_list_embed(
     proximity: list[NextPointProgress],
     rank_color: discord.Color,
 ) -> discord.Embed:
-    """Build the top-N list embed"""
-    embed = build_response_embed("", "", rank_color)
-
+    """Build the top-N proximity table embed"""
     if not proximity:
+        embed = build_response_embed("", "", rank_color)
         embed.add_field(
             name="No progress yet",
             value=(
@@ -101,19 +107,19 @@ def _build_list_embed(
         )
         return embed
 
-    for progress in proximity:
-        icon = find_emoji(progress.emoji_key)
-        label = progress.display_name or progress.name
-        remaining = math.ceil(progress.remaining_to_next)
-        suffix = "EHP" if progress.category == "skill" else "EHB"
-        time_str = format_duration_hours(progress.time_hours, suffix)
-        embed.add_field(
-            name=f"{icon} {label}",
-            value=f"{EMPTY_SPACE}{remaining:,.0f} {progress.unit}{EMPTY_SPACE}_{time_str}_",
-            inline=False,
-        )
+    rows = [_row_for_proximity(p) for p in proximity]
+    table = text_ascii_table(
+        rows,
+        headers=["Entry", "Next Point In", "Estimate"],
+        wrap_widths=[20, None, None],
+        colalign=("left", "right", "right"),
+    )
 
-    return embed
+    description = (
+        table
+        + f"\n-# _The EHP/EHB values used in the time calculation are taken directly from the Wise Old Man [ironman efficiency rates](https://wiseoldman.net/ehb/ironman)._"
+    )
+    return build_response_embed(title="", description=description, color=rank_color)
 
 
 @require_role(ROLE.MEMBER)
