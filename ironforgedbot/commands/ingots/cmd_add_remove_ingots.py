@@ -5,7 +5,6 @@ from typing import Dict
 
 import discord
 from discord import app_commands
-from tabulate import tabulate
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.responses import (
@@ -14,8 +13,8 @@ from ironforgedbot.common.responses import (
 from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.text_formatters import (
+    text_ascii_table,
     text_bold,
-    text_code_block,
     text_h2,
     text_italic,
 )
@@ -113,11 +112,12 @@ async def cmd_add_remove_ingots(
 
     ingot_icon = find_emoji("Ingot")
     sorted_output_data = sorted(output_data, key=lambda row: row[0])
-    result_table = tabulate(
+    result_table = text_ascii_table(
         sorted_output_data,
         headers=["Member", "Change", "Total"],
-        tablefmt="github",
+        wrap_widths=[None, None, None],
         colalign=("left", "right", "right"),
+        code_block=False,
     )
     result_title = f"{ingot_icon} {'Add' if is_positive else 'Remove'} Ingots"
     result_description = f"Ingots are our clan currency. Visit <#{CONFIG.INGOT_SHOP_CHANNEL_ID}> to see how they can be earned and spent."
@@ -140,6 +140,14 @@ async def cmd_add_remove_ingots(
         )
 
     embed = build_ingot_response_embed(result_title, result_content)
-    embed.add_field(name="", value=text_code_block(result_table))
+    embed.add_field(
+        name="",
+        value=text_ascii_table(
+            sorted_output_data,
+            headers=["Member", "Change", "Total"],
+            wrap_widths=[None, None, None],
+            colalign=("left", "right", "right"),
+        ),
+    )
 
     return await interaction.followup.send(embed=embed)
