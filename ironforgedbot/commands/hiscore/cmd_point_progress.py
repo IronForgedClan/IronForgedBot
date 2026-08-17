@@ -4,7 +4,9 @@ import discord
 from discord import app_commands
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
+from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedbot.commands.hiscore.score_utils import _resolve_rank_display
+from ironforgedbot.config import CONFIG
 from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedcore.common.ranks import (
     RANK,
@@ -20,7 +22,6 @@ from ironforgedbot.common.responses import (
     send_not_clan_member,
     send_prospect_response,
 )
-from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedcore.common.roles import ROLE
 from ironforgedbot.common.ranks_discord import get_rank_color_from_points
 from ironforgedbot.common.roles_discord import check_member_has_role, has_prospect_role
@@ -36,8 +37,9 @@ logger = logging.getLogger(__name__)
 _TOP_N = 50
 _EMBED_TITLE = ":chart_with_upwards_trend: Point Progress"
 _EMBED_DESCRIPTION = (
-    f"The top **{_TOP_N}** entries closest to gaining the next point. "
-    "Ordered by the estimated time to complete."
+    "Your most efficient path to the next clan point. Skills, bosses, raids "
+    "and clues ranked by the real time it takes to complete. "
+    f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for the rank ladder."
 )
 
 
