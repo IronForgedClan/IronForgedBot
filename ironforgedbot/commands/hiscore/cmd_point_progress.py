@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 _TOP_N = 50
 _EMBED_TITLE = ":chart_with_upwards_trend: Point Progress"
 _EMBED_DESCRIPTION = (
-    "Your most efficient path to the next clan point. Skills, bosses, raids "
-    "and clues ranked by the real time it takes to complete. "
+    "The most efficient path to the next **clan point**. Skills, bosses, raids "
+    "and clues ranked by the efficient time it takes to complete. "
     f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for the rank ladder."
 )
 
