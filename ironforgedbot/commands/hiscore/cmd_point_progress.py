@@ -5,7 +5,10 @@ from discord import app_commands
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedbot.common.text_formatters import text_ascii_table
-from ironforgedbot.commands.hiscore.score_utils import _resolve_rank_display
+from ironforgedbot.commands.hiscore.score_utils import (
+    _calculate_points,
+    _resolve_rank_display,
+)
 from ironforgedbot.config import CONFIG
 from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedcore.common.ranks import (
@@ -34,12 +37,12 @@ from ironforgedcore.services.score_service import get_score_service
 
 logger = logging.getLogger(__name__)
 
-_TOP_N = 50
+_TOP_N = 15
 _EMBED_TITLE = ":chart_with_upwards_trend: Point Progress"
 _EMBED_DESCRIPTION = (
-    "The most efficient path to the next **clan point**. Skills, bosses, raids "
-    "and clues ranked by the efficient time it takes to complete. "
-    f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for the rank ladder."
+    "The most efficient path to your next **clan point**. Skills, bosses, raids "
+    "and clues ranked by the _efficient_ time it would take to complete. "
+    f"See <#{CONFIG.RANKINGS_CHANNEL_ID}> for a full point breakdown."
 )
 
 
@@ -86,8 +89,8 @@ def _build_summary_embed(
 def _row_for_proximity(progress: NextPointProgress) -> tuple[str, str, str]:
     label = (progress.display_name or progress.name).strip()
     remaining = f"{progress.remaining_to_next:,} {progress.unit}"
-    suffix = "ehp" if progress.category == "skill" else "ehb"
-    ehp_col = format_duration_hours(progress.time_hours, suffix)
+    # suffix = "ehp" if progress.category == "skill" else "ehb"
+    ehp_col = format_duration_hours(progress.time_hours)
     return (label, remaining, ehp_col)
 
 
@@ -101,7 +104,7 @@ def _build_list_embed(
         embed.add_field(
             name="No progress yet",
             value=(
-                "This player has no qualifying XP or KC yet. "
+                "This player has no qualifying XP or KC. "
                 "Start grinding to populate the list."
             ),
             inline=False,
@@ -111,15 +114,19 @@ def _build_list_embed(
     rows = [_row_for_proximity(p) for p in proximity]
     table = text_ascii_table(
         rows,
-        headers=["Entry", "Next Point In", "Estimate"],
+        headers=["Point", "Next In", "Estimate"],
         wrap_widths=[20, None, None],
         colalign=("left", "right", "right"),
     )
 
-    description = (
-        table
-        + f"\n-# _The EHP/EHB values used in the time calculation are taken directly from the Wise Old Man [ironman efficiency rates](https://wiseoldman.net/ehb/ironman)._"
-    )
+    has_estimate = any(p.time_hours is not None for p in proximity)
+    description = table
+    if has_estimate:
+        description += (
+            "\n-# _The EHP/EHB values used in the time calculation are taken "
+            "directly from the Wise Old Man "
+            "[ironman efficiency rates](https://wiseoldman.net/ehb/ironman)._"
+        )
     return build_response_embed(title="", description=description, color=rank_color)
 
 
@@ -131,7 +138,7 @@ def _build_list_embed(
 async def cmd_point_progress(
     interaction: discord.Interaction, player: str | None = None
 ):
-    """Show the top 15 skills/activities closest to gaining a point.
+    """Show the top N skills/activities closest to gaining a point.
 
     Arguments:
         interaction: Discord Interaction from CommandTree.
@@ -164,9 +171,7 @@ async def cmd_point_progress(
             return await send_member_no_hiscore_values(interaction, display_name)
         data = ScoreBreakdown([], [], [], [])
 
-    points_total = sum(s.points for s in data.skills) + sum(
-        a.points for a in (data.clues + data.raids + data.bosses)
-    )
+    points_total = _calculate_points(data)[2]
     rank_name = get_rank_from_points(points_total)
 
     if member and member.roles:
