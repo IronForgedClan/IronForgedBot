@@ -4,7 +4,7 @@ version = "5.2.0"
 description = "Discord bot for the Iron Forged Old School RuneScape clan"
 requires-python = ">=3.14"
 dependencies = [
-    "ironforgedcore @ git+https://github.com/ironforgedclan/ironforgedcore.git@v1.0.0",
+    "ironforgedcore @ git+https://github.com/ironforgedclan/ironforgedcore.git@v1.1.0",
     "python-dotenv",
     "discord.py",
     "requests",
