@@ -22,7 +22,6 @@ with patch("ironforgedbot.decorators.require_role.require_role", mock_require_ro
             _build_ascii_table,
             _build_commands_description,
             _build_activities_description,
-            _DESC_WRAP_WIDTH,
         )
 
 
@@ -401,7 +400,7 @@ class TestBuildAsciiTable(unittest.TestCase):
         self.assertIn("View the player's score.", result)
 
     def test_long_description_is_wrapped(self):
-        long_desc = "A" * (_DESC_WRAP_WIDTH + 10) + " " + "B" * 5
+        long_desc = "A" * 45 + " " + "B" * 5
         cmds = [_make_command("score", long_desc)]
         result = _build_ascii_table(cmds)
         self.assertGreaterEqual(result.count("\n"), 3)

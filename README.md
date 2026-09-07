@@ -1,6 +1,6 @@
 <h1 align="center">Iron Forged Bot</h1>
 <p align="center">
-<img alt="Bot Version" src="https://img.shields.io/github/v/release/IronForgedClan/IronForgedBot?include_prereleases&label=bot&color=%20%2361ad38">
+<img alt="Bot version" src="https://img.shields.io/github/tag/IronForgedClan/IronForgedBot?label=bot&sort=semver">
 <a href="https://github.com/IronForgedClan/IronForgedBot/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/IronForgedClan/IronForgedBot"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
@@ -14,6 +14,7 @@
 | `help`               | N/A                                                                             | Member     | Displays all active bot commands with descriptions                               |
 | `score`              | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
+| `point_progress`     | Player (str) _Optional_                                                         | Member     | Returns the top skills, bosses, raids, and clues closest to gaining a point      |
 | `leaderboard`        | Leaderboard Type                                                                | Member     | Displays a paginated clan leaderboard                                            |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
 | `gains`              | Player (str) _Optional_                                                         | Member     | Returns daily XP gains over the past 30 days for the player                      |
@@ -298,19 +299,29 @@ view its source command and try running that instead.
 ### Commands
 
 - `make up`\
-  Starts the database, bot (dev), and API (dev) together. Dev services mount
-  the source tree so code changes are picked up live — the bot uses
-  `watchmedo` for auto-restart, the API uses `uvicorn --reload`.
+  Starts the database, bot (dev), and API (dev) together. Dev services mount the
+  source tree so code changes are picked up live — the bot uses `watchmedo` for
+  auto-restart, the API uses `uvicorn --reload`.
 
 - `make up-prod`\
-  Starts the database, bot, and API from their built prod images. Use this
-  to verify a production build without the dev mount.
+  Starts the database, bot, and API from their built prod images. Use this to
+  verify a production build without the dev mount.
 
 - `make down`\
   Stops and removes the containers.
 
 - `make test`\
-  Runs the test suite.
+  Runs the test suite inside the dev container. The dev image mounts the sibling
+  `IronForgedCore` source over the installed core, so in-development core changes
+  are exercised alongside bot changes. First run builds the dev image.
+
+- `make test-prod`\
+  Runs the test suite against the built prod image, which bakes the pinned
+  `ironforgedcore` from git. Use this to confirm a feature is releasable against
+  the shipped core pin — it will fail until the `ironforgedcore` pin in
+  `ironforgedbot/pyproject.toml` is bumped to a release containing the new
+  symbols. Mounts `./tests` read-only into the prod container so the test source
+  is available without baking it into the prod image.
 
 - `make format`\
   Formats the codebase using Black formatter.
@@ -343,7 +354,8 @@ view its source command and try running that instead.
   Start, stop, tail logs, or open a shell in the dev API container (mounted
   code, `uvicorn --reload`).
 
-- `make api-up-prod` / `make api-down-prod` / `make api-logs-prod` / `make api-shell-prod`\
+- `make api-up-prod` / `make api-down-prod` / `make api-logs-prod` /
+  `make api-shell-prod`\
   Same as above but against the built prod API image, for verifying prod
   behavior in isolation.
 

@@ -3,7 +3,6 @@ from typing import Optional
 
 import discord
 from discord import app_commands
-from tabulate import tabulate
 
 from ironforgedbot.common.helpers import find_emoji, validate_playername
 from ironforgedcore.common.normalize import normalize_discord_string
@@ -13,7 +12,7 @@ from ironforgedbot.common.responses import (
     build_ingot_response_embed,
     send_error_response,
 )
-from ironforgedbot.common.text_formatters import text_code_block
+from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedcore.common.roles import ROLE
 from ironforgedbot.config import CONFIG
 from ironforgedcore.database import db
@@ -106,15 +105,15 @@ async def cmd_view_ingots(
 
         if transactions:
             transaction_data = [format_transaction(t) for t in transactions]
-            transaction_table = tabulate(
+            transaction_table = text_ascii_table(
                 transaction_data,
                 headers=["Change", "Reason"],
-                tablefmt="simple",
+                wrap_widths=[None, 40],
                 colalign=("right", "left"),
             )
             embed.add_field(
                 name="Recent Transactions",
-                value=text_code_block(transaction_table),
+                value=transaction_table,
                 inline=False,
             )
 

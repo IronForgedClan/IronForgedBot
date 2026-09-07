@@ -1,15 +1,13 @@
 import logging
-import textwrap
 
 import discord
-from tabulate import tabulate
 
 from ironforgedbot.common.constants import EMPTY_SPACE
 from ironforgedbot.common.helpers import build_discord_link, find_emoji
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedcore.common.roles import ROLE
-from ironforgedbot.common.text_formatters import text_code_block
+from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedbot.config import CONFIG
 from ironforgedbot.decorators.require_role import require_role
 from ironforgedbot.state import STATE
@@ -18,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _STATS_LOOKUP: set[str] = {"score", "breakdown", "check", "gains", "ingots"}
 _GAMES_FUN: set[str] = {"raffle", "reset_rng", "eight_ball", "spin", "trick_or_treat"}
+_DESC_WRAP_WIDTH = 35
 
 
 def _get_ingot_cost(cmd: discord.app_commands.Command) -> int | None:
@@ -29,9 +28,6 @@ def _get_ingot_cost(cmd: discord.app_commands.Command) -> int | None:
             return cost
         fn = getattr(fn, "__wrapped__", None)
     return None
-
-
-_DESC_WRAP_WIDTH = 35
 
 
 def _build_ascii_table(cmds: list[discord.app_commands.Command]) -> str:
@@ -46,11 +42,12 @@ def _build_ascii_table(cmds: list[discord.app_commands.Command]) -> str:
         if cost is not None:
             desc = f"{desc} ({cost:,} ingots)"
 
-        wrapped = "\n".join(textwrap.wrap(desc, _DESC_WRAP_WIDTH))
-        rows.append([f"{cmd.name}", wrapped])
+        rows.append([cmd.name, desc])
 
-    return text_code_block(
-        tabulate(rows, headers=["Command", "Description"], tablefmt="simple")
+    return text_ascii_table(
+        rows,
+        headers=["Command", "Description"],
+        wrap_widths=[None, _DESC_WRAP_WIDTH],
     )
 
 

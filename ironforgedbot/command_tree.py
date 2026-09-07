@@ -14,6 +14,7 @@ from ironforgedbot.commands.debug.cmd_debug_error_report import cmd_debug_error_
 from ironforgedbot.commands.debug.cmd_stress_test import cmd_stress_test
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
 from ironforgedbot.commands.leaderboard.cmd_leaderboard import cmd_leaderboard
+from ironforgedbot.commands.hiscore.cmd_point_progress import cmd_point_progress
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.trickortreat.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
@@ -78,6 +79,13 @@ class IronForgedCommands:
                 name="breakdown",
                 description="Show a breakdown of your score across skills, bosses, raids, and clues.",
                 callback=cmd_breakdown,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="point_progress",
+                description="Show the skills, bosses, raids, and clues closest to gaining a point.",
+                callback=cmd_point_progress,
             )
         )
         self._tree.add_command(

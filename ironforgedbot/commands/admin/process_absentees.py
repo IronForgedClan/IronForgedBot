@@ -4,10 +4,9 @@ import time
 from datetime import datetime
 
 import discord
-from tabulate import tabulate
 
 from ironforgedcore.common.numbers import format_duration
-from ironforgedbot.common.text_formatters import text_h2
+from ironforgedbot.common.text_formatters import text_ascii_table, text_h2
 from ironforgedcore.database import db
 from ironforgedbot.common.logging_utils import log_command_execution
 from ironforgedbot.services.absent_service import AbsentMemberService
@@ -36,10 +35,11 @@ async def cmd_process_absentees(interaction: discord.Interaction):
                 ]
             )
 
-        result_table = tabulate(
+        result_table = text_ascii_table(
             data,
             headers=["Member", "Date", "Info", "Comment"],
             tablefmt="github",
+            code_block=False,
         )
         discord_file = discord.File(
             fp=io.BytesIO(result_table.encode("utf-8")),

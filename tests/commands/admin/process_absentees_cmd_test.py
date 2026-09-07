@@ -22,14 +22,14 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.process_absentees.format_duration")
     @patch("ironforgedbot.commands.admin.process_absentees.text_h2")
     @patch("ironforgedbot.commands.admin.process_absentees.discord.File")
-    @patch("ironforgedbot.commands.admin.process_absentees.tabulate")
+    @patch("ironforgedbot.commands.admin.process_absentees.text_ascii_table")
     @patch("ironforgedbot.commands.admin.process_absentees.db")
     @patch("ironforgedbot.commands.admin.process_absentees.AbsentMemberService")
     async def test_cmd_process_absentees_success(
         self,
         mock_absent_service_class,
         mock_db,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_discord_file,
         mock_text_h2,
         mock_format_duration,
@@ -52,7 +52,7 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
             return_value=[mock_member]
         )
 
-        mock_tabulate.return_value = "table_output"
+        mock_text_ascii_table.return_value = "table_output"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
 
@@ -66,10 +66,11 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         mock_absent_service.process_absent_members.assert_called_once()
 
         expected_data = [["member1", "2023-01-01", "info1", "comment1"]]
-        mock_tabulate.assert_called_once_with(
+        mock_text_ascii_table.assert_called_once_with(
             expected_data,
             headers=["Member", "Date", "Info", "Comment"],
             tablefmt="github",
+            code_block=False,
         )
 
         mock_discord_file.assert_called_once()
@@ -92,14 +93,14 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.process_absentees.format_duration")
     @patch("ironforgedbot.commands.admin.process_absentees.text_h2")
     @patch("ironforgedbot.commands.admin.process_absentees.discord.File")
-    @patch("ironforgedbot.commands.admin.process_absentees.tabulate")
+    @patch("ironforgedbot.commands.admin.process_absentees.text_ascii_table")
     @patch("ironforgedbot.commands.admin.process_absentees.db")
     @patch("ironforgedbot.commands.admin.process_absentees.AbsentMemberService")
     async def test_cmd_process_absentees_empty_list(
         self,
         mock_absent_service_class,
         mock_db,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_discord_file,
         mock_text_h2,
         mock_format_duration,
@@ -113,14 +114,17 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         )
         mock_absent_service.process_absent_members = AsyncMock(return_value=[])
 
-        mock_tabulate.return_value = "empty_table"
+        mock_text_ascii_table.return_value = "empty_table"
         mock_file = Mock()
         mock_discord_file.return_value = mock_file
 
         await self.cmd_process_absentees(self.mock_interaction)
 
-        mock_tabulate.assert_called_once_with(
-            [], headers=["Member", "Date", "Info", "Comment"], tablefmt="github"
+        mock_text_ascii_table.assert_called_once_with(
+            [],
+            headers=["Member", "Date", "Info", "Comment"],
+            tablefmt="github",
+            code_block=False,
         )
 
         send_call_args = self.mock_interaction.followup.send.call_args

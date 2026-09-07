@@ -1,4 +1,6 @@
-.PHONY: up up-prod down test format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod
+.PHONY: up up-prod down test test-prod format shell migrate revision downgrade update-deps update-data clean build-dev build-prod rmi-dev rmi-prod
+
+MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 up:
 	docker compose up db bot
@@ -10,8 +12,13 @@ down:
 	docker compose down
 
 test:
-	uv sync --project ironforgedbot --extra dev
-	uv run --project ironforgedbot python run_tests.py
+	docker compose run --rm --no-deps bot python run_tests.py
+
+test-prod:
+	docker compose run --rm --no-deps \
+		-v $(MAKEFILE_DIR)/run_tests.py:/app/run_tests.py:ro \
+		-v $(MAKEFILE_DIR)/tests:/app/tests:ro \
+		bot_prod python run_tests.py
 
 format:
 	docker compose run --rm --no-deps bot python -m black .

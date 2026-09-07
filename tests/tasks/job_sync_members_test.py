@@ -38,14 +38,14 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_sync_members.text_h2")
     @patch("ironforgedbot.tasks.job_sync_members.datetime_to_discord_relative")
     @patch("ironforgedbot.tasks.job_sync_members.format_duration")
-    @patch("ironforgedbot.tasks.job_sync_members.tabulate")
+    @patch("ironforgedbot.tasks.job_sync_members.text_ascii_table")
     @patch("ironforgedbot.tasks.job_sync_members.discord.File")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
     async def test_job_sync_members_with_changes(
         self,
         mock_sync_members,
         mock_discord_file,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_format_duration,
         mock_datetime_relative,
         mock_text_h2,
@@ -59,7 +59,7 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
             ["Player1", "Added", "New member"],
             ["Player2", "Updated", "Role change"],
         ]
-        mock_tabulate.return_value = "Member\tAction\tReason\nPlayer1\tAdded\tNew member\nPlayer2\tUpdated\tRole change"
+        mock_text_ascii_table.return_value = "Member\tAction\tReason\nPlayer1\tAdded\tNew member\nPlayer2\tUpdated\tRole change"
         mock_format_duration.return_value = "5.0s"
         mock_datetime_relative.return_value = "<t:1705314600:t>"
         mock_text_h2.return_value = "## 🔁 Member Synchronization"
@@ -69,10 +69,11 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         await job_sync_members(self.mock_guild, self.mock_report_channel)
 
         mock_sync_members.assert_called_once_with(self.mock_guild)
-        mock_tabulate.assert_called_once_with(
+        mock_text_ascii_table.assert_called_once_with(
             [["Player1", "Added", "New member"], ["Player2", "Updated", "Role change"]],
             headers=["Member", "Action", "Reason"],
             tablefmt="simple",
+            code_block=False,
         )
         mock_discord_file.assert_called_once()
 
@@ -110,14 +111,14 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_sync_members.text_h2")
     @patch("ironforgedbot.tasks.job_sync_members.datetime_to_discord_relative")
     @patch("ironforgedbot.tasks.job_sync_members.format_duration")
-    @patch("ironforgedbot.tasks.job_sync_members.tabulate")
+    @patch("ironforgedbot.tasks.job_sync_members.text_ascii_table")
     @patch("ironforgedbot.tasks.job_sync_members.discord.File")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
     async def test_job_sync_members_file_creation(
         self,
         mock_sync_members,
         mock_discord_file,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_format_duration,
         mock_datetime_relative,
         mock_text_h2,
@@ -133,7 +134,7 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
             ),  # Second call for filename
         ]
         mock_sync_members.return_value = [["TestPlayer", "Removed", "Left guild"]]
-        mock_tabulate.return_value = "Test table output"
+        mock_text_ascii_table.return_value = "Test table output"
         mock_format_duration.return_value = "2.5s"
         mock_datetime_relative.return_value = "<t:1705314600:t>"
         mock_text_h2.return_value = "## 🔁 Member Synchronization"
@@ -182,14 +183,14 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.tasks.job_sync_members.text_h2")
     @patch("ironforgedbot.tasks.job_sync_members.datetime_to_discord_relative")
     @patch("ironforgedbot.tasks.job_sync_members.format_duration")
-    @patch("ironforgedbot.tasks.job_sync_members.tabulate")
+    @patch("ironforgedbot.tasks.job_sync_members.text_ascii_table")
     @patch("ironforgedbot.tasks.job_sync_members.discord.File")
     @patch("ironforgedbot.tasks.job_sync_members.sync_members")
     async def test_job_sync_members_multiple_changes(
         self,
         mock_sync_members,
         mock_discord_file,
-        mock_tabulate,
+        mock_text_ascii_table,
         mock_format_duration,
         mock_datetime_relative,
         mock_text_h2,
@@ -205,7 +206,7 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
             ["Player3", "Removed", "Left guild"],
             ["Player4", "Updated", "Rank promotion"],
         ]
-        mock_tabulate.return_value = "Multiple changes table"
+        mock_text_ascii_table.return_value = "Multiple changes table"
         mock_format_duration.return_value = "10.0s"
         mock_datetime_relative.return_value = "<t:1705314600:t>"
         mock_text_h2.return_value = "## 🔁 Member Synchronization"
@@ -214,7 +215,7 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
 
         await job_sync_members(self.mock_guild, self.mock_report_channel)
 
-        mock_tabulate.assert_called_once_with(
+        mock_text_ascii_table.assert_called_once_with(
             [
                 ["Player1", "Added", "New guild member"],
                 ["Player2", "Updated", "Nickname change"],
@@ -223,6 +224,7 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
             ],
             headers=["Member", "Action", "Reason"],
             tablefmt="simple",
+            code_block=False,
         )
 
         self.mock_report_channel.send.assert_called_once()

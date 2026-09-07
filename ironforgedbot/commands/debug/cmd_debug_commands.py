@@ -5,6 +5,7 @@ from discord.ui import Button, View
 
 from ironforgedbot.commands.admin.cmd_get_role_members import cmd_get_role_members
 from ironforgedbot.commands.hiscore.cmd_breakdown import cmd_breakdown
+from ironforgedbot.commands.hiscore.cmd_point_progress import cmd_point_progress
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.trickortreat.cmd_trick_or_treat import cmd_trick_or_treat
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
@@ -29,6 +30,9 @@ async def cmd_debug_commands(original_interaction: discord.Interaction):
     commands = {
         "score": {"callback": lambda interaction: cmd_score(interaction)},
         "breakdown": {"callback": lambda interaction: cmd_breakdown(interaction)},
+        "point progress": {
+            "callback": lambda interaction: cmd_point_progress(interaction)
+        },
         "ingots": {"callback": lambda interaction: cmd_view_ingots(interaction)},
         "add ingots": {
             "callback": lambda interaction: cmd_add_remove_ingots(

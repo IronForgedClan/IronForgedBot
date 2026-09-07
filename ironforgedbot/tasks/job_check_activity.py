@@ -6,7 +6,6 @@ import time
 from typing import Dict, List, Optional
 
 import discord
-from tabulate import tabulate
 
 from ironforgedcore.common.activity_check import (
     check_bulk_activity,
@@ -16,6 +15,7 @@ from ironforgedcore.common.numbers import format_duration
 from ironforgedcore.common.normalize import normalize_rsn
 from ironforgedcore.common.time import render_relative_time
 from ironforgedbot.common.logging_utils import log_task_execution
+from ironforgedbot.common.text_formatters import text_ascii_table
 from ironforgedbot.config import CONFIG
 from ironforgedcore.database import db
 from ironforgedbot.services.service_factory import (
@@ -134,11 +134,12 @@ async def job_check_activity(
                 colalign = ("left", "left", "right", "right")
 
             sorted_results = _sort_results_safely(table_rows)
-            result_table = tabulate(
+            result_table = text_ascii_table(
                 sorted_results,
                 headers=headers,
                 tablefmt="github",
                 colalign=colalign,
+                code_block=False,
             )
 
             discord_file = discord.File(
