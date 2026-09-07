@@ -82,7 +82,6 @@ async def pay_group(
     return text_ascii_table(
         output,
         headers=["Member", "Change", "Total"],
-        wrap_widths=[None, None, None],
         tablefmt="github",
         code_block=False,
     )

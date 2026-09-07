@@ -43,7 +43,6 @@ async def job_sync_members(
     output_table = text_ascii_table(
         changes,
         headers=["Member", "Action", "Reason"],
-        wrap_widths=[None, None, None],
         tablefmt="simple",
         code_block=False,
     )

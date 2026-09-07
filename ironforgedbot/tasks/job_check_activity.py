@@ -137,7 +137,6 @@ async def job_check_activity(
             result_table = text_ascii_table(
                 sorted_results,
                 headers=headers,
-                wrap_widths=[None, None, None, None],
                 tablefmt="github",
                 colalign=colalign,
                 code_block=False,
