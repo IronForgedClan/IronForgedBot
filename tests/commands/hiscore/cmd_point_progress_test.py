@@ -194,13 +194,13 @@ class TestBuildSummaryEmbed(unittest.TestCase):
         field_names = {f.name for f in result.fields if f.name}
         self.assertIn("Member", field_names)
         self.assertIn("Total Points", field_names)
-        self.assertIn("Points to Next Rank", field_names)
+        self.assertIn("Next Rank", field_names)
         self.assertNotIn("God Alignment", field_names)
 
         total_field = next(f for f in result.fields if f.name == "Total Points")
         self.assertEqual(total_field.value, "42")
 
-        next_field = next(f for f in result.fields if f.name == "Points to Next Rank")
+        next_field = next(f for f in result.fields if f.name == "Next Rank")
         self.assertIn("Mithril", next_field.value)
         self.assertIn("58 pts", next_field.value)
 
@@ -259,7 +259,7 @@ class TestBuildSummaryEmbed(unittest.TestCase):
         self.assertIn("Saradominist", align_field.value)
         self.assertIn(":saradominist:", align_field.value)
 
-        self.assertNotIn("Points to Next Rank", {f.name for f in result.fields})
+        self.assertNotIn("Next Rank", {f.name for f in result.fields})
 
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.find_emoji")
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
@@ -337,6 +337,11 @@ class TestBuildListEmbed(unittest.TestCase):
         embed = _build_list_embed(proximity, discord.Color.greyple())
         return embed.description or ""
 
+    def _table(self, proximity: list[NextPointProgress]) -> str:
+        description = self._build(proximity)
+        parts = description.split("```")
+        return parts[1] if len(parts) >= 2 else description
+
     @patch("ironforgedbot.commands.hiscore.cmd_point_progress.build_response_embed")
     def test_empty_proximity_shows_no_progress_field(self, mock_build_embed):
         embed = _make_embed_mock()
@@ -357,8 +362,8 @@ class TestBuildListEmbed(unittest.TestCase):
             ]
         )
 
-        self.assertIn("Entry", description)
-        self.assertIn("Next Point In", description)
+        self.assertIn("Point", description)
+        self.assertIn("Next In", description)
         self.assertIn("Estimate", description)
 
     def test_table_renders_one_row_per_progress_entry(self):
@@ -434,7 +439,8 @@ class TestBuildListEmbed(unittest.TestCase):
         description = self._build([progress])
 
         self.assertIn("100,000 xp", description)
-        self.assertIn("2 hr 30 min ehp", description)
+        self.assertIn("2 hr 30 min", description)
+        self.assertNotIn("ehp", self._table([progress]))
 
     def test_row_ehb_for_boss(self):
         progress = self._make_progress(
@@ -449,7 +455,8 @@ class TestBuildListEmbed(unittest.TestCase):
         description = self._build([progress])
 
         self.assertIn("11 kc", description)
-        self.assertIn("1 hr ehb", description)
+        self.assertIn("1 hr", description)
+        self.assertNotIn("ehb", self._table([progress]))
 
     def test_row_ehb_for_raid(self):
         progress = self._make_progress(
@@ -465,7 +472,8 @@ class TestBuildListEmbed(unittest.TestCase):
         description = self._build([progress])
 
         self.assertIn("10 kc", description)
-        self.assertIn("1 d ehb", description)
+        self.assertIn("1 d", description)
+        self.assertNotIn("ehb", self._table([progress]))
 
     def test_row_ehb_for_clue(self):
         progress = self._make_progress(
@@ -481,7 +489,8 @@ class TestBuildListEmbed(unittest.TestCase):
         description = self._build([progress])
 
         self.assertIn("5 kc", description)
-        self.assertIn("30 min ehb", description)
+        self.assertIn("30 min", description)
+        self.assertNotIn("ehb", self._table([progress]))
 
     def test_row_ehp_renders_dash_when_time_hours_is_none(self):
         progress = self._make_progress(
@@ -532,7 +541,7 @@ class TestListEmbedUsesTextAsciiTable(unittest.TestCase):
 
         mock_table.assert_called_once()
         call_kwargs = mock_table.call_args.kwargs
-        self.assertEqual(call_kwargs["headers"], ["Entry", "Next Point In", "Estimate"])
+        self.assertEqual(call_kwargs["headers"], ["Point", "Next In", "Estimate"])
         self.assertEqual(call_kwargs["wrap_widths"], [20, None, None])
         self.assertEqual(call_kwargs["colalign"], ("left", "right", "right"))
 
