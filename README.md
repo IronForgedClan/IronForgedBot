@@ -311,7 +311,17 @@ view its source command and try running that instead.
   Stops and removes the containers.
 
 - `make test`\
-  Runs the test suite.
+  Runs the test suite inside the dev container. The dev image mounts the sibling
+  `IronForgedCore` source over the installed core, so in-development core changes
+  are exercised alongside bot changes. First run builds the dev image.
+
+- `make test-prod`\
+  Runs the test suite against the built prod image, which bakes the pinned
+  `ironforgedcore` from git. Use this to confirm a feature is releasable against
+  the shipped core pin — it will fail until the `ironforgedcore` pin in
+  `ironforgedbot/pyproject.toml` is bumped to a release containing the new
+  symbols. Mounts `./tests` read-only into the prod container so the test source
+  is available without baking it into the prod image.
 
 - `make format`\
   Formats the codebase using Black formatter.
