@@ -38,6 +38,7 @@ services:
             DATABASE_URL: mysql+aiomysql://${DB_USER}:${DB_PASS}@db/${DB_NAME}
         volumes:
             - .:/app
+            # use the local version of ironforgedcore for development
             - ../IronForgedCore/ironforgedcore:/usr/local/lib/python3.14/site-packages/ironforgedcore:ro
         networks:
             - ironforged-network
