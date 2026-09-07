@@ -14,7 +14,7 @@
 | `help`               | N/A                                                                             | Member     | Displays all active bot commands with descriptions                               |
 | `score`              | Player (str) _Optional_                                                         | Member     | Returns the score for the player                                                 |
 | `breakdown`          | Player (str) _Optional_                                                         | Member     | Returns an interactive breakdown of the player's score                           |
-| `point_progress`     | Player (str) _Optional_                                                         | Member     | Returns the top 10 skills, bosses, raids, and clues closest to gaining a point   |
+| `point_progress`     | Player (str) _Optional_                                                         | Member     | Returns the top skills, bosses, raids, and clues closest to gaining a point      |
 | `leaderboard`        | Leaderboard Type                                                                | Member     | Displays a paginated clan leaderboard                                            |
 | `check`              | Player (str) _Optional_                                                         | Member     | Returns a membership check for the player                                        |
 | `gains`              | Player (str) _Optional_                                                         | Member     | Returns daily XP gains over the past 30 days for the player                      |
@@ -299,13 +299,13 @@ view its source command and try running that instead.
 ### Commands
 
 - `make up`\
-  Starts the database, bot (dev), and API (dev) together. Dev services mount
-  the source tree so code changes are picked up live — the bot uses
-  `watchmedo` for auto-restart, the API uses `uvicorn --reload`.
+  Starts the database, bot (dev), and API (dev) together. Dev services mount the
+  source tree so code changes are picked up live — the bot uses `watchmedo` for
+  auto-restart, the API uses `uvicorn --reload`.
 
 - `make up-prod`\
-  Starts the database, bot, and API from their built prod images. Use this
-  to verify a production build without the dev mount.
+  Starts the database, bot, and API from their built prod images. Use this to
+  verify a production build without the dev mount.
 
 - `make down`\
   Stops and removes the containers.
@@ -344,7 +344,8 @@ view its source command and try running that instead.
   Start, stop, tail logs, or open a shell in the dev API container (mounted
   code, `uvicorn --reload`).
 
-- `make api-up-prod` / `make api-down-prod` / `make api-logs-prod` / `make api-shell-prod`\
+- `make api-up-prod` / `make api-down-prod` / `make api-logs-prod` /
+  `make api-shell-prod`\
   Same as above but against the built prod API image, for verifying prod
   behavior in isolation.
 
