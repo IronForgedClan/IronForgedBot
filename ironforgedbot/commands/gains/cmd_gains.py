@@ -60,7 +60,6 @@ def _build_gains_table(daily: List[tuple[datetime, int]]) -> str:
     table = text_ascii_table(
         rows,
         headers=["Date", "XP Gained", "Total"],
-        wrap_widths=[None, None, None],
         colalign=("left", "right", "right"),
     )
     return table

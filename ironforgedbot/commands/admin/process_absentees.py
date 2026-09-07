@@ -38,7 +38,6 @@ async def cmd_process_absentees(interaction: discord.Interaction):
         result_table = text_ascii_table(
             data,
             headers=["Member", "Date", "Info", "Comment"],
-            wrap_widths=[None, None, None, None],
             tablefmt="github",
             code_block=False,
         )

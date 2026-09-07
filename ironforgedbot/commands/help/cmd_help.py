@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _STATS_LOOKUP: set[str] = {"score", "breakdown", "check", "gains", "ingots"}
 _GAMES_FUN: set[str] = {"raffle", "reset_rng", "eight_ball", "spin", "trick_or_treat"}
+_DESC_WRAP_WIDTH = 35
 
 
 def _get_ingot_cost(cmd: discord.app_commands.Command) -> int | None:
@@ -46,7 +47,7 @@ def _build_ascii_table(cmds: list[discord.app_commands.Command]) -> str:
     return text_ascii_table(
         rows,
         headers=["Command", "Description"],
-        wrap_widths=[None, 35],
+        wrap_widths=[None, _DESC_WRAP_WIDTH],
     )
 
 
