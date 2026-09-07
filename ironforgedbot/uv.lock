@@ -752,7 +752,7 @@ requires-dist = [
     { name = "google-auth" },
     { name = "gspread" },
     { name = "httpx2", marker = "extra == 'dev'" },
-    { name = "ironforgedcore", git = "https://github.com/ironforgedclan/ironforgedcore.git?rev=v1.0.0" },
+    { name = "ironforgedcore", git = "https://github.com/ironforgedclan/ironforgedcore.git?rev=v1.1.0" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "python-dateutil" },
@@ -773,8 +773,8 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "ironforgedcore"
-version = "1.0.0"
-source = { git = "https://github.com/ironforgedclan/ironforgedcore.git?rev=v1.0.0#f5d042fe629cef2bb6d74334edf7fe8d6b7def6d" }
+version = "1.1.0"
+source = { git = "https://github.com/ironforgedclan/ironforgedcore.git?rev=v1.1.0#614cdf113bbee03da6225c97ff2af50021f98017" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
