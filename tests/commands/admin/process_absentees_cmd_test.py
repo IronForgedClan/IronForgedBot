@@ -69,7 +69,6 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         mock_text_ascii_table.assert_called_once_with(
             expected_data,
             headers=["Member", "Date", "Info", "Comment"],
-            wrap_widths=[None, None, None, None],
             tablefmt="github",
             code_block=False,
         )
@@ -124,7 +123,6 @@ class TestProcessAbsenteesCmd(unittest.IsolatedAsyncioTestCase):
         mock_text_ascii_table.assert_called_once_with(
             [],
             headers=["Member", "Date", "Info", "Comment"],
-            wrap_widths=[None, None, None, None],
             tablefmt="github",
             code_block=False,
         )

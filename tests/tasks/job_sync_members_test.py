@@ -72,7 +72,6 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
         mock_text_ascii_table.assert_called_once_with(
             [["Player1", "Added", "New member"], ["Player2", "Updated", "Role change"]],
             headers=["Member", "Action", "Reason"],
-            wrap_widths=[None, None, None],
             tablefmt="simple",
             code_block=False,
         )
@@ -224,7 +223,6 @@ class TestJobSyncMembers(unittest.IsolatedAsyncioTestCase):
                 ["Player4", "Updated", "Rank promotion"],
             ],
             headers=["Member", "Action", "Reason"],
-            wrap_widths=[None, None, None],
             tablefmt="simple",
             code_block=False,
         )
