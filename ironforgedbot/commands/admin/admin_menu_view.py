@@ -4,6 +4,9 @@ from typing import Optional
 import discord
 from discord.ui import View
 
+from ironforgedbot.commands.admin.change_discord_account_view import (
+    cmd_change_discord_account,
+)
 from ironforgedbot.commands.admin.check_activity import cmd_check_activity
 from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepancies
 from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
@@ -115,6 +118,19 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
         await cmd_view_state(interaction)
+
+    @discord.ui.button(
+        label="Change Discord Account",
+        style=discord.ButtonStyle.red,
+        custom_id="change_discord_account",
+        emoji="🔄",
+        row=2,
+    )
+    async def change_discord_account_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await cmd_change_discord_account(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Process Absentee List",

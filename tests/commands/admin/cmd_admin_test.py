@@ -191,3 +191,18 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
 
         self.menu.clear_parent.assert_called_once()
         mock_cmd_process_absentees.assert_called_once_with(self.mock_interaction)
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.cmd_change_discord_account")
+    async def test_change_discord_account_button(self, mock_cmd_change_discord_account):
+        mock_cmd_change_discord_account.return_value = None
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.change_discord_account_button(
+            self.mock_interaction, mock_button
+        )
+
+        self.menu.clear_parent.assert_called_once()
+        mock_cmd_change_discord_account.assert_called_once_with(
+            self.mock_interaction, self.mock_channel
+        )
