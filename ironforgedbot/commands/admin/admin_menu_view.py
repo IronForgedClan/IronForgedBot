@@ -15,6 +15,7 @@ from ironforgedbot.commands.admin.spin_members_view import SpinMembersView
 from ironforgedbot.commands.admin.spin_options import get_botw_options, get_sotw_options
 from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
+from ironforgedbot.commands.admin.view_changelog import cmd_view_changelog
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
@@ -118,6 +119,19 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
         await cmd_view_state(interaction)
+
+    @discord.ui.button(
+        label="View Member Changelog",
+        style=discord.ButtonStyle.blurple,
+        custom_id="view_changelog",
+        emoji="📜",
+        row=1,
+    )
+    async def view_changelog_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await cmd_view_changelog(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Change Discord Account",
