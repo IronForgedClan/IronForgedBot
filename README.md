@@ -28,7 +28,7 @@
 | `add_remove_ingots`  | Players (str, comma separated list of player names), Ingots (int), Reason (str) | Leadership | Add or remove ingots from one or many players at once                            |
 | `roster`             | Url (str)                                                                       | Leadership | Produces a roster list of players                                                |
 | `get_role_members`   | Role (str)                                                                      | Leadership | Produces a comma separated list of names for all members with the specified role |
-| `admin`              | N/A                                                                             | Leadership | A menu of administrative commands                                                |
+| `admin`              | N/A                                                                             | Leadership | A menu of administrative commands (includes **Change Discord Account** sub-action) |
 | `debug_commands`     | N/A                                                                             | -          | Debug tool for testing various commands. Dev/staging only                        |
 | `debug_error_report` | Role Simulation (str) _Optional_                                                | Leadership | Debug tool for simulating error reports. Dev/staging only                        |
 | `stress_test`        | N/A                                                                             | -          | Debug tool for initiating stressful environments. Dev/staging only               |
