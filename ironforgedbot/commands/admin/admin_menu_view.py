@@ -4,14 +4,19 @@ from typing import Optional
 import discord
 from discord.ui import View
 
+from ironforgedbot.commands.admin.change_discord_account_view import (
+    cmd_change_discord_account,
+)
 from ironforgedbot.commands.admin.check_activity import cmd_check_activity
 from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepancies
 from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
 from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
+from ironforgedbot.commands.admin.set_join_date_view import cmd_set_join_date
 from ironforgedbot.commands.admin.spin_members_view import SpinMembersView
 from ironforgedbot.commands.admin.spin_options import get_botw_options, get_sotw_options
 from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 from ironforgedbot.commands.admin.sync_members import cmd_sync_members
+from ironforgedbot.commands.admin.view_changelog import cmd_view_changelog
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
@@ -115,6 +120,45 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
         await cmd_view_state(interaction)
+
+    @discord.ui.button(
+        label="View Member Changelog",
+        style=discord.ButtonStyle.blurple,
+        custom_id="view_changelog",
+        emoji="📜",
+        row=1,
+    )
+    async def view_changelog_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await cmd_view_changelog(interaction, self.report_channel)
+
+    @discord.ui.button(
+        label="Change Discord Account",
+        style=discord.ButtonStyle.red,
+        custom_id="change_discord_account",
+        emoji="🔄",
+        row=2,
+    )
+    async def change_discord_account_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await cmd_change_discord_account(interaction, self.report_channel)
+
+    @discord.ui.button(
+        label="Set Join Date",
+        style=discord.ButtonStyle.red,
+        custom_id="set_join_date",
+        emoji="📅",
+        row=2,
+    )
+    async def set_join_date_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await cmd_set_join_date(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Process Absentee List",

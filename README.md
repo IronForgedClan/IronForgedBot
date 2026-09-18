@@ -312,8 +312,8 @@ view its source command and try running that instead.
 
 - `make test`\
   Runs the test suite inside the dev container. The dev image mounts the sibling
-  `IronForgedCore` source over the installed core, so in-development core changes
-  are exercised alongside bot changes. First run builds the dev image.
+  `IronForgedCore` source over the installed core, so in-development core
+  changes are exercised alongside bot changes. First run builds the dev image.
 
 - `make test-prod`\
   Runs the test suite against the built prod image, which bakes the pinned
