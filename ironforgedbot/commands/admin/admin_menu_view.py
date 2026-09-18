@@ -11,6 +11,7 @@ from ironforgedbot.commands.admin.check_activity import cmd_check_activity
 from ironforgedbot.commands.admin.check_discrepancies import cmd_check_discrepancies
 from ironforgedbot.commands.admin.process_absentees import cmd_process_absentees
 from ironforgedbot.commands.admin.refresh_ranks import cmd_refresh_ranks
+from ironforgedbot.commands.admin.set_join_date_view import cmd_set_join_date
 from ironforgedbot.commands.admin.spin_members_view import SpinMembersView
 from ironforgedbot.commands.admin.spin_options import get_botw_options, get_sotw_options
 from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
@@ -145,6 +146,19 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
         await cmd_change_discord_account(interaction, self.report_channel)
+
+    @discord.ui.button(
+        label="Set Join Date",
+        style=discord.ButtonStyle.red,
+        custom_id="set_join_date",
+        emoji="📅",
+        row=2,
+    )
+    async def set_join_date_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await cmd_set_join_date(interaction, self.report_channel)
 
     @discord.ui.button(
         label="Process Absentee List",
