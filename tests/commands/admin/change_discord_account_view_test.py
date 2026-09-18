@@ -7,9 +7,6 @@ from sqlalchemy.exc import IntegrityError
 
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.role_names import (
-    BANNED_ROLE_NAME,
-    BLACKLISTED_ROLE_NAME,
-    BOOSTER_ROLE_NAME,
     PROSPECT_ROLE_NAME,
 )
 from ironforgedcore.common.roles import ROLE
@@ -62,7 +59,6 @@ class TestResolveTrackedRoles(unittest.TestCase):
                 ROLE.MEMBER,
                 RANK.MYTH,
                 "Custom Decoration",
-                BOOSTER_ROLE_NAME,
                 PROSPECT_ROLE_NAME,
             ],
         )
@@ -72,7 +68,7 @@ class TestResolveTrackedRoles(unittest.TestCase):
         names = sorted(r.name for r in result)
         self.assertEqual(
             names,
-            sorted([ROLE.MEMBER, RANK.MYTH, BOOSTER_ROLE_NAME, PROSPECT_ROLE_NAME]),
+            sorted([ROLE.MEMBER, RANK.MYTH, PROSPECT_ROLE_NAME]),
         )
 
 
@@ -924,14 +920,13 @@ class TestApplyToOld(unittest.IsolatedAsyncioTestCase):
             _apply_to_old,
         )
 
-        old = _make_member(1, "Old", [ROLE.MEMBER, RANK.MYTH, BOOSTER_ROLE_NAME])
+        old = _make_member(1, "Old", [ROLE.MEMBER, RANK.MYTH])
         new = _make_member(2, "New", [])
 
         result = await _apply_to_old(old, new)
 
         self.assertIn(ROLE.MEMBER, result.removed_roles)
         self.assertIn(RANK.MYTH, result.removed_roles)
-        self.assertIn(BOOSTER_ROLE_NAME, result.removed_roles)
         old.remove_roles.assert_called_once()
 
     async def test_uses_atomic_false_for_single_event(self):
