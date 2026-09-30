@@ -371,46 +371,59 @@ class WeeklySpinView(View):
     async def reroll_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        # ACK immediately so the interaction token doesn't expire during the
-        # slow balance lookup below.
-        await interaction.response.defer(ephemeral=True)
+        # Lock synchronously, before any await, so a second click arriving in
+        # the same event-loop tick fails `interaction_check` immediately
+        # instead of racing through defer / DB lookup / embed build.
+        self.reroll_locked = True
+        self._apply_button_state()
+        try:
+            # ACK immediately so the interaction token doesn't expire during the
+            # slow balance lookup below.
+            await interaction.response.defer(ephemeral=True)
 
-        allowed, wait = _check_reroll_rate_limit(interaction.user.id, self.kind)
-        if not allowed:
-            minutes = (wait + 59) // 60
-            return await interaction.followup.send(
-                content=(
-                    f"Reroll cap reached ({REROLL_HOURLY_LIMIT}/hour). "
-                    f"Try again in ~{minutes} minute(s)."
-                ),
-                ephemeral=True,
+            allowed, wait = _check_reroll_rate_limit(interaction.user.id, self.kind)
+            if not allowed:
+                minutes = (wait + 59) // 60
+                await interaction.followup.send(
+                    content=(
+                        f"Reroll cap reached ({REROLL_HOURLY_LIMIT}/hour). "
+                        f"Try again in ~{minutes} minute(s)."
+                    ),
+                    ephemeral=True,
+                )
+                await self._release_concurrent_lock()
+                return
+
+            async with db.get_session() as session:
+                member_service = MemberService(session)
+                member = await member_service.get_member_by_discord_id(
+                    interaction.user.id
+                )
+                user_balance = member.ingots if member else 0
+
+            try:
+                flavor_text_options = load_flavor_text()
+                flavor_text = f"*{random.choice(flavor_text_options)}*\n"
+            except Exception as e:
+                logger.error(f"Failed to load flavor text: {e}")
+                flavor_text = ""
+
+            embed = build_payment_embed(
+                cost=REROLL_COST,
+                user_balance=user_balance,
+                flavor_text=flavor_text,
+                title=REROLL_PAYMENT_TITLE,
             )
 
-        async with db.get_session() as session:
-            member_service = MemberService(session)
-            member = await member_service.get_member_by_discord_id(interaction.user.id)
-            user_balance = member.ingots if member else 0
+            await self._set_lock_disabled()
 
-        try:
-            flavor_text_options = load_flavor_text()
-            flavor_text = f"*{random.choice(flavor_text_options)}*\n"
-        except Exception as e:
-            logger.error(f"Failed to load flavor text: {e}")
-            flavor_text = ""
-
-        embed = build_payment_embed(
-            cost=REROLL_COST,
-            user_balance=user_balance,
-            flavor_text=flavor_text,
-            title=REROLL_PAYMENT_TITLE,
-        )
-
-        await self._set_lock_disabled()
-
-        view = RerollPaymentView(parent_view=self, user_id=interaction.user.id)
-        view.message = await interaction.followup.send(
-            embed=embed, view=view, ephemeral=True
-        )
+            view = RerollPaymentView(parent_view=self, user_id=interaction.user.id)
+            view.message = await interaction.followup.send(
+                embed=embed, view=view, ephemeral=True
+            )
+        except Exception:
+            await self._release_concurrent_lock()
+            raise
 
 
 class RerollPaymentView(View):
@@ -426,6 +439,10 @@ class RerollPaymentView(View):
         self.parent_view = parent_view
         self.user_id = user_id
         self.message: discord.Message | None = None
+        # Set synchronously inside `confirm_button` so concurrent Pay clicks
+        # can short-circuit before any await. Mirrors the
+        # change_discord_account_view `completed` flag pattern.
+        self.completed: bool = False
 
     async def _reject_other_user(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_message(
@@ -457,6 +474,9 @@ class RerollPaymentView(View):
     ):
         if interaction.user.id != self.user_id:
             return await self._reject_other_user(interaction)
+        if self.completed:
+            return
+        self.completed = True
         parent = self.parent_view
         if parent.target_message is None:
             await interaction.response.send_message(
@@ -488,6 +508,11 @@ class RerollPaymentView(View):
             await parent._release_concurrent_lock()
             await self._delete_self(interaction)
             return
+
+        # Drop the payment embed immediately after debit succeeds; the slow
+        # GIF build / message edit / reveal schedule that follows doesn't
+        # need the user staring at the prompt.
+        await self._delete_self(interaction)
 
         try:
             new_file, new_winner = await build_spin_gif_file(parent.options)
@@ -539,7 +564,6 @@ class RerollPaymentView(View):
         await _reset_reactions(parent.target_message)
 
         await parent._release_concurrent_lock()
-        await self._delete_self(interaction)
         logger.debug(
             f"Reroll complete for user {interaction.user.id} ({parent.kind.upper()})"
         )
@@ -556,8 +580,4 @@ class RerollPaymentView(View):
             return await self._reject_other_user(interaction)
         await interaction.response.defer(ephemeral=True)
         await self.parent_view._release_concurrent_lock()
-        if self.message is not None:
-            try:
-                await self.message.delete()
-            except discord.HTTPException:
-                pass
+        await self._delete_self(interaction)
