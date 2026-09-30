@@ -19,6 +19,7 @@ from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_changelog import cmd_view_changelog
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
+from ironforgedbot.commands.admin.weekly_spin import post_weekly_spin_result
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedbot.common.helpers import find_emoji, get_text_channel
@@ -307,7 +308,7 @@ class AdminMenuView(View):
         options = get_sotw_options()
 
         async def on_result(interaction, file, winner):
-            await target.send(file=file, content=f"Spinning result: {winner}")
+            await post_weekly_spin_result(target, "sotw", file, winner)
 
         await interaction.response.send_modal(
             SpinOptionsModal("Spin SOTW (new)", options, on_result)
@@ -334,7 +335,7 @@ class AdminMenuView(View):
         options = get_botw_options()
 
         async def on_result(interaction, file, winner):
-            await target.send(file=file, content=f"Spinning result: {winner}")
+            await post_weekly_spin_result(target, "botw", file, winner)
 
         await interaction.response.send_modal(
             SpinOptionsModal("Spin BOTW (new)", options, on_result)
