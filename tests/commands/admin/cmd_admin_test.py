@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import discord
 
+from ironforgedbot.config import CONFIG
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import create_mock_discord_interaction, create_test_member
 
@@ -255,10 +256,15 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sotw_new["row"], 4)
         self.assertEqual(botw_new["row"], 4)
 
-    async def test_spin_sotw_new_opens_placeholder_modal(self):
-        from ironforgedbot.commands.admin.spin_placeholder_modal import (
-            SpinPlaceholderModal,
-        )
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_text_channel")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_sotw_options")
+    async def test_spin_sotw_new_opens_options_modal(
+        self, mock_get_sotw_options, mock_spin_options_modal, mock_get_text_channel
+    ):
+        mock_target = Mock()
+        mock_get_text_channel.return_value = mock_target
+        mock_get_sotw_options.return_value = ["skill-a", "skill-b"]
 
         self.menu.clear_parent = AsyncMock()
         mock_button = Mock()
@@ -266,15 +272,24 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         await self.menu.spin_sotw_new_button(self.mock_interaction, mock_button)
 
         self.menu.clear_parent.assert_called_once()
-        self.mock_interaction.response.send_modal.assert_called_once()
-        sent_modal = self.mock_interaction.response.send_modal.call_args[0][0]
-        self.assertIsInstance(sent_modal, SpinPlaceholderModal)
-        self.assertEqual(sent_modal.title, "Spin SOTW (new)")
-
-    async def test_spin_botw_new_opens_placeholder_modal(self):
-        from ironforgedbot.commands.admin.spin_placeholder_modal import (
-            SpinPlaceholderModal,
+        mock_get_text_channel.assert_called_once_with(
+            self.mock_interaction.guild, CONFIG.BOTW_SOTW_CHANNEL_ID
         )
+        mock_spin_options_modal.assert_called_once()
+        modal_args = mock_spin_options_modal.call_args[0]
+        self.assertEqual(modal_args[0], "Spin SOTW (new)")
+        self.assertEqual(modal_args[1], ["skill-a", "skill-b"])
+        self.mock_interaction.response.send_modal.assert_called_once()
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_text_channel")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_botw_options")
+    async def test_spin_botw_new_opens_options_modal(
+        self, mock_get_botw_options, mock_spin_options_modal, mock_get_text_channel
+    ):
+        mock_target = Mock()
+        mock_get_text_channel.return_value = mock_target
+        mock_get_botw_options.return_value = ["boss-a", "boss-b"]
 
         self.menu.clear_parent = AsyncMock()
         mock_button = Mock()
@@ -282,10 +297,112 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         await self.menu.spin_botw_new_button(self.mock_interaction, mock_button)
 
         self.menu.clear_parent.assert_called_once()
+        mock_get_text_channel.assert_called_once_with(
+            self.mock_interaction.guild, CONFIG.BOTW_SOTW_CHANNEL_ID
+        )
+        mock_spin_options_modal.assert_called_once()
+        modal_args = mock_spin_options_modal.call_args[0]
+        self.assertEqual(modal_args[0], "Spin BOTW (new)")
+        self.assertEqual(modal_args[1], ["boss-a", "boss-b"])
         self.mock_interaction.response.send_modal.assert_called_once()
-        sent_modal = self.mock_interaction.response.send_modal.call_args[0][0]
-        self.assertIsInstance(sent_modal, SpinPlaceholderModal)
-        self.assertEqual(sent_modal.title, "Spin BOTW (new)")
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.send_error_response")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_text_channel")
+    async def test_spin_sotw_new_channel_not_found_sends_error(
+        self,
+        mock_get_text_channel,
+        mock_spin_options_modal,
+        mock_send_error_response,
+    ):
+        mock_get_text_channel.return_value = None
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_sotw_new_button(self.mock_interaction, mock_button)
+
+        self.menu.clear_parent.assert_called_once()
+        mock_send_error_response.assert_called_once_with(
+            self.mock_interaction, "Spinning channel not configured."
+        )
+        mock_spin_options_modal.assert_not_called()
+        self.mock_interaction.response.send_modal.assert_not_called()
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.send_error_response")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_text_channel")
+    async def test_spin_botw_new_channel_not_found_sends_error(
+        self,
+        mock_get_text_channel,
+        mock_spin_options_modal,
+        mock_send_error_response,
+    ):
+        mock_get_text_channel.return_value = None
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_botw_new_button(self.mock_interaction, mock_button)
+
+        self.menu.clear_parent.assert_called_once()
+        mock_send_error_response.assert_called_once_with(
+            self.mock_interaction, "Spinning channel not configured."
+        )
+        mock_spin_options_modal.assert_not_called()
+        self.mock_interaction.response.send_modal.assert_not_called()
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.post_weekly_spin_result")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_text_channel")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_sotw_options")
+    async def test_spin_sotw_new_submits_to_target_channel(
+        self,
+        mock_get_sotw_options,
+        mock_spin_options_modal,
+        mock_get_text_channel,
+        mock_post_weekly_spin_result,
+    ):
+        mock_target = Mock()
+        mock_get_text_channel.return_value = mock_target
+        mock_get_sotw_options.return_value = []
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_sotw_new_button(self.mock_interaction, mock_button)
+
+        on_result = mock_spin_options_modal.call_args[0][2]
+        mock_file = Mock()
+        await on_result(self.mock_interaction, mock_file, "Agility")
+
+        mock_post_weekly_spin_result.assert_called_once_with(
+            mock_target, "sotw", [], mock_file, "Agility"
+        )
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.post_weekly_spin_result")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_text_channel")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_botw_options")
+    async def test_spin_botw_new_submits_to_target_channel(
+        self,
+        mock_get_botw_options,
+        mock_spin_options_modal,
+        mock_get_text_channel,
+        mock_post_weekly_spin_result,
+    ):
+        mock_target = Mock()
+        mock_get_text_channel.return_value = mock_target
+        mock_get_botw_options.return_value = []
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_botw_new_button(self.mock_interaction, mock_button)
+
+        on_result = mock_spin_options_modal.call_args[0][2]
+        mock_file = Mock()
+        await on_result(self.mock_interaction, mock_file, "Zulrah")
+
+        mock_post_weekly_spin_result.assert_called_once_with(
+            mock_target, "botw", [], mock_file, "Zulrah"
+        )
 
     @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
     @patch("ironforgedbot.commands.admin.admin_menu_view.get_sotw_options")
