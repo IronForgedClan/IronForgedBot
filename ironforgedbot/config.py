@@ -33,6 +33,7 @@ class Config(BaseConfig):
         self.CREATE_TICKET_CHANNEL_ID: int = int(
             os.getenv("CREATE_TICKET_CHANNEL_ID") or 0
         )
+        self.BOTW_SOTW_CHANNEL_ID: int = int(os.getenv("BOTW_SOTW_CHANNEL_ID") or 0)
         self.TRICK_OR_TREAT_ENABLED: bool = (
             os.getenv("TRICK_OR_TREAT_ENABLED", "False") == "True"
         )

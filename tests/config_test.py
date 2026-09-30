@@ -89,6 +89,23 @@ class ConfigTest(unittest.TestCase):
         self.assertFalse(result.TRICK_OR_TREAT_ENABLED)
         self.assertEqual(result.TRICK_OR_TREAT_CHANNEL_ID, 0)
 
+    @patch.dict("os.environ", {**VALID_CONFIG, "BOTW_SOTW_CHANNEL_ID": "999"})
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_loads_botw_sotw_channel_id(self, mock_dotenv):
+        result = Config()
+
+        self.assertEqual(result.BOTW_SOTW_CHANNEL_ID, 999)
+
+    def test_validates_botw_sotw_channel_id_required(self):
+        invalid_config = self.valid_config.copy()
+        invalid_config["BOTW_SOTW_CHANNEL_ID"] = "0"
+
+        with patch.dict("os.environ", invalid_config):
+            with self.assertRaises(ValueError) as context:
+                Config()
+
+            self.assertIn("BOTW_SOTW_CHANNEL_ID", str(context.exception))
+
     @patch.dict(
         "os.environ", {**VALID_CONFIG, "TRICK_OR_TREAT_COOLDOWN_SECONDS": "7200"}
     )
