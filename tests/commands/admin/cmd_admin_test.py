@@ -219,3 +219,102 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         mock_cmd_change_discord_account.assert_called_once_with(
             self.mock_interaction, self.mock_channel
         )
+
+    async def test_renamed_spin_buttons_have_old_suffix(self):
+        buttons_by_id = {
+            raw.__discord_ui_model_kwargs__.get(
+                "custom_id"
+            ): raw.__discord_ui_model_kwargs__
+            for raw in self.AdminMenuView.__view_children_items__.values()
+            if raw.__discord_ui_model_kwargs__.get("custom_id")
+            and raw.__discord_ui_model_kwargs__.get("custom_id").startswith("spin_")
+        }
+
+        self.assertIn("spin_sotw_old", buttons_by_id)
+        self.assertIn("spin_botw_old", buttons_by_id)
+        self.assertIn("(old)", buttons_by_id["spin_sotw_old"]["label"])
+        self.assertIn("(old)", buttons_by_id["spin_botw_old"]["label"])
+
+    async def test_new_spin_placeholder_buttons_exist(self):
+        buttons_by_id = {
+            raw.__discord_ui_model_kwargs__.get(
+                "custom_id"
+            ): raw.__discord_ui_model_kwargs__
+            for raw in self.AdminMenuView.__view_children_items__.values()
+            if raw.__discord_ui_model_kwargs__.get("custom_id")
+            and raw.__discord_ui_model_kwargs__.get("custom_id").startswith("spin_")
+        }
+
+        sotw_new = buttons_by_id.get("spin_sotw_new")
+        botw_new = buttons_by_id.get("spin_botw_new")
+
+        self.assertIsNotNone(sotw_new)
+        self.assertIsNotNone(botw_new)
+        self.assertIn("(new)", sotw_new["label"])
+        self.assertIn("(new)", botw_new["label"])
+        self.assertEqual(sotw_new["row"], 4)
+        self.assertEqual(botw_new["row"], 4)
+
+    async def test_spin_sotw_new_opens_placeholder_modal(self):
+        from ironforgedbot.commands.admin.spin_placeholder_modal import (
+            SpinPlaceholderModal,
+        )
+
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_sotw_new_button(self.mock_interaction, mock_button)
+
+        self.menu.clear_parent.assert_called_once()
+        self.mock_interaction.response.send_modal.assert_called_once()
+        sent_modal = self.mock_interaction.response.send_modal.call_args[0][0]
+        self.assertIsInstance(sent_modal, SpinPlaceholderModal)
+        self.assertEqual(sent_modal.title, "Spin SOTW (new)")
+
+    async def test_spin_botw_new_opens_placeholder_modal(self):
+        from ironforgedbot.commands.admin.spin_placeholder_modal import (
+            SpinPlaceholderModal,
+        )
+
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_botw_new_button(self.mock_interaction, mock_button)
+
+        self.menu.clear_parent.assert_called_once()
+        self.mock_interaction.response.send_modal.assert_called_once()
+        sent_modal = self.mock_interaction.response.send_modal.call_args[0][0]
+        self.assertIsInstance(sent_modal, SpinPlaceholderModal)
+        self.assertEqual(sent_modal.title, "Spin BOTW (new)")
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_sotw_options")
+    async def test_renamed_sotw_button_still_opens_options_modal(
+        self, mock_get_sotw_options, mock_spin_options_modal
+    ):
+        mock_get_sotw_options.return_value = []
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_sotw_button(self.mock_interaction, mock_button)
+
+        self.menu.clear_parent.assert_called_once()
+        mock_spin_options_modal.assert_called_once()
+        modal_title = mock_spin_options_modal.call_args[0][0]
+        self.assertIn("(old)", modal_title)
+
+    @patch("ironforgedbot.commands.admin.admin_menu_view.SpinOptionsModal")
+    @patch("ironforgedbot.commands.admin.admin_menu_view.get_botw_options")
+    async def test_renamed_botw_button_still_opens_options_modal(
+        self, mock_get_botw_options, mock_spin_options_modal
+    ):
+        mock_get_botw_options.return_value = []
+        self.menu.clear_parent = AsyncMock()
+        mock_button = Mock()
+
+        await self.menu.spin_botw_button(self.mock_interaction, mock_button)
+
+        self.menu.clear_parent.assert_called_once()
+        mock_spin_options_modal.assert_called_once()
+        modal_title = mock_spin_options_modal.call_args[0][0]
+        self.assertIn("(old)", modal_title)

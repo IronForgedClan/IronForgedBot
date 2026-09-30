@@ -174,9 +174,9 @@ class AdminMenuView(View):
         await cmd_process_absentees(interaction)
 
     @discord.ui.button(
-        label="Spin SOTW",
+        label="Spin SOTW (old)",
         style=discord.ButtonStyle.grey,
-        custom_id="spin_sotw",
+        custom_id="spin_sotw_old",
         emoji="🌀",
         row=3,
     )
@@ -203,13 +203,13 @@ class AdminMenuView(View):
             )
 
         await interaction.response.send_modal(
-            SpinOptionsModal("Spin SOTW", options, on_result)
+            SpinOptionsModal("Spin SOTW (old)", options, on_result)
         )
 
     @discord.ui.button(
-        label="Spin BOTW",
+        label="Spin BOTW (old)",
         style=discord.ButtonStyle.grey,
-        custom_id="spin_botw",
+        custom_id="spin_botw_old",
         emoji="🌀",
         row=3,
     )
@@ -237,7 +237,7 @@ class AdminMenuView(View):
             )
 
         await interaction.response.send_modal(
-            SpinOptionsModal("Spin BOTW", options, on_result)
+            SpinOptionsModal("Spin BOTW (old)", options, on_result)
         )
 
     @discord.ui.button(
@@ -282,3 +282,29 @@ class AdminMenuView(View):
             "Select a role to spin members from:", view=view, ephemeral=True
         )
         view.message = await interaction.original_response()
+
+    @discord.ui.button(
+        label="Spin SOTW (new)",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_sotw_new",
+        emoji="🆕",
+        row=4,
+    )
+    async def spin_sotw_new_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await interaction.response.send_modal(SpinPlaceholderModal("Spin SOTW (new)"))
+
+    @discord.ui.button(
+        label="Spin BOTW (new)",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_botw_new",
+        emoji="🆕",
+        row=4,
+    )
+    async def spin_botw_new_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+        await interaction.response.send_modal(SpinPlaceholderModal("Spin BOTW (new)"))
