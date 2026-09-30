@@ -308,7 +308,7 @@ class AdminMenuView(View):
         options = get_sotw_options()
 
         async def on_result(interaction, file, winner):
-            await post_weekly_spin_result(target, "sotw", file, winner)
+            await post_weekly_spin_result(target, "sotw", options, file, winner)
 
         await interaction.response.send_modal(
             SpinOptionsModal("Spin SOTW (new)", options, on_result)
@@ -335,7 +335,7 @@ class AdminMenuView(View):
         options = get_botw_options()
 
         async def on_result(interaction, file, winner):
-            await post_weekly_spin_result(target, "botw", file, winner)
+            await post_weekly_spin_result(target, "botw", options, file, winner)
 
         await interaction.response.send_modal(
             SpinOptionsModal("Spin BOTW (new)", options, on_result)
