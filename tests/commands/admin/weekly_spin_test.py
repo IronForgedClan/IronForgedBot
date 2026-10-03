@@ -221,37 +221,45 @@ class TestBuildConsolidatedHistoryLine(unittest.TestCase):
     def test_format_locked(self):
         self.assertEqual(
             _build_consolidated_history_line(
-                "Sailing", "<@42>", 1700000000, icon=LOCK_EMOJI
+                "\U0001f3c3", "Sailing", "<@42>", 1700000000, icon=LOCK_EMOJI
             ),
-            "~~Sailing~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
+            "\U0001f3c3 ~~Sailing~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
         )
 
     def test_format_dont_lock(self):
         self.assertEqual(
             _build_consolidated_history_line(
-                "Sailing", "<@42>", 1700000000, icon=UNLOCK_EMOJI
+                "\U0001f3c3", "Sailing", "<@42>", 1700000000, icon=UNLOCK_EMOJI
             ),
-            "~~Sailing~~ rerolled by <@42> <t:1700000000:R> \U0001f513",
+            "\U0001f3c3 ~~Sailing~~ rerolled by <@42> <t:1700000000:R> \U0001f513",
         )
 
     def test_format_no_icon(self):
         self.assertEqual(
-            _build_consolidated_history_line("Sailing", "<@42>", 1700000000, icon=None),
-            "~~Sailing~~ rerolled by <@42> <t:1700000000:R>",
+            _build_consolidated_history_line(
+                "\U0001f3c3", "Sailing", "<@42>", 1700000000, icon=None
+            ),
+            "\U0001f3c3 ~~Sailing~~ rerolled by <@42> <t:1700000000:R>",
         )
 
     def test_empty_previous_winner(self):
         self.assertEqual(
-            _build_consolidated_history_line("", "<@42>", 1700000000, icon=LOCK_EMOJI),
-            "~~~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
+            _build_consolidated_history_line(
+                "\U0001f3c3", "", "<@42>", 1700000000, icon=LOCK_EMOJI
+            ),
+            "\U0001f3c3 ~~~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
         )
 
     def test_grouped_botw_winner_is_fully_struck(self):
         self.assertEqual(
             _build_consolidated_history_line(
-                "Callisto or Artio", "@User1", 1700000000, icon=LOCK_EMOJI
+                "\U0001f40d",
+                "Callisto or Artio",
+                "@User1",
+                1700000000,
+                icon=LOCK_EMOJI,
             ),
-            "~~Callisto or Artio~~ rerolled by @User1 <t:1700000000:R> \U0001f512",
+            "\U0001f40d ~~Callisto or Artio~~ rerolled by @User1 <t:1700000000:R> \U0001f512",
         )
 
 
@@ -802,6 +810,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         # confirm_button stages this; emulate that step here.
         self.view._pending_reroll = {
             "winner": "OldSkill",
+            "emoji": "\U0001f3c3",
             "mention": "<@999>",
             "ts": 1700000000,
         }
@@ -822,7 +831,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.view.history_lines,
             [
-                "~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f512",
+                "\U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f512",
             ],
             "expected consolidated lock-decision history line",
         )
@@ -843,6 +852,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         await self.view._open_lock_window(user_id=999)
         self.view._pending_reroll = {
             "winner": "OldSkill",
+            "emoji": "\U0001f3c3",
             "mention": "<@999>",
             "ts": 1700000000,
         }
@@ -866,7 +876,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.view.history_lines,
             [
-                "~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
+                "\U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
             ],
             "expected consolidated unlock-decision history line",
         )
@@ -1126,6 +1136,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         # don't-lock decision appends a real consolidated history line.
         self.view._pending_reroll = {
             "winner": "OldSkill",
+            "emoji": "\U0001f3c3",
             "mention": "<@999>",
             "ts": 1700000000,
         }
@@ -1260,6 +1271,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         # confirm_button stages this; emulate that step here.
         self.view._pending_reroll = {
             "winner": "OldSkill",
+            "emoji": "\U0001f3c3",
             "mention": "<@999>",
             "ts": 1700000000,
         }
@@ -1286,7 +1298,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             self.view.history_lines,
             [
-                "~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
+                "\U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
             ],
             "timer expiry should append consolidated line same as Don't Lock",
         )
@@ -1845,17 +1857,23 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
 
         # After the first confirm, the consolidated line is staged but not
         # yet appended; ``_pending_reroll`` holds the previous winner /
-        # mention / timestamp for the (still-pending) first decision.
+        # emoji / mention / timestamp for the (still-pending) first
+        # decision. OldSkill isn't in mock_data.SKILLS so the lookup falls
+        # back to the generic party-popper.
         self.assertEqual(self.parent_view.history_lines, [])
         self.assertEqual(self.parent_view._pending_reroll["winner"], "OldSkill")
+        self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f389")
         self.assertEqual(self.parent_view._pending_reroll["mention"], "<@111>")
 
         await _invoke_callback(view2, "confirm_button", interaction2, button)
 
         # Second confirm overwrites _pending_reroll; history_lines is still
         # empty because no decision has been made for either reroll yet.
+        # NewSkill is in mock_data.SKILLS so the lookup resolves to the
+        # mocked emoji returned by find_emoji.
         self.assertEqual(self.parent_view.history_lines, [])
         self.assertEqual(self.parent_view._pending_reroll["winner"], "NewSkill")
+        self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f3c3")
         self.assertEqual(self.parent_view._pending_reroll["mention"], "<@222>")
         self.assertEqual(self.parent_view.current_winner, "ThirdSkill")
 

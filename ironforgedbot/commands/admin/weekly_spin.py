@@ -74,18 +74,27 @@ def _lookup_emoji(kind: WeeklySpinKind, winner: str) -> str:
 
 
 def _build_consolidated_history_line(
-    previous_winner: str, user_mention: str, ts: int, *, icon: str | None
+    winner_emoji: str,
+    previous_winner: str,
+    user_mention: str,
+    ts: int,
+    *,
+    icon: str | None,
 ) -> str:
     """Single history line per reroll.
 
-    Carries the previous winner (struck through), the rigger, a Discord
-    relative timestamp captured at reroll time, and (optionally) the
-    decision icon. ``icon=None`` yields the no-decision form; the two
-    production callers (Don't Lock click and timer expiry) both pass
-    ``UNLOCK_EMOJI`` so timer expiry renders identically to an explicit
-    Don't Lock.
+    Carries the previous-winner emoji, the struck-through previous winner,
+    the rigger, a Discord relative timestamp captured at reroll time, and
+    (optionally) the decision icon. ``icon=None`` yields the no-decision
+    form; the two production callers (Don't Lock click and timer expiry)
+    both pass ``UNLOCK_EMOJI`` so timer expiry renders identically to an
+    explicit Don't Lock. The emoji uses the same leading position as the
+    post header (``||emoji winner||``).
     """
-    line = f"~~{previous_winner}~~ rerolled by {user_mention} <t:{ts}:R>"
+    line = (
+        f"{winner_emoji} ~~{previous_winner}~~ rerolled by {user_mention} "
+        f"<t:{ts}:R>"
+    )
     if icon is not None:
         line = f"{line} {icon}"
     return line
@@ -630,6 +639,7 @@ class WeeklySpinView(View):
         if self._pending_reroll is not None:
             self.history_lines.append(
                 _build_consolidated_history_line(
+                    self._pending_reroll["emoji"],
                     self._pending_reroll["winner"],
                     self._pending_reroll["mention"],
                     self._pending_reroll["ts"],
@@ -687,6 +697,7 @@ class WeeklySpinView(View):
         if self._pending_reroll is not None:
             self.history_lines.append(
                 _build_consolidated_history_line(
+                    self._pending_reroll["emoji"],
                     self._pending_reroll["winner"],
                     self._pending_reroll["mention"],
                     self._pending_reroll["ts"],
@@ -942,6 +953,7 @@ class RerollPaymentView(View):
 
         parent._pending_reroll = {
             "winner": parent.current_winner or "",
+            "emoji": _lookup_emoji(parent.kind, parent.current_winner or ""),
             "mention": interaction.user.mention,
             "ts": int(time.time()),
         }
