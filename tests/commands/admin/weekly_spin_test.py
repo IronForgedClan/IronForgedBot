@@ -7,9 +7,11 @@ import discord
 
 from ironforgedbot.commands.admin import weekly_spin
 from ironforgedbot.commands.admin.weekly_spin import (
+    LOCK_EMOJI,
     RerollPaymentView,
+    UNLOCK_EMOJI,
     WeeklySpinView,
-    _build_history_line,
+    _build_consolidated_history_line,
     _build_pending_content,
     _build_post_content,
     _check_reroll_rate_limit,
@@ -215,23 +217,41 @@ class TestBuildPendingContent(unittest.TestCase):
             _build_pending_content("weekly", [])
 
 
-class TestBuildHistoryLine(unittest.TestCase):
-    def test_format(self):
+class TestBuildConsolidatedHistoryLine(unittest.TestCase):
+    def test_format_locked(self):
         self.assertEqual(
-            _build_history_line("Crafting", "@User1"),
-            "~~Crafting~~ rerolled by @User1",
+            _build_consolidated_history_line(
+                "Sailing", "<@42>", 1700000000, icon=LOCK_EMOJI
+            ),
+            "~~Sailing~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
+        )
+
+    def test_format_dont_lock(self):
+        self.assertEqual(
+            _build_consolidated_history_line(
+                "Sailing", "<@42>", 1700000000, icon=UNLOCK_EMOJI
+            ),
+            "~~Sailing~~ rerolled by <@42> <t:1700000000:R> \U0001f513",
+        )
+
+    def test_format_no_icon(self):
+        self.assertEqual(
+            _build_consolidated_history_line("Sailing", "<@42>", 1700000000, icon=None),
+            "~~Sailing~~ rerolled by <@42> <t:1700000000:R>",
         )
 
     def test_empty_previous_winner(self):
         self.assertEqual(
-            _build_history_line("", "@User1"),
-            "~~~~ rerolled by @User1",
+            _build_consolidated_history_line("", "<@42>", 1700000000, icon=LOCK_EMOJI),
+            "~~~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
         )
 
     def test_grouped_botw_winner_is_fully_struck(self):
         self.assertEqual(
-            _build_history_line("Callisto or Artio", "@User1"),
-            "~~Callisto or Artio~~ rerolled by @User1",
+            _build_consolidated_history_line(
+                "Callisto or Artio", "@User1", 1700000000, icon=LOCK_EMOJI
+            ),
+            "~~Callisto or Artio~~ rerolled by @User1 <t:1700000000:R> \U0001f512",
         )
 
 
@@ -716,19 +736,13 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             content = weekly_spin._build_locked_content(
                 kind="sotw",
                 winner="Agility",
-                history_lines=["~~Old~~ rerolled by <@42>", "<@42> \U0001f512"],
+                history_lines=[
+                    "~~Old~~ rerolled by <@42> <t:1700000000:R> \U0001f512",
+                ],
             )
         self.assertIn("\U0001f3c3 Agility|| \U0001f512", content)
         self.assertNotIn("Re-roll window closes", content)
         self.assertIn("~~Old~~ rerolled by <@42>", content)
-
-    def test_build_lock_decision_line_uses_lock_emoji_when_locked(self):
-        line = weekly_spin._build_lock_decision_line("<@42>", locked=True)
-        self.assertEqual(line, "<@42> \U0001f512")
-
-    def test_build_lock_decision_line_uses_unlock_emoji_when_unlocked(self):
-        line = weekly_spin._build_lock_decision_line("<@42>", locked=False)
-        self.assertEqual(line, "<@42> \U0001f513")
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -785,6 +799,12 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
+        # confirm_button stages this; emulate that step here.
+        self.view._pending_reroll = {
+            "winner": "OldSkill",
+            "mention": "<@999>",
+            "ts": 1700000000,
+        }
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
@@ -795,15 +815,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(self.view._is_locked)
         self.assertFalse(self.view._lock_window_active)
+        self.assertIsNone(self.view._pending_reroll)
         self.assertNotIn(self.view._reroll_button, self.view.children)
         self.assertNotIn(self.view._lock_button, self.view.children)
         self.assertNotIn(self.view._dont_lock_button, self.view.children)
-        self.assertTrue(
-            any(
-                "\U0001f512" in line and "<@999>" in line
-                for line in self.view.history_lines
-            ),
-            "expected lock-decision history line",
+        self.assertEqual(
+            self.view.history_lines,
+            [
+                "~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f512",
+            ],
+            "expected consolidated lock-decision history line",
         )
 
         final_edit = self.target_message.edit.call_args_list[-1]
@@ -820,6 +841,11 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
+        self.view._pending_reroll = {
+            "winner": "OldSkill",
+            "mention": "<@999>",
+            "ts": 1700000000,
+        }
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
@@ -828,20 +854,21 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         await self.view._close_lock_window_as_open(
             message=self.target_message,
-            add_history_line=True,
+            history_icon=UNLOCK_EMOJI,
         )
 
         self.assertFalse(self.view._lock_window_active)
         self.assertFalse(self.view._is_locked)
+        self.assertIsNone(self.view._pending_reroll)
         self.assertNotIn(self.view._lock_button, self.view.children)
         self.assertNotIn(self.view._dont_lock_button, self.view.children)
         self.assertFalse(self.view._reroll_button.disabled)
-        self.assertTrue(
-            any(
-                "\U0001f513" in line and "<@999>" in line
-                for line in self.view.history_lines
-            ),
-            "expected unlock-decision history line",
+        self.assertEqual(
+            self.view.history_lines,
+            [
+                "~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
+            ],
+            "expected consolidated unlock-decision history line",
         )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -863,7 +890,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         history_before = list(self.view.history_lines)
         await self.view._close_lock_window_as_open(
             message=self.target_message,
-            add_history_line=False,
+            history_icon=UNLOCK_EMOJI,
         )
         self.assertEqual(self.view.history_lines, history_before)
 
@@ -1095,6 +1122,13 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
+        # confirm_button stages this in production; emulate it here so the
+        # don't-lock decision appends a real consolidated history line.
+        self.view._pending_reroll = {
+            "winner": "OldSkill",
+            "mention": "<@999>",
+            "ts": 1700000000,
+        }
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
@@ -1223,6 +1257,12 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
+        # confirm_button stages this; emulate that step here.
+        self.view._pending_reroll = {
+            "winner": "OldSkill",
+            "mention": "<@999>",
+            "ts": 1700000000,
+        }
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
@@ -1230,17 +1270,26 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             pass
 
         # Drive the close path directly (matches what the timer does on
-        # timeout). No history line because the user did not decide.
+        # timeout). Timer expiry renders identically to Don't Lock: the
+        # consolidated line is appended with the unlock icon.
         await self.view._close_lock_window_as_open(
             message=self.target_message,
-            add_history_line=False,
+            history_icon=UNLOCK_EMOJI,
         )
 
         self.assertFalse(self.view._lock_window_active)
         self.assertFalse(self.view._is_locked)
+        self.assertIsNone(self.view._pending_reroll)
         self.assertNotIn(self.view._lock_button, self.view.children)
         self.assertNotIn(self.view._dont_lock_button, self.view.children)
         self.assertFalse(self.view._reroll_button.disabled)
+        self.assertEqual(
+            self.view.history_lines,
+            [
+                "~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
+            ],
+            "timer expiry should append consolidated line same as Don't Lock",
+        )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -1537,7 +1586,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
                 await self.view._close_lock_window_as_open(
                     message=self.target_message,
-                    add_history_line=True,
+                    history_icon=UNLOCK_EMOJI,
                 )
 
             self.assertTrue(self.view._reroll_unlocked)
@@ -1716,15 +1765,22 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
 
         await _invoke_callback(self.view, "confirm_button", interaction, button)
 
-        self.assertEqual(
-            self.parent_view.history_lines,
-            ["~~OldSkill~~ rerolled by <@999>"],
-        )
+        # The consolidated history line is appended only at decision time
+        # (lock / don't-lock / timer expiry). confirm_button just stages
+        # the data on `_pending_reroll` so the timestamp reflects when the
+        # reroll happened and the icon is filled in later.
+        self.assertEqual(self.parent_view.history_lines, [])
+        self.assertIsNotNone(self.parent_view._pending_reroll)
+        self.assertEqual(self.parent_view._pending_reroll["winner"], "OldSkill")
+        self.assertEqual(self.parent_view._pending_reroll["mention"], "<@999>")
+        self.assertIsInstance(self.parent_view._pending_reroll["ts"], int)
         self.assertEqual(self.parent_view.current_winner, "NewSkill")
 
         # Pick the pending post-reveal edit (the one without attachments is
         # the lock-window footer; the one without the countdown is the
-        # initial pending edit).
+        # initial pending edit). The reroll line is NOT in this edit —
+        # it's still staged in ``_pending_reroll`` and will only be
+        # appended once the rigger decides (lock / don't-lock / timer).
         pending_edits = [
             call
             for call in self.target_message.edit.call_args_list
@@ -1732,7 +1788,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual(len(pending_edits), 1)
         edit_content = pending_edits[0].kwargs["content"]
-        self.assertIn("~~OldSkill~~ rerolled by <@999>", edit_content)
+        self.assertNotIn("OldSkill", edit_content)
         self.assertIn("# Next SOTW is...", edit_content)
         self.assertNotIn("NewSkill", edit_content)
         self.target_message.clear_reactions.assert_awaited_once()
@@ -1786,15 +1842,21 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         view1 = RerollPaymentView(parent_view=self.parent_view, user_id=111)
         view2 = RerollPaymentView(parent_view=self.parent_view, user_id=222)
         await _invoke_callback(view1, "confirm_button", interaction1, button)
+
+        # After the first confirm, the consolidated line is staged but not
+        # yet appended; ``_pending_reroll`` holds the previous winner /
+        # mention / timestamp for the (still-pending) first decision.
+        self.assertEqual(self.parent_view.history_lines, [])
+        self.assertEqual(self.parent_view._pending_reroll["winner"], "OldSkill")
+        self.assertEqual(self.parent_view._pending_reroll["mention"], "<@111>")
+
         await _invoke_callback(view2, "confirm_button", interaction2, button)
 
-        self.assertEqual(
-            self.parent_view.history_lines,
-            [
-                "~~OldSkill~~ rerolled by <@111>",
-                "~~NewSkill~~ rerolled by <@222>",
-            ],
-        )
+        # Second confirm overwrites _pending_reroll; history_lines is still
+        # empty because no decision has been made for either reroll yet.
+        self.assertEqual(self.parent_view.history_lines, [])
+        self.assertEqual(self.parent_view._pending_reroll["winner"], "NewSkill")
+        self.assertEqual(self.parent_view._pending_reroll["mention"], "<@222>")
         self.assertEqual(self.parent_view.current_winner, "ThirdSkill")
 
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")

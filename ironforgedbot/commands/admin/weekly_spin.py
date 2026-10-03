@@ -73,8 +73,22 @@ def _lookup_emoji(kind: WeeklySpinKind, winner: str) -> str:
     raise ValueError(f"Unknown weekly spin kind: {kind!r}")
 
 
-def _build_history_line(previous_winner: str, user_mention: str) -> str:
-    return f"~~{previous_winner}~~ rerolled by {user_mention}"
+def _build_consolidated_history_line(
+    previous_winner: str, user_mention: str, ts: int, *, icon: str | None
+) -> str:
+    """Single history line per reroll.
+
+    Carries the previous winner (struck through), the rigger, a Discord
+    relative timestamp captured at reroll time, and (optionally) the
+    decision icon. ``icon=None`` yields the no-decision form; the two
+    production callers (Don't Lock click and timer expiry) both pass
+    ``UNLOCK_EMOJI`` so timer expiry renders identically to an explicit
+    Don't Lock.
+    """
+    line = f"~~{previous_winner}~~ rerolled by {user_mention} <t:{ts}:R>"
+    if icon is not None:
+        line = f"{line} {icon}"
+    return line
 
 
 def _build_post_content(
@@ -156,16 +170,6 @@ def _build_locked_content(
     header = f"# Next {kind.upper()} is ||{emoji} {winner}|| {LOCK_EMOJI}"
     bulleted = [f"- {line}" for line in history_lines]
     return "\n".join([header, *bulleted])
-
-
-def _build_lock_decision_line(user_mention: str, *, locked: bool) -> str:
-    """History line appended after a lock decision.
-
-    ``locked=True`` -> lock emoji (user paid). ``locked=False`` -> unlock emoji
-    (user explicitly chose Don't Lock). Timeout deliberately omits the line.
-    """
-    emoji = LOCK_EMOJI if locked else UNLOCK_EMOJI
-    return f"{user_mention} {emoji}"
 
 
 def _check_reroll_rate_limit(
@@ -317,7 +321,7 @@ async def _lock_window_timer(
 
     await view._close_lock_window_as_open(
         message=message,
-        add_history_line=False,
+        history_icon=UNLOCK_EMOJI,
     )
 
 
@@ -415,6 +419,11 @@ class WeeklySpinView(View):
         self._is_locked: bool = False
         self._lock_window_task: asyncio.Task | None = None
         self._lock_completed: bool = False
+
+        # Reroll data held between confirm_button and the lock-window
+        # decision so the consolidated history line can be emitted once at
+        # decision time. None when no decision is pending.
+        self._pending_reroll: dict | None = None
 
         self._reroll_button = discord.ui.Button(
             label="Re-roll",
@@ -602,8 +611,9 @@ class WeeklySpinView(View):
     async def _close_lock_window_as_locked(self) -> None:
         """Terminal locked state: user paid, event is over.
 
-        Removes all buttons, appends a lock-decision history line, edits the
-        target message with the locked content (no footer, 🔒 in header).
+        Removes all buttons, appends the consolidated history line for the
+        pending reroll (capped with the lock icon), edits the target message
+        with the locked content (no footer, 🔒 in header).
 
         Cancels the pending reveal task — if it fired later it would
         overwrite the 🔒 header with a plain spoiler header.
@@ -617,12 +627,16 @@ class WeeklySpinView(View):
         self._lock_window_active = False
         self._is_locked = True
 
-        if self._lock_window_user_id is not None:
+        if self._pending_reroll is not None:
             self.history_lines.append(
-                _build_lock_decision_line(
-                    f"<@{self._lock_window_user_id}>", locked=True
+                _build_consolidated_history_line(
+                    self._pending_reroll["winner"],
+                    self._pending_reroll["mention"],
+                    self._pending_reroll["ts"],
+                    icon=LOCK_EMOJI,
                 )
             )
+            self._pending_reroll = None
 
         for item in (
             self._lock_button,
@@ -646,14 +660,16 @@ class WeeklySpinView(View):
         self,
         *,
         message: discord.Message | None,
-        add_history_line: bool,
+        history_icon: str,
     ) -> None:
         """Reopen state: user clicked Don't Lock or the timer timed out.
 
         Re-enables the Re-roll button immediately (no waiting on the reveal
         animation), removes the lock buttons, restores the standard footer,
-        and (optionally) appends an unlock-decision history line. Timeout
-        callers pass ``add_history_line=False`` for a silent default.
+        and appends the consolidated history line for the pending reroll
+        capped with ``history_icon``. Both production callers (Don't Lock
+        click and timer expiry) pass ``UNLOCK_EMOJI`` so timer expiry
+        renders identically to an explicit Don't Lock.
 
         Cancels the pending reveal task — its job was to flip
         ``_reroll_unlocked`` and reveal the spoiler; we do both ourselves
@@ -668,12 +684,16 @@ class WeeklySpinView(View):
         self._lock_window_active = False
         self._reroll_unlocked = True
 
-        if add_history_line and self._lock_window_user_id is not None:
+        if self._pending_reroll is not None:
             self.history_lines.append(
-                _build_lock_decision_line(
-                    f"<@{self._lock_window_user_id}>", locked=False
+                _build_consolidated_history_line(
+                    self._pending_reroll["winner"],
+                    self._pending_reroll["mention"],
+                    self._pending_reroll["ts"],
+                    icon=history_icon,
                 )
             )
+            self._pending_reroll = None
 
         for item in (self._lock_button, self._dont_lock_button):
             if item in self.children:
@@ -816,7 +836,7 @@ class WeeklySpinView(View):
 
         await self._close_lock_window_as_open(
             message=self.target_message,
-            add_history_line=True,
+            history_icon=UNLOCK_EMOJI,
         )
 
 
@@ -920,10 +940,11 @@ class RerollPaymentView(View):
             await self._delete_self(interaction)
             return
 
-        history_line = _build_history_line(
-            parent.current_winner or "", interaction.user.mention
-        )
-        parent.history_lines.append(history_line)
+        parent._pending_reroll = {
+            "winner": parent.current_winner or "",
+            "mention": interaction.user.mention,
+            "ts": int(time.time()),
+        }
         parent.current_winner = new_winner
         parent._reroll_unlocked = False
         parent._apply_button_state()
