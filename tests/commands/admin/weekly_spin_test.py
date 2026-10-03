@@ -730,7 +730,13 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertIn("# Next SOTW is ||\U0001f3c3 Agility||", content)
         self.assertIn("<@42>", content)
         self.assertIn("<t:1234567890:R>", content)
-        self.assertIn("lock before re-rolls", content)
+        self.assertIn(":warning:", content)
+        self.assertIn("has rerolled", content)
+        self.assertIn("to decide to lock or not", content)
+        self.assertIn(
+            "to decide to lock or not.\n\n-# Re-roll window closes",
+            content,
+        )
         self.assertIn("Re-roll window closes <t:1234570000:R>", content)
 
     def test_build_locked_content_appends_lock_emoji(self):
@@ -771,15 +777,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.view._reroll_button.disabled)
         self.target_message.edit.assert_called()
 
-        # Find the lock-window edit call (the one whose content mentions the
-        # countdown footer) and assert it includes the relative timestamp.
+        # Find the lock-window edit call (the one whose content carries the
+        # lock-decision status line) and assert it includes the relative
+        # timestamp.
         lock_edit_call = next(
             (
                 c
                 for c in self.target_message.edit.call_args_list
                 if "content" in c.kwargs
                 and "<t:" in c.kwargs["content"]
-                and "lock before re-rolls" in c.kwargs["content"]
+                and "to decide to lock or not" in c.kwargs["content"]
             ),
             None,
         )
