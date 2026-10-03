@@ -104,13 +104,16 @@ def _build_post_content(
     kind: WeeklySpinKind,
     winner: str,
     history_lines: list[str],
+    start_ts: int,
+    end_ts: int,
     reroll_close_ts: int | None = None,
 ) -> str:
     """Compose the full post content with the spoiler winner inside the header."""
     emoji = _lookup_emoji(kind, winner)
     header = f"# Next {kind.upper()} is ||{emoji} {winner}||"
+    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
     bulleted = [f"- {line}" for line in history_lines]
-    parts = [header, *bulleted]
+    parts = [header, dates, *bulleted]
     if reroll_close_ts is not None:
         parts.append("")
         parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
@@ -120,6 +123,8 @@ def _build_post_content(
 def _build_pending_content(
     kind: WeeklySpinKind,
     history_lines: list[str],
+    start_ts: int,
+    end_ts: int,
     reroll_close_ts: int | None = None,
 ) -> str:
     """Compose post content while the result is still pending reveal.
@@ -129,8 +134,9 @@ def _build_pending_content(
     """
     _validate_kind(kind)
     header = f"# Next {kind.upper()} is..."
+    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
     bulleted = [f"- {line}" for line in history_lines]
-    parts = [header, *bulleted]
+    parts = [header, dates, *bulleted]
     if reroll_close_ts is not None:
         parts.append("")
         parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
@@ -143,6 +149,8 @@ def _build_lock_window_content(
     history_lines: list[str],
     user_mention: str,
     lock_close_ts: int,
+    start_ts: int,
+    end_ts: int,
     reroll_close_ts: int | None = None,
 ) -> str:
     """Compose post content during the 60s lock-decision window.
@@ -155,8 +163,9 @@ def _build_lock_window_content(
     """
     emoji = _lookup_emoji(kind, winner)
     header = f"# Next {kind.upper()} is ||{emoji} {winner}||"
+    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
     bulleted = [f"- {line}" for line in history_lines]
-    parts = [header, *bulleted, ""]
+    parts = [header, dates, *bulleted, ""]
     parts.append(
         f":warning: {user_mention} has rerolled and now has "
         f"<t:{lock_close_ts}:R> to decide to lock or not."
@@ -171,6 +180,8 @@ def _build_locked_content(
     kind: WeeklySpinKind,
     winner: str,
     history_lines: list[str],
+    start_ts: int,
+    end_ts: int,
 ) -> str:
     """Compose post content for the terminal locked state.
 
@@ -180,8 +191,9 @@ def _build_locked_content(
     """
     emoji = _lookup_emoji(kind, winner)
     header = f"# Next {kind.upper()} is ||{emoji} {winner}|| {LOCK_EMOJI}"
+    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
     bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join([header, *bulleted])
+    return "\n".join([header, dates, *bulleted])
 
 
 def _check_reroll_rate_limit(
@@ -297,11 +309,18 @@ async def _reveal_winner_after_delay(
             history_lines,
             f"<@{view._lock_window_user_id}>",
             view._lock_window_end_ts,
+            view._start_ts,
+            view._end_ts,
             reroll_close_ts=reroll_close_ts,
         )
     else:
         content = _build_post_content(
-            kind, winner, history_lines, reroll_close_ts=reroll_close_ts
+            kind,
+            winner,
+            history_lines,
+            view._start_ts,
+            view._end_ts,
+            reroll_close_ts=reroll_close_ts,
         )
     try:
         await message.edit(content=content, view=view)
@@ -362,6 +381,8 @@ async def post_weekly_spin_result(
     options: list[str],
     file: discord.File,
     winner: str,
+    start_ts: int,
+    end_ts: int,
 ) -> discord.Message:
     """Post a spin GIF plus the pending-result header to the weekly channel.
 
@@ -373,8 +394,12 @@ async def post_weekly_spin_result(
     """
     placeholder_view = WeeklySpinView(options=options, kind=kind, target_message=None)
     placeholder_view.current_winner = winner
+    placeholder_view._start_ts = start_ts
+    placeholder_view._end_ts = end_ts
     close_ts = _reroll_close_ts(placeholder_view)
-    pending_content = _build_pending_content(kind, [], reroll_close_ts=close_ts)
+    pending_content = _build_pending_content(
+        kind, [], start_ts, end_ts, reroll_close_ts=close_ts
+    )
 
     msg = await target.send(file=file, content=pending_content, view=placeholder_view)
     placeholder_view.target_message = msg
@@ -436,6 +461,12 @@ class WeeklySpinView(View):
         # decision so the consolidated history line can be emitted once at
         # decision time. None when no decision is pending.
         self._pending_reroll: dict | None = None
+
+        # Spin window dates (UTC midnight timestamps). Set by
+        # ``post_weekly_spin_result`` right after construction; default 0
+        # so existing tests that don't exercise the modal flow still work.
+        self._start_ts: int = 0
+        self._end_ts: int = 0
 
         self._reroll_button = discord.ui.Button(
             label="Re-roll",
@@ -538,14 +569,22 @@ class WeeklySpinView(View):
             if self._is_locked:
                 edit_kwargs = {
                     "content": _build_locked_content(
-                        self.kind, self.current_winner or "", self.history_lines
+                        self.kind,
+                        self.current_winner or "",
+                        self.history_lines,
+                        self._start_ts,
+                        self._end_ts,
                     ),
                     "view": None,
                 }
             elif self.current_winner is not None:
                 edit_kwargs = {
                     "content": _build_post_content(
-                        self.kind, self.current_winner, self.history_lines
+                        self.kind,
+                        self.current_winner,
+                        self.history_lines,
+                        self._start_ts,
+                        self._end_ts,
                     ),
                     "view": None,
                 }
@@ -608,6 +647,8 @@ class WeeklySpinView(View):
                 self.history_lines,
                 f"<@{user_id}>",
                 self._lock_window_end_ts,
+                self._start_ts,
+                self._end_ts,
                 _reroll_close_ts(self),
             )
             try:
@@ -662,7 +703,11 @@ class WeeklySpinView(View):
         message = self.target_message
         if message is not None:
             content = _build_locked_content(
-                self.kind, self.current_winner or "", self.history_lines
+                self.kind,
+                self.current_winner or "",
+                self.history_lines,
+                self._start_ts,
+                self._end_ts,
             )
             try:
                 await message.edit(content=content, view=None)
@@ -732,6 +777,8 @@ class WeeklySpinView(View):
                 self.kind,
                 self.current_winner or "",
                 self.history_lines,
+                self._start_ts,
+                self._end_ts,
                 reroll_close_ts=_reroll_close_ts(self),
             )
             try:
@@ -980,6 +1027,8 @@ class RerollPaymentView(View):
         new_content = _build_pending_content(
             parent.kind,
             parent.history_lines,
+            parent._start_ts,
+            parent._end_ts,
             reroll_close_ts=_reroll_close_ts(parent),
         )
         try:
