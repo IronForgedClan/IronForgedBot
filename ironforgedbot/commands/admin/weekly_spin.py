@@ -677,18 +677,31 @@ class WeeklySpinView(View):
     ) -> None:
         """Reopen state: user clicked Don't Lock or the timer timed out.
 
-        Re-enables the Re-roll button immediately (no waiting on the reveal
-        animation), removes the lock buttons, restores the standard footer,
-        and appends the consolidated history line for the pending reroll
-        capped with ``history_icon``. Both production callers (Don't Lock
-        click and timer expiry) pass ``UNLOCK_EMOJI`` so timer expiry
-        renders identically to an explicit Don't Lock.
+                Re-enables the Re-roll button immediately (no waiting on the reveal
+                animation), removes the lock buttons, restores the standard footer,
+                and appends the consolidated history line for the pending reroll
+                capped with ``history_icon``. Both production callers (Don't Lock
+                click and timer expiry) pass ``UNLOCK_EMOJI`` so timer expiry
+                renders identically to an explicit Don't Lock.
 
-        Cancels the pending reveal task — its job was to flip
-        ``_reroll_unlocked`` and reveal the spoiler; we do both ourselves
+                Cancels the pending reveal task — its job was to flip
+                ``_reroll_unlocked`` and reveal the spoiler; we do both ourselves
         here so the post is immediately actionable.
         """
-        if self._lock_window_task is not None and not self._lock_window_task.done():
+        # Skip self-cancel when the current task is the timer itself. cancel()
+        # is a no-op on a finished task, but on a still-running self it raises
+        # CancelledError at the next yield, which interrupts this function's
+        # own trailing ``await message.edit(...)`` and leaves the spin post
+        # stuck on the lock-window content while Python thinks the window is
+        # closed (so subsequent button clicks look like "This interaction
+        # failed" because the discord-side message and our Python state are
+        # out of sync).
+        current = asyncio.current_task()
+        if (
+            self._lock_window_task is not None
+            and not self._lock_window_task.done()
+            and current is not self._lock_window_task
+        ):
             self._lock_window_task.cancel()
         if self._reveal_task is not None and not self._reveal_task.done():
             self._reveal_task.cancel()

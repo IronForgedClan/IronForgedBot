@@ -1312,6 +1312,88 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    async def test_lock_window_timer_self_cancel_does_not_block_message_edit(
+        self, mock_data, mock_find_emoji
+    ):
+        """Regression: ``_close_lock_window_as_open`` used to call
+        ``self._lock_window_task.cancel()`` unconditionally, even when
+        invoked from the timer task itself. asyncio schedules
+        ``CancelledError`` for the next yield in the cancelled task,
+        which interrupts the trailing ``await message.edit(...)`` and
+        leaves the spin post stuck on the lock-window content (so
+        subsequent clicks return "This interaction failed"). Guard
+        against self-cancel by skipping when ``asyncio.current_task()``
+        is the timer itself.
+
+        The bug only manifests in production because discord.py's
+        ``message.edit`` yields to the event loop multiple times (via
+        aiohttp) so the cancel gets a chance to interrupt it. To make
+        the bug reproducible in a test we attach a coroutine to
+        ``target_message.edit`` that explicitly yields enough times for
+        asyncio to deliver the cancel between the cancel call and the
+        coroutine completing.
+        """
+        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
+        mock_find_emoji.return_value = "\U0001f3c3"
+
+        edit_completed = []
+        edit_interrupted = []
+
+        async def slow_edit(*args, **kwargs):
+            # Two yields gives the cancel call (made earlier in the
+            # same coroutine) a chance to be delivered before this
+            # function returns, mirroring the multiple await points a real
+            # ``message.edit`` has via aiohttp.
+            try:
+                await asyncio.sleep(0)
+                await asyncio.sleep(0)
+            except asyncio.CancelledError:
+                edit_interrupted.append(True)
+                raise
+            edit_completed.append(True)
+
+        self.target_message.edit = slow_edit
+
+        self.view.current_winner = "Agility"
+        await self.view._open_lock_window(user_id=999)
+        self.view._pending_reroll = {
+            "winner": "OldSkill",
+            "emoji": "\U0001f3c3",
+            "mention": "<@999>",
+            "ts": 1700000000,
+        }
+
+        try:
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.asyncio.sleep",
+                new=AsyncMock(),
+            ):
+                # Drive the production timer (already scheduled by
+                # ``_open_lock_window``) to completion so the
+                # ``self._lock_window_task.cancel()`` inside
+                # ``_close_lock_window_as_open`` is a real self-cancel.
+                await self.view._lock_window_task
+        finally:
+            pass
+
+        self.assertGreaterEqual(
+            len(edit_completed),
+            1,
+            "timer expiry must complete the message.edit so the "
+            "discord-side spin post transitions from lock-window "
+            "content to post-content (else buttons keep saying "
+            "'This interaction failed').",
+        )
+        self.assertEqual(
+            edit_interrupted,
+            [],
+            "message.edit must NOT be cancelled by the timer's "
+            "self-cancel — the cancel only schedules CancelledError at "
+            "the next yield, which is inside message.edit itself.",
+        )
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
     async def test_on_timeout_locked_state_uses_locked_content(
         self, mock_data, mock_find_emoji
     ):
