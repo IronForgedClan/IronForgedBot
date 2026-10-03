@@ -147,19 +147,22 @@ def _build_lock_window_content(
 ) -> str:
     """Compose post content during the 60s lock-decision window.
 
-    The countdown line uses Discord's relative timestamp (``<t:TS:R>``) so it
+    The status line is plain text (the :warning: emoji carries the urgency),
+    and the countdown uses Discord's relative timestamp (``<t:TS:R>``) so it
     auto-updates as time passes without us having to edit the message every
-    tick.
+    tick. The trailing reroll-window footer is small italic and references
+    the 24h view timeout.
     """
     emoji = _lookup_emoji(kind, winner)
     header = f"# Next {kind.upper()} is ||{emoji} {winner}||"
     bulleted = [f"- {line}" for line in history_lines]
     parts = [header, *bulleted, ""]
     parts.append(
-        f"-# {user_mention} now has <t:{lock_close_ts}:R> to lock before "
-        f"re-rolls open for everyone."
+        f":warning: {user_mention} has rerolled and now has "
+        f"<t:{lock_close_ts}:R> to decide to lock or not."
     )
     if reroll_close_ts is not None:
+        parts.append("")
         parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
     return "\n".join(parts)
 
