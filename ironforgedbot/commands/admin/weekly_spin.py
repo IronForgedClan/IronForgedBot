@@ -28,6 +28,10 @@ WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS = 86400
 REROLL_PAYMENT_TIMEOUT_SECONDS = 30
 REROLL_PAYMENT_TITLE = "\U0001f4b0 Re-roll Weekly Spin"
 REVEAL_DELAY_SECONDS = 10.5
+LOCK_COST = 10000
+LOCK_WINDOW_SECONDS = 60
+LOCK_EMOJI = "\U0001f512"
+UNLOCK_EMOJI = "\U0001f513"
 
 THUMBS_UP = "\U0001f44d"
 THUMBS_DOWN = "\U0001f44e"
@@ -110,6 +114,60 @@ def _build_pending_content(
     return "\n".join(parts)
 
 
+def _build_lock_window_content(
+    kind: WeeklySpinKind,
+    winner: str,
+    history_lines: list[str],
+    user_mention: str,
+    lock_close_ts: int,
+    reroll_close_ts: int | None = None,
+) -> str:
+    """Compose post content during the 60s lock-decision window.
+
+    The countdown line uses Discord's relative timestamp (``<t:TS:R>``) so it
+    auto-updates as time passes without us having to edit the message every
+    tick.
+    """
+    emoji = _lookup_emoji(kind, winner)
+    header = f"# Next {kind.upper()} is ||{emoji} {winner}||"
+    bulleted = [f"- {line}" for line in history_lines]
+    parts = [header, *bulleted, ""]
+    parts.append(
+        f"-# {user_mention} now has <t:{lock_close_ts}:R> to lock before "
+        f"re-rolls open for everyone."
+    )
+    if reroll_close_ts is not None:
+        parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
+    return "\n".join(parts)
+
+
+def _build_locked_content(
+    kind: WeeklySpinKind,
+    winner: str,
+    history_lines: list[str],
+) -> str:
+    """Compose post content for the terminal locked state.
+
+    Adds the lock emoji to the header, keeps the reroll + lock-decision
+    history, and strips the footers. All buttons are removed at the View
+    level; this helper just produces the body.
+    """
+    emoji = _lookup_emoji(kind, winner)
+    header = f"# Next {kind.upper()} is ||{emoji} {winner}|| {LOCK_EMOJI}"
+    bulleted = [f"- {line}" for line in history_lines]
+    return "\n".join([header, *bulleted])
+
+
+def _build_lock_decision_line(user_mention: str, *, locked: bool) -> str:
+    """History line appended after a lock decision.
+
+    ``locked=True`` -> lock emoji (user paid). ``locked=False`` -> unlock emoji
+    (user explicitly chose Don't Lock). Timeout deliberately omits the line.
+    """
+    emoji = LOCK_EMOJI if locked else UNLOCK_EMOJI
+    return f"{user_mention} {emoji}"
+
+
 def _check_reroll_rate_limit(
     user_id: int,
     kind: WeeklySpinKind,
@@ -187,6 +245,11 @@ async def _reveal_winner_after_delay(
     reveal the spoiler winner inside the header line.
 
     Skips the edit if the view has already timed out.
+
+    If a lock-decision window is active when the reveal fires (the rigger's
+    60s timer started at the same moment as the reroll, so they typically
+    overlap), the lock-window footer is preserved instead of being replaced
+    with the standard ``Re-roll window closes`` footer.
     """
     try:
         await asyncio.sleep(REVEAL_DELAY_SECONDS)
@@ -200,12 +263,30 @@ async def _reveal_winner_after_delay(
         )
         return
 
+    # Defensive: if the user locked before reveal fired, do not overwrite
+    # the locked content. ``_close_lock_window_as_locked`` cancels the
+    # reveal task but a missed cancel (process restart, race) could leave
+    # us here — bail out cleanly instead.
+    if view._is_locked:
+        logger.debug(f"Spin reveal skipped for message {message.id}: view is locked")
+        return
+
     view._reroll_unlocked = True
     view._apply_button_state()
 
-    content = _build_post_content(
-        kind, winner, history_lines, reroll_close_ts=reroll_close_ts
-    )
+    if view._lock_window_active and view._lock_window_user_id is not None:
+        content = _build_lock_window_content(
+            kind,
+            winner,
+            history_lines,
+            f"<@{view._lock_window_user_id}>",
+            view._lock_window_end_ts,
+            reroll_close_ts=reroll_close_ts,
+        )
+    else:
+        content = _build_post_content(
+            kind, winner, history_lines, reroll_close_ts=reroll_close_ts
+        )
     try:
         await message.edit(content=content, view=view)
         logger.debug(
@@ -213,6 +294,31 @@ async def _reveal_winner_after_delay(
         )
     except discord.HTTPException as e:
         logger.warning(f"Failed to reveal spin result for message {message.id}: {e}")
+
+
+async def _lock_window_timer(
+    view: "WeeklySpinView",
+    message: discord.Message | None,
+) -> None:
+    """Background task: wait ``LOCK_WINDOW_SECONDS``, then close the window.
+
+    Mirrors the cancellation discipline of ``_reveal_winner_after_delay``.
+    Closing silently (no history line) implements the "default = don't lock"
+    semantics on timeout.
+    """
+    try:
+        await asyncio.sleep(LOCK_WINDOW_SECONDS)
+    except asyncio.CancelledError:
+        logger.debug("Lock window timer cancelled")
+        raise
+
+    if view._timed_out:
+        return
+
+    await view._close_lock_window_as_open(
+        message=message,
+        add_history_line=False,
+    )
 
 
 def _schedule_reveal(
@@ -268,15 +374,20 @@ async def post_weekly_spin_result(
 class WeeklySpinView(View):
     """View attached to the spin post. Member-only re-roll trigger.
 
-    Two independent locks govern the reroll button:
+    State machine
+    -------------
+    The Re-roll button's enabled-ness is the conjunction of three gates:
 
     - ``reroll_locked``: True while a single user is in the payment flow
       (prevents concurrent rerolls on the same post).
     - ``_reroll_unlocked``: False while the result is still pending reveal
       (prevents re-rolls before the winner is visible). Flipped to True by
       the background reveal task after REVEAL_DELAY_SECONDS.
-
-    The button's ``disabled`` flag is ``reroll_locked or not _reroll_unlocked``.
+    - ``_lock_window_active``: True for LOCK_WINDOW_SECONDS after a reroll
+      while the rigger decides whether to lock the result. Disabled
+      automatically by the lock-window close helpers.
+    - ``_is_locked``: True once the rigger pays the lock cost. Terminal —
+      all buttons are removed and the event is over.
     """
 
     def __init__(
@@ -297,24 +408,90 @@ class WeeklySpinView(View):
         self._reveal_task: asyncio.Task | None = None
         self._timed_out: bool = False
 
+        # Lock-decision window state.
+        self._lock_window_active: bool = False
+        self._lock_window_end_ts: int = 0
+        self._lock_window_user_id: int | None = None
+        self._is_locked: bool = False
+        self._lock_window_task: asyncio.Task | None = None
+        self._lock_completed: bool = False
+
+        self._reroll_button = discord.ui.Button(
+            label="Re-roll",
+            style=discord.ButtonStyle.blurple,
+            custom_id="weekly_spin_reroll",
+            emoji="\U0001f504",
+            row=0,
+        )
+        self._reroll_button.callback = self._on_reroll
+        self.add_item(self._reroll_button)
+
+        # Lock buttons are pre-built but NOT added to the view until the
+        # lock-decision window opens. They're stored on the instance so
+        # `_open_lock_window` can flip them in/out with a single add_item /
+        # remove_item pair.
+        self._lock_button = discord.ui.Button(
+            label="Lock",
+            style=discord.ButtonStyle.green,
+            custom_id="weekly_spin_lock",
+            emoji=LOCK_EMOJI,
+            row=0,
+        )
+        self._lock_button.callback = self._on_lock
+
+        self._dont_lock_button = discord.ui.Button(
+            label="Don't Lock",
+            style=discord.ButtonStyle.gray,
+            custom_id="weekly_spin_dont_lock",
+            emoji=UNLOCK_EMOJI,
+            row=0,
+        )
+        self._dont_lock_button.callback = self._on_dont_lock
+
         self._apply_button_state()
 
     def _apply_button_state(self) -> None:
-        """Sync each child's ``disabled`` from current lock flags."""
-        disabled = self.reroll_locked or not self._reroll_unlocked
-        for child in self.children:
-            if isinstance(child, discord.ui.Item):
-                child.disabled = disabled
+        """Sync the Re-roll button's ``disabled`` flag from the current gates.
+
+        Lock/Don't-Lock buttons are added/removed from the view dynamically;
+        their visibility is not driven by ``disabled`` alone.
+        """
+        reroll_disabled = (
+            self.reroll_locked
+            or not self._reroll_unlocked
+            or self._lock_window_active
+            or self._is_locked
+        )
+        self._reroll_button.disabled = reroll_disabled
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self._is_locked:
+            await interaction.response.send_message(
+                "This spin has been locked.", ephemeral=True
+            )
+            return False
         if self.reroll_locked:
             await interaction.response.send_message(
                 "A re-roll is already in progress.", ephemeral=True
             )
             return False
-        if not self._reroll_unlocked:
+        # The rigger already knows what they rerolled to, so they get to
+        # bypass the reveal-state gate during the lock window. Everyone
+        # else still gets the "pending reveal" deny so they can't peek
+        # before the spoiler tag flips.
+        is_rigger = (
+            self._lock_window_active
+            and interaction.user.id == self._lock_window_user_id
+        )
+        if not self._reroll_unlocked and not is_rigger:
             await interaction.response.send_message(
                 "Result is pending reveal. Try again in a moment.", ephemeral=True
+            )
+            return False
+        if self._lock_window_active and not is_rigger:
+            await interaction.response.send_message(
+                "Only the player who rerolled can decide whether to lock.",
+                ephemeral=True,
             )
             return False
         role_names = {r.name for r in interaction.user.roles}
@@ -327,15 +504,32 @@ class WeeklySpinView(View):
 
     async def on_timeout(self) -> None:
         self._timed_out = True
-        for child in self.children:
-            if isinstance(child, discord.ui.Item):
-                child.disabled = True
+        if self._lock_window_task is not None and not self._lock_window_task.done():
+            self._lock_window_task.cancel()
+        for item in (
+            self._lock_button,
+            self._dont_lock_button,
+            self._reroll_button,
+        ):
+            if item in self.children:
+                self.remove_item(item)
         if self.target_message is not None:
-            edit_kwargs: dict = {"view": self}
-            if self.current_winner is not None:
-                edit_kwargs["content"] = _build_post_content(
-                    self.kind, self.current_winner, self.history_lines
-                )
+            if self._is_locked:
+                edit_kwargs = {
+                    "content": _build_locked_content(
+                        self.kind, self.current_winner or "", self.history_lines
+                    ),
+                    "view": None,
+                }
+            elif self.current_winner is not None:
+                edit_kwargs = {
+                    "content": _build_post_content(
+                        self.kind, self.current_winner, self.history_lines
+                    ),
+                    "view": None,
+                }
+            else:
+                edit_kwargs = {"view": None}
             try:
                 await self.target_message.edit(**edit_kwargs)
             except discord.HTTPException:
@@ -362,12 +556,154 @@ class WeeklySpinView(View):
             except discord.HTTPException:
                 pass
 
-    @discord.ui.button(
-        label="Re-roll",
-        style=discord.ButtonStyle.blurple,
-        custom_id="weekly_spin_reroll",
-        emoji="\U0001f504",
-    )
+    async def _open_lock_window(self, *, user_id: int) -> None:
+        """Enter the LOCK_WINDOW state for ``user_id``.
+
+        Cancels any prior lock-window task, adds the Lock/Don't-Lock buttons,
+        edits the target message with the countdown footer, and schedules the
+        background timer that closes the window silently after
+        ``LOCK_WINDOW_SECONDS``.
+        """
+        if self._lock_window_task is not None and not self._lock_window_task.done():
+            self._lock_window_task.cancel()
+
+        self._lock_window_active = True
+        self._lock_window_user_id = user_id
+        self._lock_window_end_ts = int(time.time()) + LOCK_WINDOW_SECONDS
+        self._is_locked = False
+        self._lock_completed = False
+
+        self._apply_button_state()
+        if self._lock_button not in self.children:
+            self.add_item(self._lock_button)
+        if self._dont_lock_button not in self.children:
+            self.add_item(self._dont_lock_button)
+
+        message = self.target_message
+        if message is not None:
+            content = _build_lock_window_content(
+                self.kind,
+                self.current_winner or "",
+                self.history_lines,
+                f"<@{user_id}>",
+                self._lock_window_end_ts,
+                _reroll_close_ts(self),
+            )
+            try:
+                await message.edit(content=content, view=self)
+            except discord.HTTPException as e:
+                logger.warning(f"Failed to open lock window: {e}")
+
+        self._lock_window_task = asyncio.create_task(
+            _lock_window_timer(self, message),
+            name=f"spin_lock_window_{message.id if message is not None else 0}",
+        )
+
+    async def _close_lock_window_as_locked(self) -> None:
+        """Terminal locked state: user paid, event is over.
+
+        Removes all buttons, appends a lock-decision history line, edits the
+        target message with the locked content (no footer, 🔒 in header).
+
+        Cancels the pending reveal task — if it fired later it would
+        overwrite the 🔒 header with a plain spoiler header.
+        """
+        if self._lock_window_task is not None and not self._lock_window_task.done():
+            self._lock_window_task.cancel()
+        if self._reveal_task is not None and not self._reveal_task.done():
+            self._reveal_task.cancel()
+            self._reveal_task = None
+
+        self._lock_window_active = False
+        self._is_locked = True
+
+        if self._lock_window_user_id is not None:
+            self.history_lines.append(
+                _build_lock_decision_line(
+                    f"<@{self._lock_window_user_id}>", locked=True
+                )
+            )
+
+        for item in (
+            self._lock_button,
+            self._dont_lock_button,
+            self._reroll_button,
+        ):
+            if item in self.children:
+                self.remove_item(item)
+
+        message = self.target_message
+        if message is not None:
+            content = _build_locked_content(
+                self.kind, self.current_winner or "", self.history_lines
+            )
+            try:
+                await message.edit(content=content, view=None)
+            except discord.HTTPException as e:
+                logger.warning(f"Failed to lock spin post: {e}")
+
+    async def _close_lock_window_as_open(
+        self,
+        *,
+        message: discord.Message | None,
+        add_history_line: bool,
+    ) -> None:
+        """Reopen state: user clicked Don't Lock or the timer timed out.
+
+        Re-enables the Re-roll button immediately (no waiting on the reveal
+        animation), removes the lock buttons, restores the standard footer,
+        and (optionally) appends an unlock-decision history line. Timeout
+        callers pass ``add_history_line=False`` for a silent default.
+
+        Cancels the pending reveal task — its job was to flip
+        ``_reroll_unlocked`` and reveal the spoiler; we do both ourselves
+        here so the post is immediately actionable.
+        """
+        if self._lock_window_task is not None and not self._lock_window_task.done():
+            self._lock_window_task.cancel()
+        if self._reveal_task is not None and not self._reveal_task.done():
+            self._reveal_task.cancel()
+            self._reveal_task = None
+
+        self._lock_window_active = False
+        self._reroll_unlocked = True
+
+        if add_history_line and self._lock_window_user_id is not None:
+            self.history_lines.append(
+                _build_lock_decision_line(
+                    f"<@{self._lock_window_user_id}>", locked=False
+                )
+            )
+
+        for item in (self._lock_button, self._dont_lock_button):
+            if item in self.children:
+                self.remove_item(item)
+        self._apply_button_state()
+
+        if message is not None:
+            content = _build_post_content(
+                self.kind,
+                self.current_winner or "",
+                self.history_lines,
+                reroll_close_ts=_reroll_close_ts(self),
+            )
+            try:
+                await message.edit(content=content, view=self)
+            except discord.HTTPException as e:
+                logger.warning(f"Failed to close lock window: {e}")
+
+    # Discord's persistent-view machinery calls ``item.callback(interaction)``
+    # with a single argument; our real handlers also need the Button instance
+    # (so tests can introspect it). These thin adapters bridge the two.
+    async def _on_reroll(self, interaction: discord.Interaction) -> None:
+        await self.reroll_button(interaction, self._reroll_button)
+
+    async def _on_lock(self, interaction: discord.Interaction) -> None:
+        await self.lock_button(interaction, self._lock_button)
+
+    async def _on_dont_lock(self, interaction: discord.Interaction) -> None:
+        await self.dont_lock_button(interaction, self._dont_lock_button)
+
     async def reroll_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -424,6 +760,64 @@ class WeeklySpinView(View):
         except Exception:
             await self._release_concurrent_lock()
             raise
+
+    async def lock_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id != self._lock_window_user_id:
+            await interaction.response.send_message(
+                "Only the player who rerolled can decide whether to lock.",
+                ephemeral=True,
+            )
+            return
+        if self._lock_completed:
+            return
+        self._lock_completed = True
+
+        await interaction.response.defer(ephemeral=True)
+
+        async with db.get_session() as session:
+            ingot_service = create_ingot_service(session)
+            result = await ingot_service.try_remove_ingots(
+                interaction.user.id,
+                -LOCK_COST,
+                None,
+                f"Lock weekly spin: {self.kind.upper()}",
+            )
+
+        if not result.status:
+            ingot_icon = find_emoji("Ingot")
+            error_embed = build_response_embed(
+                title="\u274c Insufficient Funds",
+                description=f"Locking costs {ingot_icon} **{LOCK_COST:,}**.",
+                color=discord.Colour.red(),
+            )
+            await interaction.followup.send(embed=error_embed)
+            # Allow another lock attempt within the same window.
+            self._lock_completed = False
+            return
+
+        await self._close_lock_window_as_locked()
+
+    async def dont_lock_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id != self._lock_window_user_id:
+            await interaction.response.send_message(
+                "Only the player who rerolled can decide whether to lock.",
+                ephemeral=True,
+            )
+            return
+        if self._lock_completed:
+            return
+        self._lock_completed = True
+
+        await interaction.response.defer(ephemeral=True)
+
+        await self._close_lock_window_as_open(
+            message=self.target_message,
+            add_history_line=True,
+        )
 
 
 class RerollPaymentView(View):
@@ -562,6 +956,11 @@ class RerollPaymentView(View):
         )
 
         await _reset_reactions(parent.target_message)
+
+        # Open the 60s lock-decision window for the rigger. _open_lock_window
+        # also cancels any prior lock window and edits the target message
+        # with the countdown footer + Lock/Don't-Lock buttons.
+        await parent._open_lock_window(user_id=interaction.user.id)
 
         await parent._release_concurrent_lock()
         logger.debug(
