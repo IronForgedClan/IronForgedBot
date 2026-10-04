@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import time
+from dataclasses import dataclass
 from typing import Literal
 
 import discord
@@ -25,7 +26,7 @@ WeeklySpinKind = Literal["sotw", "botw"]
 REROLL_COST = 2500
 REROLL_HOURLY_LIMIT = 10
 REROLL_WINDOW_SECONDS = 3600
-WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS = 86400
+WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS = 18 * 60 * 60
 REROLL_PAYMENT_TIMEOUT_SECONDS = 30
 REROLL_PAYMENT_TITLE = "\U0001f4b0 Re-roll Weekly Spin"
 LOCK_PAYMENT_TITLE = "\U0001f4b0 Lock Weekly Spin"
@@ -34,13 +35,19 @@ LOCK_COST = 10000
 LOCK_WINDOW_SECONDS = 60
 LOCK_EMOJI = "\U0001f512"
 UNLOCK_EMOJI = "\U0001f513"
+NO_MENTIONS = discord.AllowedMentions.none()
+
+
+@dataclass(frozen=True)
+class PendingReroll:
+    winner: str
+    emoji: str
+    mention: str
+    timestamp: int
+
 
 THUMBS_UP = "\U0001f44d"
 THUMBS_DOWN = "\U0001f44e"
-
-# Strong references to background reveal tasks to prevent premature GC.
-# Tasks are discarded via done callback when they complete.
-_background_tasks: set[asyncio.Task] = set()
 
 _recent_rerolls: dict[tuple[int, str], list[float]] = {}
 
@@ -106,9 +113,9 @@ def _build_event_schedule_paragraph(
     end_ts: int,
     reroll_close_ts: int | None = None,
 ) -> str:
-    paragraph = f"This event will run from <t:{start_ts}:D> through <t:{end_ts}:D>."
+    paragraph = f"This event will start on <t:{start_ts}:D> and end on <t:{end_ts}:D>."
     if reroll_close_ts is not None:
-        paragraph += f" The re-roll window closes <t:{reroll_close_ts}:R>."
+        paragraph += f" The active option will automatically be locked <t:{reroll_close_ts}:R>, unless a member locks their reroll."
     return paragraph
 
 
@@ -204,8 +211,8 @@ def _build_lock_window_content(
         start_ts, end_ts, reroll_close_ts
     )
     lock_decision_sentence = (
-        f":warning: {user_mention} rerolled. They must decide whether to lock it "
-        f"before their chance to lock expires <t:{lock_close_ts}:R>."
+        f":warning: {user_mention} has rerolled and must decide whether to lock "
+        f"the result before the opportunity expires <t:{lock_close_ts}:R>."
     )
     history_section = _build_history_section(history_lines)
     content_lines = [*headings, "", event_schedule_paragraph, "", *history_section]
@@ -260,8 +267,17 @@ def _check_reroll_rate_limit(
     """
     if now is None:
         now = time.time()
+    for existing_key, timestamps in tuple(_recent_rerolls.items()):
+        active_timestamps = [
+            timestamp for timestamp in timestamps if now - timestamp < window_seconds
+        ]
+        if active_timestamps:
+            _recent_rerolls[existing_key] = active_timestamps
+        else:
+            del _recent_rerolls[existing_key]
+
     key = (user_id, kind)
-    recent = [t for t in _recent_rerolls.get(key, []) if now - t < window_seconds]
+    recent = _recent_rerolls.get(key, [])
     if len(recent) >= limit:
         oldest = min(recent)
         wait = int(window_seconds - (now - oldest)) + 1
@@ -320,6 +336,22 @@ async def _reset_reactions(message: discord.Message) -> None:
         logger.warning(f"Failed to clear reactions on {message.id}: {e}")
         return
     await _add_default_reactions(message)
+
+
+async def _refund_reroll_cost(user_id: int, reason: str) -> bool:
+    try:
+        async with db.get_session() as session:
+            ingot_service = create_ingot_service(session)
+            result = await ingot_service.try_add_ingots(
+                user_id,
+                REROLL_COST,
+                None,
+                f"Refund weekly spin reroll after {reason}",
+            )
+        return result.status
+    except Exception:
+        logger.exception(f"Failed to refund weekly spin reroll for user {user_id}")
+        return False
 
 
 async def _reveal_winner_after_delay(
@@ -383,7 +415,11 @@ async def _reveal_winner_after_delay(
             reroll_close_ts=reroll_close_ts,
         )
     try:
-        await message.edit(content=content, view=view)
+        await message.edit(
+            content=content,
+            view=view,
+            allowed_mentions=NO_MENTIONS,
+        )
         logger.debug(
             f"Revealed {kind.upper()} winner {winner!r} after {REVEAL_DELAY_SECONDS}s delay"
         )
@@ -464,7 +500,12 @@ async def post_weekly_spin_result(
         kind, [], start_ts, end_ts, reroll_close_ts=close_ts
     )
 
-    msg = await target.send(file=file, content=pending_content, view=placeholder_view)
+    msg = await target.send(
+        file=file,
+        content=pending_content,
+        view=placeholder_view,
+        allowed_mentions=NO_MENTIONS,
+    )
     placeholder_view.target_message = msg
     deadline_delay = max(
         0,
@@ -537,7 +578,7 @@ class WeeklySpinView(View):
         # Reroll data held between confirm_button and the lock-window
         # decision so the consolidated history line can be emitted once at
         # decision time. None when no decision is pending.
-        self._pending_reroll: dict | None = None
+        self._pending_reroll: PendingReroll | None = None
 
         # Spin window dates (UTC midnight timestamps). Set by
         # ``post_weekly_spin_result`` right after construction; default 0
@@ -695,10 +736,10 @@ class WeeklySpinView(View):
                 if self._pending_reroll is not None:
                     self.history_lines.append(
                         _build_consolidated_history_line(
-                            self._pending_reroll["emoji"],
-                            self._pending_reroll["winner"],
-                            self._pending_reroll["mention"],
-                            self._pending_reroll["ts"],
+                            self._pending_reroll.emoji,
+                            self._pending_reroll.winner,
+                            self._pending_reroll.mention,
+                            self._pending_reroll.timestamp,
                             icon=LOCK_EMOJI,
                         )
                     )
@@ -719,6 +760,7 @@ class WeeklySpinView(View):
                     edit_kwargs = {
                         "content": _build_locked_content(self, self.history_lines),
                         "view": None,
+                        "allowed_mentions": NO_MENTIONS,
                     }
                 elif self.current_winner is not None:
                     edit_kwargs = {
@@ -730,6 +772,7 @@ class WeeklySpinView(View):
                             self._end_ts,
                         ),
                         "view": None,
+                        "allowed_mentions": NO_MENTIONS,
                     }
                 else:
                     edit_kwargs = {"view": None}
@@ -749,7 +792,7 @@ class WeeklySpinView(View):
         if self.target_message is not None:
             try:
                 await self.target_message.edit(view=self)
-            except discord.HTTPException:
+            except Exception:
                 pass
 
     async def _release_concurrent_lock(self) -> None:
@@ -811,7 +854,11 @@ class WeeklySpinView(View):
                 _reroll_close_ts(self),
             )
             try:
-                await message.edit(content=content, view=self)
+                await message.edit(
+                    content=content,
+                    view=self,
+                    allowed_mentions=NO_MENTIONS,
+                )
             except discord.HTTPException as e:
                 logger.warning(f"Failed to open lock window: {e}")
 
@@ -842,10 +889,10 @@ class WeeklySpinView(View):
         if self._pending_reroll is not None:
             self.history_lines.append(
                 _build_consolidated_history_line(
-                    self._pending_reroll["emoji"],
-                    self._pending_reroll["winner"],
-                    self._pending_reroll["mention"],
-                    self._pending_reroll["ts"],
+                    self._pending_reroll.emoji,
+                    self._pending_reroll.winner,
+                    self._pending_reroll.mention,
+                    self._pending_reroll.timestamp,
                     icon=LOCK_EMOJI,
                 )
             )
@@ -863,7 +910,11 @@ class WeeklySpinView(View):
         if message is not None:
             content = _build_locked_content(self, self.history_lines)
             try:
-                await message.edit(content=content, view=None)
+                await message.edit(
+                    content=content,
+                    view=None,
+                    allowed_mentions=NO_MENTIONS,
+                )
             except discord.HTTPException as e:
                 logger.warning(f"Failed to lock spin post: {e}")
         self._lock_completed = False
@@ -917,10 +968,10 @@ class WeeklySpinView(View):
         if self._pending_reroll is not None:
             self.history_lines.append(
                 _build_consolidated_history_line(
-                    self._pending_reroll["emoji"],
-                    self._pending_reroll["winner"],
-                    self._pending_reroll["mention"],
-                    self._pending_reroll["ts"],
+                    self._pending_reroll.emoji,
+                    self._pending_reroll.winner,
+                    self._pending_reroll.mention,
+                    self._pending_reroll.timestamp,
                     icon=history_icon,
                 )
             )
@@ -941,7 +992,11 @@ class WeeklySpinView(View):
                 reroll_close_ts=_reroll_close_ts(self),
             )
             try:
-                await message.edit(content=content, view=self)
+                await message.edit(
+                    content=content,
+                    view=self,
+                    allowed_mentions=NO_MENTIONS,
+                )
             except discord.HTTPException as e:
                 logger.warning(f"Failed to close lock window: {e}")
         self._lock_completed = False
@@ -960,7 +1015,7 @@ class WeeklySpinView(View):
 
     async def reroll_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ) -> None:
         if self._deadline_has_passed():
             self._request_deadline_expiry()
             await interaction.response.send_message(
@@ -1024,7 +1079,7 @@ class WeeklySpinView(View):
 
     async def lock_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ) -> None:
         if interaction.user.id != self._lock_window_user_id:
             await interaction.response.send_message(
                 "Only the player who rerolled can decide whether to lock.",
@@ -1094,7 +1149,7 @@ class WeeklySpinView(View):
 
     async def dont_lock_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ) -> None:
         if interaction.user.id != self._lock_window_user_id:
             await interaction.response.send_message(
                 "Only the player who rerolled can decide whether to lock.",
@@ -1142,7 +1197,10 @@ class LockPaymentView(View):
             pass
 
     async def on_timeout(self) -> None:
-        await self.parent_view._release_lock_payment(self.lock_window_generation)
+        if not self.completed:
+            await self.parent_view._release_lock_payment(self.lock_window_generation)
+        else:
+            return await super().on_timeout()
         if self.message is not None:
             try:
                 await self.message.delete()
@@ -1157,7 +1215,7 @@ class LockPaymentView(View):
     )
     async def confirm_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ) -> None:
         if interaction.user.id != self.user_id:
             return await self._reject_other_user(interaction)
         if self.completed:
@@ -1165,59 +1223,72 @@ class LockPaymentView(View):
         self.completed = True
 
         parent = self.parent_view
-        if parent._deadline_has_passed():
-            await interaction.response.edit_message(
-                content="The reroll window has closed.", embed=None, view=None
-            )
-            await parent._release_lock_payment(self.lock_window_generation)
-            parent._request_deadline_expiry()
-            return
+        try:
+            if parent._deadline_has_passed():
+                await interaction.response.edit_message(
+                    content="The reroll window has closed.", embed=None, view=None
+                )
+                parent._request_deadline_expiry()
+                return
 
-        if (
-            not parent._lock_window_active
-            or parent._is_locked
-            or parent._lock_window_user_id != self.user_id
-            or parent._lock_window_generation != self.lock_window_generation
-        ):
-            await interaction.response.edit_message(
-                content="The lock window has closed.", embed=None, view=None
-            )
-            await parent._release_lock_payment(self.lock_window_generation)
-            return
+            if (
+                not parent._lock_window_active
+                or parent._is_locked
+                or parent._lock_window_user_id != self.user_id
+                or parent._lock_window_generation != self.lock_window_generation
+            ):
+                await interaction.response.edit_message(
+                    content="The lock window has closed.", embed=None, view=None
+                )
+                return
 
-        if parent.target_message is None:
-            await interaction.response.edit_message(
-                content="Original spin post no longer exists.", embed=None, view=None
-            )
-            await parent._release_lock_payment(self.lock_window_generation)
-            return
+            if parent.target_message is None:
+                await interaction.response.edit_message(
+                    content="Original spin post no longer exists.",
+                    embed=None,
+                    view=None,
+                )
+                return
 
-        await interaction.response.defer(ephemeral=True)
-        self.message = await interaction.original_response()
+            await interaction.response.defer(ephemeral=True)
+            self.message = await interaction.original_response()
 
-        async with db.get_session() as session:
-            ingot_service = create_ingot_service(session)
-            result = await ingot_service.try_remove_ingots(
-                interaction.user.id,
-                -LOCK_COST,
-                None,
-                f"Lock weekly spin: {parent.kind.upper()}",
-            )
+            try:
+                async with db.get_session() as session:
+                    ingot_service = create_ingot_service(session)
+                    result = await ingot_service.try_remove_ingots(
+                        interaction.user.id,
+                        -LOCK_COST,
+                        None,
+                        f"Lock weekly spin: {parent.kind.upper()}",
+                    )
+            except Exception:
+                logger.exception(
+                    f"Failed to charge lock cost for user {interaction.user.id}"
+                )
+                await interaction.followup.send(
+                    "Lock payment could not be confirmed. Check your balance before "
+                    "trying again; contact an admin if balance changed.",
+                    ephemeral=True,
+                )
+                await self._delete_self(interaction)
+                return
 
-        if not result.status:
-            ingot_icon = find_emoji("Ingot")
-            error_embed = build_response_embed(
-                title="\u274c Insufficient Funds",
-                description=f"Locking costs {ingot_icon} **{LOCK_COST:,}**.",
-                color=discord.Colour.red(),
-            )
-            await interaction.followup.send(embed=error_embed, ephemeral=True)
-            await parent._release_lock_payment(self.lock_window_generation)
+            if not result.status:
+                ingot_icon = find_emoji("Ingot")
+                error_embed = build_response_embed(
+                    title="\u274c Insufficient Funds",
+                    description=f"Locking costs {ingot_icon} **{LOCK_COST:,}**.",
+                    color=discord.Colour.red(),
+                )
+                await interaction.followup.send(embed=error_embed, ephemeral=True)
+                await self._delete_self(interaction)
+                return
+
             await self._delete_self(interaction)
-            return
-
-        await self._delete_self(interaction)
-        await parent._close_lock_window_as_locked()
+            await parent._close_lock_window_as_locked()
+        finally:
+            await parent._release_lock_payment(self.lock_window_generation)
 
     @discord.ui.button(
         label="Cancel",
@@ -1267,7 +1338,10 @@ class RerollPaymentView(View):
             pass
 
     async def on_timeout(self) -> None:
-        await self.parent_view._release_concurrent_lock()
+        if not self.completed:
+            await self.parent_view._release_concurrent_lock()
+        else:
+            return await super().on_timeout()
         if self.message is not None:
             try:
                 await self.message.delete()
@@ -1282,125 +1356,151 @@ class RerollPaymentView(View):
     )
     async def confirm_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ) -> None:
         if interaction.user.id != self.user_id:
             return await self._reject_other_user(interaction)
         if self.completed:
             return
         self.completed = True
         parent = self.parent_view
-        if parent._deadline_has_passed():
-            await interaction.response.edit_message(
-                content="The reroll window has closed.", embed=None, view=None
-            )
-            await parent._release_concurrent_lock()
-            parent._request_deadline_expiry()
-            return
-
-        if parent.target_message is None:
-            await interaction.response.send_message(
-                "Original spin post no longer exists.", ephemeral=True
-            )
-            return
-
-        parent._reroll_confirmation_task = asyncio.current_task()
-        await interaction.response.defer(ephemeral=True)
-        self.message = await interaction.original_response()
-
-        async with db.get_session() as session:
-            ingot_service = create_ingot_service(session)
-            result = await ingot_service.try_remove_ingots(
-                interaction.user.id,
-                -REROLL_COST,
-                None,
-                f"Reroll weekly spin: {parent.kind.upper()}",
-            )
-
-        ingot_icon = find_emoji("Ingot")
-
-        if not result.status:
-            error_embed = build_response_embed(
-                title="\u274c Insufficient Funds",
-                description=(f"Re-roll costs {ingot_icon} **{REROLL_COST:,}**."),
-                color=discord.Colour.red(),
-            )
-            await interaction.followup.send(embed=error_embed)
-            await parent._release_concurrent_lock()
-            await self._delete_self(interaction)
-            return
-
-        # Drop the payment embed immediately after debit succeeds; the slow
-        # GIF build / message edit / reveal schedule that follows doesn't
-        # need the user staring at the prompt.
-        await self._delete_self(interaction)
-
-        previous_winner = parent.current_winner or ""
-        reroll_options = [
-            option for option in parent.options if option != previous_winner
-        ]
-
+        current_task = asyncio.current_task()
+        parent._reroll_confirmation_task = current_task
         try:
-            new_file, new_winner = await build_spin_gif_file(reroll_options)
-        except Exception as e:
-            logger.error(f"Re-roll GIF generation failed: {e}")
-            await interaction.followup.send(
-                "Payment succeeded but generating the new GIF failed. "
-                "Contact an admin.",
-            )
-            await parent._release_concurrent_lock()
+            if parent._deadline_has_passed():
+                await interaction.response.edit_message(
+                    content="The reroll window has closed.", embed=None, view=None
+                )
+                parent._request_deadline_expiry()
+                return
+
+            if parent.target_message is None:
+                await interaction.response.send_message(
+                    "Original spin post no longer exists.", ephemeral=True
+                )
+                return
+
+            await interaction.response.defer(ephemeral=True)
+            self.message = await interaction.original_response()
+
+            try:
+                async with db.get_session() as session:
+                    ingot_service = create_ingot_service(session)
+                    result = await ingot_service.try_remove_ingots(
+                        interaction.user.id,
+                        -REROLL_COST,
+                        None,
+                        f"Reroll weekly spin: {parent.kind.upper()}",
+                    )
+            except Exception:
+                logger.exception(
+                    f"Failed to charge reroll cost for user {interaction.user.id}"
+                )
+                await interaction.followup.send(
+                    "Reroll payment could not be confirmed. Check your balance "
+                    "before trying again; contact an admin if balance changed.",
+                    ephemeral=True,
+                )
+                await self._delete_self(interaction)
+                return
+
+            if not result.status:
+                ingot_icon = find_emoji("Ingot")
+                error_embed = build_response_embed(
+                    title="\u274c Insufficient Funds",
+                    description=f"Re-roll costs {ingot_icon} **{REROLL_COST:,}**.",
+                    color=discord.Colour.red(),
+                )
+                await interaction.followup.send(embed=error_embed)
+                await self._delete_self(interaction)
+                return
+
             await self._delete_self(interaction)
-            return
 
-        parent._pending_reroll = {
-            "winner": previous_winner,
-            "emoji": _lookup_emoji(parent.kind, previous_winner),
-            "mention": interaction.user.mention,
-            "ts": int(time.time()),
-        }
-        parent.current_winner = new_winner
-        parent._reroll_unlocked = False
-        parent._apply_button_state()
+            previous_winner = parent.current_winner or ""
+            reroll_options = [
+                option for option in parent.options if option != previous_winner
+            ]
 
-        new_content = _build_pending_content(
-            parent.kind,
-            parent.history_lines,
-            parent._start_ts,
-            parent._end_ts,
-            reroll_close_ts=_reroll_close_ts(parent),
-        )
-        try:
-            await parent.target_message.edit(
-                content=new_content, attachments=[new_file], view=parent
+            try:
+                new_file, new_winner = await build_spin_gif_file(reroll_options)
+            except Exception:
+                logger.exception(
+                    f"Re-roll GIF generation failed for user {interaction.user.id}"
+                )
+                await self._refund_failed_reroll(
+                    interaction,
+                    "GIF generation failure",
+                )
+                return
+
+            new_content = _build_pending_content(
+                parent.kind,
+                parent.history_lines,
+                parent._start_ts,
+                parent._end_ts,
+                reroll_close_ts=_reroll_close_ts(parent),
             )
-        except discord.HTTPException as e:
-            logger.error(f"Failed to edit spin post for reroll: {e}")
-            await interaction.followup.send(
-                "Payment succeeded but updating the spin post failed.",
+            try:
+                await parent.target_message.edit(
+                    content=new_content,
+                    attachments=[new_file],
+                    view=parent,
+                    allowed_mentions=NO_MENTIONS,
+                )
+            except Exception:
+                logger.exception(
+                    f"Failed to update spin post after reroll for user "
+                    f"{interaction.user.id}"
+                )
+                await self._refund_failed_reroll(
+                    interaction,
+                    "spin post update failure",
+                )
+                return
+
+            parent._pending_reroll = PendingReroll(
+                winner=previous_winner,
+                emoji=_lookup_emoji(parent.kind, previous_winner),
+                mention=interaction.user.mention,
+                timestamp=int(time.time()),
             )
+            parent.current_winner = new_winner
+            parent._reroll_unlocked = False
+            parent._apply_button_state()
+
+            _schedule_reveal(
+                parent,
+                parent.target_message,
+                parent.kind,
+                new_winner,
+                parent.history_lines,
+                _reroll_close_ts(parent),
+            )
+
+            await _reset_reactions(parent.target_message)
+            await parent._open_lock_window(user_id=interaction.user.id)
+            logger.debug(
+                f"Reroll complete for user {interaction.user.id} ({parent.kind.upper()})"
+            )
+        finally:
+            if parent._reroll_confirmation_task is current_task:
+                parent._reroll_confirmation_task = None
             await parent._release_concurrent_lock()
-            await self._delete_self(interaction)
-            return
 
-        _schedule_reveal(
-            parent,
-            parent.target_message,
-            parent.kind,
-            new_winner,
-            parent.history_lines,
-            _reroll_close_ts(parent),
-        )
-
-        await _reset_reactions(parent.target_message)
-
-        # Open the 60s lock-decision window for the rigger. _open_lock_window
-        # also cancels any prior lock window and edits the target message
-        # with the countdown footer + Lock/Don't-Lock buttons.
-        await parent._open_lock_window(user_id=interaction.user.id)
-
-        await parent._release_concurrent_lock()
-        logger.debug(
-            f"Reroll complete for user {interaction.user.id} ({parent.kind.upper()})"
-        )
+    async def _refund_failed_reroll(
+        self,
+        interaction: discord.Interaction,
+        reason: str,
+    ) -> None:
+        refunded = await _refund_reroll_cost(interaction.user.id, reason)
+        if refunded:
+            message = "Reroll failed; your ingots were refunded. Try again later."
+        else:
+            message = (
+                "Reroll failed and refund could not be confirmed. Contact an admin "
+                "before retrying."
+            )
+        await interaction.followup.send(message, ephemeral=True)
 
     @discord.ui.button(
         label="Cancel",
@@ -1409,9 +1509,12 @@ class RerollPaymentView(View):
     )
     async def cancel_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    ) -> None:
         if interaction.user.id != self.user_id:
             return await self._reject_other_user(interaction)
+        if self.completed:
+            return
+        self.completed = True
         await interaction.response.defer(ephemeral=True)
         await self.parent_view._release_concurrent_lock()
         await self._delete_self(interaction)
