@@ -100,6 +100,17 @@ def _build_consolidated_history_line(
     return line
 
 
+def _build_event_schedule_paragraph(
+    start_ts: int,
+    end_ts: int,
+    reroll_close_ts: int | None = None,
+) -> str:
+    paragraph = f"This event will run from <t:{start_ts}:D> through <t:{end_ts}:D>."
+    if reroll_close_ts is not None:
+        paragraph += f" The re-roll window closes <t:{reroll_close_ts}:R>."
+    return paragraph
+
+
 def _build_post_content(
     kind: WeeklySpinKind,
     winner: str,
@@ -110,14 +121,21 @@ def _build_post_content(
 ) -> str:
     """Compose the full post content with the spoiler winner inside the header."""
     emoji = _lookup_emoji(kind, winner)
-    header = f"# Next {kind.upper()} is ||{emoji} {winner}||"
-    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
+    header = (
+        f"# {find_emoji('DWH') or ':DWH:'} "
+        f"The next {kind.upper()} is ||{emoji} {winner}||"
+    )
+    event_schedule_paragraph = _build_event_schedule_paragraph(
+        start_ts, end_ts, reroll_close_ts
+    )
     bulleted = [f"- {line}" for line in history_lines]
-    parts = [header, dates, *bulleted]
-    if reroll_close_ts is not None:
-        parts.append("")
-        parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
-    return "\n".join(parts)
+    return "\n".join(
+        [
+            header,
+            event_schedule_paragraph,
+            *bulleted,
+        ]
+    )
 
 
 def _build_pending_content(
@@ -133,14 +151,18 @@ def _build_pending_content(
     reveal task replaces this with the spoiler-tagged winner.
     """
     _validate_kind(kind)
-    header = f"# Next {kind.upper()} is..."
-    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
+    header = f"# {find_emoji('DWH') or ':DWH:'} The next {kind.upper()} is..."
+    event_schedule_paragraph = _build_event_schedule_paragraph(
+        start_ts, end_ts, reroll_close_ts
+    )
     bulleted = [f"- {line}" for line in history_lines]
-    parts = [header, dates, *bulleted]
-    if reroll_close_ts is not None:
-        parts.append("")
-        parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
-    return "\n".join(parts)
+    return "\n".join(
+        [
+            header,
+            event_schedule_paragraph,
+            *bulleted,
+        ]
+    )
 
 
 def _build_lock_window_content(
@@ -155,45 +177,63 @@ def _build_lock_window_content(
 ) -> str:
     """Compose post content during the 60s lock-decision window.
 
-    The status line is plain text (the :warning: emoji carries the urgency),
-    and the countdown uses Discord's relative timestamp (``<t:TS:R>``) so it
-    auto-updates as time passes without us having to edit the message every
-    tick. The trailing reroll-window footer is small italic and references
-    the 24h view timeout.
+    Identifies the reroller and displays their lock-decision deadline.
     """
     emoji = _lookup_emoji(kind, winner)
-    header = f"# Next {kind.upper()} is ||{emoji} {winner}||"
-    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
-    bulleted = [f"- {line}" for line in history_lines]
-    parts = [header, dates, *bulleted, ""]
-    parts.append(
+    header = (
+        f"# {find_emoji('DWH') or ':DWH:'} "
+        f"The next {kind.upper()} is ||{emoji} {winner}||"
+    )
+    event_schedule_paragraph = _build_event_schedule_paragraph(
+        start_ts, end_ts, reroll_close_ts
+    )
+    lock_decision_sentence = (
         f":warning: {user_mention} has rerolled and now has "
         f"<t:{lock_close_ts}:R> to decide to lock or not."
     )
-    if reroll_close_ts is not None:
-        parts.append("")
-        parts.append(f"-# Re-roll window closes <t:{reroll_close_ts}:R>.")
-    return "\n".join(parts)
+    bulleted = [f"- {line}" for line in history_lines]
+    return "\n".join(
+        [
+            header,
+            event_schedule_paragraph,
+            *bulleted,
+            "",
+            lock_decision_sentence,
+        ]
+    )
 
 
 def _build_locked_content(
-    kind: WeeklySpinKind,
-    winner: str,
+    self,
     history_lines: list[str],
-    start_ts: int,
-    end_ts: int,
 ) -> str:
     """Compose post content for the terminal locked state.
 
     Adds the lock emoji to the header, keeps the reroll + lock-decision
     history, and strips the footers. All buttons are removed at the View
     level; this helper just produces the body.
+
+    Sentences reflect the duration and the locked timestamp captured when
+    the rigger paid the lock cost.
     """
+    kind = self.kind
+    winner = self.current_winner or ""
+    start_ts = self._start_ts
+    end_ts = self._end_ts
+    locked_at = self._locked_at
     emoji = _lookup_emoji(kind, winner)
-    header = f"# Next {kind.upper()} is ||{emoji} {winner}|| {LOCK_EMOJI}"
-    dates = f"<t:{start_ts}:D> → <t:{end_ts}:D>"
+    header = (
+        f"# {find_emoji('DWH') or ':DWH:'} "
+        f"The next {kind.upper()} is ||{emoji} {winner}|| {LOCK_EMOJI}"
+    )
+    event_schedule_paragraph = _build_event_schedule_paragraph(start_ts, end_ts)
+    locked_sentence = (
+        f"Locked <t:{locked_at}:R>. The reroll window is now closed."
+        if locked_at
+        else "The reroll window is now closed."
+    )
     bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join([header, dates, *bulleted])
+    return "\n".join([header, event_schedule_paragraph, locked_sentence, *bulleted])
 
 
 def _check_reroll_rate_limit(
@@ -467,6 +507,9 @@ class WeeklySpinView(View):
         # so existing tests that don't exercise the modal flow still work.
         self._start_ts: int = 0
         self._end_ts: int = 0
+        # UTC timestamp captured the moment the rigger paid the lock
+        # cost; surfaces in the locked-content sentence. 0 = not locked.
+        self._locked_at: int = 0
 
         self._reroll_button = discord.ui.Button(
             label="Re-roll",
@@ -568,13 +611,7 @@ class WeeklySpinView(View):
         if self.target_message is not None:
             if self._is_locked:
                 edit_kwargs = {
-                    "content": _build_locked_content(
-                        self.kind,
-                        self.current_winner or "",
-                        self.history_lines,
-                        self._start_ts,
-                        self._end_ts,
-                    ),
+                    "content": _build_locked_content(self, self.history_lines),
                     "view": None,
                 }
             elif self.current_winner is not None:
@@ -645,7 +682,7 @@ class WeeklySpinView(View):
                 self.kind,
                 self.current_winner or "",
                 self.history_lines,
-                f"<@{user_id}>",
+                f"<@{self._lock_window_user_id}>",
                 self._lock_window_end_ts,
                 self._start_ts,
                 self._end_ts,
@@ -679,6 +716,7 @@ class WeeklySpinView(View):
 
         self._lock_window_active = False
         self._is_locked = True
+        self._locked_at = int(time.time())
 
         if self._pending_reroll is not None:
             self.history_lines.append(
@@ -702,13 +740,7 @@ class WeeklySpinView(View):
 
         message = self.target_message
         if message is not None:
-            content = _build_locked_content(
-                self.kind,
-                self.current_winner or "",
-                self.history_lines,
-                self._start_ts,
-                self._end_ts,
-            )
+            content = _build_locked_content(self, self.history_lines)
             try:
                 await message.edit(content=content, view=None)
             except discord.HTTPException as e:
