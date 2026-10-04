@@ -13,6 +13,7 @@ from ironforgedbot.common.payment_embed import build_payment_embed, load_flavor_
 from ironforgedbot.common.responses import build_response_embed
 from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
+from ironforgedbot.config import CONFIG
 from ironforgedbot.services.service_factory import create_ingot_service
 from ironforgedcore.common.roles import ROLE
 from ironforgedcore.database import db
@@ -23,16 +24,8 @@ logger = logging.getLogger(__name__)
 
 WeeklySpinKind = Literal["sotw", "botw"]
 
-REROLL_COST = 2500
-REROLL_HOURLY_LIMIT = 10
-REROLL_WINDOW_SECONDS = 3600
-WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS = 18 * 60 * 60
-REROLL_PAYMENT_TIMEOUT_SECONDS = 30
 REROLL_PAYMENT_TITLE = "\U0001f4b0 Re-roll Weekly Spin"
 LOCK_PAYMENT_TITLE = "\U0001f4b0 Lock Weekly Spin"
-REVEAL_DELAY_SECONDS = 10.5
-LOCK_COST = 10000
-LOCK_WINDOW_SECONDS = 60
 LOCK_EMOJI = "\U0001f512"
 UNLOCK_EMOJI = "\U0001f513"
 NO_MENTIONS = discord.AllowedMentions.none()
@@ -118,8 +111,8 @@ def _build_event_schedule_paragraph(
         paragraph += f" The active option will automatically be locked <t:{reroll_close_ts}:R>, unless a member locks their reroll."
         ingot_icon = find_emoji("Ingot") or ":Ingot:"
         paragraph += (
-            f" Re-rolling costs {ingot_icon} **{REROLL_COST:,}** ingots and "
-            f"locking costs {ingot_icon} **{LOCK_COST:,}** ingots."
+            f" Re-rolling costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
+            f"locking costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}** ingots."
         )
     return paragraph
 
@@ -261,8 +254,8 @@ def _check_reroll_rate_limit(
     user_id: int,
     kind: WeeklySpinKind,
     *,
-    limit: int = REROLL_HOURLY_LIMIT,
-    window_seconds: int = REROLL_WINDOW_SECONDS,
+    limit: int | None = None,
+    window_seconds: int | None = None,
     now: float | None = None,
 ) -> tuple[bool, int]:
     """Record a reroll attempt; return (allowed, seconds_until_next_slot).
@@ -272,6 +265,10 @@ def _check_reroll_rate_limit(
     """
     if now is None:
         now = time.time()
+    if limit is None:
+        limit = CONFIG.WEEKLY_SPIN_REROLL_HOURLY_LIMIT
+    if window_seconds is None:
+        window_seconds = CONFIG.WEEKLY_SPIN_REROLL_WINDOW_SECONDS
     for existing_key, timestamps in tuple(_recent_rerolls.items()):
         active_timestamps = [
             timestamp for timestamp in timestamps if now - timestamp < window_seconds
@@ -295,11 +292,11 @@ def _check_reroll_rate_limit(
 
 def _reroll_close_ts(view: "WeeklySpinView") -> int:
     """Unix timestamp at which the view's re-roll window expires."""
-    return int(view.created_at + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)
+    return int(view.created_at + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)
 
 
 def _reroll_deadline_reached(view: "WeeklySpinView") -> bool:
-    return time.time() >= view.created_at + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS
+    return time.time() >= view.created_at + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS
 
 
 async def _expire_weekly_spin_after_delay(view: "WeeklySpinView", delay: float) -> None:
@@ -349,7 +346,7 @@ async def _refund_reroll_cost(user_id: int, reason: str) -> bool:
             ingot_service = create_ingot_service(session)
             result = await ingot_service.try_add_ingots(
                 user_id,
-                REROLL_COST,
+                CONFIG.WEEKLY_SPIN_REROLL_COST,
                 None,
                 f"Refund weekly spin reroll after {reason}",
             )
@@ -367,7 +364,7 @@ async def _reveal_winner_after_delay(
     history_lines: list[str],
     reroll_close_ts: int,
 ) -> None:
-    """Background task: wait REVEAL_DELAY_SECONDS, then reveal winner in H2.
+    """Background task: wait configured reveal delay, then reveal winner in H2.
 
     Skips the edit if the view has already timed out.
 
@@ -377,7 +374,7 @@ async def _reveal_winner_after_delay(
     with the standard ``Re-roll window closes`` footer.
     """
     try:
-        await asyncio.sleep(REVEAL_DELAY_SECONDS)
+        await asyncio.sleep(CONFIG.WEEKLY_SPIN_REVEAL_DELAY_SECONDS)
     except asyncio.CancelledError:
         logger.info(f"Spin reveal cancelled for message {message.id}")
         raise
@@ -426,7 +423,8 @@ async def _reveal_winner_after_delay(
             allowed_mentions=NO_MENTIONS,
         )
         logger.debug(
-            f"Revealed {kind.upper()} winner {winner!r} after {REVEAL_DELAY_SECONDS}s delay"
+            f"Revealed {kind.upper()} winner {winner!r} after "
+            f"{CONFIG.WEEKLY_SPIN_REVEAL_DELAY_SECONDS}s delay"
         )
     except discord.HTTPException as e:
         logger.warning(f"Failed to reveal spin result for message {message.id}: {e}")
@@ -444,7 +442,7 @@ async def _lock_window_timer(
     active so payment cannot race the timeout.
     """
     try:
-        await asyncio.sleep(LOCK_WINDOW_SECONDS)
+        await asyncio.sleep(CONFIG.WEEKLY_SPIN_LOCK_WINDOW_SECONDS)
         while view._lock_completed and view._lock_window_active:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
@@ -491,7 +489,7 @@ async def post_weekly_spin_result(
     """Post a spin GIF plus the pending-result header to the weekly channel.
 
     The initial post shows only the "Next X is..." header — the winner is
-    revealed after REVEAL_DELAY_SECONDS via a background task that edits the
+    revealed after the configured reveal delay via a background task that edits the
     message. Two thumb reactions (👍 / 👎) are added immediately so members
     can vote without typing. A `WeeklySpinView` with a Re-roll button is
     attached so members can pay to spin again.
@@ -514,7 +512,9 @@ async def post_weekly_spin_result(
     placeholder_view.target_message = msg
     deadline_delay = max(
         0,
-        placeholder_view.created_at + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS - time.time(),
+        placeholder_view.created_at
+        + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS
+        - time.time(),
     )
     placeholder_view._deadline_task = asyncio.create_task(
         _expire_weekly_spin_after_delay(placeholder_view, deadline_delay),
@@ -540,8 +540,8 @@ class WeeklySpinView(View):
       (prevents concurrent rerolls on the same post).
     - ``_reroll_unlocked``: False while the result is still pending reveal
       (prevents re-rolls before the winner is visible). Flipped to True by
-      the background reveal task after REVEAL_DELAY_SECONDS.
-    - ``_lock_window_active``: True for LOCK_WINDOW_SECONDS after a reroll
+      the background reveal task after the configured reveal delay.
+    - ``_lock_window_active``: True for the configured lock window after a reroll
       while the rigger decides whether to lock the result. Disabled
       automatically by the lock-window close helpers.
     - ``_is_locked``: True once the rigger pays the lock cost or the view
@@ -554,7 +554,7 @@ class WeeklySpinView(View):
         kind: WeeklySpinKind,
         target_message: discord.Message | None,
     ):
-        super().__init__(timeout=WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)
+        super().__init__(timeout=CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)
         self.options = options
         self.kind = kind
         self.target_message = target_message
@@ -824,7 +824,7 @@ class WeeklySpinView(View):
         Cancels any prior lock-window task, adds the Lock/Don't-Lock buttons,
         edits the target message with the countdown footer, and schedules the
         background timer that closes the window silently after
-        ``LOCK_WINDOW_SECONDS``.
+        configured lock window.
         """
         if self._deadline_has_passed():
             self._request_deadline_expiry()
@@ -836,7 +836,9 @@ class WeeklySpinView(View):
         self._lock_window_active = True
         self._lock_window_generation += 1
         self._lock_window_user_id = user_id
-        self._lock_window_end_ts = int(time.time()) + LOCK_WINDOW_SECONDS
+        self._lock_window_end_ts = (
+            int(time.time()) + CONFIG.WEEKLY_SPIN_LOCK_WINDOW_SECONDS
+        )
         self._is_locked = False
         self._lock_completed = False
 
@@ -1043,7 +1045,7 @@ class WeeklySpinView(View):
                 minutes = (wait + 59) // 60
                 await interaction.followup.send(
                     content=(
-                        f"Reroll cap reached ({REROLL_HOURLY_LIMIT}/hour). "
+                        f"Reroll cap reached ({CONFIG.WEEKLY_SPIN_REROLL_HOURLY_LIMIT}/hour). "
                         f"Try again in ~{minutes} minute(s)."
                     ),
                     ephemeral=True,
@@ -1066,7 +1068,7 @@ class WeeklySpinView(View):
                 flavor_text = ""
 
             embed = build_payment_embed(
-                cost=REROLL_COST,
+                cost=CONFIG.WEEKLY_SPIN_REROLL_COST,
                 user_balance=user_balance,
                 flavor_text=flavor_text,
                 title=REROLL_PAYMENT_TITLE,
@@ -1130,7 +1132,7 @@ class WeeklySpinView(View):
                 flavor_text = ""
 
             embed = build_payment_embed(
-                cost=LOCK_COST,
+                cost=CONFIG.WEEKLY_SPIN_LOCK_COST,
                 user_balance=user_balance,
                 flavor_text=flavor_text,
                 title=LOCK_PAYMENT_TITLE,
@@ -1183,7 +1185,7 @@ class LockPaymentView(View):
         user_id: int,
         lock_window_generation: int,
     ):
-        super().__init__(timeout=REROLL_PAYMENT_TIMEOUT_SECONDS)
+        super().__init__(timeout=CONFIG.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS)
         self.parent_view = parent_view
         self.user_id = user_id
         self.lock_window_generation = lock_window_generation
@@ -1263,7 +1265,7 @@ class LockPaymentView(View):
                     ingot_service = create_ingot_service(session)
                     result = await ingot_service.try_remove_ingots(
                         interaction.user.id,
-                        -LOCK_COST,
+                        -CONFIG.WEEKLY_SPIN_LOCK_COST,
                         None,
                         f"Lock weekly spin: {parent.kind.upper()}",
                     )
@@ -1283,7 +1285,9 @@ class LockPaymentView(View):
                 ingot_icon = find_emoji("Ingot")
                 error_embed = build_response_embed(
                     title="\u274c Insufficient Funds",
-                    description=f"Locking costs {ingot_icon} **{LOCK_COST:,}**.",
+                    description=(
+                        f"Locking costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}**."
+                    ),
                     color=discord.Colour.red(),
                 )
                 await interaction.followup.send(embed=error_embed, ephemeral=True)
@@ -1322,7 +1326,7 @@ class RerollPaymentView(View):
         parent_view: WeeklySpinView,
         user_id: int,
     ):
-        super().__init__(timeout=REROLL_PAYMENT_TIMEOUT_SECONDS)
+        super().__init__(timeout=CONFIG.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS)
         self.parent_view = parent_view
         self.user_id = user_id
         self.message: discord.Message | None = None
@@ -1392,7 +1396,7 @@ class RerollPaymentView(View):
                     ingot_service = create_ingot_service(session)
                     result = await ingot_service.try_remove_ingots(
                         interaction.user.id,
-                        -REROLL_COST,
+                        -CONFIG.WEEKLY_SPIN_REROLL_COST,
                         None,
                         f"Reroll weekly spin: {parent.kind.upper()}",
                     )
@@ -1412,7 +1416,9 @@ class RerollPaymentView(View):
                 ingot_icon = find_emoji("Ingot")
                 error_embed = build_response_embed(
                     title="\u274c Insufficient Funds",
-                    description=f"Re-roll costs {ingot_icon} **{REROLL_COST:,}**.",
+                    description=(
+                        f"Re-roll costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}**."
+                    ),
                     color=discord.Colour.red(),
                 )
                 await interaction.followup.send(embed=error_embed)

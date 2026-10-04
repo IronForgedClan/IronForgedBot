@@ -5,17 +5,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
 
+from ironforgedbot.config import CONFIG
 from ironforgedbot.commands.admin import weekly_spin
 from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.admin.weekly_spin import (
     LOCK_EMOJI,
-    LOCK_COST,
     LockPaymentView,
     PendingReroll,
     RerollPaymentView,
-    REROLL_COST,
     UNLOCK_EMOJI,
-    WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS,
     WeeklySpinView,
     _build_consolidated_history_line,
     _build_pending_content,
@@ -31,7 +29,7 @@ TEST_END_TS = TEST_START_TS + 7 * 86400
 
 class TestWeeklySpinConstants(unittest.TestCase):
     def test_weekly_spin_view_timeout_is_eighteen_hours(self):
-        self.assertEqual(WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 18 * 60 * 60)
+        self.assertEqual(CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 18 * 60 * 60)
 
 
 def _make_role(name: str):
@@ -69,6 +67,21 @@ def _invoke_callback(view, callback_name: str, interaction, button):
 class TestCheckRerollRateLimit(unittest.TestCase):
     def setUp(self):
         weekly_spin._recent_rerolls.clear()
+
+    def test_uses_configured_limit_and_window(self):
+        with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_HOURLY_LIMIT", 1):
+            with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_WINDOW_SECONDS", 10):
+                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1000.0)
+                self.assertTrue(allowed)
+                self.assertEqual(wait, 0)
+
+                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1001.0)
+                self.assertFalse(allowed)
+                self.assertGreater(wait, 0)
+
+                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1010.0)
+                self.assertTrue(allowed)
+                self.assertEqual(wait, 0)
 
     def test_allows_under_limit(self):
         for _ in range(9):
@@ -230,8 +243,8 @@ class TestBuildPostContent(unittest.TestCase):
             result,
         )
         self.assertIn(
-            f"Re-rolling costs <Ingot> **{REROLL_COST:,}** ingots and locking costs "
-            f"<Ingot> **{LOCK_COST:,}** ingots.",
+            f"Re-rolling costs <Ingot> **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and locking costs "
+            f"<Ingot> **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}** ingots.",
             result,
         )
         self.assertNotIn("-# Re-roll window closes", result)
@@ -380,10 +393,10 @@ class TestPostWeeklySpinResult(unittest.IsolatedAsyncioTestCase):
         self.assertIn(
             f"This event will start on <t:{TEST_START_TS}:D> and end on "
             f"<t:{TEST_END_TS}:D>. The active option will automatically be "
-            f"locked <t:{int(1_000_000 + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)}:R>, "
+            f"locked <t:{int(1_000_000 + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)}:R>, "
             "unless a member locks their reroll. "
-            f"Re-rolling costs \U0001f40d **{REROLL_COST:,}** ingots and "
-            f"locking costs \U0001f40d **{LOCK_COST:,}** ingots.",
+            f"Re-rolling costs \U0001f40d **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
+            f"locking costs \U0001f40d **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}** ingots.",
             content,
         )
 
@@ -573,7 +586,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
     @patch("ironforgedbot.commands.admin.weekly_spin.time.time")
     async def test_interaction_check_denies_after_fixed_deadline(self, mock_time):
         self.view.created_at = 1000
-        mock_time.return_value = 1000 + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS + 1
+        mock_time.return_value = 1000 + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS + 1
         interaction = _make_interaction(role_names=["Member"])
 
         result = await self.view.interaction_check(interaction)
@@ -842,8 +855,8 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             f"This event will start on <t:{TEST_START_TS}:D> and end on "
             f"<t:{TEST_END_TS}:D>. The active option will automatically be "
             "locked <t:1234570000:R>, unless a member locks their reroll. "
-            f"Re-rolling costs \U0001f3c3 **{REROLL_COST:,}** ingots and "
-            f"locking costs \U0001f3c3 **{LOCK_COST:,}** ingots.\n\n"
+            f"Re-rolling costs \U0001f3c3 **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
+            f"locking costs \U0001f3c3 **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}** ingots.\n\n"
             "### History\n-# ~~Old~~ rerolled by <@42>\n\n:warning:",
             content,
         )
@@ -930,8 +943,8 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             lock_edit_call.kwargs["content"],
         )
         self.assertIn(
-            f"Re-rolling costs \U0001f3c3 **{REROLL_COST:,}** ingots and "
-            f"locking costs \U0001f3c3 **{LOCK_COST:,}** ingots.",
+            f"Re-rolling costs \U0001f3c3 **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
+            f"locking costs \U0001f3c3 **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}** ingots.",
             lock_edit_call.kwargs["content"],
         )
         self.assertIn(
@@ -1928,7 +1941,10 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             content,
         )
         self.assertIn("The active option will automatically be locked", content)
-        self.assertIn(f"Re-rolling costs \U0001f3c3 **{REROLL_COST:,}**", content)
+        self.assertIn(
+            f"Re-rolling costs \U0001f3c3 **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}**",
+            content,
+        )
 
 
 class TestLockPaymentView(unittest.IsolatedAsyncioTestCase):

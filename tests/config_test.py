@@ -32,6 +32,58 @@ class ConfigTest(unittest.TestCase):
         )
         mock_dotenv.assert_called_once()
 
+    @patch.dict("os.environ", VALID_CONFIG, clear=True)
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_uses_default_weekly_spin_settings(self, mock_dotenv):
+        result = Config()
+
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_COST, 2500)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_HOURLY_LIMIT, 10)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_WINDOW_SECONDS, 3600)
+        self.assertEqual(result.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 64800)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS, 30)
+        self.assertEqual(result.WEEKLY_SPIN_REVEAL_DELAY_SECONDS, 10.5)
+        self.assertEqual(result.WEEKLY_SPIN_LOCK_COST, 10000)
+        self.assertEqual(result.WEEKLY_SPIN_LOCK_WINDOW_SECONDS, 60)
+
+    @patch.dict(
+        "os.environ",
+        {
+            **VALID_CONFIG,
+            "WEEKLY_SPIN_REROLL_COST": "3000",
+            "WEEKLY_SPIN_REROLL_HOURLY_LIMIT": "8",
+            "WEEKLY_SPIN_REROLL_WINDOW_SECONDS": "1800",
+            "WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS": "3600",
+            "WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS": "45",
+            "WEEKLY_SPIN_REVEAL_DELAY_SECONDS": "5.25",
+            "WEEKLY_SPIN_LOCK_COST": "12000",
+            "WEEKLY_SPIN_LOCK_WINDOW_SECONDS": "90",
+        },
+        clear=True,
+    )
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_loads_weekly_spin_settings_from_environment(self, mock_dotenv):
+        result = Config()
+
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_COST, 3000)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_HOURLY_LIMIT, 8)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_WINDOW_SECONDS, 1800)
+        self.assertEqual(result.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 3600)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS, 45)
+        self.assertEqual(result.WEEKLY_SPIN_REVEAL_DELAY_SECONDS, 5.25)
+        self.assertEqual(result.WEEKLY_SPIN_LOCK_COST, 12000)
+        self.assertEqual(result.WEEKLY_SPIN_LOCK_WINDOW_SECONDS, 90)
+
+    @patch.dict(
+        "os.environ",
+        {**VALID_CONFIG, "WEEKLY_SPIN_REVEAL_DELAY_SECONDS": "-1"},
+        clear=True,
+    )
+    @patch("ironforgedcore.config.load_dotenv")
+    def test_rejects_nonpositive_weekly_spin_reveal_delay(self, mock_dotenv):
+        with self.assertRaisesRegex(ValueError, "WEEKLY_SPIN_REVEAL_DELAY_SECONDS"):
+            Config()
+
     def test_raises_value_error_for_empty_string_field(self):
         with patch.dict("os.environ", self.invalid_str_config):
             with self.assertRaises(ValueError) as context:
