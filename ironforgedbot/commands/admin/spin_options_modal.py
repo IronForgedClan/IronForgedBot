@@ -31,7 +31,7 @@ class SpinOptionsModal(discord.ui.Modal):
         title: str,
         base_options: list[str],
         on_result: Callable[
-            [discord.Interaction, discord.File, str, int, int],
+            [discord.Interaction, discord.File, str, int, int, list[str]],
             Awaitable[None],
         ],
     ):
@@ -57,7 +57,7 @@ class SpinOptionsModal(discord.ui.Modal):
         )
         self.add_item(self.start_date_input)
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
         options = [
@@ -105,7 +105,7 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
-        await self.on_result(interaction, file, winner, start_ts, end_ts)
+        await self.on_result(interaction, file, winner, start_ts, end_ts, options)
 
         try:
             await generating_msg.delete()

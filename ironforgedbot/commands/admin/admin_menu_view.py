@@ -191,7 +191,14 @@ class AdminMenuView(View):
 
         options = get_sotw_options()
 
-        async def on_result(interaction, file, winner):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            _start_ts: int,
+            _end_ts: int,
+            _options: list[str],
+        ) -> None:
             skill = next((s for s in data.SKILLS if s["name"] == winner), None)
             emoji = find_emoji(skill["emoji_key"]) if skill else "🎉"
 
@@ -224,7 +231,14 @@ class AdminMenuView(View):
 
         options = get_botw_options()
 
-        async def on_result(interaction, file, winner):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            _start_ts: int,
+            _end_ts: int,
+            _options: list[str],
+        ) -> None:
             boss_name = winner.split(" or ")[0]
             boss = next((b for b in data.BOSSES if b["name"] == boss_name), None)
             emoji = find_emoji(boss["emoji_key"]) if boss else "🎉"
@@ -256,7 +270,14 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        async def on_result(interaction, file, winner):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            _start_ts: int,
+            _end_ts: int,
+            _options: list[str],
+        ) -> None:
             await send_spin_result(
                 interaction,
                 file,
@@ -307,9 +328,16 @@ class AdminMenuView(View):
 
         options = get_sotw_options()
 
-        async def on_result(interaction, file, winner, start_ts, end_ts):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            start_ts: int,
+            end_ts: int,
+            submitted_options: list[str],
+        ) -> None:
             await post_weekly_spin_result(
-                target, "sotw", options, file, winner, start_ts, end_ts
+                target, "sotw", submitted_options, file, winner, start_ts, end_ts
             )
 
         await interaction.response.send_modal(
@@ -336,9 +364,16 @@ class AdminMenuView(View):
 
         options = get_botw_options()
 
-        async def on_result(interaction, file, winner, start_ts, end_ts):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            start_ts: int,
+            end_ts: int,
+            submitted_options: list[str],
+        ) -> None:
             await post_weekly_spin_result(
-                target, "botw", options, file, winner, start_ts, end_ts
+                target, "botw", submitted_options, file, winner, start_ts, end_ts
             )
 
         await interaction.response.send_modal(

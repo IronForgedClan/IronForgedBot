@@ -364,7 +364,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
     ):
         mock_target = Mock()
         mock_get_text_channel.return_value = mock_target
-        mock_get_sotw_options.return_value = []
+        mock_get_sotw_options.return_value = ["default-a", "default-b", "default-c"]
         self.menu.clear_parent = AsyncMock()
         mock_button = Mock()
 
@@ -373,13 +373,18 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         on_result = mock_spin_options_modal.call_args[0][2]
         mock_file = Mock()
         await on_result(
-            self.mock_interaction, mock_file, "Agility", 1700000000, 1700604800
+            self.mock_interaction,
+            mock_file,
+            "Agility",
+            1700000000,
+            1700604800,
+            ["custom-a", "custom-b", "custom-c"],
         )
 
         mock_post_weekly_spin_result.assert_called_once_with(
             mock_target,
             "sotw",
-            [],
+            ["custom-a", "custom-b", "custom-c"],
             mock_file,
             "Agility",
             1700000000,
@@ -399,7 +404,7 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
     ):
         mock_target = Mock()
         mock_get_text_channel.return_value = mock_target
-        mock_get_botw_options.return_value = []
+        mock_get_botw_options.return_value = ["default-a", "default-b", "default-c"]
         self.menu.clear_parent = AsyncMock()
         mock_button = Mock()
 
@@ -408,13 +413,18 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
         on_result = mock_spin_options_modal.call_args[0][2]
         mock_file = Mock()
         await on_result(
-            self.mock_interaction, mock_file, "Zulrah", 1700000000, 1700604800
+            self.mock_interaction,
+            mock_file,
+            "Zulrah",
+            1700000000,
+            1700604800,
+            ["custom-a", "custom-b", "custom-c"],
         )
 
         mock_post_weekly_spin_result.assert_called_once_with(
             mock_target,
             "botw",
-            [],
+            ["custom-a", "custom-b", "custom-c"],
             mock_file,
             "Zulrah",
             1700000000,
@@ -551,9 +561,14 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
         on_result.assert_not_called()
 
-    async def test_valid_date_calls_on_result_with_timestamps(self):
+    @patch("ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file")
+    async def test_valid_date_calls_on_result_with_options_and_timestamps(
+        self, mock_build_spin_gif
+    ):
         on_result = AsyncMock()
-        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        options = ["custom-a", "custom-b", "custom-c"]
+        mock_build_spin_gif.return_value = (Mock(spec=discord.File), options[0])
+        modal = await self._make_modal(on_result, ", ".join(options), "2026-08-01")
 
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
@@ -561,8 +576,10 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
         await modal.on_submit(interaction)
 
+        mock_build_spin_gif.assert_awaited_once_with(options)
         on_result.assert_awaited_once()
         call_args = on_result.await_args
+        self.assertEqual(call_args.args[5], options)
         start_ts = call_args.args[3]
         end_ts = call_args.args[4]
         self.assertEqual(
