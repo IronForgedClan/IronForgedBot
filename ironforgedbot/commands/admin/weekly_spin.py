@@ -277,6 +277,18 @@ def _reroll_close_ts(view: "WeeklySpinView") -> int:
     return int(view.created_at + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)
 
 
+def _reroll_deadline_reached(view: "WeeklySpinView") -> bool:
+    return time.time() >= view.created_at + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS
+
+
+async def _expire_weekly_spin_after_delay(view: "WeeklySpinView", delay: float) -> None:
+    try:
+        await asyncio.sleep(delay)
+    except asyncio.CancelledError:
+        return
+    await view._timeout_at_deadline()
+
+
 async def _add_default_reactions(message: discord.Message) -> None:
     """Add the canonical 👍 + 👎 pair to a spin post.
 
@@ -454,6 +466,14 @@ async def post_weekly_spin_result(
 
     msg = await target.send(file=file, content=pending_content, view=placeholder_view)
     placeholder_view.target_message = msg
+    deadline_delay = max(
+        0,
+        placeholder_view.created_at + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS - time.time(),
+    )
+    placeholder_view._deadline_task = asyncio.create_task(
+        _expire_weekly_spin_after_delay(placeholder_view, deadline_delay),
+        name=f"spin_deadline_{msg.id}",
+    )
 
     await _add_default_reactions(msg)
 
@@ -478,8 +498,8 @@ class WeeklySpinView(View):
     - ``_lock_window_active``: True for LOCK_WINDOW_SECONDS after a reroll
       while the rigger decides whether to lock the result. Disabled
       automatically by the lock-window close helpers.
-    - ``_is_locked``: True once the rigger pays the lock cost. Terminal —
-      all buttons are removed and the event is over.
+    - ``_is_locked``: True once the rigger pays the lock cost or the view
+      expires. Terminal — all buttons are removed and the event is over.
     """
 
     def __init__(
@@ -499,6 +519,9 @@ class WeeklySpinView(View):
         self.created_at: float = time.time()
         self._reveal_task: asyncio.Task | None = None
         self._timed_out: bool = False
+        self._timeout_finalized: bool = False
+        self._timeout_lock = asyncio.Lock()
+        self._deadline_task: asyncio.Task | None = None
 
         # Lock-decision window state.
         self._lock_window_active: bool = False
@@ -568,10 +591,30 @@ class WeeklySpinView(View):
             or not self._reroll_unlocked
             or self._lock_window_active
             or self._is_locked
+            or self._timed_out
+            or _reroll_deadline_reached(self)
         )
         self._reroll_button.disabled = reroll_disabled
 
+    def _deadline_has_passed(self) -> bool:
+        return self._timed_out or _reroll_deadline_reached(self)
+
+    def _request_deadline_expiry(self) -> None:
+        self._timed_out = True
+        self._apply_button_state()
+        if self._deadline_task is None or self._deadline_task.done():
+            self._deadline_task = asyncio.create_task(
+                self._timeout_at_deadline(),
+                name=f"spin_deadline_{self.target_message.id if self.target_message else 0}",
+            )
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if self._deadline_has_passed():
+            self._request_deadline_expiry()
+            await interaction.response.send_message(
+                "The reroll window has closed.", ephemeral=True
+            )
+            return False
         if self._is_locked:
             await interaction.response.send_message(
                 "This spin has been locked.", ephemeral=True
@@ -609,40 +652,81 @@ class WeeklySpinView(View):
             return False
         return True
 
+    async def _timeout_at_deadline(self) -> None:
+        async with self._timeout_lock:
+            if self._timeout_finalized:
+                return
+
+            self._timed_out = True
+            self._apply_button_state()
+            current_task = asyncio.current_task()
+            for task in (self._lock_window_task, self._reveal_task):
+                if task is not None and not task.done() and task is not current_task:
+                    task.cancel()
+            if self._reveal_task is not None and self._reveal_task is not current_task:
+                self._reveal_task = None
+
+            while self.reroll_locked or self._lock_completed:
+                await asyncio.sleep(0.1)
+
+            if (
+                self._deadline_task is not None
+                and self._deadline_task is not current_task
+            ):
+                self._deadline_task.cancel()
+                self._deadline_task = None
+
+            self._lock_window_active = False
+            if self.current_winner is not None:
+                self._is_locked = True
+                if self._pending_reroll is not None:
+                    self.history_lines.append(
+                        _build_consolidated_history_line(
+                            self._pending_reroll["emoji"],
+                            self._pending_reroll["winner"],
+                            self._pending_reroll["mention"],
+                            self._pending_reroll["ts"],
+                            icon=LOCK_EMOJI,
+                        )
+                    )
+                    self._pending_reroll = None
+
+            for item in (
+                self._lock_button,
+                self._dont_lock_button,
+                self._reroll_button,
+            ):
+                if item in self.children:
+                    self.remove_item(item)
+
+            self._timeout_finalized = True
+            self.stop()
+            if self.target_message is not None:
+                if self._is_locked:
+                    edit_kwargs = {
+                        "content": _build_locked_content(self, self.history_lines),
+                        "view": None,
+                    }
+                elif self.current_winner is not None:
+                    edit_kwargs = {
+                        "content": _build_post_content(
+                            self.kind,
+                            self.current_winner,
+                            self.history_lines,
+                            self._start_ts,
+                            self._end_ts,
+                        ),
+                        "view": None,
+                    }
+                else:
+                    edit_kwargs = {"view": None}
+                try:
+                    await self.target_message.edit(**edit_kwargs)
+                except discord.HTTPException:
+                    pass
+
     async def on_timeout(self) -> None:
-        self._timed_out = True
-        if self._lock_window_task is not None and not self._lock_window_task.done():
-            self._lock_window_task.cancel()
-        for item in (
-            self._lock_button,
-            self._dont_lock_button,
-            self._reroll_button,
-        ):
-            if item in self.children:
-                self.remove_item(item)
-        if self.target_message is not None:
-            if self._is_locked:
-                edit_kwargs = {
-                    "content": _build_locked_content(self, self.history_lines),
-                    "view": None,
-                }
-            elif self.current_winner is not None:
-                edit_kwargs = {
-                    "content": _build_post_content(
-                        self.kind,
-                        self.current_winner,
-                        self.history_lines,
-                        self._start_ts,
-                        self._end_ts,
-                    ),
-                    "view": None,
-                }
-            else:
-                edit_kwargs = {"view": None}
-            try:
-                await self.target_message.edit(**edit_kwargs)
-            except discord.HTTPException:
-                pass
+        await self._timeout_at_deadline()
         return await super().on_timeout()
 
     async def _set_lock_disabled(self) -> None:
@@ -757,6 +841,7 @@ class WeeklySpinView(View):
                 await message.edit(content=content, view=None)
             except discord.HTTPException as e:
                 logger.warning(f"Failed to lock spin post: {e}")
+        self._lock_completed = False
 
     async def _close_lock_window_as_open(
         self,
@@ -773,10 +858,15 @@ class WeeklySpinView(View):
                 click and timer expiry) pass ``UNLOCK_EMOJI`` so timer expiry
                 renders identically to an explicit Don't Lock.
 
-                Cancels the pending reveal task — its job was to flip
-                ``_reroll_unlocked`` and reveal the spoiler; we do both ourselves
+        Cancels the pending reveal task — its job was to flip
+        ``_reroll_unlocked`` and reveal the spoiler; we do both ourselves
         here so the post is immediately actionable.
         """
+        if self._deadline_has_passed():
+            self._lock_completed = False
+            self._request_deadline_expiry()
+            return
+
         # Skip self-cancel when the current task is the timer itself. cancel()
         # is a no-op on a finished task, but on a still-running self it raises
         # CancelledError at the next yield, which interrupts this function's
@@ -829,6 +919,7 @@ class WeeklySpinView(View):
                 await message.edit(content=content, view=self)
             except discord.HTTPException as e:
                 logger.warning(f"Failed to close lock window: {e}")
+        self._lock_completed = False
 
     # Discord's persistent-view machinery calls ``item.callback(interaction)``
     # with a single argument; our real handlers also need the Button instance
@@ -845,6 +936,13 @@ class WeeklySpinView(View):
     async def reroll_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
+        if self._deadline_has_passed():
+            self._request_deadline_expiry()
+            await interaction.response.send_message(
+                "The reroll window has closed.", ephemeral=True
+            )
+            return
+
         # Lock synchronously, before any await, so a second click arriving in
         # the same event-loop tick fails `interaction_check` immediately
         # instead of racing through defer / DB lookup / embed build.
@@ -1042,6 +1140,14 @@ class LockPaymentView(View):
         self.completed = True
 
         parent = self.parent_view
+        if parent._deadline_has_passed():
+            await interaction.response.edit_message(
+                content="The reroll window has closed.", embed=None, view=None
+            )
+            await parent._release_lock_payment(self.lock_window_generation)
+            parent._request_deadline_expiry()
+            return
+
         if (
             not parent._lock_window_active
             or parent._is_locked
@@ -1158,6 +1264,14 @@ class RerollPaymentView(View):
             return
         self.completed = True
         parent = self.parent_view
+        if parent._deadline_has_passed():
+            await interaction.response.edit_message(
+                content="The reroll window has closed.", embed=None, view=None
+            )
+            await parent._release_concurrent_lock()
+            parent._request_deadline_expiry()
+            return
+
         if parent.target_message is None:
             await interaction.response.send_message(
                 "Original spin post no longer exists.", ephemeral=True
