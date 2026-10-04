@@ -124,6 +124,12 @@ def _build_spin_headings(kind: WeeklySpinKind, winner: str | None) -> list[str]:
     return [title, winner_heading]
 
 
+def _build_history_section(history_lines: list[str]) -> list[str]:
+    if not history_lines:
+        return []
+    return ["### History", *(f"-# {line}" for line in history_lines)]
+
+
 def _build_post_content(
     kind: WeeklySpinKind,
     winner: str,
@@ -137,15 +143,15 @@ def _build_post_content(
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
-    bulleted = [f"- {line}" for line in history_lines]
+    history_section = _build_history_section(history_lines)
     content_lines = [
         *headings,
         "",
         event_schedule_paragraph,
         "",
-        *bulleted,
+        *history_section,
     ]
-    if not bulleted:
+    if not history_section:
         content_lines.append("")
     return "\n".join(content_lines)
 
@@ -166,15 +172,15 @@ def _build_pending_content(
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
-    bulleted = [f"- {line}" for line in history_lines]
+    history_section = _build_history_section(history_lines)
     content_lines = [
         *headings,
         "",
         event_schedule_paragraph,
         "",
-        *bulleted,
+        *history_section,
     ]
-    if not bulleted:
+    if not history_section:
         content_lines.append("")
     return "\n".join(content_lines)
 
@@ -201,18 +207,12 @@ def _build_lock_window_content(
         f":warning: {user_mention} rerolled. They must decide whether to lock it "
         f"before their chance to lock expires <t:{lock_close_ts}:R>."
     )
-    bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join(
-        [
-            *headings,
-            "",
-            event_schedule_paragraph,
-            "",
-            *bulleted,
-            "",
-            lock_decision_sentence,
-        ]
-    )
+    history_section = _build_history_section(history_lines)
+    content_lines = [*headings, "", event_schedule_paragraph, "", *history_section]
+    if history_section:
+        content_lines.append("")
+    content_lines.append(lock_decision_sentence)
+    return "\n".join(content_lines)
 
 
 def _build_locked_content(
@@ -239,10 +239,10 @@ def _build_locked_content(
         if locked_at
         else f"{LOCK_EMOJI} The reroll window is now closed."
     )
-    bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join(
-        [*headings, "", event_schedule_paragraph, "", locked_sentence, "", *bulleted]
-    )
+    history_section = _build_history_section(history_lines)
+    content_lines = [*headings, "", event_schedule_paragraph, "", locked_sentence, ""]
+    content_lines.extend(history_section)
+    return "\n".join(content_lines)
 
 
 def _check_reroll_rate_limit(

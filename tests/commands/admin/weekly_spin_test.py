@@ -110,6 +110,7 @@ class TestBuildPostContent(unittest.TestCase):
             )
         )
         self.assertIn("This event will run from <t:", result)
+        self.assertNotIn("### History", result)
         self.assertTrue(result.endswith("\n\n"))
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -125,6 +126,7 @@ class TestBuildPostContent(unittest.TestCase):
             )
         )
         self.assertIn("This event will run from <t:", result)
+        self.assertNotIn("### History", result)
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -139,7 +141,7 @@ class TestBuildPostContent(unittest.TestCase):
         self.assertIn(
             "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
         )
-        self.assertIn("- ~~Crafting~~ rerolled by @User1", result)
+        self.assertIn("### History\n-# ~~Crafting~~ rerolled by @User1", result)
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -153,10 +155,10 @@ class TestBuildPostContent(unittest.TestCase):
         result = _build_post_content(
             "botw", "Zulrah", history, TEST_START_TS, TEST_END_TS
         )
-        self.assertIn("- ~~Crafting~~ rerolled by @User1", result)
-        self.assertIn("- ~~Agility~~ rerolled by @User2", result)
+        self.assertIn("### History\n-# ~~Crafting~~ rerolled by @User1", result)
+        self.assertIn("-# ~~Agility~~ rerolled by @User2", result)
 
-    def test_history_renders_as_bullet_list(self):
+    def test_history_renders_in_small_text_under_heading(self):
         with patch(
             "ironforgedbot.commands.admin.weekly_spin.data",
             SKILLS=[{"name": "Agility", "emoji_key": "agility"}],
@@ -171,7 +173,7 @@ class TestBuildPostContent(unittest.TestCase):
                     TEST_END_TS,
                     reroll_close_ts=1,
                 )
-        self.assertIn("- ~~X~~ rerolled by @U", result)
+        self.assertIn("### History\n-# ~~X~~ rerolled by @U", result)
 
     def test_description_paragraph_has_blank_lines_above_and_below(self):
         with patch(
@@ -190,7 +192,7 @@ class TestBuildPostContent(unittest.TestCase):
         self.assertIn(
             f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
             f"This event will run from <t:{TEST_START_TS}:D> through <t:{TEST_END_TS}:D>.\n\n"
-            "- ~~X~~ rerolled by @U",
+            "### History\n-# ~~X~~ rerolled by @U",
             result,
         )
 
@@ -231,12 +233,13 @@ class TestBuildPendingContent(unittest.TestCase):
         self.assertIn(
             "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
         )
+        self.assertNotIn("### History", result)
         self.assertTrue(result.endswith("\n\n"))
 
     def test_pending_with_history_includes_history_lines(self):
         history = ["~~Crafting~~ rerolled by @User1"]
         result = _build_pending_content("sotw", history, TEST_START_TS, TEST_END_TS)
-        self.assertIn("- ~~Crafting~~ rerolled by @User1", result)
+        self.assertIn("### History\n-# ~~Crafting~~ rerolled by @User1", result)
 
     def test_pending_validates_kind(self):
         with self.assertRaises(ValueError):
@@ -831,7 +834,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertIn(
             f"This event will run from <t:{TEST_START_TS}:D> through "
             f"<t:{TEST_END_TS}:D>. The re-roll window closes <t:1234570000:R>.\n\n"
-            "- ~~Old~~ rerolled by <@42>\n\n:warning:",
+            "### History\n-# ~~Old~~ rerolled by <@42>\n\n:warning:",
             content,
         )
         self.assertIn(f"The re-roll window closes <t:1234570000:R>.", content)
@@ -875,7 +878,8 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             f"This event will run from <t:{TEST_START_TS}:D> through "
             f"<t:{TEST_END_TS}:D>.\n\n{LOCK_EMOJI} "
             f"Locked <t:{self.view._locked_at}:R>. The reroll window is now closed.\n\n"
-            f"- \U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> {LOCK_EMOJI}",
+            "### History\n-# "
+            f"\U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> {LOCK_EMOJI}",
             content,
         )
 
@@ -919,6 +923,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             f"<t:{self.view._lock_window_end_ts}:R>",
             lock_edit_call.kwargs["content"],
         )
+        self.assertNotIn("### History", lock_edit_call.kwargs["content"])
 
         # Lock-window task scheduled and not yet done
         self.assertIsNotNone(self.view._lock_window_task)
@@ -1620,6 +1625,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertIn("content", edit_kwargs)
         self.assertNotIn("Re-roll window closes", edit_kwargs["content"])
         self.assertIn("\U0001f512", edit_kwargs["content"])
+        self.assertNotIn("### History", edit_kwargs["content"])
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
