@@ -1194,8 +1194,13 @@ class RerollPaymentView(View):
         # need the user staring at the prompt.
         await self._delete_self(interaction)
 
+        previous_winner = parent.current_winner or ""
+        reroll_options = [
+            option for option in parent.options if option != previous_winner
+        ]
+
         try:
-            new_file, new_winner = await build_spin_gif_file(parent.options)
+            new_file, new_winner = await build_spin_gif_file(reroll_options)
         except Exception as e:
             logger.error(f"Re-roll GIF generation failed: {e}")
             await interaction.followup.send(
@@ -1207,8 +1212,8 @@ class RerollPaymentView(View):
             return
 
         parent._pending_reroll = {
-            "winner": parent.current_winner or "",
-            "emoji": _lookup_emoji(parent.kind, parent.current_winner or ""),
+            "winner": previous_winner,
+            "emoji": _lookup_emoji(parent.kind, previous_winner),
             "mention": interaction.user.mention,
             "ts": int(time.time()),
         }

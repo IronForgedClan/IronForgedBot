@@ -2104,6 +2104,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
     ):
         mock_data.SKILLS = [{"name": "NewSkill", "emoji_key": "newskill"}]
         mock_find_emoji.return_value = "\U0001f3c3"
+        self.parent_view.options = ["OldSkill", "NewSkill", "ThirdSkill"]
 
         success_response = MagicMock()
         success_response.status = True
@@ -2133,7 +2134,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(call_args.args[2])
         self.assertIn("Reroll weekly spin: SOTW", call_args.args[3])
 
-        mock_build_spin_gif.assert_called_once_with(self.options)
+        mock_build_spin_gif.assert_called_once_with(["NewSkill", "ThirdSkill"])
         # The pending post-reveal edit carries the new GIF; the lock-window
         # edit fires after that with the countdown footer.
         pending_edits = [
@@ -2230,6 +2231,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji,
     ):
         mock_data.SKILLS = [
+            {"name": "OldSkill", "emoji_key": "oldskill"},
             {"name": "NewSkill", "emoji_key": "newskill"},
             {"name": "ThirdSkill", "emoji_key": "thirdskill"},
         ]
@@ -2246,10 +2248,11 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         mock_service.try_remove_ingots = AsyncMock(return_value=success_response)
         mock_create_ingot_service.return_value = mock_service
 
+        self.parent_view.options = ["OldSkill", "NewSkill", "ThirdSkill"]
         new_file = MagicMock(spec=discord.File)
         mock_build_spin_gif.side_effect = [
             (new_file, "NewSkill"),
-            (new_file, "ThirdSkill"),
+            (new_file, "OldSkill"),
         ]
 
         interaction1 = _make_interaction(user_id=111)
@@ -2265,11 +2268,10 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         # After the first confirm, the consolidated line is staged but not
         # yet appended; ``_pending_reroll`` holds the previous winner /
         # emoji / mention / timestamp for the (still-pending) first
-        # decision. OldSkill isn't in mock_data.SKILLS so the lookup falls
-        # back to the generic party-popper.
+        # decision. OldSkill resolves to the mocked skill emoji.
         self.assertEqual(self.parent_view.history_lines, [])
         self.assertEqual(self.parent_view._pending_reroll["winner"], "OldSkill")
-        self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f389")
+        self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f3c3")
         self.assertEqual(self.parent_view._pending_reroll["mention"], "<@111>")
 
         await _invoke_callback(view2, "confirm_button", interaction2, button)
@@ -2282,7 +2284,18 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.parent_view._pending_reroll["winner"], "NewSkill")
         self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f3c3")
         self.assertEqual(self.parent_view._pending_reroll["mention"], "<@222>")
-        self.assertEqual(self.parent_view.current_winner, "ThirdSkill")
+        self.assertEqual(self.parent_view.current_winner, "OldSkill")
+        self.assertEqual(
+            mock_build_spin_gif.call_args_list[0].args[0],
+            ["NewSkill", "ThirdSkill"],
+        )
+        self.assertEqual(
+            mock_build_spin_gif.call_args_list[1].args[0],
+            ["OldSkill", "ThirdSkill"],
+        )
+        self.assertEqual(
+            self.parent_view.options, ["OldSkill", "NewSkill", "ThirdSkill"]
+        )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
