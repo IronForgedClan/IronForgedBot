@@ -2287,6 +2287,73 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    @patch("ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file")
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_deadline_waits_for_reroll_post_edit_then_locks_result(
+        self,
+        mock_db,
+        mock_create_ingot_service,
+        mock_build_spin_gif,
+        mock_data,
+        mock_find_emoji,
+    ):
+        mock_data.SKILLS = [
+            {"name": "OldSkill", "emoji_key": "oldskill"},
+            {"name": "NewSkill", "emoji_key": "newskill"},
+        ]
+        mock_find_emoji.return_value = "\U0001f3c3"
+        self.parent_view.options = ["OldSkill", "NewSkill"]
+        self.parent_view.reroll_locked = True
+
+        success_response = MagicMock(status=True, new_total=5000)
+        mock_session = AsyncMock()
+        mock_session.__aenter__.return_value = mock_session
+        mock_session.__aexit__.return_value = None
+        mock_db.get_session.return_value = mock_session
+        mock_service = AsyncMock()
+        mock_service.try_remove_ingots = AsyncMock(return_value=success_response)
+        mock_create_ingot_service.return_value = mock_service
+        mock_build_spin_gif.return_value = (MagicMock(spec=discord.File), "NewSkill")
+
+        edit_started = asyncio.Event()
+        finish_edit = asyncio.Event()
+
+        async def delayed_edit(*args, **kwargs):
+            if kwargs == {"view": self.parent_view}:
+                edit_started.set()
+                await finish_edit.wait()
+
+        self.target_message.edit.side_effect = delayed_edit
+        interaction = _make_interaction(user_id=999)
+        reroll_task = asyncio.create_task(
+            _invoke_callback(
+                self.view,
+                "confirm_button",
+                interaction,
+                MagicMock(spec=discord.ui.Button),
+            )
+        )
+        await edit_started.wait()
+
+        expiry_task = asyncio.create_task(self.parent_view._timeout_at_deadline())
+        await asyncio.sleep(0)
+        self.assertFalse(self.parent_view._timeout_finalized)
+
+        finish_edit.set()
+        await reroll_task
+        await expiry_task
+
+        self.assertEqual(self.parent_view.current_winner, "NewSkill")
+        self.assertTrue(self.parent_view._is_locked)
+        self.assertFalse(self.parent_view._lock_window_active)
+        self.assertNotIn(self.parent_view._lock_button, self.parent_view.children)
+        self.assertNotIn(self.parent_view._dont_lock_button, self.parent_view.children)
+        self.assertNotIn(self.parent_view._reroll_button, self.parent_view.children)
+        self.assertIsNone(self.target_message.edit.call_args.kwargs["view"])
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
     async def test_confirm_after_reroll_deadline_does_not_charge(
         self, mock_db, mock_data, mock_find_emoji

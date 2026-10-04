@@ -522,6 +522,8 @@ class WeeklySpinView(View):
         self._timeout_finalized: bool = False
         self._timeout_lock = asyncio.Lock()
         self._deadline_task: asyncio.Task | None = None
+        self._reroll_confirmation_task: asyncio.Task | None = None
+        self._reroll_release_count: int = 0
 
         # Lock-decision window state.
         self._lock_window_active: bool = False
@@ -602,6 +604,8 @@ class WeeklySpinView(View):
     def _request_deadline_expiry(self) -> None:
         self._timed_out = True
         self._apply_button_state()
+        if self._timeout_finalized or self._timeout_lock.locked():
+            return
         if self._deadline_task is None or self._deadline_task.done():
             self._deadline_task = asyncio.create_task(
                 self._timeout_at_deadline(),
@@ -666,7 +670,16 @@ class WeeklySpinView(View):
             if self._reveal_task is not None and self._reveal_task is not current_task:
                 self._reveal_task = None
 
-            while self.reroll_locked or self._lock_completed:
+            while (
+                self.reroll_locked
+                or self._lock_completed
+                or self._reroll_release_count > 0
+                or (
+                    self._reroll_confirmation_task is not None
+                    and self._reroll_confirmation_task is not current_task
+                    and not self._reroll_confirmation_task.done()
+                )
+            ):
                 await asyncio.sleep(0.1)
 
             if (
@@ -741,13 +754,21 @@ class WeeklySpinView(View):
 
     async def _release_concurrent_lock(self) -> None:
         """Release the concurrent reroll lock without touching the reveal lock."""
+        self._reroll_release_count += 1
         self.reroll_locked = False
         self._apply_button_state()
-        if self.target_message is not None:
-            try:
-                await self.target_message.edit(view=self)
-            except discord.HTTPException:
-                pass
+        try:
+            if (
+                self.target_message is not None
+                and not self._timed_out
+                and not _reroll_deadline_reached(self)
+            ):
+                try:
+                    await self.target_message.edit(view=self)
+                except discord.HTTPException:
+                    pass
+        finally:
+            self._reroll_release_count -= 1
 
     async def _open_lock_window(self, *, user_id: int) -> None:
         """Enter the LOCK_WINDOW state for ``user_id``.
@@ -757,6 +778,10 @@ class WeeklySpinView(View):
         background timer that closes the window silently after
         ``LOCK_WINDOW_SECONDS``.
         """
+        if self._deadline_has_passed():
+            self._request_deadline_expiry()
+            return
+
         if self._lock_window_task is not None and not self._lock_window_task.done():
             self._lock_window_task.cancel()
 
@@ -1278,6 +1303,7 @@ class RerollPaymentView(View):
             )
             return
 
+        parent._reroll_confirmation_task = asyncio.current_task()
         await interaction.response.defer(ephemeral=True)
         self.message = await interaction.original_response()
 
