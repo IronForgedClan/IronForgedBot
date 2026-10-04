@@ -10,6 +10,7 @@ from discord.ui import View
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.payment_embed import build_payment_embed, load_flavor_text
 from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.services.service_factory import create_ingot_service
 from ironforgedcore.common.roles import ROLE
@@ -89,8 +90,7 @@ def _build_consolidated_history_line(
     (optionally) the decision icon. ``icon=None`` yields the no-decision
     form; the two production callers (Don't Lock click and timer expiry)
     both pass ``UNLOCK_EMOJI`` so timer expiry renders identically to an
-    explicit Don't Lock. The emoji uses the same leading position as the
-    post header (``||emoji winner||``).
+    explicit Don't Lock. The winner emoji leads the spoiler heading.
     """
     line = (
         f"{winner_emoji} ~~{previous_winner}~~ rerolled by {user_mention} "
@@ -112,6 +112,18 @@ def _build_event_schedule_paragraph(
     return paragraph
 
 
+def _build_spin_headings(kind: WeeklySpinKind, winner: str | None) -> list[str]:
+    _validate_kind(kind)
+    title = f"# {find_emoji('DWH') or ':DWH:'} The next {kind.upper()} is..."
+    if winner is None:
+        winner_heading = "## ..."
+    else:
+        winner_emoji = _lookup_emoji(kind, winner)
+        padded_winner = pad_winner_text(winner_emoji, winner)
+        winner_heading = f"## ||{padded_winner}||"
+    return [title, winner_heading]
+
+
 def _build_post_content(
     kind: WeeklySpinKind,
     winner: str,
@@ -120,23 +132,22 @@ def _build_post_content(
     end_ts: int,
     reroll_close_ts: int | None = None,
 ) -> str:
-    """Compose the full post content with the spoiler winner inside the header."""
-    emoji = _lookup_emoji(kind, winner)
-    header = (
-        f"# {find_emoji('DWH') or ':DWH:'} "
-        f"The next {kind.upper()} is ||{emoji} {winner}||"
-    )
+    """Compose revealed post content with the winner in a padded spoiler heading."""
+    headings = _build_spin_headings(kind, winner)
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
     bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join(
-        [
-            header,
-            event_schedule_paragraph,
-            *bulleted,
-        ]
-    )
+    content_lines = [
+        *headings,
+        "",
+        event_schedule_paragraph,
+        "",
+        *bulleted,
+    ]
+    if not bulleted:
+        content_lines.append("")
+    return "\n".join(content_lines)
 
 
 def _build_pending_content(
@@ -148,22 +159,24 @@ def _build_pending_content(
 ) -> str:
     """Compose post content while the result is still pending reveal.
 
-    Header ends with `...` to signal the result is incoming; the background
-    reveal task replaces this with the spoiler-tagged winner.
+    Keep both heading lines stable during reveal. The H2 winner placeholder is
+    replaced with the spoiler-tagged winner after the reveal delay.
     """
-    _validate_kind(kind)
-    header = f"# {find_emoji('DWH') or ':DWH:'} The next {kind.upper()} is..."
+    headings = _build_spin_headings(kind, None)
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
     bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join(
-        [
-            header,
-            event_schedule_paragraph,
-            *bulleted,
-        ]
-    )
+    content_lines = [
+        *headings,
+        "",
+        event_schedule_paragraph,
+        "",
+        *bulleted,
+    ]
+    if not bulleted:
+        content_lines.append("")
+    return "\n".join(content_lines)
 
 
 def _build_lock_window_content(
@@ -180,11 +193,7 @@ def _build_lock_window_content(
 
     Identifies the reroller and displays their lock-decision deadline.
     """
-    emoji = _lookup_emoji(kind, winner)
-    header = (
-        f"# {find_emoji('DWH') or ':DWH:'} "
-        f"The next {kind.upper()} is ||{emoji} {winner}||"
-    )
+    headings = _build_spin_headings(kind, winner)
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
@@ -195,8 +204,10 @@ def _build_lock_window_content(
     bulleted = [f"- {line}" for line in history_lines]
     return "\n".join(
         [
-            header,
+            *headings,
+            "",
             event_schedule_paragraph,
+            "",
             *bulleted,
             "",
             lock_decision_sentence,
@@ -210,9 +221,8 @@ def _build_locked_content(
 ) -> str:
     """Compose post content for the terminal locked state.
 
-    Adds the lock emoji to the header, keeps the reroll + lock-decision
-    history, and strips the footers. All buttons are removed at the View
-    level; this helper just produces the body.
+    Keeps the reroll + lock-decision history and strips the footers. All
+    buttons are removed at the View level; this helper just produces the body.
 
     Sentences reflect the duration and the locked timestamp captured when
     the rigger paid the lock cost.
@@ -222,19 +232,17 @@ def _build_locked_content(
     start_ts = self._start_ts
     end_ts = self._end_ts
     locked_at = self._locked_at
-    emoji = _lookup_emoji(kind, winner)
-    header = (
-        f"# {find_emoji('DWH') or ':DWH:'} "
-        f"The next {kind.upper()} is ||{emoji} {winner}|| {LOCK_EMOJI}"
-    )
+    headings = _build_spin_headings(kind, winner)
     event_schedule_paragraph = _build_event_schedule_paragraph(start_ts, end_ts)
     locked_sentence = (
-        f"Locked <t:{locked_at}:R>. The reroll window is now closed."
+        f"{LOCK_EMOJI} Locked <t:{locked_at}:R>. The reroll window is now closed."
         if locked_at
-        else "The reroll window is now closed."
+        else f"{LOCK_EMOJI} The reroll window is now closed."
     )
     bulleted = [f"- {line}" for line in history_lines]
-    return "\n".join([header, event_schedule_paragraph, locked_sentence, *bulleted])
+    return "\n".join(
+        [*headings, "", event_schedule_paragraph, "", locked_sentence, "", *bulleted]
+    )
 
 
 def _check_reroll_rate_limit(
@@ -310,8 +318,7 @@ async def _reveal_winner_after_delay(
     history_lines: list[str],
     reroll_close_ts: int,
 ) -> None:
-    """Background task: wait REVEAL_DELAY_SECONDS, then edit the message to
-    reveal the spoiler winner inside the header line.
+    """Background task: wait REVEAL_DELAY_SECONDS, then reveal winner in H2.
 
     Skips the edit if the view has already timed out.
 
@@ -709,10 +716,9 @@ class WeeklySpinView(View):
 
         Removes all buttons, appends the consolidated history line for the
         pending reroll (capped with the lock icon), edits the target message
-        with the locked content (no footer, 🔒 in header).
+        with the locked content (no footer, 🔒 in status).
 
-        Cancels the pending reveal task — if it fired later it would
-        overwrite the 🔒 header with a plain spoiler header.
+        Cancels pending reveal task so it cannot overwrite locked post content.
         """
         if self._lock_window_task is not None and not self._lock_window_task.done():
             self._lock_window_task.cancel()

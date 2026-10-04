@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import discord
 
 from ironforgedbot.commands.admin import weekly_spin
+from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.admin.weekly_spin import (
     LOCK_EMOJI,
     LockPaymentView,
@@ -100,18 +101,29 @@ class TestBuildPostContent(unittest.TestCase):
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
     def test_sotw_no_history(self, mock_data, mock_find_emoji):
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
+        mock_find_emoji.side_effect = ["<DWH>", "<Agility>"]
         result = _build_post_content("sotw", "Agility", [], TEST_START_TS, TEST_END_TS)
-        self.assertIn("The next SOTW is ||\U0001f3c3 Agility||", result)
+        self.assertTrue(
+            result.startswith(
+                f"# <DWH> The next SOTW is...\n## ||"
+                f"{pad_winner_text('<Agility>', 'Agility')}||\n\n"
+            )
+        )
         self.assertIn("This event will run from <t:", result)
+        self.assertTrue(result.endswith("\n\n"))
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
     def test_botw_no_history(self, mock_data, mock_find_emoji):
         mock_data.BOSSES = [{"name": "Zulrah", "emoji_key": "zulrah"}]
-        mock_find_emoji.return_value = "\U0001f40d"
+        mock_find_emoji.side_effect = ["<DWH>", "<Zulrah>"]
         result = _build_post_content("botw", "Zulrah", [], TEST_START_TS, TEST_END_TS)
-        self.assertIn("The next BOTW is ||\U0001f40d Zulrah||", result)
+        self.assertTrue(
+            result.startswith(
+                f"# <DWH> The next BOTW is...\n## ||"
+                f"{pad_winner_text('<Zulrah>', 'Zulrah')}||\n\n"
+            )
+        )
         self.assertIn("This event will run from <t:", result)
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -123,7 +135,7 @@ class TestBuildPostContent(unittest.TestCase):
         result = _build_post_content(
             "sotw", "Agility", history, TEST_START_TS, TEST_END_TS
         )
-        self.assertIn("The next SOTW is ||\U0001f3c3 Agility||", result)
+        self.assertIn(f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||", result)
         self.assertIn(
             "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
         )
@@ -161,7 +173,7 @@ class TestBuildPostContent(unittest.TestCase):
                 )
         self.assertIn("- ~~X~~ rerolled by @U", result)
 
-    def test_no_blank_line_when_no_footer(self):
+    def test_description_paragraph_has_blank_lines_above_and_below(self):
         with patch(
             "ironforgedbot.commands.admin.weekly_spin.data",
             SKILLS=[{"name": "Agility", "emoji_key": "agility"}],
@@ -175,7 +187,12 @@ class TestBuildPostContent(unittest.TestCase):
                     TEST_START_TS,
                     TEST_END_TS,
                 )
-        self.assertNotIn("\n\n-#", result)
+        self.assertIn(
+            f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
+            f"This event will run from <t:{TEST_START_TS}:D> through <t:{TEST_END_TS}:D>.\n\n"
+            "- ~~X~~ rerolled by @U",
+            result,
+        )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -210,10 +227,11 @@ class TestBuildPostContent(unittest.TestCase):
 class TestBuildPendingContent(unittest.TestCase):
     def test_pending_header_signals_incoming_result(self):
         result = _build_pending_content("sotw", [], TEST_START_TS, TEST_END_TS)
-        self.assertIn("The next SOTW is...", result)
+        self.assertTrue(result.startswith("# :DWH: The next SOTW is...\n## ...\n\n"))
         self.assertIn(
             "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
         )
+        self.assertTrue(result.endswith("\n\n"))
 
     def test_pending_with_history_includes_history_lines(self):
         history = ["~~Crafting~~ rerolled by @User1"]
@@ -675,7 +693,11 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         edit_kwargs = self.target_message.edit.call_args.kwargs
         self.assertIn("content", edit_kwargs)
         self.assertNotIn("-# Re-roll window", edit_kwargs["content"])
-        self.assertIn("The next SOTW is ||\U0001f40d Zulrah||", edit_kwargs["content"])
+        self.assertIn("The next SOTW is...", edit_kwargs["content"])
+        self.assertIn(
+            f"## ||{pad_winner_text('\U0001f40d', 'Zulrah')}||",
+            edit_kwargs["content"],
+        )
 
     async def test_on_timeout_without_current_winner_skips_content_edit(self):
         self.view.target_message = self.target_message
@@ -774,7 +796,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    async def test_build_lock_window_content_shows_rigger_deadline_and_expiry(
+    async def test_build_lock_window_content_shows_padded_spoiler_and_deadline(
         self, mock_data, mock_find_emoji
     ):
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
@@ -790,7 +812,13 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             end_ts=TEST_END_TS,
             reroll_close_ts=1234570000,
         )
-        self.assertIn("The next SOTW is ||\U0001f3c3 Agility||", content)
+        self.assertTrue(
+            content.startswith(
+                f"# \U0001f3c3 The next SOTW is...\n## ||"
+                f"{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
+            )
+        )
+        self.assertNotIn(LOCK_EMOJI, content.splitlines()[0])
         self.assertIn(f"<t:{TEST_START_TS}:D>", content)
         self.assertIn(f"<t:{TEST_END_TS}:D>", content)
         self.assertIn("<@42>", content)
@@ -800,10 +828,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             "before their chance to lock expires <t:1234567890:R>.",
             content,
         )
+        self.assertIn(
+            f"This event will run from <t:{TEST_START_TS}:D> through "
+            f"<t:{TEST_END_TS}:D>. The re-roll window closes <t:1234570000:R>.\n\n"
+            "- ~~Old~~ rerolled by <@42>\n\n:warning:",
+            content,
+        )
         self.assertIn(f"The re-roll window closes <t:1234570000:R>.", content)
         self.assertNotIn("-# Re-roll window closes", content)
 
-    def test_build_locked_content_appends_lock_emoji(self):
+    def test_build_locked_content_keeps_lock_emoji_out_of_heading(self):
         # The locked-content helper now operates on a WeeklySpinView
         # instance (it sources start_ts/end_ts/locked_at from self).
         self.view.current_winner = "Agility"
@@ -823,12 +857,25 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
                     "\U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f512",
                 ],
             )
-        self.assertIn("The next SOTW is ||\U0001f3c3 Agility|| \U0001f512", content)
+        self.assertTrue(
+            content.startswith(
+                f"# \U0001f3c3 The next SOTW is...\n## ||"
+                f"{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
+            )
+        )
+        self.assertNotIn(LOCK_EMOJI, content.splitlines()[0])
         self.assertNotIn("Re-roll window closes", content)
         self.assertIn("\U0001f3c3 ~~OldSkill~~ rerolled by <@999>", content)
         self.assertIn("This event will run from", content)
         self.assertIn(
             f"Locked <t:{self.view._locked_at}:R>. The reroll window is now closed.",
+            content,
+        )
+        self.assertIn(
+            f"This event will run from <t:{TEST_START_TS}:D> through "
+            f"<t:{TEST_END_TS}:D>.\n\n{LOCK_EMOJI} "
+            f"Locked <t:{self.view._locked_at}:R>. The reroll window is now closed.\n\n"
+            f"- \U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> {LOCK_EMOJI}",
             content,
         )
 
@@ -1234,7 +1281,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.target_message.delete.assert_not_called()
         interaction.delete_original_response.assert_not_called()
         final_edit = self.target_message.edit.call_args_list[-1]
-        self.assertIn("The next SOTW is ||", final_edit.kwargs["content"])
+        self.assertIn("The next SOTW is...", final_edit.kwargs["content"])
         self.assertIn("\U0001f513", final_edit.kwargs["content"])
         self.assertIn("<@999>", final_edit.kwargs["content"])
 
