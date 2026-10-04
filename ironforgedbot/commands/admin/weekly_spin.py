@@ -27,6 +27,7 @@ REROLL_WINDOW_SECONDS = 3600
 WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS = 86400
 REROLL_PAYMENT_TIMEOUT_SECONDS = 30
 REROLL_PAYMENT_TITLE = "\U0001f4b0 Re-roll Weekly Spin"
+LOCK_PAYMENT_TITLE = "\U0001f4b0 Lock Weekly Spin"
 REVEAL_DELAY_SECONDS = 10.5
 LOCK_COST = 10000
 LOCK_WINDOW_SECONDS = 60
@@ -379,15 +380,18 @@ async def _lock_window_timer(
 
     Mirrors the cancellation discipline of ``_reveal_winner_after_delay``.
     Closing silently (no history line) implements the "default = don't lock"
-    semantics on timeout.
+    semantics on timeout. Keep the window open while a lock payment prompt is
+    active so payment cannot race the timeout.
     """
     try:
         await asyncio.sleep(LOCK_WINDOW_SECONDS)
+        while view._lock_completed and view._lock_window_active:
+            await asyncio.sleep(1)
     except asyncio.CancelledError:
         logger.debug("Lock window timer cancelled")
         raise
 
-    if view._timed_out:
+    if view._timed_out or not view._lock_window_active:
         return
 
     await view._close_lock_window_as_open(
@@ -492,6 +496,7 @@ class WeeklySpinView(View):
         # Lock-decision window state.
         self._lock_window_active: bool = False
         self._lock_window_end_ts: int = 0
+        self._lock_window_generation: int = 0
         self._lock_window_user_id: int | None = None
         self._is_locked: bool = False
         self._lock_window_task: asyncio.Task | None = None
@@ -665,6 +670,7 @@ class WeeklySpinView(View):
             self._lock_window_task.cancel()
 
         self._lock_window_active = True
+        self._lock_window_generation += 1
         self._lock_window_user_id = user_id
         self._lock_window_end_ts = int(time.time()) + LOCK_WINDOW_SECONDS
         self._is_locked = False
@@ -898,32 +904,64 @@ class WeeklySpinView(View):
             return
         if self._lock_completed:
             return
-        self._lock_completed = True
-
-        await interaction.response.defer(ephemeral=True)
-
-        async with db.get_session() as session:
-            ingot_service = create_ingot_service(session)
-            result = await ingot_service.try_remove_ingots(
-                interaction.user.id,
-                -LOCK_COST,
-                None,
-                f"Lock weekly spin: {self.kind.upper()}",
+        if not self._lock_window_active or self._is_locked:
+            await interaction.response.send_message(
+                "The lock window has closed.", ephemeral=True
             )
-
-        if not result.status:
-            ingot_icon = find_emoji("Ingot")
-            error_embed = build_response_embed(
-                title="\u274c Insufficient Funds",
-                description=f"Locking costs {ingot_icon} **{LOCK_COST:,}**.",
-                color=discord.Colour.red(),
-            )
-            await interaction.followup.send(embed=error_embed)
-            # Allow another lock attempt within the same window.
-            self._lock_completed = False
             return
+        self._lock_completed = True
+        lock_window_generation = self._lock_window_generation
 
-        await self._close_lock_window_as_locked()
+        try:
+            await interaction.response.defer(ephemeral=True)
+
+            async with db.get_session() as session:
+                member_service = MemberService(session)
+                member = await member_service.get_member_by_discord_id(
+                    interaction.user.id
+                )
+                user_balance = member.ingots if member else 0
+
+            if (
+                not self._lock_window_active
+                or self._lock_window_generation != lock_window_generation
+                or self._lock_window_user_id != interaction.user.id
+            ):
+                await self._release_lock_payment(lock_window_generation)
+                await interaction.followup.send(
+                    "The lock window has closed.", ephemeral=True
+                )
+                return
+
+            try:
+                flavor_text_options = load_flavor_text()
+                flavor_text = f"*{random.choice(flavor_text_options)}*\n"
+            except Exception as e:
+                logger.error(f"Failed to load flavor text: {e}")
+                flavor_text = ""
+
+            embed = build_payment_embed(
+                cost=LOCK_COST,
+                user_balance=user_balance,
+                flavor_text=flavor_text,
+                title=LOCK_PAYMENT_TITLE,
+            )
+
+            view = LockPaymentView(
+                parent_view=self,
+                user_id=interaction.user.id,
+                lock_window_generation=lock_window_generation,
+            )
+            view.message = await interaction.followup.send(
+                embed=embed, view=view, ephemeral=True
+            )
+        except Exception:
+            await self._release_lock_payment(lock_window_generation)
+            raise
+
+    async def _release_lock_payment(self, generation: int) -> None:
+        if generation == self._lock_window_generation and not self._is_locked:
+            self._lock_completed = False
 
     async def dont_lock_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -944,6 +982,122 @@ class WeeklySpinView(View):
             message=self.target_message,
             history_icon=UNLOCK_EMOJI,
         )
+
+
+class LockPaymentView(View):
+    """Ephemeral Confirm/Cancel view for lock payment."""
+
+    def __init__(
+        self,
+        *,
+        parent_view: WeeklySpinView,
+        user_id: int,
+        lock_window_generation: int,
+    ):
+        super().__init__(timeout=REROLL_PAYMENT_TIMEOUT_SECONDS)
+        self.parent_view = parent_view
+        self.user_id = user_id
+        self.lock_window_generation = lock_window_generation
+        self.message: discord.Message | None = None
+        self.completed: bool = False
+
+    async def _reject_other_user(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(
+            "This confirmation is not for you.", ephemeral=True
+        )
+
+    async def _delete_self(self, interaction: discord.Interaction) -> None:
+        try:
+            await interaction.delete_original_response()
+        except discord.HTTPException:
+            pass
+
+    async def on_timeout(self) -> None:
+        await self.parent_view._release_lock_payment(self.lock_window_generation)
+        if self.message is not None:
+            try:
+                await self.message.delete()
+            except discord.HTTPException:
+                pass
+        return await super().on_timeout()
+
+    @discord.ui.button(
+        label="Pay",
+        style=discord.ButtonStyle.green,
+        custom_id="weekly_lock_pay",
+    )
+    async def confirm_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id != self.user_id:
+            return await self._reject_other_user(interaction)
+        if self.completed:
+            return
+        self.completed = True
+
+        parent = self.parent_view
+        if (
+            not parent._lock_window_active
+            or parent._is_locked
+            or parent._lock_window_user_id != self.user_id
+            or parent._lock_window_generation != self.lock_window_generation
+        ):
+            await interaction.response.edit_message(
+                content="The lock window has closed.", embed=None, view=None
+            )
+            await parent._release_lock_payment(self.lock_window_generation)
+            return
+
+        if parent.target_message is None:
+            await interaction.response.edit_message(
+                content="Original spin post no longer exists.", embed=None, view=None
+            )
+            await parent._release_lock_payment(self.lock_window_generation)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        self.message = await interaction.original_response()
+
+        async with db.get_session() as session:
+            ingot_service = create_ingot_service(session)
+            result = await ingot_service.try_remove_ingots(
+                interaction.user.id,
+                -LOCK_COST,
+                None,
+                f"Lock weekly spin: {parent.kind.upper()}",
+            )
+
+        if not result.status:
+            ingot_icon = find_emoji("Ingot")
+            error_embed = build_response_embed(
+                title="\u274c Insufficient Funds",
+                description=f"Locking costs {ingot_icon} **{LOCK_COST:,}**.",
+                color=discord.Colour.red(),
+            )
+            await interaction.followup.send(embed=error_embed, ephemeral=True)
+            await parent._release_lock_payment(self.lock_window_generation)
+            await self._delete_self(interaction)
+            return
+
+        await self._delete_self(interaction)
+        await parent._close_lock_window_as_locked()
+
+    @discord.ui.button(
+        label="Cancel",
+        style=discord.ButtonStyle.red,
+        custom_id="weekly_lock_cancel",
+    )
+    async def cancel_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id != self.user_id:
+            return await self._reject_other_user(interaction)
+        if self.completed:
+            return
+        self.completed = True
+        await interaction.response.defer(ephemeral=True)
+        await self.parent_view._release_lock_payment(self.lock_window_generation)
+        await self._delete_self(interaction)
 
 
 class RerollPaymentView(View):

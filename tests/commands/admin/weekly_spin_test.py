@@ -8,6 +8,7 @@ import discord
 from ironforgedbot.commands.admin import weekly_spin
 from ironforgedbot.commands.admin.weekly_spin import (
     LOCK_EMOJI,
+    LockPaymentView,
     RerollPaymentView,
     UNLOCK_EMOJI,
     WeeklySpinView,
@@ -990,92 +991,78 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(self.view.history_lines, history_before)
 
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    @patch("ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file")
-    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.build_payment_embed")
+    @patch("ironforgedbot.commands.admin.weekly_spin.MemberService")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
-    async def test_lock_button_charges_10000_ingots(
-        self,
-        mock_db,
-        mock_create_ingot_service,
-        mock_build_spin_gif,
-        mock_data,
-        mock_find_emoji,
+    async def test_lock_button_opens_payment_confirmation_with_canonical_embed(
+        self, mock_db, mock_member_service_cls, mock_build_embed
     ):
-        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
-
-        success = MagicMock()
-        success.status = True
-        success.new_total = 5000
+        member = MagicMock()
+        member.ingots = 12000
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_discord_id = AsyncMock(return_value=member)
+        mock_member_service_cls.return_value = mock_member_service
         mock_session = AsyncMock()
         mock_session.__aenter__.return_value = mock_session
         mock_session.__aexit__.return_value = None
         mock_db.get_session.return_value = mock_session
-        mock_service = AsyncMock()
-        mock_service.try_remove_ingots = AsyncMock(return_value=success)
-        mock_create_ingot_service.return_value = mock_service
+        mock_embed = MagicMock(spec=discord.Embed)
+        mock_build_embed.return_value = mock_embed
 
-        self.view.current_winner = "Agility"
-        await self.view._open_lock_window(user_id=999)
-        self.view._lock_window_task.cancel()
-        try:
-            await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
-            pass
+        self.view._lock_window_active = True
+        self.view._lock_window_user_id = 999
 
         interaction = _make_interaction(user_id=999, role_names=["Member"])
+        sent_message = MagicMock(spec=discord.Message)
+        interaction.followup.send = AsyncMock(return_value=sent_message)
         button = MagicMock(spec=discord.ui.Button)
         await _invoke_callback(self.view, "lock_button", interaction, button)
 
-        mock_service.try_remove_ingots.assert_called_once()
-        call_args = mock_service.try_remove_ingots.call_args
-        self.assertEqual(call_args.args[0], 999)
-        self.assertEqual(call_args.args[1], -10000)
-        self.assertIn("Lock weekly spin: SOTW", call_args.args[3])
+        mock_build_embed.assert_called_once()
+        self.assertEqual(mock_build_embed.call_args.kwargs["cost"], 10000)
+        self.assertEqual(mock_build_embed.call_args.kwargs["user_balance"], 12000)
+        self.assertEqual(
+            mock_build_embed.call_args.kwargs["title"], "\U0001f4b0 Lock Weekly Spin"
+        )
+        interaction.response.defer.assert_awaited_once_with(ephemeral=True)
+        interaction.followup.send.assert_awaited_once()
+        sent_kwargs = interaction.followup.send.call_args.kwargs
+        self.assertTrue(sent_kwargs["ephemeral"])
+        self.assertIs(sent_kwargs["embed"], mock_embed)
+        self.assertIsInstance(sent_kwargs["view"], LockPaymentView)
+        self.assertIs(sent_kwargs["view"].message, sent_message)
+        self.assertTrue(self.view._lock_completed)
 
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.build_payment_embed")
+    @patch("ironforgedbot.commands.admin.weekly_spin.MemberService")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
-    async def test_lock_insufficient_funds_keeps_window_open(
-        self,
-        mock_db,
-        mock_create_ingot_service,
-        mock_data,
-        mock_find_emoji,
+    async def test_lock_button_double_click_opens_one_payment_prompt(
+        self, mock_db, mock_member_service_cls, mock_build_embed
     ):
-        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
-
-        fail = MagicMock()
-        fail.status = False
-        fail.new_total = 100
-        mock_session = AsyncMock()
-        mock_session.__aenter__.return_value = mock_session
-        mock_session.__aexit__.return_value = None
-        mock_db.get_session.return_value = mock_session
-        mock_service = AsyncMock()
-        mock_service.try_remove_ingots = AsyncMock(return_value=fail)
-        mock_create_ingot_service.return_value = mock_service
-
-        self.view.current_winner = "Agility"
-        await self.view._open_lock_window(user_id=999)
-        self.view._lock_window_task.cancel()
-        try:
-            await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
-            pass
-
-        interaction = _make_interaction(user_id=999, role_names=["Member"])
+        member = MagicMock()
+        member.ingots = 12000
+        member_service = AsyncMock()
+        member_service.get_member_by_discord_id = AsyncMock(return_value=member)
+        mock_member_service_cls.return_value = member_service
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        mock_db.get_session.return_value = session
+        mock_build_embed.return_value = MagicMock(spec=discord.Embed)
+        self.view._lock_window_active = True
+        self.view._lock_window_user_id = 999
+        interaction1 = _make_interaction(user_id=999)
+        interaction2 = _make_interaction(user_id=999)
         button = MagicMock(spec=discord.ui.Button)
-        await _invoke_callback(self.view, "lock_button", interaction, button)
 
-        self.assertTrue(self.view._lock_window_active)
-        self.assertFalse(self.view._is_locked)
-        self.assertIn(self.view._lock_button, self.view.children)
-        self.assertIn(self.view._dont_lock_button, self.view.children)
+        await asyncio.gather(
+            _invoke_callback(self.view, "lock_button", interaction1, button),
+            _invoke_callback(self.view, "lock_button", interaction2, button),
+        )
+
+        mock_db.get_session.assert_called_once()
+        interaction1.followup.send.assert_awaited_once()
+        interaction2.followup.send.assert_not_awaited()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -1119,11 +1106,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         mock_data,
         mock_find_emoji,
     ):
-        """Regression: defer() on a component interaction is type 6
-        (deferred_message_update), so ``original_response`` resolves to the
-        message that triggered the interaction (the spin post itself).
-        Calling ``delete_original_response`` after it deletes the spin post
-        out of the channel — the rigger must still see their locked post."""
+        """Deleting the ephemeral payment prompt must not delete the spin post."""
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
         mock_find_emoji.return_value = "\U0001f3c3"
 
@@ -1150,10 +1133,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         interaction = _make_interaction(user_id=999, role_names=["Member"])
         button = MagicMock(spec=discord.ui.Button)
-        await _invoke_callback(self.view, "lock_button", interaction, button)
+        self.view._lock_completed = True
+        payment_view = LockPaymentView(
+            parent_view=self.view,
+            user_id=999,
+            lock_window_generation=self.view._lock_window_generation,
+        )
+        await _invoke_callback(payment_view, "confirm_button", interaction, button)
 
         self.target_message.delete.assert_not_called()
-        interaction.delete_original_response.assert_not_called()
+        interaction.delete_original_response.assert_awaited_once()
         final_edit = self.target_message.edit.call_args_list[-1]
         self.assertIsNone(final_edit.kwargs.get("view"))
         self.assertIn("\U0001f512", final_edit.kwargs["content"])
@@ -1169,9 +1158,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         mock_data,
         mock_find_emoji,
     ):
-        """Regression: the failed-debit branch must also avoid
-        ``delete_original_response`` so a rejected lock attempt does not
-        silently remove the spin post from the channel."""
+        """A failed debit removes payment prompt but leaves spin post intact."""
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
         mock_find_emoji.return_value = "\U0001f3c3"
 
@@ -1198,10 +1185,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         interaction = _make_interaction(user_id=999, role_names=["Member"])
         button = MagicMock(spec=discord.ui.Button)
-        await _invoke_callback(self.view, "lock_button", interaction, button)
+        self.view._lock_completed = True
+        payment_view = LockPaymentView(
+            parent_view=self.view,
+            user_id=999,
+            lock_window_generation=self.view._lock_window_generation,
+        )
+        await _invoke_callback(payment_view, "confirm_button", interaction, button)
 
         self.target_message.delete.assert_not_called()
-        interaction.delete_original_response.assert_not_called()
+        interaction.delete_original_response.assert_awaited_once()
         self.assertTrue(self.view._lock_window_active)
         self.assertFalse(self.view._is_locked)
 
@@ -1299,20 +1292,15 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         )
         self.assertTrue(self.view._lock_window_active)
 
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
-    async def test_lock_button_double_click_only_charges_once(
-        self,
-        mock_db,
-        mock_create_ingot_service,
-        mock_data,
-        mock_find_emoji,
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    async def test_lock_payment_double_confirm_charges_once(
+        self, mock_data, mock_find_emoji, mock_db, mock_create_ingot_service
     ):
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
         mock_find_emoji.return_value = "\U0001f3c3"
-
         success = MagicMock()
         success.status = True
         success.new_total = 5000
@@ -1332,13 +1320,19 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         except (asyncio.CancelledError, Exception):
             pass
 
+        self.view._lock_completed = True
+        payment_view = LockPaymentView(
+            parent_view=self.view,
+            user_id=999,
+            lock_window_generation=self.view._lock_window_generation,
+        )
         interaction1 = _make_interaction(user_id=999, role_names=["Member"])
         interaction2 = _make_interaction(user_id=999, role_names=["Member"])
         button = MagicMock(spec=discord.ui.Button)
 
         await asyncio.gather(
-            _invoke_callback(self.view, "lock_button", interaction1, button),
-            _invoke_callback(self.view, "lock_button", interaction2, button),
+            _invoke_callback(payment_view, "confirm_button", interaction1, button),
+            _invoke_callback(payment_view, "confirm_button", interaction2, button),
         )
 
         mock_service.try_remove_ingots.assert_called_once()
@@ -1390,10 +1384,40 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         interaction = _make_interaction(user_id=999, role_names=["Member"])
         button = MagicMock(spec=discord.ui.Button)
-        await _invoke_callback(self.view, "lock_button", interaction, button)
+        self.view._lock_completed = True
+        payment_view = LockPaymentView(
+            parent_view=self.view,
+            user_id=999,
+            lock_window_generation=self.view._lock_window_generation,
+        )
+        await _invoke_callback(payment_view, "confirm_button", interaction, button)
 
         self.assertTrue(self.view._is_locked)
         self.assertGreater(self.view._locked_at, 0)
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    async def test_lock_window_timer_waits_for_payment_prompt(
+        self, mock_data, mock_find_emoji
+    ):
+        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
+        mock_find_emoji.return_value = "\U0001f3c3"
+        self.view.current_winner = "Agility"
+        self.view._lock_window_active = True
+        self.view._lock_completed = True
+
+        async def fake_sleep(seconds):
+            if seconds == 1:
+                self.view._lock_completed = False
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.asyncio.sleep",
+            side_effect=fake_sleep,
+        ):
+            await weekly_spin._lock_window_timer(self.view, self.target_message)
+
+        self.assertFalse(self.view._lock_window_active)
+        self.target_message.edit.assert_awaited_once()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -1687,25 +1711,10 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         except (asyncio.CancelledError, Exception):
             pass
 
-        with patch("ironforgedbot.commands.admin.weekly_spin.db") as mock_db, patch(
-            "ironforgedbot.commands.admin.weekly_spin.create_ingot_service"
-        ) as mock_create:
-            mock_session = AsyncMock()
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = None
-            mock_db.get_session.return_value = mock_session
-            fail = MagicMock()
-            fail.status = False
-            fail.new_total = 0
-            mock_service = AsyncMock()
-            mock_service.try_remove_ingots = AsyncMock(return_value=fail)
-            mock_create.return_value = mock_service
-
-            await self.view._lock_button.callback(rigger)
-            self.assertTrue(
-                self.view._lock_window_active,
-                "insufficient funds must keep window open",
-            )
+        non_rigger = _make_interaction(user_id=42, role_names=["Member"])
+        await self.view._lock_button.callback(non_rigger)
+        non_rigger.response.send_message.assert_awaited_once()
+        self.assertTrue(self.view._lock_window_active)
 
     async def test_lock_window_rigger_can_lock_before_reveal(self):
         """The rigger's lock decision must not be blocked by the pending-reveal
@@ -1718,34 +1727,10 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._reroll_unlocked = False
         self.view._apply_button_state()
 
-        with patch(
-            "ironforgedbot.commands.admin.weekly_spin.find_emoji",
-            return_value="\U0001f3c3",
-        ), patch(
-            "ironforgedbot.commands.admin.weekly_spin.data",
-            MagicMock(SKILLS=[{"name": "Agility", "emoji_key": "agility"}]),
-        ), patch(
-            "ironforgedbot.commands.admin.weekly_spin.create_ingot_service"
-        ) as mock_create, patch(
-            "ironforgedbot.commands.admin.weekly_spin.db"
-        ) as mock_db:
-            mock_session = AsyncMock()
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = None
-            mock_db.get_session.return_value = mock_session
-            success = MagicMock()
-            success.status = True
-            success.new_total = 4000
-            mock_service = AsyncMock()
-            mock_service.try_remove_ingots = AsyncMock(return_value=success)
-            mock_create.return_value = mock_service
-
-            interaction = _make_interaction(user_id=999, role_names=["Member"])
-            button = MagicMock(spec=discord.ui.Button)
-            await _invoke_callback(self.view, "lock_button", interaction, button)
-
-            mock_service.try_remove_ingots.assert_called_once()
-            self.assertTrue(self.view._is_locked)
+        interaction = _make_interaction(user_id=999, role_names=["Member"])
+        result = await self.view.interaction_check(interaction)
+        self.assertTrue(result)
+        interaction.response.send_message.assert_not_awaited()
 
         # Cleanup the post-close lock-window task to let the test loop exit.
         if (
@@ -1917,6 +1902,125 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn("The re-roll window closes <t:1234570000:R>.", content)
         self.assertNotIn("-# Re-roll window closes", content)
+
+
+class TestLockPaymentView(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.target_message = MagicMock(spec=discord.Message)
+        self.target_message.edit = AsyncMock()
+        self.parent_view = WeeklySpinView(
+            options=["a", "b"], kind="sotw", target_message=self.target_message
+        )
+        self.parent_view.current_winner = "Agility"
+        self.parent_view._lock_window_active = True
+        self.parent_view._lock_window_user_id = 999
+        self.parent_view._lock_completed = True
+        self.view = LockPaymentView(
+            parent_view=self.parent_view,
+            user_id=999,
+            lock_window_generation=self.parent_view._lock_window_generation,
+        )
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    async def test_confirm_charges_lock_cost_and_locks_spin(
+        self, mock_data, mock_find_emoji, mock_db, mock_create_ingot_service
+    ):
+        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
+        mock_find_emoji.return_value = "\U0001f3c3"
+        success = MagicMock(status=True, new_total=2000)
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        mock_db.get_session.return_value = session
+        service = AsyncMock()
+        service.try_remove_ingots = AsyncMock(return_value=success)
+        mock_create_ingot_service.return_value = service
+
+        interaction = _make_interaction(user_id=999)
+        button = MagicMock(spec=discord.ui.Button)
+        await _invoke_callback(self.view, "confirm_button", interaction, button)
+
+        service.try_remove_ingots.assert_awaited_once_with(
+            999, -10000, None, "Lock weekly spin: SOTW"
+        )
+        self.assertTrue(self.parent_view._is_locked)
+        self.assertFalse(self.parent_view._lock_window_active)
+        interaction.delete_original_response.assert_awaited_once()
+        self.target_message.edit.assert_awaited_once()
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_insufficient_funds_keeps_lock_window_open(
+        self, mock_db, mock_create_ingot_service
+    ):
+        failure = MagicMock(status=False, new_total=100)
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        mock_db.get_session.return_value = session
+        service = AsyncMock()
+        service.try_remove_ingots = AsyncMock(return_value=failure)
+        mock_create_ingot_service.return_value = service
+
+        interaction = _make_interaction(user_id=999)
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        self.assertTrue(self.parent_view._lock_window_active)
+        self.assertFalse(self.parent_view._is_locked)
+        self.assertFalse(self.parent_view._lock_completed)
+        interaction.followup.send.assert_awaited_once()
+        interaction.delete_original_response.assert_awaited_once()
+
+    async def test_cancel_releases_lock_prompt_without_charging(self):
+        interaction = _make_interaction(user_id=999)
+
+        await _invoke_callback(
+            self.view, "cancel_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        self.assertTrue(self.parent_view._lock_window_active)
+        self.assertFalse(self.parent_view._lock_completed)
+        interaction.delete_original_response.assert_awaited_once()
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_confirm_after_lock_window_closed_does_not_charge(
+        self, mock_db, mock_create_ingot_service
+    ):
+        self.parent_view._lock_window_active = False
+        interaction = _make_interaction(user_id=999)
+
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        mock_db.get_session.assert_not_called()
+        mock_create_ingot_service.assert_not_called()
+        self.assertFalse(self.parent_view._is_locked)
+        interaction.response.edit_message.assert_awaited_once()
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_old_confirmation_does_not_charge_new_lock_window(
+        self, mock_db, mock_create_ingot_service
+    ):
+        self.parent_view._lock_window_generation += 1
+        self.parent_view._lock_completed = True
+        interaction = _make_interaction(user_id=999)
+
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        mock_db.get_session.assert_not_called()
+        mock_create_ingot_service.assert_not_called()
+        self.assertTrue(self.parent_view._lock_completed)
+        interaction.response.edit_message.assert_awaited_once()
 
 
 class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
