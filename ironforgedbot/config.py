@@ -33,6 +33,7 @@ class Config(BaseConfig):
         self.CREATE_TICKET_CHANNEL_ID: int = int(
             os.getenv("CREATE_TICKET_CHANNEL_ID") or 0
         )
+        self.BOTW_SOTW_CHANNEL_ID: int = int(os.getenv("BOTW_SOTW_CHANNEL_ID") or 0)
         self.TRICK_OR_TREAT_ENABLED: bool = (
             os.getenv("TRICK_OR_TREAT_ENABLED", "False") == "True"
         )
@@ -43,6 +44,31 @@ class Config(BaseConfig):
         )
         self.TRICK_OR_TREAT_COOLDOWN_SECONDS: int = int(
             os.getenv("TRICK_OR_TREAT_COOLDOWN_SECONDS") or 3600
+        )
+
+        self.WEEKLY_SPIN_REROLL_COST: int = int(
+            os.getenv("WEEKLY_SPIN_REROLL_COST") or 2500
+        )
+        self.WEEKLY_SPIN_REROLL_HOURLY_LIMIT: int = int(
+            os.getenv("WEEKLY_SPIN_REROLL_HOURLY_LIMIT") or 10
+        )
+        self.WEEKLY_SPIN_REROLL_WINDOW_SECONDS: int = int(
+            os.getenv("WEEKLY_SPIN_REROLL_WINDOW_SECONDS") or 3600
+        )
+        self.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS: int = int(
+            os.getenv("WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS") or 64800
+        )
+        self.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS: int = int(
+            os.getenv("WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS") or 30
+        )
+        self.WEEKLY_SPIN_REVEAL_DELAY_SECONDS: float = float(
+            os.getenv("WEEKLY_SPIN_REVEAL_DELAY_SECONDS") or 10.5
+        )
+        self.WEEKLY_SPIN_LOCK_COST: int = int(
+            os.getenv("WEEKLY_SPIN_LOCK_COST") or 10000
+        )
+        self.WEEKLY_SPIN_LOCK_WINDOW_SECONDS: int = int(
+            os.getenv("WEEKLY_SPIN_LOCK_WINDOW_SECONDS") or 60
         )
 
         # Limited Time Mode (LTM) tracker (optional)
@@ -87,6 +113,10 @@ class Config(BaseConfig):
                 raise ValueError(f"Configuration key '{key}' (str) is missing or empty")
             if isinstance(value, int) and value <= 0:
                 raise ValueError(f"Configuration key '{key}' (int) is missing or empty")
+            if isinstance(value, float) and value <= 0:
+                raise ValueError(
+                    f"Configuration key '{key}' (float) is missing or empty"
+                )
 
 
 try:

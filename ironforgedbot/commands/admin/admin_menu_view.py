@@ -19,8 +19,12 @@ from ironforgedbot.commands.admin.sync_members import cmd_sync_members
 from ironforgedbot.commands.admin.view_changelog import cmd_view_changelog
 from ironforgedbot.commands.admin.view_logs import cmd_view_logs
 from ironforgedbot.commands.admin.view_state import cmd_view_state
+from ironforgedbot.commands.admin.weekly_spin import post_weekly_spin_result
+from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
-from ironforgedbot.common.helpers import find_emoji
+from ironforgedbot.common.helpers import find_emoji, get_text_channel
+from ironforgedbot.common.responses import send_error_response
+from ironforgedbot.config import CONFIG
 from ironforgedcore.storage import data
 
 logger = logging.getLogger(__name__)
@@ -174,9 +178,9 @@ class AdminMenuView(View):
         await cmd_process_absentees(interaction)
 
     @discord.ui.button(
-        label="Spin SOTW",
+        label="Spin SOTW (old)",
         style=discord.ButtonStyle.grey,
-        custom_id="spin_sotw",
+        custom_id="spin_sotw_old",
         emoji="🌀",
         row=3,
     )
@@ -187,7 +191,14 @@ class AdminMenuView(View):
 
         options = get_sotw_options()
 
-        async def on_result(interaction, file, winner):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            _start_ts: int,
+            _end_ts: int,
+            _options: list[str],
+        ) -> None:
             skill = next((s for s in data.SKILLS if s["name"] == winner), None)
             emoji = find_emoji(skill["emoji_key"]) if skill else "🎉"
 
@@ -203,13 +214,13 @@ class AdminMenuView(View):
             )
 
         await interaction.response.send_modal(
-            SpinOptionsModal("Spin SOTW", options, on_result)
+            SpinOptionsModal("Spin SOTW (old)", options, on_result)
         )
 
     @discord.ui.button(
-        label="Spin BOTW",
+        label="Spin BOTW (old)",
         style=discord.ButtonStyle.grey,
-        custom_id="spin_botw",
+        custom_id="spin_botw_old",
         emoji="🌀",
         row=3,
     )
@@ -220,7 +231,14 @@ class AdminMenuView(View):
 
         options = get_botw_options()
 
-        async def on_result(interaction, file, winner):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            _start_ts: int,
+            _end_ts: int,
+            _options: list[str],
+        ) -> None:
             boss_name = winner.split(" or ")[0]
             boss = next((b for b in data.BOSSES if b["name"] == boss_name), None)
             emoji = find_emoji(boss["emoji_key"]) if boss else "🎉"
@@ -237,7 +255,7 @@ class AdminMenuView(View):
             )
 
         await interaction.response.send_modal(
-            SpinOptionsModal("Spin BOTW", options, on_result)
+            SpinOptionsModal("Spin BOTW (old)", options, on_result)
         )
 
     @discord.ui.button(
@@ -252,7 +270,14 @@ class AdminMenuView(View):
     ):
         await self.clear_parent()
 
-        async def on_result(interaction, file, winner):
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            _start_ts: int,
+            _end_ts: int,
+            _options: list[str],
+        ) -> None:
             await send_spin_result(
                 interaction,
                 file,
@@ -282,3 +307,75 @@ class AdminMenuView(View):
             "Select a role to spin members from:", view=view, ephemeral=True
         )
         view.message = await interaction.original_response()
+
+    @discord.ui.button(
+        label="Spin SOTW (new)",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_sotw_new",
+        emoji="🆕",
+        row=4,
+    )
+    async def spin_sotw_new_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+
+        target = get_text_channel(interaction.guild, CONFIG.BOTW_SOTW_CHANNEL_ID)
+        if target is None:
+            return await send_error_response(
+                interaction, "Spinning channel not configured."
+            )
+
+        options = get_sotw_options()
+
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            start_ts: int,
+            end_ts: int,
+            submitted_options: list[str],
+        ) -> None:
+            await post_weekly_spin_result(
+                target, "sotw", submitted_options, file, winner, start_ts, end_ts
+            )
+
+        await interaction.response.send_modal(
+            SpinOptionsModal("Spin SOTW (new)", options, on_result)
+        )
+
+    @discord.ui.button(
+        label="Spin BOTW (new)",
+        style=discord.ButtonStyle.grey,
+        custom_id="spin_botw_new",
+        emoji="🆕",
+        row=4,
+    )
+    async def spin_botw_new_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await self.clear_parent()
+
+        target = get_text_channel(interaction.guild, CONFIG.BOTW_SOTW_CHANNEL_ID)
+        if target is None:
+            return await send_error_response(
+                interaction, "Spinning channel not configured."
+            )
+
+        options = get_botw_options()
+
+        async def on_result(
+            interaction: discord.Interaction,
+            file: discord.File,
+            winner: str,
+            start_ts: int,
+            end_ts: int,
+            submitted_options: list[str],
+        ) -> None:
+            await post_weekly_spin_result(
+                target, "botw", submitted_options, file, winner, start_ts, end_ts
+            )
+
+        await interaction.response.send_modal(
+            SpinOptionsModal("Spin BOTW (new)", options, on_result)
+        )

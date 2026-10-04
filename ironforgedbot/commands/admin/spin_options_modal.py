@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta, timezone
 
 import discord
 
@@ -11,6 +12,17 @@ from ironforgedbot.common.responses import send_error_response
 logger = logging.getLogger(__name__)
 
 
+def _default_next_monday_str() -> str:
+    """Return today UTC as `YYYY-MM-DD`, snapped to the next Monday.
+
+    If today is already Monday, returns today.
+    """
+    today_utc = datetime.now(timezone.utc).date()
+    days_ahead = (0 - today_utc.weekday()) % 7
+    default_start = today_utc + timedelta(days=days_ahead)
+    return default_start.strftime("%Y-%m-%d")
+
+
 class SpinOptionsModal(discord.ui.Modal):
     """Modal for spinning with editable option list."""
 
@@ -18,7 +30,10 @@ class SpinOptionsModal(discord.ui.Modal):
         self,
         title: str,
         base_options: list[str],
-        on_result: Callable[[discord.Interaction, discord.File, str], Awaitable[None]],
+        on_result: Callable[
+            [discord.Interaction, discord.File, str, int, int, list[str]],
+            Awaitable[None],
+        ],
     ):
         super().__init__(title=title)
 
@@ -32,7 +47,17 @@ class SpinOptionsModal(discord.ui.Modal):
         )
         self.add_item(self.options_input)
 
-    async def on_submit(self, interaction: discord.Interaction):
+        self.start_date_input = discord.ui.TextInput(
+            label="Start date (YYYY-MM-DD, UTC)",
+            placeholder="YYYY-MM-DD",
+            required=True,
+            max_length=10,
+            style=discord.TextStyle.short,
+            default=_default_next_monday_str(),
+        )
+        self.add_item(self.start_date_input)
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
         options = [
@@ -46,6 +71,21 @@ class SpinOptionsModal(discord.ui.Modal):
             await send_error_response(
                 interaction,
                 f"At least {MINIMUM_SPIN_OPTIONS} options are required to spin.",
+            )
+            return
+
+        raw_date = self.start_date_input.value.strip()
+        try:
+            start_date = datetime.strptime(raw_date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            end_date = start_date + timedelta(days=7)
+            start_ts = int(start_date.timestamp())
+            end_ts = int(end_date.timestamp())
+        except ValueError:
+            await send_error_response(
+                interaction,
+                f"`{raw_date}` is not a valid date. Use `YYYY-MM-DD`.",
             )
             return
 
@@ -65,7 +105,7 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
-        await self.on_result(interaction, file, winner)
+        await self.on_result(interaction, file, winner, start_ts, end_ts, options)
 
         try:
             await generating_msg.delete()
