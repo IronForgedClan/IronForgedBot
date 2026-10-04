@@ -188,8 +188,8 @@ def _build_lock_window_content(
         start_ts, end_ts, reroll_close_ts
     )
     lock_decision_sentence = (
-        f":warning: {user_mention} has rerolled and now has "
-        f"<t:{lock_close_ts}:R> to decide to lock or not."
+        f":warning: {user_mention} rerolled. They must decide whether to lock it "
+        f"before their chance to lock expires <t:{lock_close_ts}:R>."
     )
     bulleted = [f"- {line}" for line in history_lines]
     return "\n".join(

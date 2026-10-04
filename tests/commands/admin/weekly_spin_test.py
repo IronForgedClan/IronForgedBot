@@ -794,8 +794,11 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertIn(f"<t:{TEST_END_TS}:D>", content)
         self.assertIn("<@42>", content)
         self.assertIn("This event will run from", content)
-        self.assertIn("<@42> has rerolled and now has <t:1234567890:R>", content)
-        self.assertIn("to decide to lock or not", content)
+        self.assertIn(
+            ":warning: <@42> rerolled. They must decide whether to lock it "
+            "before their chance to lock expires <t:1234567890:R>.",
+            content,
+        )
         self.assertIn(f"The re-roll window closes <t:1234570000:R>.", content)
         self.assertNotIn("-# Re-roll window closes", content)
 
@@ -854,12 +857,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
                 for c in self.target_message.edit.call_args_list
                 if "content" in c.kwargs
                 and "<t:" in c.kwargs["content"]
-                and "has rerolled and now has" in c.kwargs["content"]
+                and "must decide whether to lock it" in c.kwargs["content"]
             ),
             None,
         )
         self.assertIsNotNone(lock_edit_call, "expected lock-window content edit")
         self.assertIn("<@999>", lock_edit_call.kwargs["content"])
+        self.assertIn(
+            "They must decide whether to lock it before their chance to lock expires",
+            lock_edit_call.kwargs["content"],
+        )
         self.assertIn(
             f"<t:{self.view._lock_window_end_ts}:R>",
             lock_edit_call.kwargs["content"],
@@ -1903,7 +1910,11 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             )
 
         content = self.target_message.edit.call_args.kwargs["content"]
-        self.assertIn("<@999> has rerolled and now has <t:1234567890:R>", content)
+        self.assertIn(
+            ":warning: <@999> rerolled. They must decide whether to lock it "
+            "before their chance to lock expires <t:1234567890:R>.",
+            content,
+        )
         self.assertIn("The re-roll window closes <t:1234570000:R>.", content)
         self.assertNotIn("-# Re-roll window closes", content)
 
