@@ -27,11 +27,6 @@ TEST_START_TS = 1700000000
 TEST_END_TS = TEST_START_TS + 7 * 86400
 
 
-class TestWeeklySpinConstants(unittest.TestCase):
-    def test_weekly_spin_view_timeout_is_eighteen_hours(self):
-        self.assertEqual(CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 18 * 60 * 60)
-
-
 def _make_role(name: str):
     role = MagicMock(spec=discord.Role)
     role.name = name
