@@ -61,6 +61,7 @@ class TestBuildPaymentEmbed(unittest.TestCase):
         embed = build_payment_embed(cost=100, user_balance=500)
         self.assertEqual(embed.title, DEFAULT_PAYMENT_TITLE)
         self.assertEqual(embed.color.value, discord.Colour.gold().value)
+        self.assertEqual(embed.description, "")
 
     def test_custom_title(self):
         embed = build_payment_embed(
@@ -78,26 +79,17 @@ class TestBuildPaymentEmbed(unittest.TestCase):
         expiration_field = next((f for f in embed.fields if f.name == ""), None)
         self.assertIsNotNone(expiration_field)
         self.assertIn("expires", expiration_field.value.lower())
-
-    def test_balance_and_cost_are_inline(self):
-        embed = build_payment_embed(cost=100, user_balance=500)
-        for field in embed.fields:
-            if field.name in ("Your Balance", "Price"):
-                self.assertTrue(field.inline)
-
-    def test_expiration_field_is_not_inline(self):
-        embed = build_payment_embed(cost=100, user_balance=500)
-        for field in embed.fields:
-            if field.name == "":
-                self.assertFalse(field.inline)
+        self.assertTrue(
+            next(f for f in embed.fields if f.name == "Your Balance").inline
+        )
+        self.assertTrue(next(f for f in embed.fields if f.name == "Price").inline)
+        self.assertFalse(expiration_field.inline)
+        self.assertIn("<t:", expiration_field.value)
+        self.assertIn(":R>", expiration_field.value)
 
     def test_includes_flavor_text_in_description(self):
         embed = build_payment_embed(cost=100, user_balance=500, flavor_text="*hello*")
         self.assertIn("hello", embed.description)
-
-    def test_no_flavor_text_yields_empty_description(self):
-        embed = build_payment_embed(cost=100, user_balance=500)
-        self.assertEqual(embed.description, "")
 
     def test_thumbnail_set(self):
         embed = build_payment_embed(cost=100, user_balance=500)
@@ -109,9 +101,3 @@ class TestBuildPaymentEmbed(unittest.TestCase):
             cost=100, user_balance=500, thumbnail_url="https://example.com/x.png"
         )
         self.assertEqual(embed.thumbnail.url, "https://example.com/x.png")
-
-    def test_expiration_field_format(self):
-        embed = build_payment_embed(cost=100, user_balance=500)
-        expiration_field = next(f for f in embed.fields if f.name == "")
-        self.assertIn("<t:", expiration_field.value)
-        self.assertIn(":R>", expiration_field.value)

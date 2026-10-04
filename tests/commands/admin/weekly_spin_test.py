@@ -10,6 +10,7 @@ from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.admin.weekly_spin import (
     LOCK_EMOJI,
     LockPaymentView,
+    PendingReroll,
     RerollPaymentView,
     UNLOCK_EMOJI,
     WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS,
@@ -18,11 +19,17 @@ from ironforgedbot.commands.admin.weekly_spin import (
     _build_pending_content,
     _build_post_content,
     _check_reroll_rate_limit,
+    _lookup_emoji,
     post_weekly_spin_result,
 )
 
 TEST_START_TS = 1700000000
 TEST_END_TS = TEST_START_TS + 7 * 86400
+
+
+class TestWeeklySpinConstants(unittest.TestCase):
+    def test_weekly_spin_view_timeout_is_eighteen_hours(self):
+        self.assertEqual(WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 18 * 60 * 60)
 
 
 def _make_role(name: str):
@@ -96,6 +103,40 @@ class TestCheckRerollRateLimit(unittest.TestCase):
         allowed, _ = _check_reroll_rate_limit(2, "sotw", now=1001.0)
         self.assertTrue(allowed)
 
+    def test_prunes_inactive_users(self):
+        _check_reroll_rate_limit(1, "sotw", now=1000.0)
+
+        _check_reroll_rate_limit(2, "botw", now=4600.0)
+
+        self.assertEqual(weekly_spin._recent_rerolls, {(2, "botw"): [4600.0]})
+
+
+class TestLookupEmoji(unittest.TestCase):
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    def test_botw_group_uses_leading_boss(self, mock_data, mock_find_emoji):
+        mock_data.BOSSES = [{"name": "Callisto", "emoji_key": "callisto"}]
+        mock_find_emoji.return_value = "<Callisto>"
+
+        self.assertEqual(_lookup_emoji("botw", "Callisto or Artio"), "<Callisto>")
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    def test_unknown_skill_uses_fallback(self, mock_data, mock_find_emoji):
+        mock_data.SKILLS = []
+
+        self.assertEqual(_lookup_emoji("sotw", "Unknown"), "\U0001f389")
+        mock_find_emoji.assert_not_called()
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
+    @patch("ironforgedbot.commands.admin.weekly_spin.data")
+    def test_missing_emoji_uses_fallback(self, mock_data, mock_find_emoji):
+        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
+        mock_find_emoji.return_value = None
+
+        self.assertEqual(_lookup_emoji("sotw", "Agility"), "\U0001f389")
+        mock_find_emoji.assert_called_once_with("agility")
+
 
 class TestBuildPostContent(unittest.TestCase):
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -143,6 +184,13 @@ class TestBuildPostContent(unittest.TestCase):
             "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
         )
         self.assertIn("### History\n-# ~~Crafting~~ rerolled by @User1", result)
+        self.assertIn(
+            f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
+            f"This event will run from <t:{TEST_START_TS}:D> through "
+            f"<t:{TEST_END_TS}:D>.\n\n"
+            "### History\n-# ~~Crafting~~ rerolled by @User1",
+            result,
+        )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -158,44 +206,6 @@ class TestBuildPostContent(unittest.TestCase):
         )
         self.assertIn("### History\n-# ~~Crafting~~ rerolled by @User1", result)
         self.assertIn("-# ~~Agility~~ rerolled by @User2", result)
-
-    def test_history_renders_in_small_text_under_heading(self):
-        with patch(
-            "ironforgedbot.commands.admin.weekly_spin.data",
-            SKILLS=[{"name": "Agility", "emoji_key": "agility"}],
-        ):
-            with patch("ironforgedbot.commands.admin.weekly_spin.find_emoji") as me:
-                me.return_value = "\U0001f3c3"
-                result = _build_post_content(
-                    "sotw",
-                    "Agility",
-                    ["~~X~~ rerolled by @U"],
-                    TEST_START_TS,
-                    TEST_END_TS,
-                    reroll_close_ts=1,
-                )
-        self.assertIn("### History\n-# ~~X~~ rerolled by @U", result)
-
-    def test_description_paragraph_has_blank_lines_above_and_below(self):
-        with patch(
-            "ironforgedbot.commands.admin.weekly_spin.data",
-            SKILLS=[{"name": "Agility", "emoji_key": "agility"}],
-        ):
-            with patch("ironforgedbot.commands.admin.weekly_spin.find_emoji") as me:
-                me.return_value = "\U0001f3c3"
-                result = _build_post_content(
-                    "sotw",
-                    "Agility",
-                    ["~~X~~ rerolled by @U"],
-                    TEST_START_TS,
-                    TEST_END_TS,
-                )
-        self.assertIn(
-            f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
-            f"This event will run from <t:{TEST_START_TS}:D> through <t:{TEST_END_TS}:D>.\n\n"
-            "### History\n-# ~~X~~ rerolled by @U",
-            result,
-        )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -326,6 +336,14 @@ class TestPostWeeklySpinResult(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(view.kind, "sotw")
         self.assertEqual(view.options, self.options)
         self.assertIs(view.target_message, self.sent_message)
+        self.assertEqual(
+            self.target.send.call_args.kwargs["allowed_mentions"].to_dict(),
+            {"parse": []},
+        )
+        for task in (view._deadline_task, view._reveal_task):
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
 
     @patch("ironforgedbot.commands.admin.weekly_spin.time")
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -375,105 +393,6 @@ class TestPostWeeklySpinResult(unittest.IsolatedAsyncioTestCase):
         calls = self.sent_message.add_reaction.call_args_list
         self.assertEqual(calls[0].args[0], "\U0001f44d")
         self.assertEqual(calls[1].args[0], "\U0001f44e")
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.time")
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    async def test_post_weekly_spin_botw_handles_grouped_winner(
-        self, mock_data, mock_find_emoji, mock_time
-    ):
-        mock_time.time.return_value = 1_000_000.0
-        mock_data.BOSSES = [{"name": "Callisto", "emoji_key": "callisto"}]
-        mock_find_emoji.return_value = "\U0001f98a"
-
-        await post_weekly_spin_result(
-            self.target,
-            "botw",
-            self.options,
-            self.file,
-            "Callisto or Artio",
-            TEST_START_TS,
-            TEST_END_TS,
-        )
-
-        content = self.target.send.call_args.kwargs["content"]
-        self.assertIn("The next BOTW is...", content)
-        self.assertIn(f"This event will run from <t:{TEST_START_TS}:D>", content)
-        mock_find_emoji.assert_called()
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.time")
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    async def test_post_weekly_spin_sotw_fallback_emoji_on_unknown_winner(
-        self, mock_data, mock_find_emoji, mock_time
-    ):
-        mock_time.time.return_value = 1_000_000.0
-        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
-
-        await post_weekly_spin_result(
-            self.target,
-            "sotw",
-            self.options,
-            self.file,
-            "UnknownSkill",
-            TEST_START_TS,
-            TEST_END_TS,
-        )
-
-        content = self.target.send.call_args.kwargs["content"]
-        self.assertIn("The next SOTW is...", content)
-        self.assertIn(f"This event will run from <t:{TEST_START_TS}:D>", content)
-        mock_find_emoji.assert_called()
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.time")
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    async def test_post_weekly_spin_botw_fallback_emoji_on_unknown_winner(
-        self, mock_data, mock_find_emoji, mock_time
-    ):
-        mock_time.time.return_value = 1_000_000.0
-        mock_data.BOSSES = [{"name": "Zulrah", "emoji_key": "zulrah"}]
-        mock_find_emoji.return_value = "\U0001f40d"
-
-        await post_weekly_spin_result(
-            self.target,
-            "botw",
-            self.options,
-            self.file,
-            "UnknownBoss",
-            TEST_START_TS,
-            TEST_END_TS,
-        )
-
-        content = self.target.send.call_args.kwargs["content"]
-        self.assertIn("The next BOTW is...", content)
-        self.assertIn(f"This event will run from <t:{TEST_START_TS}:D>", content)
-        mock_find_emoji.assert_called()
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    async def test_post_weekly_spin_returns_sent_message(
-        self, mock_data, mock_find_emoji
-    ):
-        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
-
-        result = await post_weekly_spin_result(
-            self.target,
-            "sotw",
-            self.options,
-            self.file,
-            "Agility",
-            TEST_START_TS,
-            TEST_END_TS,
-        )
-        self.assertIs(result, self.sent_message)
-        view = self.target.send.call_args.kwargs["view"]
-        self.assertIsNotNone(view._deadline_task)
-        view._deadline_task.cancel()
-        with self.assertRaises(asyncio.CancelledError):
-            await view._deadline_task
 
     async def test_post_weekly_spin_raises_on_unknown_kind(self):
         with self.assertRaises(ValueError):
@@ -564,32 +483,6 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(sent_view, RerollPaymentView)
         self.assertIs(followup_kwargs["embed"], mock_embed)
         self.assertIs(sent_view.message, sent_message)
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.build_payment_embed")
-    @patch("ironforgedbot.commands.admin.weekly_spin.MemberService")
-    @patch("ironforgedbot.commands.admin.weekly_spin.db")
-    @patch("ironforgedbot.commands.admin.weekly_spin._check_reroll_rate_limit")
-    async def test_reroll_payment_embed_is_ephemeral(
-        self, mock_rate_limit, mock_db, mock_member_service_cls, mock_build_embed
-    ):
-        mock_rate_limit.return_value = (True, 0)
-        mock_member_service_cls.return_value = AsyncMock()
-        mock_session = AsyncMock()
-        mock_session.__aenter__.return_value = mock_session
-        mock_session.__aexit__.return_value = None
-        mock_db.get_session.return_value = mock_session
-        mock_build_embed.return_value = MagicMock(spec=discord.Embed)
-
-        interaction = _make_interaction(role_names=["Member"])
-        interaction.followup.send = AsyncMock(
-            return_value=MagicMock(spec=discord.Message)
-        )
-        button = MagicMock(spec=discord.ui.Button)
-
-        await _invoke_callback(self.view, "reroll_button", interaction, button)
-
-        self.assertTrue(interaction.followup.send.call_args.kwargs["ephemeral"])
-        interaction.edit_original_response.assert_not_called()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.build_payment_embed")
     @patch("ironforgedbot.commands.admin.weekly_spin.MemberService")
@@ -797,12 +690,12 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         mock_find_emoji.return_value = "\U0001f40d"
         self.view.current_winner = "Zulrah"
         self.view._lock_window_active = True
-        self.view._pending_reroll = {
-            "emoji": "\U0001f40d",
-            "winner": "Old Winner",
-            "mention": "<@999>",
-            "ts": 1234567890,
-        }
+        self.view._pending_reroll = PendingReroll(
+            emoji="\U0001f40d",
+            winner="Old Winner",
+            mention="<@999>",
+            timestamp=1234567890,
+        )
 
         await self.view.on_timeout()
 
@@ -868,16 +761,6 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._is_locked = True
         self.view._apply_button_state()
         self.assertTrue(self.view._reroll_button.disabled)
-
-    def test_lock_buttons_added_only_during_lock_window(self):
-        self.assertNotIn(self.view._lock_button, self.view.children)
-        self.assertNotIn(self.view._dont_lock_button, self.view.children)
-
-        self.view._lock_window_active = True
-        self.view.add_item(self.view._lock_button)
-        self.view.add_item(self.view._dont_lock_button)
-        self.assertIn(self.view._lock_button, self.view.children)
-        self.assertIn(self.view._dont_lock_button, self.view.children)
 
     def test_initial_view_has_no_lock_window_state(self):
         fresh = WeeklySpinView(options=["a"], kind="sotw", target_message=None)
@@ -1043,7 +926,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -1057,16 +940,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
         # confirm_button stages this; emulate that step here.
-        self.view._pending_reroll = {
-            "winner": "OldSkill",
-            "emoji": "\U0001f3c3",
-            "mention": "<@999>",
-            "ts": 1700000000,
-        }
+        self.view._pending_reroll = PendingReroll(
+            winner="OldSkill",
+            emoji="\U0001f3c3",
+            mention="<@999>",
+            timestamp=1700000000,
+        )
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         await self.view._close_lock_window_as_locked()
@@ -1099,16 +982,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
-        self.view._pending_reroll = {
-            "winner": "OldSkill",
-            "emoji": "\U0001f3c3",
-            "mention": "<@999>",
-            "ts": 1700000000,
-        }
+        self.view._pending_reroll = PendingReroll(
+            winner="OldSkill",
+            emoji="\U0001f3c3",
+            mention="<@999>",
+            timestamp=1700000000,
+        )
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         await self.view._close_lock_window_as_open(
@@ -1143,7 +1026,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         history_before = list(self.view.history_lines)
@@ -1239,7 +1122,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         with patch("ironforgedbot.commands.admin.weekly_spin.db") as mock_db, patch(
@@ -1288,7 +1171,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         self.target_message.delete = AsyncMock()
@@ -1340,7 +1223,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         self.target_message.delete = AsyncMock()
@@ -1375,16 +1258,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         await self.view._open_lock_window(user_id=999)
         # confirm_button stages this in production; emulate it here so the
         # don't-lock decision appends a real consolidated history line.
-        self.view._pending_reroll = {
-            "winner": "OldSkill",
-            "emoji": "\U0001f3c3",
-            "mention": "<@999>",
-            "ts": 1700000000,
-        }
+        self.view._pending_reroll = PendingReroll(
+            winner="OldSkill",
+            emoji="\U0001f3c3",
+            mention="<@999>",
+            timestamp=1700000000,
+        )
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         self.target_message.delete = AsyncMock()
@@ -1413,7 +1296,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         other = _make_interaction(user_id=42, role_names=["Member"])
@@ -1440,7 +1323,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         other = _make_interaction(user_id=42, role_names=["Member"])
@@ -1479,7 +1362,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         self.view._lock_completed = True
@@ -1530,16 +1413,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
-        self.view._pending_reroll = {
-            "winner": "OldSkill",
-            "emoji": "\U0001f3c3",
-            "mention": "<@999>",
-            "ts": 1700000000,
-        }
+        self.view._pending_reroll = PendingReroll(
+            winner="OldSkill",
+            emoji="\U0001f3c3",
+            mention="<@999>",
+            timestamp=1700000000,
+        )
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         self.assertEqual(self.view._locked_at, 0)
@@ -1580,52 +1463,6 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(self.view._lock_window_active)
         self.target_message.edit.assert_awaited_once()
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
-    @patch("ironforgedbot.commands.admin.weekly_spin.data")
-    async def test_lock_window_timer_times_out_reenables_reroll(
-        self, mock_data, mock_find_emoji
-    ):
-        """Bypass real sleep; assert the post-timer state."""
-        mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
-
-        self.view.current_winner = "Agility"
-        await self.view._open_lock_window(user_id=999)
-        # confirm_button stages this; emulate that step here.
-        self.view._pending_reroll = {
-            "winner": "OldSkill",
-            "emoji": "\U0001f3c3",
-            "mention": "<@999>",
-            "ts": 1700000000,
-        }
-        self.view._lock_window_task.cancel()
-        try:
-            await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
-            pass
-
-        # Drive the close path directly (matches what the timer does on
-        # timeout). Timer expiry renders identically to Don't Lock: the
-        # consolidated line is appended with the unlock icon.
-        await self.view._close_lock_window_as_open(
-            message=self.target_message,
-            history_icon=UNLOCK_EMOJI,
-        )
-
-        self.assertFalse(self.view._lock_window_active)
-        self.assertFalse(self.view._is_locked)
-        self.assertIsNone(self.view._pending_reroll)
-        self.assertNotIn(self.view._lock_button, self.view.children)
-        self.assertNotIn(self.view._dont_lock_button, self.view.children)
-        self.assertFalse(self.view._reroll_button.disabled)
-        self.assertEqual(
-            self.view.history_lines,
-            [
-                "\U0001f3c3 ~~OldSkill~~ rerolled by <@999> <t:1700000000:R> \U0001f513",
-            ],
-            "timer expiry should append consolidated line same as Don't Lock",
-        )
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -1673,12 +1510,12 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
 
         self.view.current_winner = "Agility"
         await self.view._open_lock_window(user_id=999)
-        self.view._pending_reroll = {
-            "winner": "OldSkill",
-            "emoji": "\U0001f3c3",
-            "mention": "<@999>",
-            "ts": 1700000000,
-        }
+        self.view._pending_reroll = PendingReroll(
+            winner="OldSkill",
+            emoji="\U0001f3c3",
+            mention="<@999>",
+            timestamp=1700000000,
+        )
 
         try:
             with patch(
@@ -1722,7 +1559,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         await self.view._close_lock_window_as_locked()
@@ -1812,7 +1649,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             self.view._lock_window_task.cancel()
             try:
                 await self.view._lock_window_task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
                 pass
 
     @patch("ironforgedbot.commands.admin.weekly_spin.build_payment_embed")
@@ -1871,7 +1708,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.view._lock_window_task.cancel()
         try:
             await self.view._lock_window_task
-        except (asyncio.CancelledError, Exception):
+        except asyncio.CancelledError:
             pass
 
         non_rigger = _make_interaction(user_id=42, role_names=["Member"])
@@ -1903,7 +1740,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             self.view._lock_window_task.cancel()
             try:
                 await self.view._lock_window_task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
                 pass
 
     async def test_lock_window_rigger_can_dont_lock_before_reveal(self):
@@ -1935,7 +1772,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             self.view._lock_window_task.cancel()
             try:
                 await self.view._lock_window_task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
                 pass
 
     async def test_close_lock_window_as_open_cancels_reveal_and_unlocks_reroll(self):
@@ -1961,7 +1798,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
                 self.view._lock_window_task.cancel()
                 try:
                     await self.view._lock_window_task
-                except (asyncio.CancelledError, Exception):
+                except asyncio.CancelledError:
                     pass
 
                 await self.view._close_lock_window_as_open(
@@ -1999,7 +1836,7 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
                 self.view._lock_window_task.cancel()
                 try:
                     await self.view._lock_window_task
-                except (asyncio.CancelledError, Exception):
+                except asyncio.CancelledError:
                     pass
 
                 await self.view._close_lock_window_as_locked()
@@ -2058,6 +1895,10 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             )
 
         content = self.target_message.edit.call_args.kwargs["content"]
+        self.assertEqual(
+            self.target_message.edit.call_args.kwargs["allowed_mentions"].to_dict(),
+            {"parse": []},
+        )
         self.assertIn(
             ":warning: <@999> rerolled. They must decide whether to lock it "
             "before their chance to lock expires <t:1234567890:R>.",
@@ -2149,6 +1990,28 @@ class TestLockPaymentView(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.parent_view._lock_window_active)
         self.assertFalse(self.parent_view._lock_completed)
         interaction.delete_original_response.assert_awaited_once()
+
+    async def test_timeout_does_not_release_lock_while_confirmation_is_running(self):
+        self.view.completed = True
+        self.parent_view._lock_completed = True
+        self.view.message = None
+
+        await self.view.on_timeout()
+
+        self.assertTrue(self.parent_view._lock_completed)
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_database_exception_releases_lock_window(self, mock_db):
+        mock_db.get_session.side_effect = RuntimeError("database unavailable")
+        interaction = _make_interaction(user_id=999)
+        interaction.original_response = AsyncMock(return_value=MagicMock())
+
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        self.assertFalse(self.parent_view._lock_completed)
+        interaction.followup.send.assert_awaited()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
@@ -2415,9 +2278,9 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         # reroll happened and the icon is filled in later.
         self.assertEqual(self.parent_view.history_lines, [])
         self.assertIsNotNone(self.parent_view._pending_reroll)
-        self.assertEqual(self.parent_view._pending_reroll["winner"], "OldSkill")
-        self.assertEqual(self.parent_view._pending_reroll["mention"], "<@999>")
-        self.assertIsInstance(self.parent_view._pending_reroll["ts"], int)
+        self.assertEqual(self.parent_view._pending_reroll.winner, "OldSkill")
+        self.assertEqual(self.parent_view._pending_reroll.mention, "<@999>")
+        self.assertIsInstance(self.parent_view._pending_reroll.timestamp, int)
         self.assertEqual(self.parent_view.current_winner, "NewSkill")
 
         # Pick the pending post-reveal edit (the one without attachments is
@@ -2435,6 +2298,10 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("OldSkill", edit_content)
         self.assertIn("The next SOTW is...", edit_content)
         self.assertNotIn("NewSkill", edit_content)
+        self.assertEqual(
+            pending_edits[0].kwargs["allowed_mentions"].to_dict(),
+            {"parse": []},
+        )
         self.target_message.clear_reactions.assert_awaited_once()
         self.assertEqual(self.target_message.add_reaction.await_count, 2)
         reaction_calls = self.target_message.add_reaction.call_args_list
@@ -2494,9 +2361,9 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         # emoji / mention / timestamp for the (still-pending) first
         # decision. OldSkill resolves to the mocked skill emoji.
         self.assertEqual(self.parent_view.history_lines, [])
-        self.assertEqual(self.parent_view._pending_reroll["winner"], "OldSkill")
-        self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f3c3")
-        self.assertEqual(self.parent_view._pending_reroll["mention"], "<@111>")
+        self.assertEqual(self.parent_view._pending_reroll.winner, "OldSkill")
+        self.assertEqual(self.parent_view._pending_reroll.emoji, "\U0001f3c3")
+        self.assertEqual(self.parent_view._pending_reroll.mention, "<@111>")
 
         await _invoke_callback(view2, "confirm_button", interaction2, button)
 
@@ -2505,9 +2372,9 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         # NewSkill is in mock_data.SKILLS so the lookup resolves to the
         # mocked emoji returned by find_emoji.
         self.assertEqual(self.parent_view.history_lines, [])
-        self.assertEqual(self.parent_view._pending_reroll["winner"], "NewSkill")
-        self.assertEqual(self.parent_view._pending_reroll["emoji"], "\U0001f3c3")
-        self.assertEqual(self.parent_view._pending_reroll["mention"], "<@222>")
+        self.assertEqual(self.parent_view._pending_reroll.winner, "NewSkill")
+        self.assertEqual(self.parent_view._pending_reroll.emoji, "\U0001f3c3")
+        self.assertEqual(self.parent_view._pending_reroll.mention, "<@222>")
         self.assertEqual(self.parent_view.current_winner, "OldSkill")
         self.assertEqual(
             mock_build_spin_gif.call_args_list[0].args[0],
@@ -2523,86 +2390,6 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
-    async def test_confirm_releases_lock_and_re_enables_on_success(
-        self, mock_db, mock_create_ingot_service
-    ):
-        with patch(
-            "ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file",
-            return_value=(MagicMock(spec=discord.File), "NewSkill"),
-        ):
-            mock_data_patch = patch(
-                "ironforgedbot.commands.admin.weekly_spin.data",
-                SKILLS=[{"name": "NewSkill", "emoji_key": "newskill"}],
-            )
-            mock_data_patch.start()
-            self.parent_view.reroll_locked = True
-            child = MagicMock(spec=discord.ui.Item)
-            child.disabled = True
-            self.parent_view._children = [child]
-
-            success_response = MagicMock()
-            success_response.status = True
-            success_response.new_total = 5000
-            mock_session = AsyncMock()
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = None
-            mock_db.get_session.return_value = mock_session
-            mock_service = AsyncMock()
-            mock_service.try_remove_ingots = AsyncMock(return_value=success_response)
-            mock_create_ingot_service.return_value = mock_service
-
-            interaction = _make_interaction(user_id=999)
-            interaction.original_response = AsyncMock()
-            button = MagicMock(spec=discord.ui.Button)
-            await _invoke_callback(self.view, "confirm_button", interaction, button)
-
-            self.assertFalse(self.parent_view.reroll_locked)
-            self.assertFalse(self.parent_view._reroll_unlocked)
-            self.assertTrue(child.disabled)
-            self.target_message.edit.call_args_list[-1]
-            self.target_message.clear_reactions.assert_awaited_once()
-            self.assertEqual(self.target_message.add_reaction.await_count, 2)
-            mock_data_patch.stop()
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
-    @patch("ironforgedbot.commands.admin.weekly_spin.db")
-    async def test_confirm_clears_and_readds_reactions_on_success(
-        self, mock_db, mock_create_ingot_service
-    ):
-        with patch(
-            "ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file",
-            return_value=(MagicMock(spec=discord.File), "NewSkill"),
-        ):
-            mock_data_patch = patch(
-                "ironforgedbot.commands.admin.weekly_spin.data",
-                SKILLS=[{"name": "NewSkill", "emoji_key": "newskill"}],
-            )
-            mock_data_patch.start()
-            success_response = MagicMock()
-            success_response.status = True
-            success_response.new_total = 5000
-            mock_session = AsyncMock()
-            mock_session.__aenter__.return_value = mock_session
-            mock_session.__aexit__.return_value = None
-            mock_db.get_session.return_value = mock_session
-            mock_service = AsyncMock()
-            mock_service.try_remove_ingots = AsyncMock(return_value=success_response)
-            mock_create_ingot_service.return_value = mock_service
-
-            interaction = _make_interaction(user_id=999)
-            interaction.original_response = AsyncMock()
-            button = MagicMock(spec=discord.ui.Button)
-            await _invoke_callback(self.view, "confirm_button", interaction, button)
-
-            self.target_message.clear_reactions.assert_awaited_once()
-            self.assertEqual(self.target_message.add_reaction.await_count, 2)
-            reaction_calls = self.target_message.add_reaction.call_args_list
-            self.assertEqual(reaction_calls[0].args[0], "\U0001f44d")
-            self.assertEqual(reaction_calls[1].args[0], "\U0001f44e")
-            mock_data_patch.stop()
-
-    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
-    @patch("ironforgedbot.commands.admin.weekly_spin.db")
     async def test_confirm_continues_when_clear_reactions_forbidden(
         self, mock_db, mock_create_ingot_service
     ):
@@ -2615,6 +2402,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
                 SKILLS=[{"name": "NewSkill", "emoji_key": "newskill"}],
             )
             mock_data_patch.start()
+            self.addCleanup(mock_data_patch.stop)
             self.target_message.clear_reactions.side_effect = discord.Forbidden(
                 MagicMock(), "no perms"
             )
@@ -2638,7 +2426,6 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
             self.target_message.edit.assert_called()
             interaction.delete_original_response.assert_called_once()
             self.target_message.add_reaction.assert_not_called()
-            mock_data_patch.stop()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
     @patch("ironforgedbot.commands.admin.weekly_spin.db")
@@ -2706,6 +2493,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
     async def test_confirm_target_message_none_rejected(self):
         parent = WeeklySpinView(options=self.options, kind="sotw", target_message=None)
         parent.current_winner = "OldSkill"
+        parent.reroll_locked = True
         view = RerollPaymentView(parent_view=parent, user_id=999)
 
         interaction = _make_interaction(user_id=999)
@@ -2718,6 +2506,132 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
             "no longer exists",
             interaction.response.send_message.call_args.args[0],
         )
+        self.assertFalse(parent.reroll_locked)
+
+    async def test_timeout_does_not_release_lock_while_confirmation_is_running(self):
+        self.parent_view.reroll_locked = True
+        self.view.completed = True
+        self.view.message = None
+
+        await self.view.on_timeout()
+
+        self.assertTrue(self.parent_view.reroll_locked)
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_database_exception_releases_reroll_lock(self, mock_db):
+        self.parent_view.reroll_locked = True
+        mock_db.get_session.side_effect = RuntimeError("database unavailable")
+        interaction = _make_interaction(user_id=999)
+        interaction.original_response = AsyncMock(return_value=MagicMock())
+
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        self.assertFalse(self.parent_view.reroll_locked)
+        interaction.followup.send.assert_awaited()
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file")
+    async def test_gif_failure_refunds_successful_charge(
+        self, mock_build_spin_gif, mock_create_ingot_service, mock_db
+    ):
+        successful_charge = MagicMock(status=True, new_total=100)
+        successful_refund = MagicMock(status=True, new_total=2600)
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        mock_db.get_session.return_value = session
+        service = AsyncMock()
+        service.try_remove_ingots.return_value = successful_charge
+        service.try_add_ingots.return_value = successful_refund
+        mock_create_ingot_service.return_value = service
+        mock_build_spin_gif.side_effect = RuntimeError("GIF generation failed")
+        interaction = _make_interaction(user_id=999)
+        interaction.original_response = AsyncMock(return_value=MagicMock())
+
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        service.try_add_ingots.assert_awaited_once_with(
+            999,
+            2500,
+            None,
+            "Refund weekly spin reroll after GIF generation failure",
+        )
+        self.assertFalse(self.parent_view.reroll_locked)
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
+    @patch("ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file")
+    async def test_failed_refund_requests_admin_help(
+        self, mock_build_spin_gif, mock_create_ingot_service, mock_db
+    ):
+        successful_charge = MagicMock(status=True, new_total=100)
+        failed_refund = MagicMock(status=False, new_total=100)
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        mock_db.get_session.return_value = session
+        service = AsyncMock()
+        service.try_remove_ingots.return_value = successful_charge
+        service.try_add_ingots.return_value = failed_refund
+        mock_create_ingot_service.return_value = service
+        mock_build_spin_gif.side_effect = RuntimeError("GIF generation failed")
+        interaction = _make_interaction(user_id=999)
+        interaction.original_response = AsyncMock(return_value=MagicMock())
+
+        await _invoke_callback(
+            self.view, "confirm_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        self.assertIn(
+            "Contact an admin",
+            interaction.followup.send.call_args.args[0],
+        )
+        self.assertFalse(self.parent_view.reroll_locked)
+
+    @patch("ironforgedbot.commands.admin.weekly_spin.db")
+    async def test_failed_post_update_releases_lock(self, mock_db):
+        successful_charge = MagicMock(status=True, new_total=100)
+        successful_refund = MagicMock(status=True, new_total=2600)
+        session = AsyncMock()
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = None
+        mock_db.get_session.return_value = session
+        service = AsyncMock()
+        service.try_remove_ingots.return_value = successful_charge
+        service.try_add_ingots.return_value = successful_refund
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.create_ingot_service",
+            return_value=service,
+        ), patch(
+            "ironforgedbot.commands.admin.weekly_spin.build_spin_gif_file",
+            return_value=(MagicMock(spec=discord.File), "NewSkill"),
+        ):
+            self.target_message.edit.side_effect = discord.HTTPException(
+                MagicMock(), "edit failed"
+            )
+            interaction = _make_interaction(user_id=999)
+            interaction.original_response = AsyncMock(return_value=MagicMock())
+
+            await _invoke_callback(
+                self.view,
+                "confirm_button",
+                interaction,
+                MagicMock(spec=discord.ui.Button),
+            )
+
+        service.try_add_ingots.assert_awaited_once_with(
+            999,
+            2500,
+            None,
+            "Refund weekly spin reroll after spin post update failure",
+        )
+        self.assertFalse(self.parent_view.reroll_locked)
 
     async def test_cancel_releases_lock_and_deletes_payment_message(self):
         self.parent_view.reroll_locked = True
@@ -2743,6 +2657,18 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         interaction.response.defer.assert_called_once_with(ephemeral=True)
         interaction.delete_original_response.assert_called_once()
         self.assertFalse(self.parent_view.reroll_locked)
+
+    async def test_cancel_does_not_release_lock_after_confirmation_started(self):
+        self.parent_view.reroll_locked = True
+        self.view.completed = True
+        interaction = _make_interaction(user_id=999)
+
+        await _invoke_callback(
+            self.view, "cancel_button", interaction, MagicMock(spec=discord.ui.Button)
+        )
+
+        self.assertTrue(self.parent_view.reroll_locked)
+        interaction.response.defer.assert_not_awaited()
 
     async def test_on_timeout_releases_lock_and_re_enables(self):
         self.parent_view.reroll_locked = True
