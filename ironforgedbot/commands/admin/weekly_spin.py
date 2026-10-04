@@ -116,6 +116,11 @@ def _build_event_schedule_paragraph(
     paragraph = f"This event will start on <t:{start_ts}:D> and end on <t:{end_ts}:D>."
     if reroll_close_ts is not None:
         paragraph += f" The active option will automatically be locked <t:{reroll_close_ts}:R>, unless a member locks their reroll."
+        ingot_icon = find_emoji("Ingot") or ":Ingot:"
+        paragraph += (
+            f" Re-rolling costs {ingot_icon} **{REROLL_COST:,}** ingots and "
+            f"locking costs {ingot_icon} **{LOCK_COST:,}** ingots."
+        )
     return paragraph
 
 

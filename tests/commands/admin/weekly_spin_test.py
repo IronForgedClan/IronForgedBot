@@ -9,9 +9,11 @@ from ironforgedbot.commands.admin import weekly_spin
 from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.admin.weekly_spin import (
     LOCK_EMOJI,
+    LOCK_COST,
     LockPaymentView,
     PendingReroll,
     RerollPaymentView,
+    REROLL_COST,
     UNLOCK_EMOJI,
     WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS,
     WeeklySpinView,
@@ -151,7 +153,7 @@ class TestBuildPostContent(unittest.TestCase):
                 f"{pad_winner_text('<Agility>', 'Agility')}||\n\n"
             )
         )
-        self.assertIn("This event will run from <t:", result)
+        self.assertIn("This event will start on <t:", result)
         self.assertNotIn("### History", result)
         self.assertTrue(result.endswith("\n\n"))
 
@@ -167,7 +169,7 @@ class TestBuildPostContent(unittest.TestCase):
                 f"{pad_winner_text('<Zulrah>', 'Zulrah')}||\n\n"
             )
         )
-        self.assertIn("This event will run from <t:", result)
+        self.assertIn("This event will start on <t:", result)
         self.assertNotIn("### History", result)
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -181,12 +183,12 @@ class TestBuildPostContent(unittest.TestCase):
         )
         self.assertIn(f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||", result)
         self.assertIn(
-            "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
+            "This event will start on <t:" + str(TEST_START_TS) + ":D>", result
         )
         self.assertIn("### History\n-# ~~Crafting~~ rerolled by @User1", result)
         self.assertIn(
             f"## ||{pad_winner_text('\U0001f3c3', 'Agility')}||\n\n"
-            f"This event will run from <t:{TEST_START_TS}:D> through "
+            f"This event will start on <t:{TEST_START_TS}:D> and end on "
             f"<t:{TEST_END_TS}:D>.\n\n"
             "### History\n-# ~~Crafting~~ rerolled by @User1",
             result,
@@ -213,7 +215,7 @@ class TestBuildPostContent(unittest.TestCase):
         self, mock_data, mock_find_emoji
     ):
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
-        mock_find_emoji.return_value = "\U0001f3c3"
+        mock_find_emoji.side_effect = ["<DWH>", "<Agility>", "<Ingot>"]
         result = _build_post_content(
             "sotw",
             "Agility",
@@ -222,7 +224,16 @@ class TestBuildPostContent(unittest.TestCase):
             TEST_END_TS,
             reroll_close_ts=1735612800,
         )
-        self.assertIn(f"The re-roll window closes <t:1735612800:R>.", result)
+        self.assertIn(
+            "The active option will automatically be locked "
+            "<t:1735612800:R>, unless a member locks their reroll.",
+            result,
+        )
+        self.assertIn(
+            f"Re-rolling costs <Ingot> **{REROLL_COST:,}** ingots and locking costs "
+            f"<Ingot> **{LOCK_COST:,}** ingots.",
+            result,
+        )
         self.assertNotIn("-# Re-roll window closes", result)
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
@@ -233,8 +244,8 @@ class TestBuildPostContent(unittest.TestCase):
         mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
         mock_find_emoji.return_value = "\U0001f3c3"
         result = _build_post_content("sotw", "Agility", [], TEST_START_TS, TEST_END_TS)
-        self.assertNotIn("Will lock", result)
-        self.assertNotIn("Re-roll window closes", result)
+        self.assertNotIn("automatically be locked", result)
+        self.assertNotIn("Re-rolling costs", result)
 
 
 class TestBuildPendingContent(unittest.TestCase):
@@ -242,7 +253,7 @@ class TestBuildPendingContent(unittest.TestCase):
         result = _build_pending_content("sotw", [], TEST_START_TS, TEST_END_TS)
         self.assertTrue(result.startswith("# :DWH: The next SOTW is...\n## ...\n\n"))
         self.assertIn(
-            "This event will run from <t:" + str(TEST_START_TS) + ":D>", result
+            "This event will start on <t:" + str(TEST_START_TS) + ":D>", result
         )
         self.assertNotIn("### History", result)
         self.assertTrue(result.endswith("\n\n"))
@@ -367,11 +378,14 @@ class TestPostWeeklySpinResult(unittest.IsolatedAsyncioTestCase):
         content = self.target.send.call_args.kwargs["content"]
         self.assertIn("The next BOTW is...", content)
         self.assertIn(
-            f"This event will run from <t:{TEST_START_TS}:D> through <t:{TEST_END_TS}:D>. "
-            f"The re-roll window closes <t:{int(1_000_000 + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)}:R>.",
+            f"This event will start on <t:{TEST_START_TS}:D> and end on "
+            f"<t:{TEST_END_TS}:D>. The active option will automatically be "
+            f"locked <t:{int(1_000_000 + WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)}:R>, "
+            "unless a member locks their reroll. "
+            f"Re-rolling costs \U0001f40d **{REROLL_COST:,}** ingots and "
+            f"locking costs \U0001f40d **{LOCK_COST:,}** ingots.",
             content,
         )
-        self.assertNotIn("-# Re-roll window closes", content)
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -818,20 +832,21 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertIn(f"<t:{TEST_START_TS}:D>", content)
         self.assertIn(f"<t:{TEST_END_TS}:D>", content)
         self.assertIn("<@42>", content)
-        self.assertIn("This event will run from", content)
+        self.assertIn("This event will start on", content)
         self.assertIn(
-            ":warning: <@42> rerolled. They must decide whether to lock it "
-            "before their chance to lock expires <t:1234567890:R>.",
+            ":warning: <@42> has rerolled and must decide whether to lock "
+            "the result before the opportunity expires <t:1234567890:R>.",
             content,
         )
         self.assertIn(
-            f"This event will run from <t:{TEST_START_TS}:D> through "
-            f"<t:{TEST_END_TS}:D>. The re-roll window closes <t:1234570000:R>.\n\n"
+            f"This event will start on <t:{TEST_START_TS}:D> and end on "
+            f"<t:{TEST_END_TS}:D>. The active option will automatically be "
+            "locked <t:1234570000:R>, unless a member locks their reroll. "
+            f"Re-rolling costs \U0001f3c3 **{REROLL_COST:,}** ingots and "
+            f"locking costs \U0001f3c3 **{LOCK_COST:,}** ingots.\n\n"
             "### History\n-# ~~Old~~ rerolled by <@42>\n\n:warning:",
             content,
         )
-        self.assertIn(f"The re-roll window closes <t:1234570000:R>.", content)
-        self.assertNotIn("-# Re-roll window closes", content)
 
     def test_build_locked_content_keeps_lock_emoji_out_of_heading(self):
         # The locked-content helper now operates on a WeeklySpinView
@@ -860,15 +875,16 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             )
         )
         self.assertNotIn(LOCK_EMOJI, content.splitlines()[0])
-        self.assertNotIn("Re-roll window closes", content)
+        self.assertNotIn("automatically be locked", content)
+        self.assertNotIn("Re-rolling costs", content)
         self.assertIn("\U0001f3c3 ~~OldSkill~~ rerolled by <@999>", content)
-        self.assertIn("This event will run from", content)
+        self.assertIn("This event will start on", content)
         self.assertIn(
             f"Locked <t:{self.view._locked_at}:R>. The reroll window is now closed.",
             content,
         )
         self.assertIn(
-            f"This event will run from <t:{TEST_START_TS}:D> through "
+            f"This event will start on <t:{TEST_START_TS}:D> and end on "
             f"<t:{TEST_END_TS}:D>.\n\n{LOCK_EMOJI} "
             f"Locked <t:{self.view._locked_at}:R>. The reroll window is now closed.\n\n"
             "### History\n-# "
@@ -902,14 +918,20 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
                 for c in self.target_message.edit.call_args_list
                 if "content" in c.kwargs
                 and "<t:" in c.kwargs["content"]
-                and "must decide whether to lock it" in c.kwargs["content"]
+                and "must decide whether to lock" in c.kwargs["content"]
             ),
             None,
         )
         self.assertIsNotNone(lock_edit_call, "expected lock-window content edit")
         self.assertIn("<@999>", lock_edit_call.kwargs["content"])
         self.assertIn(
-            "They must decide whether to lock it before their chance to lock expires",
+            "has rerolled and must decide whether to lock the result before the "
+            "opportunity expires",
+            lock_edit_call.kwargs["content"],
+        )
+        self.assertIn(
+            f"Re-rolling costs \U0001f3c3 **{REROLL_COST:,}** ingots and "
+            f"locking costs \U0001f3c3 **{LOCK_COST:,}** ingots.",
             lock_edit_call.kwargs["content"],
         )
         self.assertIn(
@@ -1570,7 +1592,8 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.view._timed_out)
         edit_kwargs = self.target_message.edit.call_args.kwargs
         self.assertIn("content", edit_kwargs)
-        self.assertNotIn("Re-roll window closes", edit_kwargs["content"])
+        self.assertNotIn("automatically be locked", edit_kwargs["content"])
+        self.assertNotIn("Re-rolling costs", edit_kwargs["content"])
         self.assertIn("\U0001f512", edit_kwargs["content"])
         self.assertNotIn("### History", edit_kwargs["content"])
 
@@ -1900,12 +1923,12 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
             {"parse": []},
         )
         self.assertIn(
-            ":warning: <@999> rerolled. They must decide whether to lock it "
-            "before their chance to lock expires <t:1234567890:R>.",
+            ":warning: <@999> has rerolled and must decide whether to lock "
+            "the result before the opportunity expires <t:1234567890:R>.",
             content,
         )
-        self.assertIn("The re-roll window closes <t:1234570000:R>.", content)
-        self.assertNotIn("-# Re-roll window closes", content)
+        self.assertIn("The active option will automatically be locked", content)
+        self.assertIn(f"Re-rolling costs \U0001f3c3 **{REROLL_COST:,}**", content)
 
 
 class TestLockPaymentView(unittest.IsolatedAsyncioTestCase):
@@ -2145,7 +2168,7 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         edit_kwargs = pending_edits[0].kwargs
         self.assertNotIn("NewSkill", edit_kwargs["content"])
         self.assertIn("The next SOTW is...", edit_kwargs["content"])
-        self.assertIn("This event will run from <t:", edit_kwargs["content"])
+        self.assertIn("This event will start on <t:", edit_kwargs["content"])
         interaction.delete_original_response.assert_called_once()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
