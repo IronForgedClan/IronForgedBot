@@ -21,13 +21,13 @@ FIXED_SCROLL_ITEMS = (
 FONT_SIZE = 40  # Large enough to read clearly at 500px width
 ITEM_HEIGHT = 50  # Provides comfortable vertical spacing between text items
 
-SPIN_FRAMES = 100  # ~7 seconds of spinning at 14.3fps
-FADEOUT_FRAMES = 20  # ~1.4 seconds for non-winners to fade out
-CONFETTI_FRAMES = 75  # ~5.25 seconds of confetti celebration
+SPIN_FRAMES = 90  # ~6.3 seconds of spinning at 14.3fps
+FADEOUT_FRAMES = 15  # ~1.05 seconds for non-winners to fade out
+CONFETTI_FRAMES = 45  # ~3.15 seconds of confetti celebration
 FADEIN_FRAMES = 15  # first N spin frames where all text fades in (0 -> 1)
-OUTRO_FRAMES = 25  # ~1.75 seconds fade to background for clean loop point
+OUTRO_FRAMES = 15  # ~1.05 seconds fade to background for clean loop point
 
-FRAME_COUNT = SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES + OUTRO_FRAMES  # 220
+FRAME_COUNT = SPIN_FRAMES + FADEOUT_FRAMES + CONFETTI_FRAMES + OUTRO_FRAMES  # 165
 
 CONFETTI_COUNT = 80  # Dense confetti without overwhelming the winner text
 CONFETTI_SIZE = 6  # Large enough to be visible, small enough to look like confetti
@@ -86,24 +86,40 @@ def _load_background() -> Image.Image:
         return Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (20, 20, 40, 255))
 
 
-def _draw_text_with_outline_rgba(
+def _create_text_masks(
+    text: str, font: ImageFont.FreeTypeFont, outline_width: int = 2
+) -> tuple[Image.Image, Image.Image, int, int]:
+    """Rasterize text fill and outline once for reuse across animation frames."""
+    left, top, right, bottom = font.getbbox(text, stroke_width=outline_width)
+    size = (right - left, bottom - top)
+
+    outline_mask = Image.new("L", size, 0)
+    fill_mask = Image.new("L", size, 0)
+    ImageDraw.Draw(outline_mask).text(
+        (-left, -top),
+        text,
+        font=font,
+        fill=255,
+        stroke_width=outline_width,
+        stroke_fill=255,
+    )
+    ImageDraw.Draw(fill_mask).text((-left, -top), text, font=font, fill=255)
+
+    return outline_mask, fill_mask, left, top
+
+
+def _draw_text_with_masks(
     draw: ImageDraw.Draw,
     x: float,
     y: float,
-    text: str,
-    font: ImageFont.FreeTypeFont,
+    masks: tuple[Image.Image, Image.Image, int, int],
     alpha: int,
-    outline_width: int = 2,
-):
-    """Draw text with a Pillow stroke outline onto an RGBA draw context."""
-    draw.text(
-        (x, y),
-        text,
-        font=font,
-        fill=(255, 255, 0, alpha),
-        stroke_width=outline_width,
-        stroke_fill=(0, 0, 0, alpha),
-    )
+) -> None:
+    """Composite cached text masks at requested position and opacity."""
+    outline_mask, fill_mask, left, top = masks
+    position = (round(x) + left, round(y) + top)
+    draw.bitmap(position, outline_mask, fill=(0, 0, 0, alpha))
+    draw.bitmap(position, fill_mask, fill=(255, 255, 0, alpha))
 
 
 def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Image]:
@@ -126,7 +142,8 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
     text_layout = {}
     for text in set(options):
         bbox = font.getbbox(text)
-        text_layout[text] = (bbox, (GIF_WIDTH - (bbox[2] - bbox[0])) // 2)
+        x = (GIF_WIDTH - (bbox[2] - bbox[0])) // 2
+        text_layout[text] = (bbox, x, _create_text_masks(text, font))
 
     frames: list[Image.Image] = []
 
@@ -163,10 +180,10 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
             if alpha == 0:
                 continue
 
-            bbox, x = text_layout[text]
+            bbox, x, masks = text_layout[text]
             text_y = item_y - (bbox[3] - bbox[1]) / 2 - bbox[1]
 
-            _draw_text_with_outline_rgba(draw, x, text_y, text, font, alpha)
+            _draw_text_with_masks(draw, x, text_y, masks, alpha)
 
         composite = Image.alpha_composite(background, overlay)
         frames.append(composite)
@@ -193,9 +210,9 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
             if alpha == 0:
                 continue
 
-            bbox, x = text_layout[text]
+            bbox, x, masks = text_layout[text]
             text_y = item_y - (bbox[3] - bbox[1]) / 2 - bbox[1]
-            _draw_text_with_outline_rgba(draw, x, text_y, text, font, alpha)
+            _draw_text_with_masks(draw, x, text_y, masks, alpha)
 
         composite = Image.alpha_composite(background, overlay)
         frames.append(composite)
@@ -217,7 +234,7 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
 
     # Pre-compute winner text layout (constant for all confetti frames)
     winner_text = options[selected_index]
-    w_bbox, winner_x = text_layout[winner_text]
+    w_bbox, winner_x, winner_masks = text_layout[winner_text]
     winner_ty = center_y - (w_bbox[3] - w_bbox[1]) / 2 - w_bbox[1]
 
     # Phase 3 (f < CONFETTI_FRAMES): winner text + confetti at full opacity.
@@ -228,8 +245,8 @@ def build_spin_frames(options: list[str], selected_index: int) -> list[Image.Ima
         alpha = int(255 * fade)
 
         text_overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
-        _draw_text_with_outline_rgba(
-            ImageDraw.Draw(text_overlay), winner_x, winner_ty, winner_text, font, alpha
+        _draw_text_with_masks(
+            ImageDraw.Draw(text_overlay), winner_x, winner_ty, winner_masks, alpha
         )
 
         confetti_overlay = Image.new("RGBA", (GIF_WIDTH, GIF_HEIGHT), (0, 0, 0, 0))
@@ -264,6 +281,18 @@ async def build_spin_gif_file(options: list[str]) -> tuple[discord.File, str]:
     return result
 
 
+def _convert_frames_to_rgb(frames: list[Image.Image]) -> list[Image.Image]:
+    """Convert frames while releasing each larger RGBA source immediately."""
+    gif_frames = []
+    for frame in frames:
+        try:
+            gif_frames.append(frame.convert("RGB"))
+        finally:
+            frame.close()
+    frames.clear()
+    return gif_frames
+
+
 def _build_spin_gif_sync(options: list[str]) -> tuple[discord.File, str]:
     """Synchronous GIF generation - runs in thread pool.
 
@@ -281,7 +310,7 @@ def _build_spin_gif_sync(options: list[str]) -> tuple[discord.File, str]:
 
     # build_spin_frames guarantees an opaque background, so conversion alone
     # preserves pixels and avoids another full-frame composite pass.
-    gif_frames = [frame.convert("RGB") for frame in frames]
+    gif_frames = _convert_frames_to_rgb(frames)
     del frames
     converted_at = time.perf_counter()
 
