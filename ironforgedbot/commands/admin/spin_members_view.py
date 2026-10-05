@@ -1,10 +1,8 @@
 import logging
-from typing import Optional
 
 import discord
 
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
-from ironforgedbot.commands.spin.cmd_spin import MINIMUM_SPIN_OPTIONS
 from ironforgedbot.commands.spin.spin_result_handler import send_spin_result
 from ironforgedcore.common.normalize import normalize_discord_string
 from ironforgedbot.common.responses import send_error_response
@@ -15,11 +13,11 @@ logger = logging.getLogger(__name__)
 class SpinMembersView(discord.ui.View):
     """Ephemeral view with a RoleSelect dropdown to pick members for spin."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(timeout=120)
-        self.message: Optional[discord.Message] = None
+        self.message: discord.Message | None = None
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         if self.message:
             await self.message.delete()
         return await super().on_timeout()
@@ -32,23 +30,23 @@ class SpinMembersView(discord.ui.View):
     )
     async def role_select(
         self, interaction: discord.Interaction, select: discord.ui.RoleSelect
-    ):
+    ) -> None:
         await interaction.response.defer(ephemeral=True)
         role = select.values[0]
 
-        # Keep member objects, extract and clean display names for GIF
-        member_list = [m for m in role.members if not m.bot]
-        member_name_pairs = [
-            (normalize_discord_string(m.display_name), m)
-            for m in member_list
-            if normalize_discord_string(m.display_name)
-        ]
+        member_name_pairs: list[tuple[str, discord.Member]] = []
+        for member in role.members:
+            if member.bot:
+                continue
+            display_name = normalize_discord_string(member.display_name)
+            if display_name:
+                member_name_pairs.append((display_name, member))
         display_names = [name for name, _ in member_name_pairs]
 
-        if len(display_names) < 1:
+        if not display_names:
             await send_error_response(
                 interaction,
-                f"The role **{role.name}** has fewer than {MINIMUM_SPIN_OPTIONS} members to spin.",
+                f"The role **{role.name}** has no eligible members to spin.",
             )
             return
 
