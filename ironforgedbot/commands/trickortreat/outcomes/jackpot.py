@@ -33,16 +33,17 @@ async def result_jackpot(
             embed = handler._build_embed(handler.jackpot["claimed_message"])
             return await interaction.followup.send(embed=embed)
 
-        user_new_total = await handler._adjust_ingots(
+        adjustment = await handler._adjust_ingots(
             interaction,
             JACKPOT_VALUE,
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: jackpot",
         )
 
-        if user_new_total is None or user_new_total is IngotAdjustmentFailure.ERROR:
+        if adjustment.failure is not None:
             return
 
+        assert adjustment.new_total is not None
         STATE.state["trick_or_treat_jackpot_claimed"] = True
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
@@ -53,7 +54,7 @@ async def result_jackpot(
             amount=JACKPOT_VALUE,
         )
         embed = handler._build_embed(
-            message + handler._get_balance_message(user_nickname, user_new_total)
+            message + handler._get_balance_message(user_nickname, adjustment.new_total)
         )
         embed.set_thumbnail(
             url=(

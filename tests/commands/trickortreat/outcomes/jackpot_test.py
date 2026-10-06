@@ -3,6 +3,10 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from ironforgedbot.commands.trickortreat.outcomes import jackpot
+from ironforgedbot.commands.trickortreat.types import (
+    IngotAdjustment,
+    IngotAdjustmentFailure,
+)
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
@@ -60,7 +64,9 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=1_500_000)
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(1_500_000, 1_000_000)
+        )
         handler._get_user_info = AsyncMock(return_value=("TestUser", 500_000))
 
         await jackpot.result_jackpot(handler, self.interaction)
@@ -74,7 +80,9 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
     async def test_result_jackpot_does_not_claim_when_award_fails(self, mock_state):
         handler = create_test_trick_or_treat_handler()
         mock_state.state = {"trick_or_treat_jackpot_claimed": False}
-        handler._adjust_ingots = AsyncMock(return_value=None)
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
+        )
         handler._get_user_info = AsyncMock(return_value=("TestUser", 0))
 
         await jackpot.result_jackpot(handler, self.interaction)
@@ -91,7 +99,7 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         async def adjust_ingots(*args, **kwargs):
             adjustment_started.set()
             await finish_adjustment.wait()
-            return 1500
+            return IngotAdjustment(1500, 500)
 
         handler._adjust_ingots = AsyncMock(side_effect=adjust_ingots)
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))

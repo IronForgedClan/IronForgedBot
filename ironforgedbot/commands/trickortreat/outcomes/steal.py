@@ -139,16 +139,28 @@ class StealTargetView(discord.ui.View):
 
             self.has_interacted = True
 
-            await interaction.response.defer()
+            message_updated = False
+            try:
+                await interaction.response.defer()
 
-            self.clear_items()
-            embed = await process_steal(self.handler, interaction, self.amount, target)
+                self.clear_items()
+                embed = await process_steal(
+                    self.handler, interaction, self.amount, target
+                )
 
-            if self.message:
-                await self.message.edit(embed=embed, view=self)
+                if self.message:
+                    await self.message.edit(embed=embed, view=self)
+                    message_updated = True
+            finally:
+                if not message_updated and self.message:
+                    self.clear_items()
+                    try:
+                        await self.message.edit(view=None)
+                    except discord.HTTPException:
+                        pass
 
-            self.stop()
-            self._cleanup()
+                self.stop()
+                self._cleanup()
 
         return callback
 
@@ -172,17 +184,27 @@ class StealTargetView(discord.ui.View):
 
         self.has_interacted = True
 
-        await interaction.response.defer()
+        message_updated = False
+        try:
+            await interaction.response.defer()
 
-        self.clear_items()
+            self.clear_items()
 
-        embed = self.handler._build_embed(self.handler.steal["walk_away"])
+            embed = self.handler._build_embed(self.handler.steal["walk_away"])
 
-        if self.message:
-            await self.message.edit(embed=embed, view=self)
+            if self.message:
+                await self.message.edit(embed=embed, view=self)
+                message_updated = True
+        finally:
+            if not message_updated and self.message:
+                self.clear_items()
+                try:
+                    await self.message.edit(view=None)
+                except discord.HTTPException:
+                    pass
 
-        self.stop()
-        self._cleanup()
+            self.stop()
+            self._cleanup()
 
     async def on_timeout(self):
         """Handle the view timing out after 45 seconds."""
@@ -328,29 +350,31 @@ async def process_steal(
     else:
         penalty = _calculate_steal_penalty(amount)
 
-        user_new_total = await handler._adjust_ingots(
+        adjustment = await handler._adjust_ingots(
             interaction,
             -penalty,
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: steal failure penalty",
         )
 
-        if user_new_total is IngotAdjustmentFailure.ERROR:
+        if adjustment.failure is IngotAdjustmentFailure.ERROR:
             return handler._build_embed("An error occurred processing the steal.")
 
-        if user_new_total is None:
-            logger.error("Error removing penalty from user")
-            return handler._build_embed("An error occurred processing the steal.")
+        if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
+            return handler._build_no_ingots_error_response(
+                interaction.user.display_name
+            )
 
+        assert adjustment.new_total is not None
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
-        formatted_penalty = f"-{penalty:,}"
+        formatted_penalty = f"{adjustment.applied_quantity:,}"
         message = handler.steal["failure"].format(
             ingot_icon=handler.ingot_icon,
             amount=amount,
             target_mention=target.mention,
             penalty=formatted_penalty,
         )
-        message += handler._get_balance_message(user_nickname, user_new_total)
+        message += handler._get_balance_message(user_nickname, adjustment.new_total)
 
     return handler._build_embed(message)

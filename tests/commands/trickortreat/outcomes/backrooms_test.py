@@ -8,6 +8,10 @@ from ironforgedbot.commands.trickortreat.outcomes.backrooms import (
     BackroomsView,
     DoorOutcome,
 )
+from ironforgedbot.commands.trickortreat.types import (
+    IngotAdjustment,
+    IngotAdjustmentFailure,
+)
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
     create_mock_discord_interaction,
@@ -60,7 +64,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler = create_test_trick_or_treat_handler()
 
-        handler._adjust_ingots = AsyncMock(return_value=4500)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(4500, 3000))
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -87,7 +91,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler = create_test_trick_or_treat_handler()
 
-        handler._adjust_ingots = AsyncMock(return_value=3000)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(3000, -2000))
         handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -104,6 +108,25 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsNotNone(result)
         self.assertIsInstance(result, discord.Embed)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
+    async def test_monster_message_reports_actual_capped_loss(self, mock_randint):
+        mock_randint.return_value = 2000
+        handler = create_test_trick_or_treat_handler()
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(0, -500))
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 500))
+
+        result = await backrooms.process_door_choice(
+            handler,
+            self.interaction,
+            DoorOutcome.MONSTER,
+            1,
+            [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE],
+            ["Door 1", "Door 2", "Door 3"],
+        )
+
+        self.assertIn("-500", result.description)
+        self.assertNotIn("-2,000", result.description)
 
     async def test_process_door_choice_escape(self):
         """Test escape door outcome (no ingot change)."""
@@ -135,7 +158,9 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler = create_test_trick_or_treat_handler()
 
-        handler._adjust_ingots = AsyncMock(return_value=None)
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, IngotAdjustmentFailure.NO_INGOTS)
+        )
         handler._get_user_info = AsyncMock(return_value=("TestUser", 0))
 
         outcomes = [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE]
@@ -168,3 +193,25 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         call_kwargs = view.message.edit.call_args.kwargs
         self.assertIn("embed", call_kwargs)
         self.assertIsNone(call_kwargs["view"])
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.asyncio.sleep")
+    async def test_backrooms_callback_cleans_up_when_processing_fails(self, mock_sleep):
+        handler = create_test_trick_or_treat_handler()
+        view = BackroomsView(
+            handler,
+            self.test_user.id,
+            [DoorOutcome.TREASURE, DoorOutcome.MONSTER, DoorOutcome.ESCAPE],
+            ["Door 1", "Door 2", "Door 3"],
+        )
+        view.message = AsyncMock()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.backrooms.process_door_choice",
+            side_effect=RuntimeError("database unavailable"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "database unavailable"):
+                await view.children[0].callback(self.interaction)
+
+        self.assertIsNone(view.handler)
+        self.assertIsNone(view.door_outcomes)
+        mock_sleep.assert_awaited_once_with(8)

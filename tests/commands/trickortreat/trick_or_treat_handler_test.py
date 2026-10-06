@@ -8,11 +8,20 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import aiohttp
 
-from ironforgedbot.commands.trickortreat.trick_or_treat_constants import CONTENT_FILE
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    BACKROOMS_DOOR_COUNT,
+    CONTENT_FILE,
+    TrickOrTreat,
+)
+from ironforgedbot.commands.trickortreat import trick_or_treat_handler as handler_module
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
-from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
+from ironforgedbot.commands.trickortreat.types import (
+    IngotAdjustment,
+    IngotAdjustmentFailure,
+    QUIZ_OPTION_COUNT,
+)
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
@@ -51,6 +60,68 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(history_deque, deque)
             self.assertEqual(len(history_deque), 0)
 
+    async def test_random_result_dispatches_every_outcome(self):
+        handler = create_test_trick_or_treat_handler()
+        outcome_handlers = {
+            TrickOrTreat.JACKPOT_INGOTS: "jackpot.result_jackpot",
+            TrickOrTreat.REMOVE_ALL_INGOTS_TRICK: "trick.result_remove_all_ingots_trick",
+            TrickOrTreat.DOUBLE_OR_NOTHING: "double_or_nothing.result_double_or_nothing",
+            TrickOrTreat.STEAL: "steal.result_steal",
+            TrickOrTreat.QUIZ_MASTER: "quiz_master.result_quiz_master",
+            TrickOrTreat.BACKROOMS: "backrooms.result_backrooms",
+            TrickOrTreat.REMOVE_INGOTS_HIGH: "ingot_changes.result_remove_high",
+            TrickOrTreat.ADD_INGOTS_HIGH: "ingot_changes.result_add_high",
+            TrickOrTreat.REMOVE_INGOTS_LOW: "ingot_changes.result_remove_low",
+            TrickOrTreat.ADD_INGOTS_LOW: "ingot_changes.result_add_low",
+            TrickOrTreat.JOKE: "joke.result_joke",
+            TrickOrTreat.GIF: "gif.result_gif",
+        }
+
+        self.assertEqual(set(outcome_handlers), set(TrickOrTreat))
+        for outcome, handler_path in outcome_handlers.items():
+            with self.subTest(outcome=outcome):
+                with patch(
+                    f"ironforgedbot.commands.trickortreat.outcomes.{handler_path}",
+                    new_callable=AsyncMock,
+                ) as mock_outcome:
+                    with patch(
+                        "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choices",
+                        return_value=[outcome],
+                    ):
+                        await handler.random_result(self.interaction)
+
+                mock_outcome.assert_awaited_once_with(handler, self.interaction)
+
+    def test_get_handler_returns_cached_instance(self):
+        with patch.object(handler_module, "_handler_instance", None):
+            with patch.object(handler_module, "TrickOrTreatHandler") as handler_class:
+                first = handler_module.get_handler()
+                second = handler_module.get_handler()
+
+        self.assertIs(first, second)
+        handler_class.assert_called_once_with()
+
+    def test_get_random_from_list_avoids_recent_items_and_resets_history(self):
+        handler = create_test_trick_or_treat_handler()
+        history = deque(maxlen=5)
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choice",
+            side_effect=lambda available: available[0],
+        ):
+            results = [
+                handler._get_random_from_list(["A", "B"], history) for _ in range(3)
+            ]
+
+        self.assertEqual(results, ["A", "B", "A"])
+        self.assertEqual(list(history), [0])
+
+    def test_get_random_from_list_rejects_empty_items(self):
+        handler = create_test_trick_or_treat_handler()
+
+        with self.assertRaisesRegex(ValueError, "non-empty"):
+            handler._get_random_from_list([], deque())
+
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
@@ -73,7 +144,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, 500, self.test_user)
 
-        self.assertEqual(result, 1500)
+        self.assertEqual(result.new_total, 1500)
+        self.assertEqual(result.applied_quantity, 500)
         mock_ingot_service.try_add_ingots.assert_called_once_with(
             self.test_user.id, 500, None, "Trick or treat: win"
         )
@@ -110,7 +182,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
 
-        self.assertEqual(result, 500)
+        self.assertEqual(result.new_total, 500)
+        self.assertEqual(result.applied_quantity, -500)
         mock_ingot_service.try_remove_ingots.assert_called_once()
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
@@ -145,7 +218,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
 
-        self.assertIsNone(result)
+        self.assertEqual(result.failure, IngotAdjustmentFailure.NO_INGOTS)
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
@@ -182,7 +255,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_ingot_service.try_remove_ingots.assert_called_once_with(
             self.test_user.id, -100, None, "Trick or treat: loss"
         )
-        self.assertEqual(result, 0)
+        self.assertEqual(result.new_total, 0)
+        self.assertEqual(result.applied_quantity, -100)
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
@@ -207,7 +281,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots_with_quantity = AsyncMock(return_value=(1500, 500))
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(1500, 500))
 
         await handler._handle_ingot_result(self.interaction, 500, is_positive=True)
 
@@ -238,7 +312,9 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots_with_quantity = AsyncMock(return_value=None)
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, IngotAdjustmentFailure.NO_INGOTS)
+        )
 
         await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
 
@@ -251,7 +327,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     ):
         handler = create_test_trick_or_treat_handler()
         setup_database_service_mocks(mock_db, mock_member_service_class)
-        handler._adjust_ingots_with_quantity = AsyncMock(return_value=(0, -100))
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(0, -100))
 
         await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
 
@@ -266,8 +342,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
     ):
         handler = create_test_trick_or_treat_handler()
         setup_database_service_mocks(mock_db, mock_member_service_class)
-        handler._adjust_ingots_with_quantity = AsyncMock(
-            return_value=IngotAdjustmentFailure.ERROR
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
         )
 
         await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
@@ -389,8 +465,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             options = question["options"]
             assert isinstance(options, list), f"Question {i} 'options' must be a list"
             assert (
-                len(options) == 4
-            ), f"Question {i} must have exactly 4 options, got {len(options)}"
+                len(options) == QUIZ_OPTION_COUNT
+            ), f"Question {i} must have exactly {QUIZ_OPTION_COUNT} options, got {len(options)}"
 
             for j, option in enumerate(options):
                 assert isinstance(
@@ -593,6 +669,17 @@ class TestLoadContentFile(unittest.TestCase):
 
         with patch("builtins.open", mock_file):
             with self.assertRaisesRegex(ValueError, "exactly 4 options"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_too_few_backrooms_door_labels(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["door_labels"] = [
+            "Door" for _ in range(BACKROOMS_DOOR_COUNT - 1)
+        ]
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "at least"):
                 TrickOrTreatHandler._load_content_file("invalid.json")
 
     def test_load_content_file_unexpected_error(self):

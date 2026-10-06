@@ -7,6 +7,7 @@ from typing import List, Optional, TypeVar
 import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    BACKROOMS_DOOR_COUNT,
     CONTENT_FILE,
     TrickOrTreat,
 )
@@ -15,12 +16,15 @@ from ironforgedbot.commands.trickortreat.types import (
     DoubleOrNothingData,
     GeneralData,
     HistoryDict,
+    IngotAdjustment,
     IngotAdjustmentFailure,
     JackpotData,
     JokeData,
     QuizData,
     StealData,
     TrickData,
+    TrickOrTreatContent,
+    QUIZ_OPTION_COUNT,
 )
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
@@ -71,7 +75,7 @@ class TrickOrTreatHandler:
         self.negative_messages: List[str] = self.general["negative_messages"]
 
     @staticmethod
-    def _load_content_file(file_path: str = CONTENT_FILE) -> dict:
+    def _load_content_file(file_path: str = CONTENT_FILE) -> TrickOrTreatContent:
         """Load and parse the trick-or-treat content JSON file.
 
         Args:
@@ -228,8 +232,10 @@ class TrickOrTreatHandler:
                 raise ValueError(f"Quiz question {index} needs non-empty question text")
 
             options = question.get("options")
-            if not isinstance(options, list) or len(options) != 4:
-                raise ValueError(f"Quiz question {index} must have exactly 4 options")
+            if not isinstance(options, list) or len(options) != QUIZ_OPTION_COUNT:
+                raise ValueError(
+                    f"Quiz question {index} must have exactly {QUIZ_OPTION_COUNT} options"
+                )
 
             correct_index = question.get("correct_index")
             if type(correct_index) is not int or not 0 <= correct_index < len(options):
@@ -243,6 +249,13 @@ class TrickOrTreatHandler:
             ):
                 raise ValueError(f"Quiz question {index} options need non-empty text")
 
+        door_labels = data["backrooms"]["door_labels"]
+        if len(door_labels) < BACKROOMS_DOOR_COUNT:
+            raise ValueError(
+                "Backrooms needs at least "
+                f"{BACKROOMS_DOOR_COUNT} door labels in {file_path}"
+            )
+
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
 
@@ -253,6 +266,9 @@ class TrickOrTreatHandler:
         Returns:
             A randomly chosen item that hasn't been used recently.
         """
+        if not items:
+            raise ValueError("items must be a non-empty list")
+
         available_indices = [i for i in range(len(items)) if i not in history]
 
         if not available_indices:
@@ -322,20 +338,6 @@ class TrickOrTreatHandler:
             self.general["no_ingots_message"] + self._get_balance_message(username, 0)
         )
 
-    def _add_to_history(
-        self, item: str, history_list: List[str], limit: int = 5
-    ) -> None:
-        """Add an item to a history list, removing oldest if limit exceeded.
-
-        Args:
-            item: The item to add to history.
-            history_list: The history list to modify.
-            limit: Maximum number of items to keep in history.
-        """
-        history_list.append(item)
-        if len(history_list) > limit:
-            history_list.pop(0)
-
     async def _get_user_info(self, user_id: int) -> tuple[str, int]:
         """Get user nickname and ingot total from database.
 
@@ -358,23 +360,8 @@ class TrickOrTreatHandler:
         quantity: int,
         discord_member: Optional[discord.Member],
         reason: Optional[str] = None,
-    ) -> Optional[int] | IngotAdjustmentFailure:
-        """Adjust balance and return new total, or failure state."""
-        adjustment = await self._adjust_ingots_with_quantity(
-            interaction, quantity, discord_member, reason
-        )
-        if isinstance(adjustment, IngotAdjustmentFailure):
-            return adjustment
-        return adjustment[0] if adjustment else None
-
-    async def _adjust_ingots_with_quantity(
-        self,
-        interaction: discord.Interaction,
-        quantity: int,
-        discord_member: Optional[discord.Member],
-        reason: Optional[str] = None,
-    ) -> Optional[tuple[int, int]] | IngotAdjustmentFailure:
-        """Add or remove ingots from a player's account.
+    ) -> IngotAdjustment:
+        """Adjust balance and report resulting total and applied quantity.
 
         Args:
             interaction: The Discord interaction context.
@@ -383,7 +370,7 @@ class TrickOrTreatHandler:
             reason: Optional changelog reason. Defaults to "Trick or treat win/loss".
 
         Returns:
-            Tuple of new ingot total and actual quantity, or None on failure.
+            Adjustment totals and failure category, when adjustment fails.
         """
         if not discord_member:
             raise Exception("error no user found")
@@ -405,11 +392,11 @@ class TrickOrTreatHandler:
                 if not member:
                     logger.error("Member not found in database")
                     await send_error_response(interaction, "Error updating ingots.")
-                    return IngotAdjustmentFailure.ERROR
+                    return IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
 
                 if member.ingots == 0:
                     # User has no ingots to lose
-                    return None
+                    return IngotAdjustment(None, 0, IngotAdjustmentFailure.NO_INGOTS)
 
                 # Adjust quantity if it would make balance negative
                 if member.ingots + quantity < 0:
@@ -423,14 +410,13 @@ class TrickOrTreatHandler:
             if not result:
                 logger.error("Error adjusting ingots")
                 await send_error_response(interaction, "Error updating ingots.")
-                return IngotAdjustmentFailure.ERROR
+                return IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
 
             if not result.status:
                 await send_error_response(interaction, result.message)
-                return IngotAdjustmentFailure.ERROR
+                return IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
 
-            return result.new_total, quantity
-        return None
+            return IngotAdjustment(result.new_total, quantity)
 
     async def _handle_ingot_result(
         self,
@@ -453,14 +439,14 @@ class TrickOrTreatHandler:
         else:
             reason = "Trick or treat: loss"
 
-        adjustment = await self._adjust_ingots_with_quantity(
+        adjustment = await self._adjust_ingots(
             interaction,
             quantity,
             interaction.guild.get_member(interaction.user.id),
             reason=reason,
         )
 
-        if adjustment is IngotAdjustmentFailure.ERROR:
+        if adjustment.failure is IngotAdjustmentFailure.ERROR:
             return
 
         # Get member nickname from database
@@ -471,13 +457,15 @@ class TrickOrTreatHandler:
             )
             user_nickname = user_member.nickname if user_member else "User"
 
-        if adjustment is None:
+        if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
             await interaction.followup.send(
                 embed=self._build_no_ingots_error_response(user_nickname)
             )
             return
 
-        ingot_total, actual_quantity = adjustment
+        assert adjustment.new_total is not None
+        ingot_total = adjustment.new_total
+        actual_quantity = adjustment.applied_quantity
 
         if is_positive:
             message_text = self._get_random_from_list(

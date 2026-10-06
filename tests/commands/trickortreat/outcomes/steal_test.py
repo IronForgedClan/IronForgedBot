@@ -9,6 +9,7 @@ from ironforgedbot.commands.trickortreat.outcomes.steal import (
     _calculate_steal_penalty,
     _get_steal_success_rate,
 )
+from ironforgedbot.commands.trickortreat.types import IngotAdjustment
 from ironforgedbot.services.trick_or_treat_service import TrickOrTreatTransferResponse
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
@@ -226,8 +227,10 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
-    async def test_process_steal_failure(self, mock_member_service_class, mock_db):
-        """Test failed steal."""
+    async def test_process_steal_failure_reports_capped_penalty(
+        self, mock_member_service_class, mock_db
+    ):
+        """Test failed steal reports amount actually removed from thief."""
         handler = create_test_trick_or_treat_handler()
 
         target_member = create_test_member("TargetUser", [ROLE.MEMBER])
@@ -236,7 +239,7 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
             nickname="TestUser",
             discord_id=self.test_user.id,
             rank=RANK.IRON,
-            ingots=1000,
+            ingots=500,
         )
         target_db_member = create_test_db_member(
             nickname="TargetUser",
@@ -260,8 +263,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         mock_db.get_session.return_value.__aenter__.return_value = AsyncMock()
 
-        handler._adjust_ingots = AsyncMock(return_value=200)
-        handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(0, -500))
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 0))
 
         success_rate = _get_steal_success_rate(100_000)
         with patch(
@@ -278,6 +281,8 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, discord.Embed)
         self.assertIn("fail", result.description.lower())
+        self.assertIn("-500", result.description)
+        self.assertNotIn("-800", result.description)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
@@ -412,3 +417,19 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIn("embed", edit_call_kwargs)
         embed = edit_call_kwargs["embed"]
         self.assertIn("walk", embed.description.lower())
+
+    async def test_steal_callback_disables_controls_when_processing_fails(self):
+        handler = create_test_trick_or_treat_handler()
+        target = create_test_member("Target", [ROLE.MEMBER])
+        view = StealTargetView(handler, self.test_user.id, 1000, [target])
+        view.message = AsyncMock()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.steal.process_steal",
+            side_effect=RuntimeError("database unavailable"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "database unavailable"):
+                await view.children[0].callback(self.interaction)
+
+        self.assertIsNone(view.handler)
+        view.message.edit.assert_awaited_with(view=None)

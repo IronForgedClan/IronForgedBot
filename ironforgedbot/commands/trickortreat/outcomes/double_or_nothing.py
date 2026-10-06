@@ -81,6 +81,7 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
+        message_updated = False
         try:
             await interaction.response.defer()
 
@@ -91,7 +92,15 @@ class DoubleOrNothingView(discord.ui.View):
 
             if self.message:
                 await self.message.edit(embed=embed, view=self)
+                message_updated = True
         finally:
+            if not message_updated and self.message:
+                self.clear_items()
+                try:
+                    await self.message.edit(view=None)
+                except discord.HTTPException:
+                    pass
+
             user_id_str = str(self.user_id)
             if user_id_str in STATE.state["double_or_nothing_offers"]:
                 del STATE.state["double_or_nothing_offers"][user_id_str]
@@ -119,6 +128,7 @@ class DoubleOrNothingView(discord.ui.View):
 
         self.has_interacted = True
 
+        message_updated = False
         try:
             await interaction.response.defer()
 
@@ -137,7 +147,15 @@ class DoubleOrNothingView(discord.ui.View):
 
             if self.message:
                 await self.message.edit(embed=embed, view=self)
+                message_updated = True
         finally:
+            if not message_updated and self.message:
+                self.clear_items()
+                try:
+                    await self.message.edit(view=None)
+                except discord.HTTPException:
+                    pass
+
             user_id_str = str(self.user_id)
             if user_id_str in STATE.state["double_or_nothing_offers"]:
                 del STATE.state["double_or_nothing_offers"][user_id_str]
@@ -190,21 +208,24 @@ async def result_double_or_nothing(
 
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
 
-    ingot_total = await handler._adjust_ingots(
+    adjustment = await handler._adjust_ingots(
         interaction,
         quantity,
         interaction.guild.get_member(interaction.user.id),
         reason="Trick or treat: double or nothing initial win",
     )
 
-    if ingot_total is IngotAdjustmentFailure.ERROR:
+    if adjustment.failure is IngotAdjustmentFailure.ERROR:
         return
 
-    if ingot_total is None:
+    if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
         await interaction.followup.send(
             embed=handler._build_no_ingots_error_response(interaction.user.display_name)
         )
         return
+
+    assert adjustment.new_total is not None
+    ingot_total = adjustment.new_total
 
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
@@ -251,42 +272,48 @@ async def process_double_or_nothing(
     user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
     if won:
-        ingot_total = await handler._adjust_ingots(
+        adjustment = await handler._adjust_ingots(
             interaction,
             amount,
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: double or nothing win",
         )
 
-        if ingot_total is IngotAdjustmentFailure.ERROR:
+        if adjustment.failure is IngotAdjustmentFailure.ERROR:
             return handler._build_embed("An error occurred processing the gamble.")
 
-        if ingot_total is None:
+        if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
             return handler._build_no_ingots_error_response(
                 interaction.user.display_name
             )
+
+        assert adjustment.new_total is not None
+        ingot_total = adjustment.new_total
 
         message = handler.double_or_nothing["win"].format(
             ingot_icon=handler.ingot_icon, total_amount=amount * 2
         )
         message += handler._get_balance_message(user_nickname, ingot_total)
     else:
-        ingot_total = await handler._adjust_ingots(
+        adjustment = await handler._adjust_ingots(
             interaction,
             -amount,
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: double or nothing loss",
         )
 
-        if ingot_total is IngotAdjustmentFailure.ERROR:
+        if adjustment.failure is IngotAdjustmentFailure.ERROR:
             return handler._build_embed("An error occurred processing the gamble.")
 
-        if ingot_total is None:
+        if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
             return handler._build_no_ingots_error_response(
                 interaction.user.display_name
             )
 
-        formatted_amount = f"-{amount:,}"
+        assert adjustment.new_total is not None
+        ingot_total = adjustment.new_total
+
+        formatted_amount = f"{adjustment.applied_quantity:,}"
         message = handler.double_or_nothing["lose"].format(
             ingot_icon=handler.ingot_icon, amount=formatted_amount
         )

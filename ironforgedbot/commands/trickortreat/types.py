@@ -1,17 +1,28 @@
 from collections import deque
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import TypedDict
+from typing import NotRequired, TypedDict
+
+QUIZ_OPTION_COUNT = 4
 
 
 class IngotAdjustmentFailure(StrEnum):
+    NO_INGOTS = "no_ingots"
     ERROR = "error"
+
+
+@dataclass(frozen=True)
+class IngotAdjustment:
+    new_total: int | None
+    applied_quantity: int
+    failure: IngotAdjustmentFailure | None = None
 
 
 class QuizOption(TypedDict):
     """A single quiz answer option."""
 
     text: str
-    emoji: str
+    emoji: NotRequired[str]
 
 
 class QuizQuestion(TypedDict):
@@ -78,6 +89,7 @@ class BackroomsData(TypedDict):
     opening_door: str
     expired: str
     thumbnails: list[str]
+    suspense_thumbnail: str
 
 
 class JokeData(TypedDict):
@@ -107,3 +119,24 @@ class HistoryDict(TypedDict):
     negative_message: deque[int]
     quiz_question: deque[int]
     joke: deque[int]
+
+
+class MediaData(TypedDict):
+    """Media URLs used by the event outcomes."""
+
+    gifs: list[str]
+    thumbnails: list[str]
+
+
+class TrickOrTreatContent(TypedDict):
+    """Validated top-level shape of trick-or-treat content JSON."""
+
+    jackpot: JackpotData
+    double_or_nothing: DoubleOrNothingData
+    steal: StealData
+    backrooms: BackroomsData
+    quiz_master: QuizData
+    joke: JokeData
+    remove_all_trick: TrickData
+    media: MediaData
+    general: GeneralData
