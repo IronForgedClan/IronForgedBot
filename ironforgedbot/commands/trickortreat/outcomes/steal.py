@@ -11,8 +11,8 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
 )
 from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
 from ironforgedbot.services.service_factory import create_trick_or_treat_service
-from ironforgedcore.common.roles import ROLE
 from ironforgedcore.database import db
+from ironforgedcore.models.member import Member
 from ironforgedcore.services.member_service import MemberService
 
 if TYPE_CHECKING:
@@ -21,6 +21,13 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
+MIN_STEAL_TARGET_INGOTS = 25_000
+STEAL_SUCCESS_RATE_START_INGOTS = 25_001
+STEAL_SUCCESS_RATE_MAX_INGOTS = 3_000_000
+MIN_STEAL_SUCCESS_RATE = 0.10
+MAX_STEAL_SUCCESS_RATE = 0.60
+MAX_STEAL_TARGETS = 4
 
 
 def _calculate_steal_penalty(amount: int) -> int:
@@ -37,7 +44,7 @@ def _calculate_steal_penalty(amount: int) -> int:
 
 
 def _get_steal_success_rate(target_ingots: int) -> float:
-    """Calculate steal success rate based on target's ingot balance.
+    """Calculate steal success rate, scaling linearly with target's balance.
 
     Args:
         target_ingots: The number of ingots the target has.
@@ -45,20 +52,18 @@ def _get_steal_success_rate(target_ingots: int) -> float:
     Returns:
         The probability of success (0.0-1.0).
     """
-    if target_ingots < 25_000:
+    if target_ingots < MIN_STEAL_TARGET_INGOTS:
         return 0
-    elif target_ingots < 50_000:
-        return 0.05
-    elif target_ingots < 100_000:
-        return 0.25
-    elif target_ingots < 250_000:
-        return 0.30
-    elif target_ingots < 500_000:
-        return 0.35
-    elif target_ingots < 2_000_000:
-        return 0.40
-    else:
-        return 0.45
+
+    balance_progress = max(
+        0,
+        target_ingots - STEAL_SUCCESS_RATE_START_INGOTS,
+    ) / (STEAL_SUCCESS_RATE_MAX_INGOTS - STEAL_SUCCESS_RATE_START_INGOTS)
+    return min(
+        MAX_STEAL_SUCCESS_RATE,
+        MIN_STEAL_SUCCESS_RATE
+        + balance_progress * (MAX_STEAL_SUCCESS_RATE - MIN_STEAL_SUCCESS_RATE),
+    )
 
 
 class StealTargetView(discord.ui.View):
@@ -74,7 +79,7 @@ class StealTargetView(discord.ui.View):
         handler: "TrickOrTreatHandler",
         user_id: int,
         amount: int,
-        targets: List[discord.Member],
+        targets: List[Member],
     ):
         """Initialize the steal target view.
 
@@ -93,9 +98,9 @@ class StealTargetView(discord.ui.View):
 
         for target in targets:
             button = discord.ui.Button(
-                label=target.display_name,
+                label=target.nickname,
                 style=discord.ButtonStyle.secondary,
-                custom_id=f"steal_{target.id}",
+                custom_id=f"steal_{target.discord_id}",
                 row=0,
             )
             button.callback = self._create_steal_callback(target)
@@ -114,7 +119,7 @@ class StealTargetView(discord.ui.View):
         """Clean up references."""
         self.handler = None
 
-    def _create_steal_callback(self, target: discord.Member):
+    def _create_steal_callback(self, target: Member):
         """Create a callback function for a specific target button.
 
         Args:
@@ -239,25 +244,28 @@ async def result_steal(
     """
     assert interaction.guild
 
-    member_targets = [
-        member
-        for member in interaction.guild.members
-        if any(role.name == ROLE.MEMBER for role in member.roles)
-        and member.id != interaction.user.id
-    ]
-
-    if not member_targets:
-        embed = handler._build_embed(handler.steal["no_targets"])
-        return await interaction.followup.send(embed=embed)
-
-    num_targets = min(4, len(member_targets))
-    targets = random.sample(member_targets, num_targets)
-
     quantity = random.randrange(LOW_INGOT_MIN, HIGH_INGOT_MAX, 1)
     penalty = _calculate_steal_penalty(quantity)
 
     async with db.get_session() as session:
         member_service = MemberService(session)
+        active_members = await member_service.get_all_active_members()
+        member_targets = [
+            member
+            for member in active_members
+            if member.active
+            and member.ingots >= MIN_STEAL_TARGET_INGOTS
+            and member.discord_id != interaction.user.id
+        ]
+
+        if not member_targets:
+            embed = handler._build_embed(handler.steal["no_targets"])
+            return await interaction.followup.send(embed=embed)
+
+        targets = random.sample(
+            member_targets, min(MAX_STEAL_TARGETS, len(member_targets))
+        )
+
         user_member = await member_service.get_member_by_discord_id(interaction.user.id)
 
         if user_member and user_member.ingots < penalty:
@@ -287,7 +295,7 @@ async def process_steal(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
     amount: int,
-    target: discord.Member,
+    target: Member,
 ) -> discord.Embed:
     """Process the result of a steal attempt.
 
@@ -308,11 +316,15 @@ async def process_steal(
 
     async with db.get_session() as session:
         member_service = MemberService(session)
-        target_member = await member_service.get_member_by_discord_id(target.id)
+        target_member = await member_service.get_member_by_discord_id(target.discord_id)
 
-        if not target_member or target_member.ingots == 0:
+        if (
+            not target_member
+            or not target_member.active
+            or target_member.ingots < MIN_STEAL_TARGET_INGOTS
+        ):
             message = handler.steal["target_no_ingots"].format(
-                target_mention=target.mention
+                target_mention=f"<@{target.discord_id}>"
             )
             return handler._build_embed(message)
 
@@ -328,7 +340,7 @@ async def process_steal(
         async with db.get_session() as session:
             transfer_service = create_trick_or_treat_service(session)
             transfer = await transfer_service.transfer_ingots(
-                target.id,
+                target.discord_id,
                 interaction.user.id,
                 actual_amount,
                 f"Trick or treat: stolen by {thief_nickname}",
@@ -343,7 +355,7 @@ async def process_steal(
         message = handler.steal["success"].format(
             ingot_icon=handler.ingot_icon,
             amount=transfer.amount,
-            target_mention=target.mention,
+            target_mention=f"<@{target.discord_id}>",
         )
         message += handler._get_balance_message(user_nickname, transfer.target_total)
 
@@ -372,7 +384,7 @@ async def process_steal(
         message = handler.steal["failure"].format(
             ingot_icon=handler.ingot_icon,
             amount=amount,
-            target_mention=target.mention,
+            target_mention=f"<@{target.discord_id}>",
             penalty=formatted_penalty,
         )
         message += handler._get_balance_message(user_nickname, adjustment.new_total)

@@ -527,7 +527,7 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "walk_away": "Walked away",
         "expired": "Time's up",
         "no_targets": "No targets",
-        "target_no_ingots": "{target_mention} has no ingots",
+        "target_no_ingots": "{target_mention} is no longer an eligible target. No ingots were taken.",
         "user_no_ingots": "Need {ingot_icon}{penalty:,}"
     },
     "backrooms": {
