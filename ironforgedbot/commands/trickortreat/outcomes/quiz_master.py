@@ -14,6 +14,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
 )
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
@@ -243,7 +244,7 @@ async def _handle_correct_answer(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
     user_nickname: str,
-) -> Optional[str]:
+) -> Optional[str] | IngotAdjustmentFailure:
     """Handle a correct quiz answer by awarding ingots.
 
     Args:
@@ -264,6 +265,9 @@ async def _handle_correct_answer(
         reason="Trick or treat: quiz master correct answer",
     )
 
+    if ingot_total is IngotAdjustmentFailure.ERROR:
+        return ingot_total
+
     if ingot_total is None:
         return None
 
@@ -276,7 +280,7 @@ async def _handle_correct_answer(
 async def _handle_wrong_answer(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
-) -> str:
+) -> str | IngotAdjustmentFailure:
     """Handle a wrong quiz answer with potential penalty.
 
     Args:
@@ -298,6 +302,9 @@ async def _handle_wrong_answer(
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: quiz master wrong answer penalty",
         )
+
+        if ingot_total is IngotAdjustmentFailure.ERROR:
+            return ingot_total
 
         if ingot_total is None:
             # User has no ingots - lucky escape from penalty
@@ -348,11 +355,15 @@ async def process_quiz_answer(
     if chosen_index == correct_index:
         message = await _handle_correct_answer(handler, interaction, user_nickname)
         thumbnail = "https://oldschool.runescape.wiki/images/Mystery_box_detail.png"
+        if message is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the answer.")
         if message is None:
             return handler._build_no_ingots_error_response(
                 interaction.user.display_name
             )
     else:
         message = await _handle_wrong_answer(handler, interaction)
+        if message is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the answer.")
 
     return handler._build_embed(message, [thumbnail])

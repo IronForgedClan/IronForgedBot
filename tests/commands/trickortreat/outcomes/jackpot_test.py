@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -67,4 +68,44 @@ class TestJackpotOutcome(unittest.IsolatedAsyncioTestCase):
         self.interaction.followup.send.assert_called_once()
         embed = self.interaction.followup.send.call_args.kwargs["embed"]
         self.assertIn("jackpot", embed.description.lower())
+        self.assertTrue(mock_state.state["trick_or_treat_jackpot_claimed"])
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
+    async def test_result_jackpot_does_not_claim_when_award_fails(self, mock_state):
+        handler = create_test_trick_or_treat_handler()
+        mock_state.state = {"trick_or_treat_jackpot_claimed": False}
+        handler._adjust_ingots = AsyncMock(return_value=None)
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 0))
+
+        await jackpot.result_jackpot(handler, self.interaction)
+
+        self.assertFalse(mock_state.state["trick_or_treat_jackpot_claimed"])
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.jackpot.STATE")
+    async def test_result_jackpot_serializes_concurrent_claims(self, mock_state):
+        handler = create_test_trick_or_treat_handler()
+        mock_state.state = {"trick_or_treat_jackpot_claimed": False}
+        adjustment_started = asyncio.Event()
+        finish_adjustment = asyncio.Event()
+
+        async def adjust_ingots(*args, **kwargs):
+            adjustment_started.set()
+            await finish_adjustment.wait()
+            return 1500
+
+        handler._adjust_ingots = AsyncMock(side_effect=adjust_ingots)
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
+
+        first_claim = asyncio.create_task(
+            jackpot.result_jackpot(handler, self.interaction)
+        )
+        await adjustment_started.wait()
+        second_claim = asyncio.create_task(
+            jackpot.result_jackpot(handler, self.interaction)
+        )
+        await asyncio.sleep(0)
+        finish_adjustment.set()
+        await asyncio.gather(first_claim, second_claim)
+
+        handler._adjust_ingots.assert_awaited_once()
         self.assertTrue(mock_state.state["trick_or_treat_jackpot_claimed"])

@@ -1,5 +1,10 @@
 from collections import deque
+from enum import StrEnum
 from typing import TypedDict
+
+
+class IngotAdjustmentFailure(StrEnum):
+    ERROR = "error"
 
 
 class QuizOption(TypedDict):

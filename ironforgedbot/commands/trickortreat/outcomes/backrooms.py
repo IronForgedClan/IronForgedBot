@@ -13,6 +13,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     BACKROOMS_TREASURE_MIN,
 )
 from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
@@ -199,6 +200,13 @@ async def process_door_choice(
                 reason="Trick or treat: backrooms treasure",
             )
 
+            if ingot_total is IngotAdjustmentFailure.ERROR:
+                return handler._build_embed(
+                    "An error occurred processing the treasure.",
+                    handler.backrooms["thumbnails"],
+                    handler.history["backrooms_thumbnail"],
+                )
+
             if ingot_total is not None:
                 formatted_message = message.format(
                     ingots=f"{handler.ingot_icon}{amount:,}"
@@ -228,6 +236,13 @@ async def process_door_choice(
                 interaction.guild.get_member(interaction.user.id),
                 reason="Trick or treat: backrooms entity",
             )
+
+            if ingot_total is IngotAdjustmentFailure.ERROR:
+                return handler._build_embed(
+                    "An error occurred processing the encounter.",
+                    handler.backrooms["thumbnails"],
+                    handler.history["backrooms_thumbnail"],
+                )
 
             if ingot_total is None:
                 lucky_message = random.choice(

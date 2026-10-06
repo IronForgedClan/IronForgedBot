@@ -9,6 +9,7 @@ from ironforgedbot.commands.trickortreat.outcomes.steal import (
     _calculate_steal_penalty,
     _get_steal_success_rate,
 )
+from ironforgedbot.services.trick_or_treat_service import TrickOrTreatTransferResponse
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
@@ -108,7 +109,12 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
-    async def test_process_steal_success(self, mock_member_service_class, mock_db):
+    @patch(
+        "ironforgedbot.commands.trickortreat.outcomes.steal.create_trick_or_treat_service"
+    )
+    async def test_process_steal_success(
+        self, mock_create_service, mock_member_service_class, mock_db
+    ):
         """Test successful steal (25% chance)."""
         handler = create_test_trick_or_treat_handler()
 
@@ -142,8 +148,18 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
 
         mock_db.get_session.return_value.__aenter__.return_value = AsyncMock()
 
-        handler._adjust_ingots = AsyncMock(return_value=3000)
         handler._get_user_info = AsyncMock(return_value=("TestUser", 2000))
+        mock_transfer_service = AsyncMock()
+        mock_transfer_service.transfer_ingots.return_value = (
+            TrickOrTreatTransferResponse(
+                status=True,
+                message="Transfer completed",
+                amount=1000,
+                source_total=99_000,
+                target_total=3000,
+            )
+        )
+        mock_create_service.return_value = mock_transfer_service
 
         success_rate = _get_steal_success_rate(100_000)
         with patch(
@@ -154,10 +170,59 @@ class TestStealOutcome(unittest.IsolatedAsyncioTestCase):
                 handler, self.interaction, 1000, target_member
             )
 
-        self.assertEqual(handler._adjust_ingots.call_count, 2)
+        mock_transfer_service.transfer_ingots.assert_awaited_once_with(
+            target_member.id,
+            self.test_user.id,
+            1000,
+            "Trick or treat: stolen by TestUser",
+        )
         self.assertIsNotNone(result)
         self.assertIsInstance(result, discord.Embed)
         self.assertIn("success", result.description.lower())
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")
+    @patch(
+        "ironforgedbot.commands.trickortreat.outcomes.steal.create_trick_or_treat_service"
+    )
+    async def test_process_steal_transfer_failure_does_not_credit_thief(
+        self, mock_create_service, mock_member_service_class, mock_db
+    ):
+        handler = create_test_trick_or_treat_handler()
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 2000))
+        target_member = create_test_member("TargetUser", [ROLE.MEMBER])
+        target_db_member = create_test_db_member(
+            nickname="TargetUser",
+            discord_id=target_member.id,
+            rank=RANK.IRON,
+            ingots=100_000,
+        )
+        mock_member_service = AsyncMock()
+        mock_member_service.get_member_by_discord_id = AsyncMock(
+            return_value=target_db_member
+        )
+        mock_member_service_class.return_value = mock_member_service
+        mock_db.get_session.return_value.__aenter__.return_value = AsyncMock()
+        transfer_service = AsyncMock()
+        transfer_service.transfer_ingots.return_value = TrickOrTreatTransferResponse(
+            status=False,
+            message="Insufficient balance",
+            amount=0,
+            source_total=0,
+            target_total=0,
+        )
+        mock_create_service.return_value = transfer_service
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.steal.random.random",
+            return_value=0,
+        ):
+            result = await steal.process_steal(
+                handler, self.interaction, 1000, target_member
+            )
+
+        transfer_service.transfer_ingots.assert_awaited_once()
+        self.assertIn("error", result.description.lower())
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.db")
     @patch("ironforgedbot.commands.trickortreat.outcomes.steal.MemberService")

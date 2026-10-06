@@ -565,7 +565,7 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "expired_message": "Expired"
     },
     "media": {
-        "gifs": [],
+        "gifs": ["http://test.com/test.gif"],
         "thumbnails": ["http://test.com/img.png"]
     }
 }

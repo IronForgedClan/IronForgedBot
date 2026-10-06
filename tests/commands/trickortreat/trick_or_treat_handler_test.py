@@ -12,6 +12,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import CONTENT
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
 )
+from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
@@ -206,7 +207,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=1500)
+        handler._adjust_ingots_with_quantity = AsyncMock(return_value=(1500, 500))
 
         await handler._handle_ingot_result(self.interaction, 500, is_positive=True)
 
@@ -237,11 +238,41 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=None)
+        handler._adjust_ingots_with_quantity = AsyncMock(return_value=None)
 
         await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
 
         self.interaction.followup.send.assert_called_once()
+
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
+    async def test_handle_ingot_result_displays_capped_loss(
+        self, mock_member_service_class, mock_db
+    ):
+        handler = create_test_trick_or_treat_handler()
+        setup_database_service_mocks(mock_db, mock_member_service_class)
+        handler._adjust_ingots_with_quantity = AsyncMock(return_value=(0, -100))
+
+        await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
+
+        embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("-100", embed.description)
+        self.assertNotIn("-500", embed.description)
+
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
+    async def test_handle_ingot_result_does_not_duplicate_adjustment_error(
+        self, mock_member_service_class, mock_db
+    ):
+        handler = create_test_trick_or_treat_handler()
+        setup_database_service_mocks(mock_db, mock_member_service_class)
+        handler._adjust_ingots_with_quantity = AsyncMock(
+            return_value=IngotAdjustmentFailure.ERROR
+        )
+
+        await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
+
+        self.interaction.followup.send.assert_not_called()
 
     # Media validation tests
     async def test_unique_gifs(self):
@@ -358,8 +389,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             options = question["options"]
             assert isinstance(options, list), f"Question {i} 'options' must be a list"
             assert (
-                len(options) >= 2
-            ), f"Question {i} must have at least 2 options, got {len(options)}"
+                len(options) == 4
+            ), f"Question {i} must have exactly 4 options, got {len(options)}"
 
             for j, option in enumerate(options):
                 assert isinstance(
@@ -550,6 +581,19 @@ class TestLoadContentFile(unittest.TestCase):
         self.assertIn("Missing required keys", error_msg)
         self.assertIn("double_or_nothing", error_msg)
         self.assertIn("steal", error_msg)
+
+    def test_load_content_file_rejects_quiz_with_fewer_than_four_options(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["quiz_master"]["questions"][0]["options"] = [
+            {"text": "A"},
+            {"text": "B"},
+            {"text": "C"},
+        ]
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "exactly 4 options"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
 
     def test_load_content_file_unexpected_error(self):
         """Test that RuntimeError is raised for unexpected errors."""

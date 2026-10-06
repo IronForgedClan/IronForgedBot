@@ -9,6 +9,8 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     HIGH_INGOT_MAX,
     LOW_INGOT_MIN,
 )
+from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
+from ironforgedbot.services.service_factory import create_trick_or_treat_service
 from ironforgedcore.common.roles import ROLE
 from ironforgedcore.database import db
 from ironforgedcore.services.member_service import MemberService
@@ -301,32 +303,27 @@ async def process_steal(
     if success:
         thief_nickname, _ = await handler._get_user_info(interaction.user.id)
 
-        await handler._adjust_ingots(
-            interaction,
-            -actual_amount,
-            target,
-            reason=f"Trick or treat: stolen by {thief_nickname}",
-        )
+        async with db.get_session() as session:
+            transfer_service = create_trick_or_treat_service(session)
+            transfer = await transfer_service.transfer_ingots(
+                target.id,
+                interaction.user.id,
+                actual_amount,
+                f"Trick or treat: stolen by {thief_nickname}",
+            )
 
-        user_new_total = await handler._adjust_ingots(
-            interaction,
-            actual_amount,
-            interaction.guild.get_member(interaction.user.id),
-            reason="Trick or treat: steal success",
-        )
-
-        if user_new_total is None:
-            logger.error("Error adding stolen ingots to user")
+        if not transfer.status:
+            logger.error(f"Error processing steal: {transfer.message}")
             return handler._build_embed("An error occurred processing the steal.")
 
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
 
         message = handler.steal["success"].format(
             ingot_icon=handler.ingot_icon,
-            amount=actual_amount,
+            amount=transfer.amount,
             target_mention=target.mention,
         )
-        message += handler._get_balance_message(user_nickname, user_new_total)
+        message += handler._get_balance_message(user_nickname, transfer.target_total)
 
     else:
         penalty = _calculate_steal_penalty(amount)
@@ -337,6 +334,9 @@ async def process_steal(
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: steal failure penalty",
         )
+
+        if user_new_total is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the steal.")
 
         if user_new_total is None:
             logger.error("Error removing penalty from user")

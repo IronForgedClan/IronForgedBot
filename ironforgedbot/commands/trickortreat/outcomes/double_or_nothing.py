@@ -8,6 +8,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     HIGH_INGOT_MAX,
     LOW_INGOT_MIN,
 )
+from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
 from ironforgedbot.state import STATE
 
 if TYPE_CHECKING:
@@ -196,6 +197,9 @@ async def result_double_or_nothing(
         reason="Trick or treat: double or nothing initial win",
     )
 
+    if ingot_total is IngotAdjustmentFailure.ERROR:
+        return
+
     if ingot_total is None:
         await interaction.followup.send(
             embed=handler._build_no_ingots_error_response(interaction.user.display_name)
@@ -254,6 +258,9 @@ async def process_double_or_nothing(
             reason="Trick or treat: double or nothing win",
         )
 
+        if ingot_total is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the gamble.")
+
         if ingot_total is None:
             return handler._build_no_ingots_error_response(
                 interaction.user.display_name
@@ -270,6 +277,9 @@ async def process_double_or_nothing(
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: double or nothing loss",
         )
+
+        if ingot_total is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the gamble.")
 
         if ingot_total is None:
             return handler._build_no_ingots_error_response(
