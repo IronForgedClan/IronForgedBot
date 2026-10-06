@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 from typing import TypedDict
 
 import aiofiles
@@ -15,6 +16,7 @@ class BotStateDict(TypedDict):
     is_shutting_down: bool
     rate_limit: dict
     trick_or_treat_jackpot_claimed: bool
+    trick_or_treat_jackpot_year: int
     double_or_nothing_offers: dict
     raffle_on: bool
     raffle_price: int
@@ -34,6 +36,7 @@ class BotState:
             "is_shutting_down": False,
             "rate_limit": dict(),
             "trick_or_treat_jackpot_claimed": False,
+            "trick_or_treat_jackpot_year": datetime.now(timezone.utc).year,
             "double_or_nothing_offers": dict(),
             "raffle_on": False,
             "raffle_price": 5_000,
@@ -58,11 +61,19 @@ class BotState:
                 async with aiofiles.open(self._file_path, "r") as file:
                     content = json.loads(await file.read())
 
-                    if content.keys() != self.state.keys():
+                    if not isinstance(content, dict) or set(content) - set(self.state):
                         logger.warning("Invalid state file, using default state object")
                         return
 
-                    self.state = content
+                    loaded_state = self.state.copy()
+                    loaded_state.update(content)
+
+                    current_year = datetime.now(timezone.utc).year
+                    saved_year = content.get("trick_or_treat_jackpot_year")
+                    if saved_year is None or saved_year != current_year:
+                        loaded_state["trick_or_treat_jackpot_claimed"] = False
+                    loaded_state["trick_or_treat_jackpot_year"] = current_year
+                    self.state = loaded_state
 
                 logger.info(f"State loaded from: {self._file_path}")
             except Exception as e:
