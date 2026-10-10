@@ -82,65 +82,72 @@ class TestBackroomsRun(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(pot, 20_000)
         self.assertLessEqual(pot, 25_000)
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
-    async def test_fatal_monster_ends_run_and_empties_pot(self, mock_choice):
-        mock_choice.return_value = "Fatal encounter"
-
-        result = await process_door_choice(
-            self.handler, DoorOutcome.FATAL_MONSTER, room_number=3, pot=10_000
-        )
+    async def test_fatal_monster_ends_run_and_empties_pot(self):
+        with patch.object(
+            self.handler, "_get_backrooms_message", return_value="Fatal encounter"
+        ):
+            result = await process_door_choice(
+                self.handler, DoorOutcome.FATAL_MONSTER, room_number=3, pot=10_000
+            )
 
         self.assertEqual(result.pot, 0)
         self.assertTrue(result.terminal)
         self.assertFalse(result.bank_pot)
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
-    async def test_escapable_monster_halves_pot_and_continues(self, mock_choice):
-        mock_choice.return_value = "Escaped encounter"
-
-        result = await process_door_choice(
-            self.handler, DoorOutcome.ESCAPABLE_MONSTER, room_number=2, pot=10_001
-        )
+    async def test_escapable_monster_halves_pot_and_continues(self):
+        with patch.object(
+            self.handler, "_get_backrooms_message", return_value="Escaped encounter"
+        ):
+            result = await process_door_choice(
+                self.handler,
+                DoorOutcome.ESCAPABLE_MONSTER,
+                room_number=2,
+                pot=10_001,
+            )
 
         self.assertEqual(result.pot, 5_001)
         self.assertFalse(result.terminal)
         self.assertFalse(result.bank_pot)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
-    async def test_bargain_costs_quarter_pot_and_adds_room_reward(
-        self, mock_choice, mock_randint
-    ):
-        mock_choice.return_value = "A stranger offers a deal."
+    async def test_bargain_costs_quarter_pot_and_adds_room_reward(self, mock_randint):
         mock_randint.return_value = 2000
 
-        result = await process_door_choice(
-            self.handler, DoorOutcome.BARGAIN, room_number=2, pot=10_000
-        )
+        with patch.object(
+            self.handler,
+            "_get_backrooms_message",
+            return_value="A stranger offers a deal.",
+        ):
+            result = await process_door_choice(
+                self.handler, DoorOutcome.BARGAIN, room_number=2, pot=10_000
+            )
 
         self.assertEqual(result.pot, 9_500)
         self.assertEqual(result.impact, ("Bargain", "−🪙2,500 / +🪙2,000"))
         self.assertFalse(result.terminal)
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
-    async def test_safe_escape_ends_and_banks_pot(self, mock_choice):
-        mock_choice.return_value = "Safe exit"
-
-        result = await process_door_choice(
-            self.handler, DoorOutcome.ESCAPE, room_number=2, pot=5000
-        )
+    async def test_safe_escape_ends_and_banks_pot(self):
+        with patch.object(
+            self.handler, "_get_backrooms_message", return_value="Safe exit"
+        ):
+            result = await process_door_choice(
+                self.handler, DoorOutcome.ESCAPE, room_number=2, pot=5000
+            )
 
         self.assertEqual(result.pot, 5000)
         self.assertTrue(result.terminal)
         self.assertTrue(result.bank_pot)
 
-    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
-    async def test_escapable_monster_on_final_room_banks_reduced_pot(self, mock_choice):
-        mock_choice.return_value = "Escaped encounter"
-
-        result = await process_door_choice(
-            self.handler, DoorOutcome.ESCAPABLE_MONSTER, room_number=5, pot=10_000
-        )
+    async def test_escapable_monster_on_final_room_banks_reduced_pot(self):
+        with patch.object(
+            self.handler, "_get_backrooms_message", return_value="Escaped encounter"
+        ):
+            result = await process_door_choice(
+                self.handler,
+                DoorOutcome.ESCAPABLE_MONSTER,
+                room_number=5,
+                pot=10_000,
+            )
 
         self.assertEqual(result.pot, 5000)
         self.assertTrue(result.terminal)

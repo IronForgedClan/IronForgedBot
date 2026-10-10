@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import unittest
 from collections import deque
 from typing import Counter
@@ -51,14 +52,38 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertIn("gif", handler.history)
         self.assertIn("thumbnail", handler.history)
         self.assertIn("backrooms_thumbnail", handler.history)
+        self.assertIn("backrooms_messages", handler.history)
         self.assertIn("positive_message", handler.history)
         self.assertIn("negative_message", handler.history)
         self.assertIn("quiz_question", handler.history)
         self.assertIn("joke", handler.history)
 
         for key, history_deque in handler.history.items():
-            self.assertIsInstance(history_deque, deque)
-            self.assertEqual(len(history_deque), 0)
+            if key == "backrooms_messages":
+                for category_history in history_deque.values():
+                    self.assertIsInstance(category_history, deque)
+                    self.assertEqual(len(category_history), 0)
+            else:
+                self.assertIsInstance(history_deque, deque)
+                self.assertEqual(len(history_deque), 0)
+
+    def test_backrooms_message_history_avoids_repeats_until_pool_exhausted(self):
+        handler = create_test_trick_or_treat_handler()
+        messages = ["first", "second", "third"]
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choice",
+            side_effect=lambda choices: choices[0],
+        ):
+            first_intro = handler._get_backrooms_message("intro", messages)
+            first_escape = handler._get_backrooms_message("escape", messages)
+            later_intro = [
+                handler._get_backrooms_message("intro", messages) for _ in range(3)
+            ]
+
+        self.assertEqual(first_intro, "first")
+        self.assertEqual(first_escape, "first")
+        self.assertEqual(later_intro, ["second", "third", "first"])
 
     async def test_random_result_dispatches_every_outcome(self):
         handler = create_test_trick_or_treat_handler()
@@ -604,10 +629,63 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         """Test bargain message leaves values and progression to embed fields."""
         with open(CONTENT_FILE) as f:
             data = json.load(f)
-            message = data["backrooms"]["bargain_message"]
+            messages = data["backrooms"]["bargain_messages"]
 
-        for placeholder in ("{room}", "{lost}", "{bonus}", "{pot}"):
-            assert placeholder not in message
+        for message in messages:
+            for placeholder in ("{room}", "{lost}", "{bonus}", "{pot}"):
+                assert placeholder not in message
+
+    async def test_backrooms_content_pools_meet_variety_targets(self):
+        targets = {
+            "intro_messages": 3,
+            "continue_intro_messages": 5,
+            "door_labels": 16,
+            "treasure_messages": 16,
+            "fatal_monster_messages": 8,
+            "monster_messages": 12,
+            "escape_messages": 16,
+            "bargain_messages": 6,
+            "opening_door_messages": 6,
+            "expired_messages": 3,
+        }
+        with open(CONTENT_FILE) as f:
+            content_data = json.load(f)
+            backrooms_data = content_data["backrooms"]
+
+        for key, minimum_count in targets.items():
+            with self.subTest(content_pool=key):
+                messages = backrooms_data[key]
+                self.assertGreaterEqual(len(messages), minimum_count)
+                self.assertEqual(len(set(messages)), len(messages))
+        TrickOrTreatHandler._validate_content_data(content_data, CONTENT_FILE)
+
+    async def test_backrooms_copy_has_no_room_numbers_or_unexpected_placeholders(self):
+        message_pools = (
+            "intro_messages",
+            "continue_intro_messages",
+            "door_labels",
+            "treasure_messages",
+            "fatal_monster_messages",
+            "monster_messages",
+            "escape_messages",
+            "bargain_messages",
+            "opening_door_messages",
+            "expired_messages",
+        )
+        with open(CONTENT_FILE) as f:
+            backrooms_data = json.load(f)["backrooms"]
+
+        for pool_name in message_pools:
+            for message in backrooms_data[pool_name]:
+                with self.subTest(content_pool=pool_name, message=message):
+                    self.assertNotRegex(
+                        message,
+                        r"(?i)\broom\s+(?:one|two|three|four|five|\d+)\b",
+                    )
+                    if pool_name == "opening_door_messages":
+                        message.format(door="Test Door")
+                    else:
+                        message.format()
 
     async def test_joke_messages_valid(self):
         """Test that joke messages array is valid."""

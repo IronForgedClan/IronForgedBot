@@ -117,14 +117,18 @@ async def process_door_choice(
             amount = random.randint(minimum, maximum)
             added_amount = min(amount, BACKROOMS_MAX_PAYOUT - pot)
             new_pot = min(BACKROOMS_MAX_PAYOUT, pot + amount)
-            message = random.choice(handler.backrooms["treasure_messages"])
+            message = handler._get_backrooms_message(
+                "treasure", handler.backrooms["treasure_messages"]
+            )
             impact = ("Found", f"+{_format_ingots(handler, added_amount)}")
             return DoorResolution(
                 message, new_pot, terminal_room, terminal_room, impact
             )
 
         case DoorOutcome.FATAL_MONSTER:
-            message = random.choice(handler.backrooms["fatal_monster_messages"])
+            message = handler._get_backrooms_message(
+                "fatal_monster", handler.backrooms["fatal_monster_messages"]
+            )
             impact = ("Lost", _format_ingots(handler, pot))
             return DoorResolution(message, 0, True, False, impact)
 
@@ -133,14 +137,18 @@ async def process_door_choice(
                 pot, BACKROOMS_ESCAPABLE_MONSTER_POT_LOSS_PERCENT
             )
             remaining_pot = pot - lost_amount
-            message = random.choice(handler.backrooms["monster_messages"])
+            message = handler._get_backrooms_message(
+                "monster", handler.backrooms["monster_messages"]
+            )
             impact = ("Lost", _format_ingots(handler, lost_amount))
             return DoorResolution(
                 message, remaining_pot, terminal_room, terminal_room, impact
             )
 
         case DoorOutcome.ESCAPE:
-            message = random.choice(handler.backrooms["escape_messages"])
+            message = handler._get_backrooms_message(
+                "escape", handler.backrooms["escape_messages"]
+            )
             return DoorResolution(message, pot, True, True)
 
         case DoorOutcome.BARGAIN:
@@ -153,7 +161,9 @@ async def process_door_choice(
             bonus = random.randint(minimum, maximum)
             lost_amount = _calculate_pot_loss(pot, BACKROOMS_BARGAIN_POT_LOSS_PERCENT)
             new_pot = min(BACKROOMS_MAX_PAYOUT, pot - lost_amount + bonus)
-            message = handler.backrooms["bargain_message"]
+            message = handler._get_backrooms_message(
+                "bargain", handler.backrooms["bargain_messages"]
+            )
             impact = (
                 "Bargain",
                 f"−{_format_ingots(handler, lost_amount)} / "
@@ -362,9 +372,9 @@ class BackroomsView(discord.ui.View):
             await interaction.response.defer()
 
             door_label = self.door_labels[door_index]
-            suspense_message = self.handler.backrooms["opening_door"].format(
-                door=door_label
-            )
+            suspense_message = self.handler._get_backrooms_message(
+                "opening_door", self.handler.backrooms["opening_door_messages"]
+            ).format(door=door_label)
             suspense_embed = self._build_embed(
                 suspense_message,
                 color=discord.Color.darker_grey(),
@@ -455,7 +465,9 @@ class BackroomsView(discord.ui.View):
             self.handler.backrooms["door_labels"], BACKROOMS_DOOR_COUNT
         )
         expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
-        intro_message = self.handler.backrooms["continue_intro"]
+        intro_message = self.handler._get_backrooms_message(
+            "continue_intro", self.handler.backrooms["continue_intro_messages"]
+        )
         self.phase = "doors"
         self.has_interacted = False
         self._add_door_buttons()
@@ -477,7 +489,9 @@ class BackroomsView(discord.ui.View):
 
         await self._cash_out(
             interaction,
-            self.handler.backrooms["expired"],
+            self.handler._get_backrooms_message(
+                "expired", self.handler.backrooms["expired_messages"]
+            ),
         )
 
 
@@ -508,7 +522,7 @@ async def result_backrooms(
         interaction=interaction,
     )
     embed = view._build_embed(
-        handler.backrooms["intro"],
+        handler._get_backrooms_message("intro", handler.backrooms["intro_messages"]),
         [("Unbanked haul", _format_ingots(handler, pot))],
         footer=f"Decide {expires_timestamp}.",
     )

@@ -531,17 +531,17 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "user_no_ingots": "Need {ingot_icon}{penalty:,}"
     },
     "backrooms": {
-        "intro": "Every corridor leads to a supply cache.",
-        "continue_intro": "You press deeper into the backrooms.",
+        "intro_messages": ["Every corridor leads to a supply cache."],
+        "continue_intro_messages": ["You press deeper into the backrooms."],
         "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
         "treasure_messages": ["Test treasure found."],
         "fatal_monster_messages": ["Fatal monster encounter."],
         "monster_messages": ["You escape the monster, but it takes some loot."],
         "escape_messages": ["Test escape"],
-        "bargain_message": "A stranger offers a bargain.",
-        "opening_door": "Opening {door}",
+        "bargain_messages": ["A stranger offers a bargain."],
+        "opening_door_messages": ["Opening {door}"],
         "suspense_thumbnail": "http://test.com/door-opening.gif",
-        "expired": "Test expired",
+        "expired_messages": ["Test expired"],
         "thumbnails": ["http://test.com/backrooms.png"]
     },
     "joke": {

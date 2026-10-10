@@ -1,7 +1,7 @@
 from collections import deque
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import NotRequired, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 QUIZ_OPTION_COUNT = 4
 
@@ -77,19 +77,46 @@ class StealData(TypedDict):
     user_no_ingots: str
 
 
+BackroomsMessageCategory = Literal[
+    "intro",
+    "continue_intro",
+    "opening_door",
+    "expired",
+    "treasure",
+    "fatal_monster",
+    "monster",
+    "escape",
+    "bargain",
+]
+
+
+class BackroomsMessageHistory(TypedDict):
+    """Recent-message indices for each Backrooms copy pool."""
+
+    intro: deque[int]
+    continue_intro: deque[int]
+    opening_door: deque[int]
+    expired: deque[int]
+    treasure: deque[int]
+    fatal_monster: deque[int]
+    monster: deque[int]
+    escape: deque[int]
+    bargain: deque[int]
+
+
 class BackroomsData(TypedDict):
     """Backrooms outcome messages and content."""
 
-    intro: str
-    continue_intro: str
+    intro_messages: list[str]
+    continue_intro_messages: list[str]
     door_labels: list[str]
     treasure_messages: list[str]
     fatal_monster_messages: list[str]
     monster_messages: list[str]
     escape_messages: list[str]
-    bargain_message: str
-    opening_door: str
-    expired: str
+    bargain_messages: list[str]
+    opening_door_messages: list[str]
+    expired_messages: list[str]
     thumbnails: list[str]
     suspense_thumbnail: str
 
@@ -117,6 +144,7 @@ class HistoryDict(TypedDict):
     gif: deque[int]
     thumbnail: deque[int]
     backrooms_thumbnail: deque[int]
+    backrooms_messages: BackroomsMessageHistory
     positive_message: deque[int]
     negative_message: deque[int]
     quiz_question: deque[int]

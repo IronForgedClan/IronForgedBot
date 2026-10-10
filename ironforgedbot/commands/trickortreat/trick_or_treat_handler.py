@@ -13,6 +13,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
 )
 from ironforgedbot.commands.trickortreat.types import (
     BackroomsData,
+    BackroomsMessageCategory,
     DoubleOrNothingData,
     GeneralData,
     HistoryDict,
@@ -52,6 +53,17 @@ class TrickOrTreatHandler:
             "gif": deque(maxlen=150),
             "thumbnail": deque(maxlen=30),
             "backrooms_thumbnail": deque(maxlen=30),
+            "backrooms_messages": {
+                "intro": deque(maxlen=20),
+                "continue_intro": deque(maxlen=20),
+                "opening_door": deque(maxlen=20),
+                "expired": deque(maxlen=20),
+                "treasure": deque(maxlen=20),
+                "fatal_monster": deque(maxlen=20),
+                "monster": deque(maxlen=20),
+                "escape": deque(maxlen=20),
+                "bargain": deque(maxlen=20),
+            },
             "positive_message": deque(maxlen=20),
             "negative_message": deque(maxlen=20),
             "quiz_question": deque(maxlen=20),
@@ -149,16 +161,16 @@ class TrickOrTreatHandler:
                 "user_no_ingots",
             ),
             "backrooms": (
-                "intro",
-                "continue_intro",
+                "intro_messages",
+                "continue_intro_messages",
                 "door_labels",
                 "treasure_messages",
                 "fatal_monster_messages",
                 "monster_messages",
                 "escape_messages",
-                "bargain_message",
-                "opening_door",
-                "expired",
+                "bargain_messages",
+                "opening_door_messages",
+                "expired_messages",
                 "thumbnails",
                 "suspense_thumbnail",
             ),
@@ -177,10 +189,15 @@ class TrickOrTreatHandler:
         }
         list_fields = {
             ("backrooms", "door_labels"),
+            ("backrooms", "intro_messages"),
+            ("backrooms", "continue_intro_messages"),
             ("backrooms", "treasure_messages"),
             ("backrooms", "fatal_monster_messages"),
             ("backrooms", "monster_messages"),
             ("backrooms", "escape_messages"),
+            ("backrooms", "bargain_messages"),
+            ("backrooms", "opening_door_messages"),
+            ("backrooms", "expired_messages"),
             ("backrooms", "thumbnails"),
             ("quiz_master", "questions"),
             ("joke", "messages"),
@@ -280,6 +297,13 @@ class TrickOrTreatHandler:
         chosen_idx = random.choice(available_indices)
         history.append(chosen_idx)
         return items[chosen_idx]
+
+    def _get_backrooms_message(
+        self, category: BackroomsMessageCategory, messages: list[str]
+    ) -> str:
+        return self._get_random_from_list(
+            messages, self.history["backrooms_messages"][category]
+        )
 
     def _get_balance_message(self, username: str, balance: int) -> str:
         """Generate a formatted message showing the user's new ingot balance.
