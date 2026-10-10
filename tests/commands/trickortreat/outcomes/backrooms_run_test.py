@@ -1,0 +1,148 @@
+import unittest
+from unittest.mock import patch
+
+from ironforgedbot.commands.trickortreat.outcomes.backrooms import (
+    DoorOutcome,
+    get_room_outcome_weights,
+    process_door_choice,
+)
+from tests.helpers import create_test_trick_or_treat_handler
+
+
+class TestBackroomsRun(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        self.handler = create_test_trick_or_treat_handler()
+
+    def test_room_one_guarantees_treasure(self):
+        weights = get_room_outcome_weights(1, 0)
+
+        self.assertEqual(weights, {DoorOutcome.TREASURE: 1.0})
+
+    def test_bargain_weights_require_room_two_and_nonzero_pot(self):
+        room_two_without_pot = get_room_outcome_weights(2, 0)
+        room_two_with_pot = get_room_outcome_weights(2, 1)
+
+        self.assertNotIn(DoorOutcome.BARGAIN, room_two_without_pot)
+        self.assertEqual(room_two_without_pot[DoorOutcome.TREASURE], 0.275)
+        self.assertEqual(room_two_without_pot[DoorOutcome.ESCAPE], 0.275)
+        self.assertEqual(room_two_with_pot[DoorOutcome.BARGAIN], 0.15)
+        self.assertAlmostEqual(sum(room_two_without_pot.values()), 1.0)
+        self.assertAlmostEqual(sum(room_two_with_pot.values()), 1.0)
+
+    def test_monster_probability_rises_after_safe_first_room(self):
+        monster_weights = [
+            sum(
+                get_room_outcome_weights(room, 1).get(outcome, 0)
+                for outcome in (
+                    DoorOutcome.FATAL_MONSTER,
+                    DoorOutcome.ESCAPABLE_MONSTER,
+                )
+            )
+            for room in range(1, 6)
+        ]
+
+        for actual, expected in zip(monster_weights, [0.0, 0.45, 0.50, 0.55, 0.60]):
+            self.assertAlmostEqual(actual, expected)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
+    async def test_treasure_adds_room_scaled_reward_to_pot(self, mock_randint):
+        mock_randint.return_value = 2000
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.TREASURE, room_number=2, pot=0
+        )
+
+        self.assertEqual(result.pot, 2000)
+        self.assertFalse(result.terminal)
+        self.assertFalse(result.bank_pot)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
+    async def test_treasure_payout_cannot_exceed_cap(self, mock_randint):
+        mock_randint.return_value = 6000
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.TREASURE, room_number=5, pot=24_000
+        )
+
+        self.assertEqual(result.pot, 25_000)
+        self.assertTrue(result.terminal)
+        self.assertTrue(result.bank_pot)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
+    async def test_maximum_treasure_path_stays_under_run_cap(self, mock_randint):
+        mock_randint.side_effect = [2000, 3000, 4000, 5000, 6000]
+        pot = 0
+
+        for room_number in range(1, 6):
+            result = await process_door_choice(
+                self.handler, DoorOutcome.TREASURE, room_number, pot
+            )
+            pot = result.pot
+
+        self.assertEqual(pot, 20_000)
+        self.assertLessEqual(pot, 25_000)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
+    async def test_fatal_monster_ends_run_and_empties_pot(self, mock_choice):
+        mock_choice.return_value = "Fatal encounter"
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.FATAL_MONSTER, room_number=3, pot=10_000
+        )
+
+        self.assertEqual(result.pot, 0)
+        self.assertTrue(result.terminal)
+        self.assertFalse(result.bank_pot)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
+    async def test_escapable_monster_halves_pot_and_continues(self, mock_choice):
+        mock_choice.return_value = "Escaped encounter"
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.ESCAPABLE_MONSTER, room_number=2, pot=10_001
+        )
+
+        self.assertEqual(result.pot, 5_001)
+        self.assertFalse(result.terminal)
+        self.assertFalse(result.bank_pot)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
+    async def test_bargain_costs_quarter_pot_and_adds_room_reward(
+        self, mock_choice, mock_randint
+    ):
+        mock_choice.return_value = "A stranger offers a deal."
+        mock_randint.return_value = 2000
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.BARGAIN, room_number=2, pot=10_000
+        )
+
+        self.assertEqual(result.pot, 9_500)
+        self.assertIn("2,500", result.message)
+        self.assertIn("2,000", result.message)
+        self.assertFalse(result.terminal)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
+    async def test_safe_escape_ends_and_banks_pot(self, mock_choice):
+        mock_choice.return_value = "Safe exit"
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.ESCAPE, room_number=2, pot=5000
+        )
+
+        self.assertEqual(result.pot, 5000)
+        self.assertTrue(result.terminal)
+        self.assertTrue(result.bank_pot)
+
+    @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")
+    async def test_escapable_monster_on_final_room_banks_reduced_pot(self, mock_choice):
+        mock_choice.return_value = "Escaped encounter"
+
+        result = await process_door_choice(
+            self.handler, DoorOutcome.ESCAPABLE_MONSTER, room_number=5, pot=10_000
+        )
+
+        self.assertEqual(result.pot, 5000)
+        self.assertTrue(result.terminal)
+        self.assertTrue(result.bank_pot)

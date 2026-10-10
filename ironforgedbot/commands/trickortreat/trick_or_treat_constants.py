@@ -90,31 +90,50 @@ def _validate_values(values: dict) -> None:
     backrooms = values["backrooms"]
     required_backrooms_fields = [
         "door_count",
-        "treasure_min",
-        "treasure_max",
-        "monster_min",
-        "monster_max",
+        "max_rooms",
+        "max_payout",
+        "bargain_start_room",
+        "bargain_pot_loss_percent",
+        "escapable_monster_pot_loss_percent",
     ]
+    required_backrooms_fields.extend(
+        field
+        for room in range(1, 6)
+        for field in (f"treasure_room_{room}_min", f"treasure_room_{room}_max")
+    )
     missing_backrooms = [f for f in required_backrooms_fields if f not in backrooms]
     if missing_backrooms:
         raise KeyError(f"Missing required backrooms fields: {missing_backrooms}")
 
     for field, value in backrooms.items():
-        if not isinstance(value, int) or value <= 0:
+        if type(value) is not int or value <= 0:
             raise ValueError(
                 f"backrooms.{field} must be a positive integer, got: {value}"
             )
 
-    if backrooms["treasure_min"] >= backrooms["treasure_max"]:
+    if backrooms["max_rooms"] != 5:
         raise ValueError(
-            f"backrooms.treasure_min ({backrooms['treasure_min']}) must be < "
-            f"treasure_max ({backrooms['treasure_max']})"
+            f"backrooms.max_rooms must be 5, got: {backrooms['max_rooms']}"
         )
-    if backrooms["monster_min"] >= backrooms["monster_max"]:
-        raise ValueError(
-            f"backrooms.monster_min ({backrooms['monster_min']}) must be < "
-            f"monster_max ({backrooms['monster_max']})"
-        )
+
+    if backrooms["door_count"] > 5:
+        raise ValueError("backrooms.door_count must not exceed 5")
+
+    for room in range(1, backrooms["max_rooms"] + 1):
+        minimum = backrooms[f"treasure_room_{room}_min"]
+        maximum = backrooms[f"treasure_room_{room}_max"]
+        if minimum >= maximum:
+            raise ValueError(
+                f"backrooms.treasure_room_{room}_min ({minimum}) must be < "
+                f"treasure_room_{room}_max ({maximum})"
+            )
+
+    if not 2 <= backrooms["bargain_start_room"] <= backrooms["max_rooms"]:
+        raise ValueError("backrooms.bargain_start_room must be between 2 and max_rooms")
+
+    for field in ["bargain_pot_loss_percent", "escapable_monster_pot_loss_percent"]:
+        if not 1 <= backrooms[field] <= 100:
+            raise ValueError(f"backrooms.{field} must be between 1 and 100")
 
     quiz = values["quiz_master"]
     required_quiz_fields = [
@@ -172,10 +191,20 @@ JACKPOT_VALUE = _values["jackpot_value"]
 
 # Backrooms configuration
 BACKROOMS_DOOR_COUNT = _values["backrooms"]["door_count"]
-BACKROOMS_TREASURE_MIN = _values["backrooms"]["treasure_min"]
-BACKROOMS_TREASURE_MAX = _values["backrooms"]["treasure_max"]
-BACKROOMS_MONSTER_MIN = _values["backrooms"]["monster_min"]
-BACKROOMS_MONSTER_MAX = _values["backrooms"]["monster_max"]
+BACKROOMS_MAX_ROOMS = _values["backrooms"]["max_rooms"]
+BACKROOMS_MAX_PAYOUT = _values["backrooms"]["max_payout"]
+BACKROOMS_BARGAIN_START_ROOM = _values["backrooms"]["bargain_start_room"]
+BACKROOMS_BARGAIN_POT_LOSS_PERCENT = _values["backrooms"]["bargain_pot_loss_percent"]
+BACKROOMS_ESCAPABLE_MONSTER_POT_LOSS_PERCENT = _values["backrooms"][
+    "escapable_monster_pot_loss_percent"
+]
+BACKROOMS_TREASURE_RANGES = [
+    (
+        _values["backrooms"][f"treasure_room_{room}_min"],
+        _values["backrooms"][f"treasure_room_{room}_max"],
+    )
+    for room in range(1, BACKROOMS_MAX_ROOMS + 1)
+]
 
 # Quiz Master configuration
 QUIZ_CORRECT_MIN = _values["quiz_master"]["correct_min"]

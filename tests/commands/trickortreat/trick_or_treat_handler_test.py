@@ -563,19 +563,31 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
                 "{ingots}" in msg
             ), f"Treasure message {i} missing {{ingots}} placeholder"
 
-    async def test_backrooms_monster_messages_valid(self):
-        """Test that backrooms monster messages array is valid."""
+    async def test_backrooms_escapable_monster_messages_valid(self):
+        """Test that escapable monster messages include pot placeholders."""
         with open(CONTENT_FILE) as f:
             data = json.load(f)
             MESSAGES = data["backrooms"]["monster_messages"]
 
-        assert len(MESSAGES) > 0, "Must have at least one monster message"
+        assert len(MESSAGES) > 0, "Must have at least one escapable monster message"
         for i, msg in enumerate(MESSAGES):
-            assert isinstance(msg, str), f"Monster message {i} must be a string"
-            assert len(msg) > 0, f"Monster message {i} cannot be empty"
-            assert (
-                "{ingots}" in msg
-            ), f"Monster message {i} missing {{ingots}} placeholder"
+            assert isinstance(
+                msg, str
+            ), f"Escapable monster message {i} must be a string"
+            assert len(msg) > 0, f"Escapable monster message {i} cannot be empty"
+            assert "{lost}" in msg, f"Escapable monster message {i} missing {{lost}}"
+            assert "{pot}" in msg, f"Escapable monster message {i} missing {{pot}}"
+
+    async def test_backrooms_fatal_monster_messages_valid(self):
+        """Test that fatal monster messages report unbanked haul lost."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            messages = data["backrooms"]["fatal_monster_messages"]
+
+        assert messages, "Must have at least one fatal monster message"
+        for i, msg in enumerate(messages):
+            assert isinstance(msg, str), f"Fatal monster message {i} must be a string"
+            assert "{ingots}" in msg, f"Fatal monster message {i} missing {{ingots}}"
 
     async def test_backrooms_escape_messages_valid(self):
         """Test that backrooms escape messages array is valid."""
@@ -588,16 +600,14 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             assert isinstance(msg, str), f"Escape message {i} must be a string"
             assert len(msg) > 0, f"Escape message {i} cannot be empty"
 
-    async def test_backrooms_lucky_escape_messages_valid(self):
-        """Test that backrooms lucky escape messages array is valid."""
+    async def test_backrooms_bargain_message_has_run_placeholders(self):
+        """Test bargain text can show room and pot values."""
         with open(CONTENT_FILE) as f:
             data = json.load(f)
-            MESSAGES = data["backrooms"]["lucky_escape_messages"]
+            message = data["backrooms"]["bargain_message"]
 
-        assert len(MESSAGES) > 0, "Must have at least one lucky escape message"
-        for i, msg in enumerate(MESSAGES):
-            assert isinstance(msg, str), f"Lucky escape message {i} must be a string"
-            assert len(msg) > 0, f"Lucky escape message {i} cannot be empty"
+        for placeholder in ("{room}", "{lost}", "{bonus}", "{pot}"):
+            assert placeholder in message, f"Bargain text missing {placeholder}"
 
     async def test_joke_messages_valid(self):
         """Test that joke messages array is valid."""

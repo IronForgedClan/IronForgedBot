@@ -531,13 +531,14 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "user_no_ingots": "Need {ingot_icon}{penalty:,}"
     },
     "backrooms": {
-        "intro": "Backrooms test intro {expires}",
+        "intro": "Room one is safe. Backrooms test room {room}/{max_rooms} {ingots} {expires}",
         "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
         "treasure_messages": ["Test treasure {ingots}"],
-        "monster_messages": ["Test monster {ingots}"],
+        "fatal_monster_messages": ["Fatal monster {ingots}"],
+        "monster_messages": ["Escapable monster lost {lost}, pot {pot}"],
         "escape_messages": ["Test escape"],
-        "lucky_escape_messages": ["Test lucky escape"],
-        "opening_door": "Opening {door}",
+        "bargain_message": "Bargain room {room} lost {lost}, bonus {bonus}, pot {pot}",
+        "opening_door": "Opening room {room}, door {door}",
         "suspense_thumbnail": "http://test.com/door-opening.gif",
         "expired": "Test expired",
         "thumbnails": ["http://test.com/backrooms.png"]

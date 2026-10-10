@@ -83,9 +83,10 @@ class BackroomsData(TypedDict):
     intro: str
     door_labels: list[str]
     treasure_messages: list[str]
+    fatal_monster_messages: list[str]
     monster_messages: list[str]
     escape_messages: list[str]
-    lucky_escape_messages: list[str]
+    bargain_message: str
     opening_door: str
     expired: str
     thumbnails: list[str]

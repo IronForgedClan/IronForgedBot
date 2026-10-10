@@ -152,9 +152,10 @@ class TrickOrTreatHandler:
                 "intro",
                 "door_labels",
                 "treasure_messages",
+                "fatal_monster_messages",
                 "monster_messages",
                 "escape_messages",
-                "lucky_escape_messages",
+                "bargain_message",
                 "opening_door",
                 "expired",
                 "thumbnails",
@@ -176,9 +177,9 @@ class TrickOrTreatHandler:
         list_fields = {
             ("backrooms", "door_labels"),
             ("backrooms", "treasure_messages"),
+            ("backrooms", "fatal_monster_messages"),
             ("backrooms", "monster_messages"),
             ("backrooms", "escape_messages"),
-            ("backrooms", "lucky_escape_messages"),
             ("backrooms", "thumbnails"),
             ("quiz_master", "questions"),
             ("joke", "messages"),
@@ -507,6 +508,8 @@ class TrickOrTreatHandler:
             steal,
             trick,
         )
+
+        return await backrooms.result_backrooms(self, interaction)
 
         match random.choices(
             list(TrickOrTreat), weights=[item.value for item in TrickOrTreat]
