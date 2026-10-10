@@ -637,16 +637,16 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
     async def test_backrooms_content_pools_meet_variety_targets(self):
         targets = {
-            "intro_messages": 3,
-            "continue_intro_messages": 5,
-            "door_labels": 16,
-            "treasure_messages": 16,
-            "fatal_monster_messages": 8,
-            "monster_messages": 12,
-            "escape_messages": 16,
-            "bargain_messages": 6,
-            "opening_door_messages": 6,
-            "expired_messages": 3,
+            "intro_messages": 5,
+            "continue_intro_messages": 8,
+            "door_labels": 24,
+            "treasure_messages": 24,
+            "fatal_monster_messages": 12,
+            "monster_messages": 18,
+            "escape_messages": 24,
+            "bargain_messages": 10,
+            "opening_door_messages": 10,
+            "expired_messages": 5,
         }
         with open(CONTENT_FILE) as f:
             content_data = json.load(f)
