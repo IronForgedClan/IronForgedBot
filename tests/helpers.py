@@ -533,15 +533,19 @@ MOCK_TRICK_OR_TREAT_DATA = """
     "backrooms": {
         "intro_messages": ["Every corridor leads to a supply cache."],
         "continue_intro_messages": ["You press deeper into the backrooms."],
-        "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
+        "door_labels": [
+            "Test Door A",
+            "Test Door B",
+            "Test Door C",
+            "Test Door D"
+        ],
         "room_outcome_weights": {
             "1": {"treasure": 1.0},
             "2": {
-                "treasure": 0.43,
+                "treasure": 0.48,
                 "fatal_monster": 0.07,
                 "escapable_monster": 0.19,
-                "escape": 0.21,
-                "bargain": 0.10
+                "escape": 0.26
             },
             "3": {
                 "treasure": 0.37,

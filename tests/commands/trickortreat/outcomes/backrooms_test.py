@@ -21,6 +21,24 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.test_user = create_test_member("TestUser", [ROLE.MEMBER])
         self.interaction = create_mock_discord_interaction(user=self.test_user)
+        self.door_count = 4
+        self.door_outcomes = [DoorOutcome.TREASURE] * self.door_count
+        self.door_labels = [f"Test Door {index}" for index in range(self.door_count)]
+        self.treasure_ranges = [(11, 19), (23, 37), (41, 59), (61, 83)]
+        self.payout_cap = 733
+        self.bargain_start_room = 3
+        self.settings_patch = patch.multiple(
+            backrooms,
+            BACKROOMS_DOOR_COUNT=self.door_count,
+            BACKROOMS_MAX_ROOMS=len(self.treasure_ranges),
+            BACKROOMS_MAX_PAYOUT=self.payout_cap,
+            BACKROOMS_TREASURE_RANGES=self.treasure_ranges,
+            BACKROOMS_BARGAIN_START_ROOM=self.bargain_start_room,
+            BACKROOMS_BARGAIN_POT_LOSS_PERCENT=37,
+            BACKROOMS_ESCAPABLE_MONSTER_POT_LOSS_PERCENT=43,
+        )
+        self.settings_patch.start()
+        self.addCleanup(self.settings_patch.stop)
 
     async def test_result_backrooms_creates_room_one_view(self):
         handler = create_test_trick_or_treat_handler()
@@ -33,8 +51,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(view, BackroomsView)
         self.assertEqual(view.room_number, 1)
         self.assertEqual(view.pot, 0)
-        self.assertEqual(len(view.children), 3)
-        self.assertEqual(view.door_outcomes, [DoorOutcome.TREASURE] * 3)
+        self.assertEqual(len(view.children), self.door_count)
+        self.assertEqual(view.door_outcomes, self.door_outcomes)
         self.assertIs(view.last_interaction, self.interaction)
         self.assertIsNotNone(call_kwargs["embed"])
         self.assertEqual(call_kwargs["embed"].title, "Backrooms")
@@ -57,8 +75,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
+            self.door_outcomes,
+            self.door_labels,
             interaction=self.interaction,
         )
         view.message = AsyncMock()
@@ -68,11 +86,11 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             new_callable=AsyncMock,
         ), patch(
             "ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint",
-            return_value=1500,
+            return_value=17,
         ):
             await view.children[0].callback(self.interaction)
 
-        self.assertEqual(view.pot, 1500)
+        self.assertEqual(view.pot, 17)
         self.assertEqual(view.phase, "decision")
         self.assertFalse(view.finished)
         self.assertEqual(len(view.children), 2)
@@ -82,8 +100,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         )
         embed = view.message.edit.call_args.kwargs["embed"]
         fields = {field.name: field.value for field in embed.fields}
-        self.assertEqual(fields["Found"], "+🪙1,500")
-        self.assertEqual(fields["Unbanked haul"], "🪙1,500")
+        self.assertEqual(fields["Found"], "+🪙17")
+        self.assertEqual(fields["Unbanked haul"], "🪙17")
         self.assertIn("➡️ Continue deeper", [button.label for button in view.children])
         self.assertNotRegex(
             embed.description, r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d"
@@ -112,7 +130,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             new_callable=AsyncMock,
         ), patch(
             "ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint",
-            return_value=1500,
+            return_value=17,
         ):
             await view.children[0].callback(self.interaction)
 
@@ -134,28 +152,28 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
+            self.door_outcomes,
+            self.door_labels,
             room_number=1,
-            pot=2000,
+            pot=29,
         )
         view.phase = "decision"
         view.message = AsyncMock()
 
         with patch(
             "ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choices",
-            return_value=[DoorOutcome.BARGAIN] * 3,
+            return_value=[DoorOutcome.BARGAIN] * self.door_count,
         ), patch(
             "ironforgedbot.commands.trickortreat.outcomes.backrooms.random.sample",
-            return_value=["Room 2 Door"] * 3,
+            return_value=self.door_labels,
         ):
             await view._continue_callback(self.interaction)
 
         self.assertEqual(view.room_number, 2)
         self.assertEqual(view.phase, "doors")
-        self.assertEqual(len(view.children), 3)
-        self.assertEqual(view.door_outcomes, [DoorOutcome.BARGAIN] * 3)
-        self.assertEqual(view.pot, 2000)
+        self.assertEqual(len(view.children), self.door_count)
+        self.assertEqual(view.door_outcomes, [DoorOutcome.BARGAIN] * self.door_count)
+        self.assertEqual(view.pot, 29)
         embed = view.message.edit.call_args.kwargs["embed"]
         self.assertEqual(embed.title, "Backrooms")
         self.assertNotIn("safe", embed.description.lower())
@@ -164,20 +182,22 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(
             {field.name: field.value for field in embed.fields}["Unbanked haul"],
-            "🪙2,000",
+            "🪙29",
         )
 
     async def test_cash_out_credits_pot_once_and_finishes_run(self):
         handler = create_test_trick_or_treat_handler()
-        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(27_000, 25_000))
-        handler._get_user_info = AsyncMock(return_value=("TestUser", 27_000))
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(12_345, self.payout_cap)
+        )
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 12_345))
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
-            room_number=2,
-            pot=30_000,
+            self.door_outcomes,
+            self.door_labels,
+            room_number=self.bargain_start_room,
+            pot=self.payout_cap + 178,
         )
         view.phase = "decision"
         view.message = AsyncMock()
@@ -186,7 +206,7 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         handler._adjust_ingots.assert_awaited_once_with(
             self.interaction,
-            25_000,
+            self.payout_cap,
             self.test_user,
             reason="Trick or treat: backrooms cash out",
         )
@@ -195,22 +215,22 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(view.children), 0)
         embed = view.message.edit.call_args.kwargs["embed"]
         fields = {field.name: field.value for field in embed.fields}
-        self.assertEqual(fields["Banked"], "🪙25,000")
-        self.assertEqual(fields["Balance"], "TestUser has 🪙27,000")
+        self.assertEqual(fields["Banked"], f"🪙{self.payout_cap:,}")
+        self.assertEqual(fields["Balance"], "TestUser has 🪙12,345")
         self.assertNotRegex(
             embed.description, r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d"
         )
 
     async def test_timeout_banks_unbanked_pot(self):
         handler = create_test_trick_or_treat_handler()
-        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(6000, 4000))
-        handler._get_user_info = AsyncMock(return_value=("TestUser", 6000))
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(987, 321))
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 987))
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
-            pot=4000,
+            self.door_outcomes,
+            self.door_labels,
+            pot=321,
             interaction=self.interaction,
         )
         view.message = AsyncMock()
@@ -222,22 +242,22 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(view.pot, 0)
         embed = view.message.edit.call_args.kwargs["embed"]
         fields = {field.name: field.value for field in embed.fields}
-        self.assertEqual(fields["Banked"], "🪙4,000")
-        self.assertEqual(fields["Balance"], "TestUser has 🪙6,000")
+        self.assertEqual(fields["Banked"], "🪙321")
+        self.assertEqual(fields["Balance"], "TestUser has 🪙987")
 
     async def test_cash_out_failure_keeps_unbanked_haul_visible(self):
         handler = create_test_trick_or_treat_handler()
         handler._adjust_ingots = AsyncMock(
             return_value=IngotAdjustment(None, 0, failure="error")
         )
-        handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 789))
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
-            room_number=2,
-            pot=4000,
+            self.door_outcomes,
+            self.door_labels,
+            room_number=self.bargain_start_room,
+            pot=456,
         )
         view.phase = "decision"
         view.message = AsyncMock()
@@ -245,25 +265,25 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         await view._cash_out_callback(self.interaction)
 
         self.assertFalse(view.finished)
-        self.assertEqual(view.pot, 4000)
+        self.assertEqual(view.pot, 456)
         self.assertEqual(len(view.children), 1)
         embed = view.message.edit.call_args.kwargs["embed"]
         fields = {field.name: field.value for field in embed.fields}
-        self.assertEqual(fields["Still unbanked"], "🪙4,000")
+        self.assertEqual(fields["Still unbanked"], "🪙456")
         self.assertNotIn("Banked", fields)
         self.assertIn("Cash-out failed", embed.description)
         self.assertEqual(view.children[0].label, "💰 Retry cash out")
 
     async def test_fatal_outcome_shows_lost_haul_and_unchanged_balance(self):
         handler = create_test_trick_or_treat_handler()
-        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 789))
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.FATAL_MONSTER] * 3,
-            ["Door 1", "Door 2", "Door 3"],
+            [DoorOutcome.FATAL_MONSTER] * self.door_count,
+            self.door_labels,
             room_number=2,
-            pot=4000,
+            pot=456,
             interaction=self.interaction,
         )
         view.message = AsyncMock()
@@ -276,20 +296,20 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
 
         embed = view.message.edit.call_args.kwargs["embed"]
         fields = {field.name: field.value for field in embed.fields}
-        self.assertEqual(fields["Lost"], "🪙4,000")
-        self.assertEqual(fields["Balance"], "TestUser has 🪙5,000")
+        self.assertEqual(fields["Lost"], "🪙456")
+        self.assertEqual(fields["Balance"], "TestUser has 🪙789")
         self.assertNotIn("Banked", fields)
         self.assertEqual(len(view.children), 0)
 
-    async def test_five_room_limit_blocks_continue_button(self):
+    async def test_final_room_blocks_continue_button(self):
         handler = create_test_trick_or_treat_handler()
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
-            room_number=5,
-            pot=1000,
+            self.door_outcomes,
+            self.door_labels,
+            room_number=backrooms.BACKROOMS_MAX_ROOMS,
+            pot=17,
         )
         view.phase = "decision"
         view._add_run_buttons()
@@ -303,8 +323,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         view = BackroomsView(
             handler,
             self.test_user.id,
-            [DoorOutcome.TREASURE] * 3,
-            ["Door 1", "Door 2", "Door 3"],
+            self.door_outcomes,
+            self.door_labels,
         )
         other_user = create_test_member("OtherUser", [ROLE.MEMBER])
         interaction = create_mock_discord_interaction(user=other_user)
