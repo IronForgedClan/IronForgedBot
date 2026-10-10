@@ -110,6 +110,7 @@ class BackroomsData(TypedDict):
     intro_messages: list[str]
     continue_intro_messages: list[str]
     door_labels: list[str]
+    room_outcome_weights: dict[str, dict[str, float]]
     treasure_messages: list[str]
     fatal_monster_messages: list[str]
     monster_messages: list[str]

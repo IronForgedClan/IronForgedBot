@@ -534,6 +534,37 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "intro_messages": ["Every corridor leads to a supply cache."],
         "continue_intro_messages": ["You press deeper into the backrooms."],
         "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
+        "room_outcome_weights": {
+            "1": {"treasure": 1.0},
+            "2": {
+                "treasure": 0.43,
+                "fatal_monster": 0.07,
+                "escapable_monster": 0.19,
+                "escape": 0.21,
+                "bargain": 0.10
+            },
+            "3": {
+                "treasure": 0.37,
+                "fatal_monster": 0.11,
+                "escapable_monster": 0.21,
+                "escape": 0.18,
+                "bargain": 0.13
+            },
+            "4": {
+                "treasure": 0.39,
+                "fatal_monster": 0.18,
+                "escapable_monster": 0.21,
+                "escape": 0.12,
+                "bargain": 0.10
+            },
+            "5": {
+                "treasure": 0.12,
+                "fatal_monster": 0.34,
+                "escapable_monster": 0.23,
+                "escape": 0.18,
+                "bargain": 0.13
+            }
+        },
         "treasure_messages": ["Test treasure found."],
         "fatal_monster_messages": ["Fatal monster encounter."],
         "monster_messages": ["You escape the monster, but it takes some loot."],

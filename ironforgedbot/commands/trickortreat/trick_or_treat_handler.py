@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import random
 from collections import deque
 from typing import List, Optional, TypeVar
@@ -8,6 +9,7 @@ import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     BACKROOMS_DOOR_COUNT,
+    BACKROOMS_MAX_ROOMS,
     CONTENT_FILE,
     TrickOrTreat,
 )
@@ -164,6 +166,7 @@ class TrickOrTreatHandler:
                 "intro_messages",
                 "continue_intro_messages",
                 "door_labels",
+                "room_outcome_weights",
                 "treasure_messages",
                 "fatal_monster_messages",
                 "monster_messages",
@@ -236,11 +239,77 @@ class TrickOrTreatHandler:
                             f"Content field '{section}.{field}' must contain "
                             f"non-empty strings in {file_path}"
                         )
+                elif (section, field) == ("backrooms", "room_outcome_weights"):
+                    if not isinstance(value, dict):
+                        raise ValueError(
+                            "Content field 'backrooms.room_outcome_weights' must be "
+                            f"an object in {file_path}"
+                        )
                 elif not isinstance(value, str) or not value.strip():
                     raise ValueError(
                         f"Content field '{section}.{field}' must be a non-empty "
                         f"string in {file_path}"
                     )
+
+        room_outcome_weights = data["backrooms"]["room_outcome_weights"]
+        expected_room_keys = {
+            str(room_number) for room_number in range(1, BACKROOMS_MAX_ROOMS + 1)
+        }
+        actual_room_keys = set(room_outcome_weights)
+        missing_rooms = expected_room_keys - actual_room_keys
+        unknown_rooms = actual_room_keys - expected_room_keys
+        if missing_rooms or unknown_rooms:
+            raise ValueError(
+                "Content field 'backrooms.room_outcome_weights' must define rooms "
+                f"{sorted(expected_room_keys)}; missing {sorted(missing_rooms)}, "
+                f"unknown {sorted(unknown_rooms)}"
+            )
+
+        if room_outcome_weights["1"] != {"treasure": 1.0}:
+            raise ValueError(
+                "Content field 'backrooms.room_outcome_weights.1' must guarantee "
+                "treasure in the first room"
+            )
+
+        valid_outcomes = {
+            "treasure",
+            "fatal_monster",
+            "escapable_monster",
+            "escape",
+            "bargain",
+        }
+        for room_number, weights in room_outcome_weights.items():
+            if not isinstance(weights, dict) or not weights:
+                raise ValueError(
+                    "Content field 'backrooms.room_outcome_weights."
+                    f"{room_number}' must be a non-empty object"
+                )
+
+            unknown_outcomes = set(weights) - valid_outcomes
+            if unknown_outcomes:
+                raise ValueError(
+                    "Content field 'backrooms.room_outcome_weights."
+                    f"{room_number}' has unknown outcomes: {sorted(unknown_outcomes)}"
+                )
+
+            for outcome, weight in weights.items():
+                if (
+                    isinstance(weight, bool)
+                    or not isinstance(weight, (int, float))
+                    or not 0 <= weight <= 1
+                    or (isinstance(weight, float) and not math.isfinite(weight))
+                ):
+                    raise ValueError(
+                        "Content field 'backrooms.room_outcome_weights."
+                        f"{room_number}.{outcome}' must be a finite probability "
+                        "between 0 and 1"
+                    )
+
+            if not math.isclose(sum(weights.values()), 1.0, rel_tol=0, abs_tol=1e-9):
+                raise ValueError(
+                    "Content field 'backrooms.room_outcome_weights."
+                    f"{room_number}' weights must sum to 1"
+                )
 
         for index, question in enumerate(data["quiz_master"]["questions"]):
             if not isinstance(question, dict):
@@ -534,7 +603,7 @@ class TrickOrTreatHandler:
             trick,
         )
 
-        return await backrooms.result_backrooms(self, interaction)
+        # return await backrooms.result_backrooms(self, interaction)
 
         match random.choices(
             list(TrickOrTreat), weights=[item.value for item in TrickOrTreat]

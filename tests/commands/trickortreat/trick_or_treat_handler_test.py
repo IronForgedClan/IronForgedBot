@@ -770,6 +770,54 @@ class TestLoadContentFile(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "at least"):
                 TrickOrTreatHandler._load_content_file("invalid.json")
 
+    def test_load_content_file_rejects_backrooms_weights_that_do_not_sum_to_one(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["2"]["treasure"] = 0.5
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "sum to 1"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_unknown_backrooms_outcomes(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["2"]["jackpot"] = 0.0
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "outcome"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_missing_backrooms_room_weights(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        del invalid_data["backrooms"]["room_outcome_weights"]["3"]
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "missing"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_negative_backrooms_weights(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["2"]["treasure"] = -0.1
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "probability"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_preserves_safe_first_room_weight(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["1"] = {
+            "treasure": 0.5,
+            "escape": 0.5,
+        }
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "first room"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
     def test_load_content_file_unexpected_error(self):
         """Test that RuntimeError is raised for unexpected errors."""
         with patch("builtins.open", side_effect=PermissionError("Access denied")):

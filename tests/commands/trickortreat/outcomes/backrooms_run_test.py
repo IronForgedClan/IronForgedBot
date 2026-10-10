@@ -12,27 +12,39 @@ from tests.helpers import create_test_trick_or_treat_handler
 class TestBackroomsRun(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.handler = create_test_trick_or_treat_handler()
+        self.weights = self.handler.backrooms["room_outcome_weights"]
 
     def test_room_one_guarantees_treasure(self):
-        weights = get_room_outcome_weights(1, 0)
+        weights = get_room_outcome_weights(1, 0, self.weights)
 
         self.assertEqual(weights, {DoorOutcome.TREASURE: 1.0})
 
+    def test_room_weights_come_from_supplied_config(self):
+        weights = {"2": {"treasure": 1.0}}
+
+        result = get_room_outcome_weights(2, 0, weights)
+
+        self.assertEqual(result, {DoorOutcome.TREASURE: 1.0})
+
+    def test_missing_room_weights_raise(self):
+        with self.assertRaisesRegex(ValueError, "Invalid backrooms room number"):
+            get_room_outcome_weights(6, 0, self.weights)
+
     def test_bargain_weights_require_room_two_and_nonzero_pot(self):
-        room_two_without_pot = get_room_outcome_weights(2, 0)
-        room_two_with_pot = get_room_outcome_weights(2, 1)
+        room_two_without_pot = get_room_outcome_weights(2, 0, self.weights)
+        room_two_with_pot = get_room_outcome_weights(2, 1, self.weights)
 
         self.assertNotIn(DoorOutcome.BARGAIN, room_two_without_pot)
-        self.assertEqual(room_two_without_pot[DoorOutcome.TREASURE], 0.275)
-        self.assertEqual(room_two_without_pot[DoorOutcome.ESCAPE], 0.275)
-        self.assertEqual(room_two_with_pot[DoorOutcome.BARGAIN], 0.15)
+        self.assertAlmostEqual(room_two_without_pot[DoorOutcome.TREASURE], 0.48)
+        self.assertAlmostEqual(room_two_without_pot[DoorOutcome.ESCAPE], 0.26)
+        self.assertEqual(room_two_with_pot[DoorOutcome.BARGAIN], 0.10)
         self.assertAlmostEqual(sum(room_two_without_pot.values()), 1.0)
         self.assertAlmostEqual(sum(room_two_with_pot.values()), 1.0)
 
     def test_monster_probability_rises_after_safe_first_room(self):
         monster_weights = [
             sum(
-                get_room_outcome_weights(room, 1).get(outcome, 0)
+                get_room_outcome_weights(room, 1, self.weights).get(outcome, 0)
                 for outcome in (
                     DoorOutcome.FATAL_MONSTER,
                     DoorOutcome.ESCAPABLE_MONSTER,
@@ -41,7 +53,7 @@ class TestBackroomsRun(unittest.IsolatedAsyncioTestCase):
             for room in range(1, 6)
         ]
 
-        for actual, expected in zip(monster_weights, [0.0, 0.45, 0.50, 0.55, 0.60]):
+        for actual, expected in zip(monster_weights, [0.0, 0.26, 0.32, 0.39, 0.57]):
             self.assertAlmostEqual(actual, expected)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint")

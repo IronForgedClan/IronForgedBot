@@ -33,41 +33,6 @@ class DoorOutcome(Enum):
     BARGAIN = "bargain"
 
 
-ROOM_OUTCOME_WEIGHTS = {
-    1: {
-        DoorOutcome.TREASURE: 1.0,
-    },
-    2: {
-        DoorOutcome.TREASURE: 0.20,
-        DoorOutcome.FATAL_MONSTER: 0.17,
-        DoorOutcome.ESCAPABLE_MONSTER: 0.28,
-        DoorOutcome.ESCAPE: 0.20,
-        DoorOutcome.BARGAIN: 0.15,
-    },
-    3: {
-        DoorOutcome.TREASURE: 0.175,
-        DoorOutcome.FATAL_MONSTER: 0.20,
-        DoorOutcome.ESCAPABLE_MONSTER: 0.30,
-        DoorOutcome.ESCAPE: 0.175,
-        DoorOutcome.BARGAIN: 0.15,
-    },
-    4: {
-        DoorOutcome.TREASURE: 0.15,
-        DoorOutcome.FATAL_MONSTER: 0.22,
-        DoorOutcome.ESCAPABLE_MONSTER: 0.33,
-        DoorOutcome.ESCAPE: 0.15,
-        DoorOutcome.BARGAIN: 0.15,
-    },
-    5: {
-        DoorOutcome.TREASURE: 0.125,
-        DoorOutcome.FATAL_MONSTER: 0.24,
-        DoorOutcome.ESCAPABLE_MONSTER: 0.36,
-        DoorOutcome.ESCAPE: 0.125,
-        DoorOutcome.BARGAIN: 0.15,
-    },
-}
-
-
 @dataclass(frozen=True)
 class DoorResolution:
     message: str
@@ -77,12 +42,17 @@ class DoorResolution:
     impact: tuple[str, str] | None = None
 
 
-def get_room_outcome_weights(room_number: int, pot: int) -> dict[DoorOutcome, float]:
+def get_room_outcome_weights(
+    room_number: int,
+    pot: int,
+    room_outcome_weights: dict[str, dict[str, float]],
+) -> dict[DoorOutcome, float]:
     """Return room outcome weights, omitting bargains when no pot is at risk."""
-    if room_number not in ROOM_OUTCOME_WEIGHTS:
+    room_weights = room_outcome_weights.get(str(room_number))
+    if room_weights is None:
         raise ValueError(f"Invalid backrooms room number: {room_number}")
 
-    weights = ROOM_OUTCOME_WEIGHTS[room_number].copy()
+    weights = {DoorOutcome(outcome): weight for outcome, weight in room_weights.items()}
     if DoorOutcome.BARGAIN in weights and pot <= 0:
         bargain_weight = weights.pop(DoorOutcome.BARGAIN)
         weights[DoorOutcome.TREASURE] += bargain_weight / 2
@@ -457,7 +427,9 @@ class BackroomsView(discord.ui.View):
         self.last_interaction = interaction
         await interaction.response.defer()
         self.room_number += 1
-        weights = get_room_outcome_weights(self.room_number, self.pot)
+        weights = get_room_outcome_weights(
+            self.room_number, self.pot, self.handler.backrooms["room_outcome_weights"]
+        )
         self.door_outcomes = random.choices(
             list(weights), weights=list(weights.values()), k=BACKROOMS_DOOR_COUNT
         )
@@ -503,7 +475,9 @@ async def result_backrooms(
 
     room_number = 1
     pot = 0
-    weights = get_room_outcome_weights(room_number, pot)
+    weights = get_room_outcome_weights(
+        room_number, pot, handler.backrooms["room_outcome_weights"]
+    )
     outcomes = random.choices(
         list(weights), weights=list(weights.values()), k=BACKROOMS_DOOR_COUNT
     )
