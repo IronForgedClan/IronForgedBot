@@ -119,8 +119,7 @@ class TestBackroomsRun(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(result.pot, 9_500)
-        self.assertIn("2,500", result.message)
-        self.assertIn("2,000", result.message)
+        self.assertEqual(result.impact, ("Bargain", "−🪙2,500 / +🪙2,000"))
         self.assertFalse(result.terminal)
 
     @patch("ironforgedbot.commands.trickortreat.outcomes.backrooms.random.choice")

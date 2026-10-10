@@ -150,6 +150,7 @@ class TrickOrTreatHandler:
             ),
             "backrooms": (
                 "intro",
+                "continue_intro",
                 "door_labels",
                 "treasure_messages",
                 "fatal_monster_messages",

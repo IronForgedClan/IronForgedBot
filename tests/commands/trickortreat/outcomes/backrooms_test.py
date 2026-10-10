@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+import discord
+
 from ironforgedbot.commands.trickortreat.outcomes import backrooms
 from ironforgedbot.commands.trickortreat.outcomes.backrooms import (
     BackroomsView,
@@ -35,7 +37,20 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(view.door_outcomes, [DoorOutcome.TREASURE] * 3)
         self.assertIs(view.last_interaction, self.interaction)
         self.assertIsNotNone(call_kwargs["embed"])
-        self.assertIn("Room one is safe", call_kwargs["embed"].description)
+        self.assertEqual(call_kwargs["embed"].title, "Backrooms")
+        self.assertIn(
+            "Every corridor leads to a supply cache", call_kwargs["embed"].description
+        )
+        self.assertNotRegex(
+            call_kwargs["embed"].description,
+            r"(?i)room\s+(?:one|two|three|four|five|\d)",
+        )
+        self.assertEqual(
+            {field.name: field.value for field in call_kwargs["embed"].fields}[
+                "Unbanked haul"
+            ],
+            "🪙0",
+        )
 
     async def test_door_choice_adds_pot_and_offers_cashout_or_continue(self):
         handler = create_test_trick_or_treat_handler()
@@ -65,7 +80,54 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             {button.custom_id for button in view.children},
             {"backrooms_cash_out", "backrooms_continue"},
         )
+        embed = view.message.edit.call_args.kwargs["embed"]
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Found"], "+🪙1,500")
+        self.assertEqual(fields["Unbanked haul"], "🪙1,500")
+        self.assertIn("➡️ Continue deeper", [button.label for button in view.children])
+        self.assertNotRegex(
+            embed.description, r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d"
+        )
+        self.assertIn("Decide", embed.footer.text)
+        self.assertFalse(
+            any("room" in button.label.lower() for button in view.children)
+        )
         self.interaction.response.defer.assert_awaited_once()
+
+    async def test_suspense_keeps_run_thumbnail_and_shared_embed_title(self):
+        handler = create_test_trick_or_treat_handler()
+        handler.backrooms["thumbnails"] = [
+            "http://test.com/first.png",
+            "http://test.com/second.png",
+        ]
+
+        await backrooms.result_backrooms(handler, self.interaction)
+
+        initial_embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        view = self.interaction.followup.send.call_args.kwargs["view"]
+        view.message = AsyncMock()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.backrooms.asyncio.sleep",
+            new_callable=AsyncMock,
+        ), patch(
+            "ironforgedbot.commands.trickortreat.outcomes.backrooms.random.randint",
+            return_value=1500,
+        ):
+            await view.children[0].callback(self.interaction)
+
+        suspense_embed = view.message.edit.call_args_list[0].kwargs["embed"]
+        result_embed = view.message.edit.call_args_list[-1].kwargs["embed"]
+        self.assertEqual(suspense_embed.title, "Backrooms")
+        self.assertEqual(suspense_embed.color.value, discord.Color.darker_grey().value)
+        self.assertEqual(
+            suspense_embed.thumbnail.url, handler.backrooms["suspense_thumbnail"]
+        )
+        self.assertEqual(result_embed.thumbnail.url, initial_embed.thumbnail.url)
+        self.assertNotRegex(
+            suspense_embed.description,
+            r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d",
+        )
 
     async def test_continue_advances_room_and_rebuilds_door_buttons(self):
         handler = create_test_trick_or_treat_handler()
@@ -94,6 +156,16 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(view.children), 3)
         self.assertEqual(view.door_outcomes, [DoorOutcome.BARGAIN] * 3)
         self.assertEqual(view.pot, 2000)
+        embed = view.message.edit.call_args.kwargs["embed"]
+        self.assertEqual(embed.title, "Backrooms")
+        self.assertNotIn("safe", embed.description.lower())
+        self.assertNotRegex(
+            embed.description, r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d"
+        )
+        self.assertEqual(
+            {field.name: field.value for field in embed.fields}["Unbanked haul"],
+            "🪙2,000",
+        )
 
     async def test_cash_out_credits_pot_once_and_finishes_run(self):
         handler = create_test_trick_or_treat_handler()
@@ -121,7 +193,13 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(view.finished)
         self.assertEqual(view.pot, 0)
         self.assertEqual(len(view.children), 0)
-        view.message.edit.assert_awaited()
+        embed = view.message.edit.call_args.kwargs["embed"]
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Banked"], "🪙25,000")
+        self.assertEqual(fields["Balance"], "TestUser has 🪙27,000")
+        self.assertNotRegex(
+            embed.description, r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d"
+        )
 
     async def test_timeout_banks_unbanked_pot(self):
         handler = create_test_trick_or_treat_handler()
@@ -142,6 +220,66 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         handler._adjust_ingots.assert_awaited_once()
         self.assertTrue(view.finished)
         self.assertEqual(view.pot, 0)
+        embed = view.message.edit.call_args.kwargs["embed"]
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Banked"], "🪙4,000")
+        self.assertEqual(fields["Balance"], "TestUser has 🪙6,000")
+
+    async def test_cash_out_failure_keeps_unbanked_haul_visible(self):
+        handler = create_test_trick_or_treat_handler()
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, failure="error")
+        )
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
+        view = BackroomsView(
+            handler,
+            self.test_user.id,
+            [DoorOutcome.TREASURE] * 3,
+            ["Door 1", "Door 2", "Door 3"],
+            room_number=2,
+            pot=4000,
+        )
+        view.phase = "decision"
+        view.message = AsyncMock()
+
+        await view._cash_out_callback(self.interaction)
+
+        self.assertFalse(view.finished)
+        self.assertEqual(view.pot, 4000)
+        self.assertEqual(len(view.children), 1)
+        embed = view.message.edit.call_args.kwargs["embed"]
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Still unbanked"], "🪙4,000")
+        self.assertNotIn("Banked", fields)
+        self.assertIn("Cash-out failed", embed.description)
+        self.assertEqual(view.children[0].label, "💰 Retry cash out")
+
+    async def test_fatal_outcome_shows_lost_haul_and_unchanged_balance(self):
+        handler = create_test_trick_or_treat_handler()
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 5000))
+        view = BackroomsView(
+            handler,
+            self.test_user.id,
+            [DoorOutcome.FATAL_MONSTER] * 3,
+            ["Door 1", "Door 2", "Door 3"],
+            room_number=2,
+            pot=4000,
+            interaction=self.interaction,
+        )
+        view.message = AsyncMock()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.backrooms.asyncio.sleep",
+            new_callable=AsyncMock,
+        ):
+            await view.children[0].callback(self.interaction)
+
+        embed = view.message.edit.call_args.kwargs["embed"]
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Lost"], "🪙4,000")
+        self.assertEqual(fields["Balance"], "TestUser has 🪙5,000")
+        self.assertNotIn("Banked", fields)
+        self.assertEqual(len(view.children), 0)
 
     async def test_five_room_limit_blocks_continue_button(self):
         handler = create_test_trick_or_treat_handler()

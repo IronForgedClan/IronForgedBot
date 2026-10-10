@@ -81,6 +81,7 @@ class BackroomsData(TypedDict):
     """Backrooms outcome messages and content."""
 
     intro: str
+    continue_intro: str
     door_labels: list[str]
     treasure_messages: list[str]
     fatal_monster_messages: list[str]

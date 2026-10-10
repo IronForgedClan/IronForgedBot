@@ -74,6 +74,7 @@ class DoorResolution:
     pot: int
     terminal: bool
     bank_pot: bool
+    impact: tuple[str, str] | None = None
 
 
 def get_room_outcome_weights(room_number: int, pot: int) -> dict[DoorOutcome, float]:
@@ -116,27 +117,27 @@ async def process_door_choice(
             amount = random.randint(minimum, maximum)
             added_amount = min(amount, BACKROOMS_MAX_PAYOUT - pot)
             new_pot = min(BACKROOMS_MAX_PAYOUT, pot + amount)
-            message = random.choice(handler.backrooms["treasure_messages"]).format(
-                ingots=_format_ingots(handler, added_amount)
+            message = random.choice(handler.backrooms["treasure_messages"])
+            impact = ("Found", f"+{_format_ingots(handler, added_amount)}")
+            return DoorResolution(
+                message, new_pot, terminal_room, terminal_room, impact
             )
-            return DoorResolution(message, new_pot, terminal_room, terminal_room)
 
         case DoorOutcome.FATAL_MONSTER:
-            message = random.choice(handler.backrooms["fatal_monster_messages"]).format(
-                ingots=_format_ingots(handler, pot)
-            )
-            return DoorResolution(message, 0, True, False)
+            message = random.choice(handler.backrooms["fatal_monster_messages"])
+            impact = ("Lost", _format_ingots(handler, pot))
+            return DoorResolution(message, 0, True, False, impact)
 
         case DoorOutcome.ESCAPABLE_MONSTER:
             lost_amount = _calculate_pot_loss(
                 pot, BACKROOMS_ESCAPABLE_MONSTER_POT_LOSS_PERCENT
             )
             remaining_pot = pot - lost_amount
-            message = random.choice(handler.backrooms["monster_messages"]).format(
-                lost=_format_ingots(handler, lost_amount),
-                pot=_format_ingots(handler, remaining_pot),
+            message = random.choice(handler.backrooms["monster_messages"])
+            impact = ("Lost", _format_ingots(handler, lost_amount))
+            return DoorResolution(
+                message, remaining_pot, terminal_room, terminal_room, impact
             )
-            return DoorResolution(message, remaining_pot, terminal_room, terminal_room)
 
         case DoorOutcome.ESCAPE:
             message = random.choice(handler.backrooms["escape_messages"])
@@ -152,13 +153,15 @@ async def process_door_choice(
             bonus = random.randint(minimum, maximum)
             lost_amount = _calculate_pot_loss(pot, BACKROOMS_BARGAIN_POT_LOSS_PERCENT)
             new_pot = min(BACKROOMS_MAX_PAYOUT, pot - lost_amount + bonus)
-            message = handler.backrooms["bargain_message"].format(
-                room=room_number,
-                lost=_format_ingots(handler, lost_amount),
-                bonus=_format_ingots(handler, bonus),
-                pot=_format_ingots(handler, new_pot),
+            message = handler.backrooms["bargain_message"]
+            impact = (
+                "Bargain",
+                f"−{_format_ingots(handler, lost_amount)} / "
+                f"+{_format_ingots(handler, bonus)}",
             )
-            return DoorResolution(message, new_pot, terminal_room, terminal_room)
+            return DoorResolution(
+                message, new_pot, terminal_room, terminal_room, impact
+            )
 
     raise ValueError(f"Unsupported backrooms outcome: {outcome}")
 
@@ -175,6 +178,7 @@ class BackroomsView(discord.ui.View):
         room_number: int = 1,
         pot: int = 0,
         interaction: discord.Interaction | None = None,
+        thumbnail_url: str | None = None,
     ):
         super().__init__(timeout=45.0)
         self.handler = handler
@@ -183,6 +187,9 @@ class BackroomsView(discord.ui.View):
         self.door_labels = door_labels
         self.room_number = room_number
         self.pot = pot
+        self.thumbnail_url = thumbnail_url or handler._get_random_from_list(
+            handler.backrooms["thumbnails"], handler.history["backrooms_thumbnail"]
+        )
         self.has_interacted = False
         self.processing = False
         self.settling = False
@@ -223,7 +230,7 @@ class BackroomsView(discord.ui.View):
 
         if not retry_only and self.room_number < BACKROOMS_MAX_ROOMS:
             continue_button = discord.ui.Button(
-                label=f"➡️ Continue to room {self.room_number + 1}",
+                label="➡️ Continue deeper",
                 style=discord.ButtonStyle.primary,
                 custom_id="backrooms_continue",
                 row=0,
@@ -231,16 +238,40 @@ class BackroomsView(discord.ui.View):
             continue_button.callback = self._continue_callback
             self.add_item(continue_button)
 
-    async def _edit_message(self, content: str) -> None:
-        embed = self.handler._build_embed(
-            content,
-            self.handler.backrooms["thumbnails"],
-            self.handler.history["backrooms_thumbnail"],
-        )
+    async def _edit_message(
+        self,
+        content: str,
+        fields: list[tuple[str, str]] | None = None,
+        footer: str | None = None,
+    ) -> None:
+        embed = self._build_embed(content, fields, footer=footer)
         if self.message:
             await self.message.edit(embed=embed, view=self)
 
-    async def _cash_out(self, interaction: discord.Interaction, message: str) -> bool:
+    def _build_embed(
+        self,
+        description: str,
+        fields: list[tuple[str, str]] | None = None,
+        color: discord.Color | None = None,
+        thumbnail_url: str | None = None,
+        footer: str | None = None,
+    ) -> discord.Embed:
+        embed = build_response_embed(
+            "Backrooms", description, color or discord.Color.orange()
+        )
+        embed.set_thumbnail(url=thumbnail_url or self.thumbnail_url)
+        for name, value in fields or []:
+            embed.add_field(name=name, value=value, inline=True)
+        if footer:
+            embed.set_footer(text=footer)
+        return embed
+
+    async def _cash_out(
+        self,
+        interaction: discord.Interaction,
+        message: str,
+        impact: tuple[str, str] | None = None,
+    ) -> bool:
         if self.finished or self.settling:
             return self.finished
 
@@ -259,39 +290,55 @@ class BackroomsView(discord.ui.View):
                 self.settling = False
                 self.phase = "cash_out"
                 self._add_run_buttons(retry_only=True)
+                fields = [impact] if impact else []
+                fields.append(
+                    ("Still unbanked", _format_ingots(self.handler, self.pot))
+                )
                 await self._edit_message(
-                    f"{message}\n\n**Cash-out failed.** Try again to bank "
-                    f"{_format_ingots(self.handler, self.pot)}."
+                    f"{message}\n\nCash-out failed. Select the retry button to try again.",
+                    fields,
                 )
                 return False
 
             assert adjustment.new_total is not None
-            message += self.handler._get_balance_message(
-                user_nickname,
-                adjustment.new_total,
-            )
+            balance = adjustment.new_total
         else:
-            user_nickname, total = await self.handler._get_user_info(self.user_id)
-            message += f"\n\n{user_nickname} leaves with no haul."
-            message += self.handler._get_balance_message(user_nickname, total)
+            user_nickname, balance = await self.handler._get_user_info(self.user_id)
 
+        banked_amount = self.pot
         self.finished = True
         self.settling = False
         self.pot = 0
         self.clear_items()
-        await self._edit_message(message)
+        fields = [impact] if impact else []
+        fields.extend(
+            [
+                ("Banked", _format_ingots(self.handler, banked_amount)),
+                (
+                    "Balance",
+                    f"{user_nickname} has {_format_ingots(self.handler, balance)}",
+                ),
+            ]
+        )
+        await self._edit_message(message, fields)
         self.stop()
         self._cleanup()
         return True
 
     async def _end_without_cash_out(
-        self, interaction: discord.Interaction, message: str
+        self,
+        interaction: discord.Interaction,
+        message: str,
+        impact: tuple[str, str] | None = None,
     ) -> None:
         user_nickname, total = await self.handler._get_user_info(self.user_id)
-        message += self.handler._get_balance_message(user_nickname, total)
         self.finished = True
         self.clear_items()
-        await self._edit_message(message)
+        fields = [impact] if impact else []
+        fields.append(
+            ("Balance", f"{user_nickname} has {_format_ingots(self.handler, total)}")
+        )
+        await self._edit_message(message, fields)
         self.stop()
         self._cleanup()
 
@@ -316,13 +363,12 @@ class BackroomsView(discord.ui.View):
 
             door_label = self.door_labels[door_index]
             suspense_message = self.handler.backrooms["opening_door"].format(
-                room=self.room_number, door=door_label
+                door=door_label
             )
-            suspense_embed = build_response_embed(
-                "", suspense_message, discord.Color.darker_grey()
-            )
-            suspense_embed.set_thumbnail(
-                url=self.handler.backrooms["suspense_thumbnail"]
+            suspense_embed = self._build_embed(
+                suspense_message,
+                color=discord.Color.darker_grey(),
+                thumbnail_url=self.handler.backrooms["suspense_thumbnail"],
             )
             if self.message:
                 await self.message.edit(embed=suspense_embed, view=None)
@@ -337,19 +383,25 @@ class BackroomsView(discord.ui.View):
 
             if resolution.terminal:
                 if resolution.bank_pot:
-                    await self._cash_out(interaction, resolution.message)
+                    await self._cash_out(
+                        interaction, resolution.message, resolution.impact
+                    )
                 else:
-                    await self._end_without_cash_out(interaction, resolution.message)
+                    await self._end_without_cash_out(
+                        interaction, resolution.message, resolution.impact
+                    )
                 return
 
             self.phase = "decision"
             self.has_interacted = False
             self._add_run_buttons()
+            fields = [resolution.impact] if resolution.impact else []
+            fields.append(("Unbanked haul", _format_ingots(self.handler, self.pot)))
+            expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
             await self._edit_message(
-                f"{resolution.message}\n\n**Room {self.room_number}/"
-                f"{BACKROOMS_MAX_ROOMS} complete.**\n"
-                f"Unbanked haul: **{_format_ingots(self.handler, self.pot)}**\n\n"
-                "Cash out now or risk another room."
+                f"{resolution.message}\n\nCash out or continue deeper.",
+                fields,
+                footer=f"Decide {expires_timestamp}.",
             )
 
         return callback
@@ -374,11 +426,7 @@ class BackroomsView(discord.ui.View):
         self.has_interacted = True
         self.last_interaction = interaction
         await interaction.response.defer()
-        await self._cash_out(
-            interaction,
-            f"You cash out after room {self.room_number}/{BACKROOMS_MAX_ROOMS} "
-            f"with {_format_ingots(self.handler, self.pot)}.",
-        )
+        await self._cash_out(interaction, "You leave the backrooms with your haul.")
         if not self.finished:
             self.has_interacted = False
 
@@ -407,16 +455,15 @@ class BackroomsView(discord.ui.View):
             self.handler.backrooms["door_labels"], BACKROOMS_DOOR_COUNT
         )
         expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
-        intro_message = self.handler.backrooms["intro"].format(
-            room=self.room_number,
-            max_rooms=BACKROOMS_MAX_ROOMS,
-            ingots=_format_ingots(self.handler, self.pot),
-            expires=expires_timestamp,
-        )
+        intro_message = self.handler.backrooms["continue_intro"]
         self.phase = "doors"
         self.has_interacted = False
         self._add_door_buttons()
-        await self._edit_message(intro_message)
+        await self._edit_message(
+            intro_message,
+            [("Unbanked haul", _format_ingots(self.handler, self.pot))],
+            footer=f"Decide {expires_timestamp}.",
+        )
 
     async def on_timeout(self) -> None:
         if self.finished or self.processing or self.settling:
@@ -430,8 +477,7 @@ class BackroomsView(discord.ui.View):
 
         await self._cash_out(
             interaction,
-            self.handler.backrooms["expired"]
-            + f"\n\nUnbanked haul: **{_format_ingots(self.handler, self.pot)}**.",
+            self.handler.backrooms["expired"],
         )
 
 
@@ -452,18 +498,6 @@ async def result_backrooms(
     )
 
     expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
-    intro_message = handler.backrooms["intro"].format(
-        room=room_number,
-        max_rooms=BACKROOMS_MAX_ROOMS,
-        ingots=_format_ingots(handler, pot),
-        expires=expires_timestamp,
-    )
-    embed = handler._build_embed(
-        intro_message,
-        handler.backrooms["thumbnails"],
-        handler.history["backrooms_thumbnail"],
-    )
-
     view = BackroomsView(
         handler,
         interaction.user.id,
@@ -472,6 +506,11 @@ async def result_backrooms(
         room_number=room_number,
         pot=pot,
         interaction=interaction,
+    )
+    embed = view._build_embed(
+        handler.backrooms["intro"],
+        [("Unbanked haul", _format_ingots(handler, pot))],
+        footer=f"Decide {expires_timestamp}.",
     )
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message
