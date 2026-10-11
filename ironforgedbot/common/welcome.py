@@ -110,11 +110,11 @@ async def send_welcome_messages(
     data_root = Path(data_directory).resolve()
     for message in messages:
         content = format_welcome_content(message.content, channel_ids)
+        embed = discord.Embed(description=content or None)
         if not message.image:
-            await user.send(content=content)
+            await user.send(embed=embed)
             continue
 
-        embed = discord.Embed(description=content or None)
         if _is_url(message.image):
             embed.set_image(url=message.image)
             await user.send(embed=embed)

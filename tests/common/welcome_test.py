@@ -134,7 +134,9 @@ class TestSendWelcomeMessages(unittest.IsolatedAsyncioTestCase):
             "attachment://welcome.png",
         )
         self.assertEqual(second_call.kwargs["embed"].description, "Second")
-        self.assertEqual(user.send.await_args_list[2].kwargs, {"content": "Third"})
+        third_call = user.send.await_args_list[2]
+        self.assertEqual(third_call.kwargs["embed"].description, "Third")
+        self.assertIsNone(third_call.kwargs["embed"].image.url)
 
     async def test_rejects_local_image_outside_data_directory(self):
         user = AsyncMock()
