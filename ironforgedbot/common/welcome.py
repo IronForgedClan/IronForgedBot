@@ -73,7 +73,9 @@ def load_welcome_messages(
     return messages
 
 
-def format_welcome_content(content: str, channel_ids: dict[str, int]) -> str:
+def format_welcome_content(
+    content: str, channel_ids: dict[str, int], guild_id: int | None = None
+) -> str:
     for placeholder, config_key in WELCOME_CHANNEL_PLACEHOLDERS.items():
         if placeholder not in content:
             continue
@@ -82,6 +84,18 @@ def format_welcome_content(content: str, channel_ids: dict[str, int]) -> str:
         if not channel_id:
             raise ValueError(f"Welcome channel is not configured: {config_key}")
         content = content.replace(placeholder, f"<#{channel_id}>")
+
+    channels_and_roles_placeholder = "{{CHANNELS_AND_ROLES}}"
+    if channels_and_roles_placeholder in content:
+        if not guild_id:
+            raise ValueError("Welcome server link is not configured: GUILD_ID")
+        channels_and_roles_link = (
+            f"[Channels & Roles](https://discord.com/channels/"
+            f"{guild_id}/customize-community)"
+        )
+        content = content.replace(
+            channels_and_roles_placeholder, channels_and_roles_link
+        )
 
     return WELCOME_EMOJI_PATTERN.sub(
         lambda match: _resolve_welcome_emoji(match.group(1)), content
@@ -105,20 +119,28 @@ async def send_welcome_messages(
         raise ValueError("Welcome data must contain at least one message")
 
     channel_ids: dict[str, int] = {}
-    if any(
+    has_channel_placeholders = any(
         placeholder in message.content
         for message in messages
         for placeholder in WELCOME_CHANNEL_PLACEHOLDERS
-    ):
+    )
+    needs_guild_id = any(
+        "{{CHANNELS_AND_ROLES}}" in message.content for message in messages
+    )
+    guild_id = None
+    if has_channel_placeholders or needs_guild_id:
         from ironforgedbot.config import CONFIG
 
-        channel_ids = {
-            config_key: getattr(CONFIG, config_key)
-            for config_key in WELCOME_CHANNEL_PLACEHOLDERS.values()
-        }
+        if has_channel_placeholders:
+            channel_ids = {
+                config_key: getattr(CONFIG, config_key)
+                for config_key in WELCOME_CHANNEL_PLACEHOLDERS.values()
+            }
+        if needs_guild_id:
+            guild_id = CONFIG.GUILD_ID
 
     prepared_embeds = _prepare_welcome_embeds(
-        messages, channel_ids, Path(data_directory).resolve()
+        messages, channel_ids, guild_id, Path(data_directory).resolve()
     )
     batches: list[list[_PreparedWelcomeEmbed]] = []
     current_batch: list[_PreparedWelcomeEmbed] = []
@@ -162,11 +184,14 @@ async def send_welcome_messages(
 
 
 def _prepare_welcome_embeds(
-    messages: list[WelcomeMessage], channel_ids: dict[str, int], data_root: Path
+    messages: list[WelcomeMessage],
+    channel_ids: dict[str, int],
+    guild_id: int | None,
+    data_root: Path,
 ) -> list[_PreparedWelcomeEmbed]:
     prepared_embeds: list[_PreparedWelcomeEmbed] = []
     for message_index, message in enumerate(messages):
-        content = format_welcome_content(message.content, channel_ids)
+        content = format_welcome_content(message.content, channel_ids, guild_id)
         image_path = None
         filename = None
         if message.image and not _is_url(message.image):

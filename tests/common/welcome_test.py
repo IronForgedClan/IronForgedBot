@@ -87,6 +87,21 @@ class TestFormatWelcomeContent(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "RULES_CHANNEL_ID"):
             format_welcome_content("Read {{RULES_CHANNEL}}.", {})
 
+    def test_replaces_channels_and_roles_placeholder_with_server_link(self):
+        result = format_welcome_content(
+            "Choose your channels: {{CHANNELS_AND_ROLES}}.", {}, guild_id=123
+        )
+
+        self.assertEqual(
+            result,
+            "Choose your channels: "
+            "[Channels & Roles](https://discord.com/channels/123/customize-community).",
+        )
+
+    def test_raises_when_channels_and_roles_guild_is_not_configured(self):
+        with self.assertRaisesRegex(ValueError, "GUILD_ID"):
+            format_welcome_content("{{CHANNELS_AND_ROLES}}", {})
+
     @patch("ironforgedbot.common.welcome._resolve_welcome_emoji")
     def test_replaces_emoji_tokens_using_emoji_name(self, mock_resolve_emoji):
         mock_resolve_emoji.side_effect = lambda name: f"<:{name}:123>"
