@@ -57,15 +57,37 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertIn("negative_message", handler.history)
         self.assertIn("quiz_question", handler.history)
         self.assertIn("joke", handler.history)
+        self.assertIn("content_messages", handler.history)
 
         for key, history_deque in handler.history.items():
-            if key == "backrooms_messages":
+            if key in {"backrooms_messages", "content_messages"}:
                 for category_history in history_deque.values():
                     self.assertIsInstance(category_history, deque)
-                    self.assertEqual(len(category_history), 0)
+                    if key == "backrooms_messages":
+                        self.assertEqual(len(category_history), 0)
             else:
                 self.assertIsInstance(history_deque, deque)
                 self.assertEqual(len(history_deque), 0)
+
+    def test_content_message_pool_avoids_recent_variants(self):
+        handler = create_test_trick_or_treat_handler()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choice",
+            side_effect=lambda choices: choices[0],
+        ):
+            messages = [
+                handler._get_content_message(
+                    "jackpot.claimed_message", ["first", "second"]
+                )
+                for _ in range(3)
+            ]
+
+        self.assertEqual(messages, ["first", "second", "first"])
+        self.assertEqual(
+            handler._get_content_message("jackpot.success_prefix", "legacy string"),
+            "legacy string",
+        )
 
     def test_backrooms_message_history_avoids_repeats_until_pool_exhausted(self):
         handler = create_test_trick_or_treat_handler()
@@ -742,6 +764,27 @@ class TestLoadContentFile(unittest.TestCase):
 
         self.assertEqual(result, valid_data)
         mock_file.assert_called_once_with("test_path.json")
+
+    def test_load_content_file_accepts_message_variants(self):
+        valid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        valid_data["jackpot"]["claimed_message"] = ["Already claimed", "Too slow"]
+        mock_file = mock_open(read_data=json.dumps(valid_data))
+
+        with patch("builtins.open", mock_file):
+            result = TrickOrTreatHandler._load_content_file("test_path.json")
+
+        self.assertEqual(
+            result["jackpot"]["claimed_message"], ["Already claimed", "Too slow"]
+        )
+
+    def test_load_content_file_rejects_empty_message_variants(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["jackpot"]["claimed_message"] = []
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "non-empty message"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
 
     def test_load_content_file_not_found(self):
         """Test that FileNotFoundError is raised when file doesn't exist."""

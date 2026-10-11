@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Literal, NotRequired, TypedDict
 
 QUIZ_OPTION_COUNT = 4
+ContentMessage = str | list[str]
 
 
 class IngotAdjustmentFailure(StrEnum):
@@ -38,43 +39,43 @@ class GeneralData(TypedDict):
 
     positive_messages: list[str]
     negative_messages: list[str]
-    no_ingots_message: str
+    no_ingots_message: ContentMessage
 
 
 class JackpotData(TypedDict):
     """Jackpot outcome messages."""
 
-    success_prefix: str
-    claimed_message: str
+    success_prefix: ContentMessage
+    claimed_message: ContentMessage
 
 
 class TrickData(TypedDict):
     """Remove-all-ingots trick outcome message."""
 
-    message: str
+    message: ContentMessage
 
 
 class DoubleOrNothingData(TypedDict):
     """Double-or-nothing outcome messages."""
 
-    offer: str
-    win: str
-    lose: str
-    keep: str
-    expired: str
+    offer: ContentMessage
+    win: ContentMessage
+    lose: ContentMessage
+    keep: ContentMessage
+    expired: ContentMessage
 
 
 class StealData(TypedDict):
     """Steal outcome messages."""
 
-    offer: str
-    success: str
-    failure: str
-    walk_away: str
-    expired: str
-    no_targets: str
-    target_no_ingots: str
-    user_no_ingots: str
+    offer: ContentMessage
+    success: ContentMessage
+    failure: ContentMessage
+    walk_away: ContentMessage
+    expired: ContentMessage
+    no_targets: ContentMessage
+    target_no_ingots: ContentMessage
+    user_no_ingots: ContentMessage
 
 
 BackroomsMessageCategory = Literal[
@@ -131,12 +132,12 @@ class JokeData(TypedDict):
 class QuizData(TypedDict):
     """Quiz master outcome messages and questions."""
 
-    intro: str
+    intro: ContentMessage
     questions: list[QuizQuestion]
-    correct_message: str
-    wrong_lucky_message: str
-    wrong_penalty_message: str
-    expired_message: str
+    correct_message: ContentMessage
+    wrong_lucky_message: ContentMessage
+    wrong_penalty_message: ContentMessage
+    expired_message: ContentMessage
 
 
 class HistoryDict(TypedDict):
@@ -150,6 +151,7 @@ class HistoryDict(TypedDict):
     negative_message: deque[int]
     quiz_question: deque[int]
     joke: deque[int]
+    content_messages: dict[str, deque[int]]
 
 
 class MediaData(TypedDict):

@@ -17,6 +17,7 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
 from ironforgedbot.commands.trickortreat.types import (
     BackroomsData,
     BackroomsMessageCategory,
+    ContentMessage,
     DoubleOrNothingData,
     GeneralData,
     HistoryDict,
@@ -71,6 +72,7 @@ class TrickOrTreatHandler:
             "negative_message": deque(maxlen=20),
             "quiz_question": deque(maxlen=20),
             "joke": deque(maxlen=20),
+            "content_messages": {},
         }
 
         data = self._load_content_file()
@@ -210,6 +212,30 @@ class TrickOrTreatHandler:
             ("general", "positive_messages"),
             ("general", "negative_messages"),
         }
+        message_fields = {
+            ("jackpot", "success_prefix"),
+            ("jackpot", "claimed_message"),
+            ("double_or_nothing", "offer"),
+            ("double_or_nothing", "win"),
+            ("double_or_nothing", "lose"),
+            ("double_or_nothing", "keep"),
+            ("double_or_nothing", "expired"),
+            ("steal", "offer"),
+            ("steal", "success"),
+            ("steal", "failure"),
+            ("steal", "walk_away"),
+            ("steal", "expired"),
+            ("steal", "no_targets"),
+            ("steal", "target_no_ingots"),
+            ("steal", "user_no_ingots"),
+            ("quiz_master", "intro"),
+            ("quiz_master", "correct_message"),
+            ("quiz_master", "wrong_lucky_message"),
+            ("quiz_master", "wrong_penalty_message"),
+            ("quiz_master", "expired_message"),
+            ("remove_all_trick", "message"),
+            ("general", "no_ingots_message"),
+        }
 
         for section, fields in section_fields.items():
             section_data = data[section]
@@ -239,6 +265,16 @@ class TrickOrTreatHandler:
                         raise ValueError(
                             f"Content field '{section}.{field}' must contain "
                             f"non-empty strings in {file_path}"
+                        )
+                elif (section, field) in message_fields:
+                    messages = value if isinstance(value, list) else [value]
+                    if not messages or any(
+                        not isinstance(message, str) or not message.strip()
+                        for message in messages
+                    ):
+                        raise ValueError(
+                            f"Content field '{section}.{field}' must contain a "
+                            f"non-empty message string or list in {file_path}"
                         )
                 elif (section, field) == ("backrooms", "room_outcome_weights"):
                     if not isinstance(value, dict):
@@ -388,6 +424,13 @@ class TrickOrTreatHandler:
             messages, self.history["backrooms_messages"][category]
         )
 
+    def _get_content_message(self, key: str, messages: ContentMessage) -> str:
+        if isinstance(messages, str):
+            return messages
+
+        history = self.history["content_messages"].setdefault(key, deque(maxlen=20))
+        return self._get_random_from_list(messages, history)
+
     def _get_balance_message(self, username: str, balance: int) -> str:
         """Generate a formatted message showing the user's new ingot balance.
 
@@ -444,7 +487,10 @@ class TrickOrTreatHandler:
             A Discord embed with a humorous error message.
         """
         return self._build_embed(
-            self.general["no_ingots_message"] + self._get_balance_message(username, 0)
+            self._get_content_message(
+                "general.no_ingots_message", self.general["no_ingots_message"]
+            )
+            + self._get_balance_message(username, 0)
         )
 
     async def _get_user_info(self, user_id: int) -> tuple[str, int]:

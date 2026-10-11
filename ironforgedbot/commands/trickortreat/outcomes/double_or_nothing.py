@@ -138,9 +138,9 @@ class DoubleOrNothingView(discord.ui.View):
                 interaction.user.id
             )
 
-            message = self.handler.double_or_nothing["keep"].format(
-                ingot_icon=self.handler.ingot_icon, amount=self.amount
-            )
+            message = self.handler._get_content_message(
+                "double_or_nothing.keep", self.handler.double_or_nothing["keep"]
+            ).format(ingot_icon=self.handler.ingot_icon, amount=self.amount)
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
             embed = self.handler._build_embed(message)
@@ -177,9 +177,9 @@ class DoubleOrNothingView(discord.ui.View):
 
         user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
 
-        message = self.handler.double_or_nothing["expired"].format(
-            ingot_icon=self.handler.ingot_icon, amount=self.amount
-        )
+        message = self.handler._get_content_message(
+            "double_or_nothing.expired", self.handler.double_or_nothing["expired"]
+        ).format(ingot_icon=self.handler.ingot_icon, amount=self.amount)
         if ingot_total is not None:
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
@@ -232,9 +232,9 @@ async def result_double_or_nothing(
     expire_timestamp = int(time.time() + 30)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    offer_message = handler.double_or_nothing["offer"].format(
-        ingot_icon=handler.ingot_icon, amount=quantity, expires=expires_formatted
-    )
+    offer_message = handler._get_content_message(
+        "double_or_nothing.offer", handler.double_or_nothing["offer"]
+    ).format(ingot_icon=handler.ingot_icon, amount=quantity, expires=expires_formatted)
     offer_message += handler._get_balance_message(user_nickname, ingot_total)
 
     embed = handler._build_embed(offer_message)
@@ -290,9 +290,9 @@ async def process_double_or_nothing(
         assert adjustment.new_total is not None
         ingot_total = adjustment.new_total
 
-        message = handler.double_or_nothing["win"].format(
-            ingot_icon=handler.ingot_icon, total_amount=amount * 2
-        )
+        message = handler._get_content_message(
+            "double_or_nothing.win", handler.double_or_nothing["win"]
+        ).format(ingot_icon=handler.ingot_icon, total_amount=amount * 2)
         message += handler._get_balance_message(user_nickname, ingot_total)
     else:
         adjustment = await handler._adjust_ingots(
@@ -314,9 +314,9 @@ async def process_double_or_nothing(
         ingot_total = adjustment.new_total
 
         formatted_amount = f"{adjustment.applied_quantity:,}"
-        message = handler.double_or_nothing["lose"].format(
-            ingot_icon=handler.ingot_icon, amount=formatted_amount
-        )
+        message = handler._get_content_message(
+            "double_or_nothing.lose", handler.double_or_nothing["lose"]
+        ).format(ingot_icon=handler.ingot_icon, amount=formatted_amount)
         message += handler._get_balance_message(user_nickname, ingot_total)
 
     return handler._build_embed(message)
