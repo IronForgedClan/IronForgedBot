@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -15,6 +16,7 @@ WELCOME_CHANNEL_PLACEHOLDERS = {
     "{{RANKINGS_CHANNEL}}": "RANKINGS_CHANNEL_ID",
     "{{RAFFLE_CHANNEL}}": "RAFFLE_CHANNEL_ID",
 }
+WELCOME_EMOJI_PATTERN = re.compile(r"\{\{EMOJI:([A-Za-z0-9_]+)\}\}")
 
 
 @dataclass(frozen=True)
@@ -71,7 +73,15 @@ def format_welcome_content(content: str, channel_ids: dict[str, int]) -> str:
             raise ValueError(f"Welcome channel is not configured: {config_key}")
         content = content.replace(placeholder, f"<#{channel_id}>")
 
-    return content
+    return WELCOME_EMOJI_PATTERN.sub(
+        lambda match: _resolve_welcome_emoji(match.group(1)), content
+    )
+
+
+def _resolve_welcome_emoji(name: str) -> str:
+    from ironforgedbot.common.helpers import find_emoji
+
+    return find_emoji(name) or f":{name}:"
 
 
 async def send_welcome_messages(

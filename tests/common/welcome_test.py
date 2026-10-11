@@ -2,7 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import discord
 
@@ -86,6 +86,27 @@ class TestFormatWelcomeContent(unittest.TestCase):
     def test_raises_when_placeholder_channel_is_not_configured(self):
         with self.assertRaisesRegex(ValueError, "RULES_CHANNEL_ID"):
             format_welcome_content("Read {{RULES_CHANNEL}}.", {})
+
+    @patch("ironforgedbot.common.welcome._resolve_welcome_emoji")
+    def test_replaces_emoji_tokens_using_emoji_name(self, mock_resolve_emoji):
+        mock_resolve_emoji.side_effect = lambda name: f"<:{name}:123>"
+
+        result = format_welcome_content(
+            "Balance: {{EMOJI:Ingot}} {{RULES_CHANNEL}}.",
+            {"RULES_CHANNEL_ID": 456},
+        )
+
+        self.assertEqual(result, "Balance: <:Ingot:123> <#456>.")
+        mock_resolve_emoji.assert_called_once_with("Ingot")
+
+    @patch(
+        "ironforgedbot.common.welcome._resolve_welcome_emoji", return_value=":Ingot:"
+    )
+    def test_uses_readable_fallback_for_missing_emoji(self, mock_resolve_emoji):
+        result = format_welcome_content("{{EMOJI:Ingot}}", {})
+
+        self.assertEqual(result, ":Ingot:")
+        mock_resolve_emoji.assert_called_once_with("Ingot")
 
 
 class TestSendWelcomeMessages(unittest.IsolatedAsyncioTestCase):
