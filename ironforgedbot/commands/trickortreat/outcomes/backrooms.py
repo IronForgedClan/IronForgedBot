@@ -225,9 +225,8 @@ class BackroomsView(discord.ui.View):
         self,
         content: str,
         fields: list[tuple[str, str]] | None = None,
-        footer: str | None = None,
     ) -> None:
-        embed = self._build_embed(content, fields, footer=footer)
+        embed = self._build_embed(content, fields)
         if self.message:
             await self.message.edit(embed=embed, view=self)
 
@@ -237,7 +236,6 @@ class BackroomsView(discord.ui.View):
         fields: list[tuple[str, str]] | None = None,
         color: discord.Color | None = None,
         thumbnail_url: str | None = None,
-        footer: str | None = None,
     ) -> discord.Embed:
         embed = build_response_embed(
             "Backrooms", description, color or discord.Color.orange()
@@ -245,8 +243,6 @@ class BackroomsView(discord.ui.View):
         embed.set_thumbnail(url=thumbnail_url or self.thumbnail_url)
         for name, value in fields or []:
             embed.add_field(name=name, value=value, inline=True)
-        if footer:
-            embed.set_footer(text=footer)
         return embed
 
     async def _cash_out(
@@ -396,9 +392,9 @@ class BackroomsView(discord.ui.View):
             fields.append(("Unbanked haul", _format_ingots(self.handler, self.pot)))
             expires_timestamp = f"<t:{int(interaction.created_at.timestamp()) + 45}:R>"
             await self._edit_message(
-                f"{resolution.message}\n\nCash out or continue deeper.",
+                f"{resolution.message}\n\nCash out or continue deeper.\n\n"
+                f"Decide {expires_timestamp}.",
                 fields,
-                footer=f"Decide {expires_timestamp}.",
             )
 
         return callback
@@ -461,9 +457,8 @@ class BackroomsView(discord.ui.View):
         self.has_interacted = False
         self._add_door_buttons()
         await self._edit_message(
-            intro_message,
+            f"{intro_message}\n\nDecide {expires_timestamp}.",
             [("Unbanked haul", _format_ingots(self.handler, self.pot))],
-            footer=f"Decide {expires_timestamp}.",
         )
 
     async def on_timeout(self) -> None:
@@ -513,9 +508,9 @@ async def result_backrooms(
         interaction=interaction,
     )
     embed = view._build_embed(
-        handler._get_backrooms_message("intro", handler.backrooms["intro_messages"]),
+        f"{handler._get_backrooms_message('intro', handler.backrooms['intro_messages'])}"
+        f"\n\nDecide {expires_timestamp}.",
         [("Unbanked haul", _format_ingots(handler, pot))],
-        footer=f"Decide {expires_timestamp}.",
     )
     message = await interaction.followup.send(embed=embed, view=view)
     view.message = message

@@ -59,6 +59,10 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIn(
             "Every corridor leads to a supply cache", call_kwargs["embed"].description
         )
+        self.assertRegex(call_kwargs["embed"].description, r"Decide <t:\d+:R>\.")
+        self.assertNotIn(
+            "<t:", call_kwargs["embed"].to_dict().get("footer", {}).get("text", "")
+        )
         self.assertNotRegex(
             call_kwargs["embed"].description,
             r"(?i)room\s+(?:one|two|three|four|five|\d)",
@@ -106,7 +110,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertNotRegex(
             embed.description, r"(?i)room\s+(?:one|two|three|four|five|\d)|\d/\d"
         )
-        self.assertIn("Decide", embed.footer.text)
+        self.assertRegex(embed.description, r"Decide <t:\d+:R>\.")
+        self.assertNotIn("<t:", embed.to_dict().get("footer", {}).get("text", ""))
         self.assertFalse(
             any("room" in button.label.lower() for button in view.children)
         )
@@ -184,6 +189,8 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
             {field.name: field.value for field in embed.fields}["Unbanked haul"],
             "🪙29",
         )
+        self.assertRegex(embed.description, r"Decide <t:\d+:R>\.")
+        self.assertNotIn("<t:", embed.to_dict().get("footer", {}).get("text", ""))
 
     async def test_cash_out_credits_pot_once_and_finishes_run(self):
         handler = create_test_trick_or_treat_handler()
