@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 from dataclasses import dataclass
 from enum import Enum
@@ -16,6 +17,8 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
     BACKROOMS_TREASURE_RANGES,
 )
 from ironforgedbot.common.responses import build_response_embed
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
@@ -341,23 +344,37 @@ class BackroomsView(discord.ui.View):
             self.last_interaction = interaction
             await interaction.response.defer()
 
-            door_label = self.door_labels[door_index]
-            suspense_message = self.handler._get_backrooms_message(
-                "opening_door", self.handler.backrooms["opening_door_messages"]
-            ).format(door=door_label)
-            suspense_embed = self._build_embed(
-                suspense_message,
-                color=discord.Color.darker_grey(),
-                thumbnail_url=self.handler.backrooms["suspense_thumbnail"],
-            )
-            if self.message:
-                await self.message.edit(embed=suspense_embed, view=None)
+            try:
+                door_label = self.door_labels[door_index]
+                suspense_message = self.handler._get_backrooms_message(
+                    "opening_door", self.handler.backrooms["opening_door_messages"]
+                ).format(door=door_label)
+                suspense_embed = self._build_embed(
+                    suspense_message,
+                    color=discord.Color.darker_grey(),
+                    thumbnail_url=self.handler.backrooms["suspense_thumbnail"],
+                )
+                if self.message:
+                    await self.message.edit(embed=suspense_embed, view=None)
 
-            await asyncio.sleep(8)
-            outcome = self.door_outcomes[door_index]
-            resolution = await process_door_choice(
-                self.handler, outcome, self.room_number, self.pot
-            )
+                await asyncio.sleep(8)
+                outcome = self.door_outcomes[door_index]
+                resolution = await process_door_choice(
+                    self.handler, outcome, self.room_number, self.pot
+                )
+            except Exception:
+                logger.exception("Failed to resolve Backrooms door")
+                self.processing = False
+                self.has_interacted = False
+                self.phase = "cash_out"
+                self._add_run_buttons(retry_only=True)
+                await self._edit_message(
+                    "Something went wrong while resolving this corridor. "
+                    "Your unbanked haul is safe. Cash out to bank it.",
+                    [("Still unbanked", _format_ingots(self.handler, self.pot))],
+                )
+                return
+
             self.pot = resolution.pot
             self.processing = False
 
