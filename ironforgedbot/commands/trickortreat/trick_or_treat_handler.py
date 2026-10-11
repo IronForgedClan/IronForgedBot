@@ -8,6 +8,7 @@ from typing import List, Optional, TypeVar
 import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    BACKROOMS_BARGAIN_START_ROOM,
     BACKROOMS_DOOR_COUNT,
     BACKROOMS_MAX_ROOMS,
     CONTENT_FILE,
@@ -291,6 +292,19 @@ class TrickOrTreatHandler:
                     "Content field 'backrooms.room_outcome_weights."
                     f"{room_number}' has unknown outcomes: {sorted(unknown_outcomes)}"
                 )
+
+            if "bargain" in weights:
+                if int(room_number) < BACKROOMS_BARGAIN_START_ROOM:
+                    raise ValueError(
+                        "Content field 'backrooms.room_outcome_weights."
+                        f"{room_number}' has bargain before room "
+                        f"{BACKROOMS_BARGAIN_START_ROOM}"
+                    )
+                if not {"treasure", "escape"}.issubset(weights):
+                    raise ValueError(
+                        "Content field 'backrooms.room_outcome_weights."
+                        f"{room_number}' bargain weights require treasure and escape"
+                    )
 
             for outcome, weight in weights.items():
                 if (
