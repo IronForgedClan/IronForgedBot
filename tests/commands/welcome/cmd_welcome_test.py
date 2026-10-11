@@ -19,7 +19,7 @@ class TestCmdWelcome(unittest.IsolatedAsyncioTestCase):
         mock_send.assert_awaited_once_with(interaction.user)
         interaction.response.defer.assert_awaited_once_with(ephemeral=True)
         interaction.followup.send.assert_awaited_once_with(
-            "Welcome messages sent to your DMs.", ephemeral=True
+            "Welcome message sent to your DMs!", ephemeral=True
         )
 
     async def test_reports_dm_failure_ephemerally(self):

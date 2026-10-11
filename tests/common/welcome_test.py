@@ -123,20 +123,66 @@ class TestSendWelcomeMessages(unittest.IsolatedAsyncioTestCase):
 
             await send_welcome_messages(user, messages, temp_dir)
 
-        self.assertEqual(user.send.await_count, 3)
-        first_embed = user.send.await_args_list[0].kwargs["embed"]
+        self.assertEqual(user.send.await_count, 1)
+        send_kwargs = user.send.await_args.kwargs
+        embeds = send_kwargs["embeds"]
+        self.assertEqual(len(embeds), 3)
+        first_embed = embeds[0]
         self.assertEqual(first_embed.image.url, "https://example.com/welcome.png")
         self.assertEqual(first_embed.description, "First")
-        second_call = user.send.await_args_list[1]
-        self.assertIsInstance(second_call.kwargs["file"], discord.File)
+        second_embed = embeds[1]
+        files = send_kwargs["files"]
+        self.assertEqual(len(files), 1)
+        self.assertIsInstance(files[0], discord.File)
         self.assertEqual(
-            second_call.kwargs["embed"].image.url,
-            "attachment://welcome.png",
+            second_embed.image.url,
+            f"attachment://{files[0].filename}",
         )
-        self.assertEqual(second_call.kwargs["embed"].description, "Second")
-        third_call = user.send.await_args_list[2]
-        self.assertEqual(third_call.kwargs["embed"].description, "Third")
-        self.assertIsNone(third_call.kwargs["embed"].image.url)
+        self.assertEqual(second_embed.description, "Second")
+        self.assertEqual(embeds[2].description, "Third")
+        self.assertIsNone(embeds[2].image.url)
+
+    async def test_batches_at_embed_limit(self):
+        user = AsyncMock()
+        messages = [WelcomeMessage(f"Section {index}") for index in range(11)]
+
+        await send_welcome_messages(user, messages)
+
+        self.assertEqual(user.send.await_count, 2)
+        batches = [call.kwargs["embeds"] for call in user.send.await_args_list]
+        self.assertEqual([len(batch) for batch in batches], [10, 1])
+        self.assertEqual(
+            [embed.description for batch in batches for embed in batch],
+            [f"Section {index}" for index in range(11)],
+        )
+
+    async def test_splits_long_sections_and_batches_at_character_limit(self):
+        user = AsyncMock()
+        messages = [
+            WelcomeMessage("A" * 5000),
+            WelcomeMessage("B" * 1000),
+            WelcomeMessage("C"),
+        ]
+
+        await send_welcome_messages(user, messages)
+
+        self.assertEqual(user.send.await_count, 2)
+        batches = [call.kwargs["embeds"] for call in user.send.await_args_list]
+        self.assertEqual(
+            [sum(len(embed.description or "") for embed in b) for b in batches],
+            [6000, 1],
+        )
+        self.assertTrue(
+            all(
+                len(embed.description or "") <= 4096
+                for batch in batches
+                for embed in batch
+            )
+        )
+        self.assertEqual(
+            "".join(embed.description or "" for batch in batches for embed in batch),
+            "A" * 5000 + "B" * 1000 + "C",
+        )
 
     async def test_rejects_local_image_outside_data_directory(self):
         user = AsyncMock()

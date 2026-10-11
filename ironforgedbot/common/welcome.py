@@ -17,12 +17,22 @@ WELCOME_CHANNEL_PLACEHOLDERS = {
     "{{RAFFLE_CHANNEL}}": "RAFFLE_CHANNEL_ID",
 }
 WELCOME_EMOJI_PATTERN = re.compile(r"\{\{EMOJI:([A-Za-z0-9_]+)\}\}")
+MAX_EMBEDS_PER_MESSAGE = 10
+MAX_EMBED_DESCRIPTION_LENGTH = 4096
+MAX_EMBED_CHARACTERS_PER_MESSAGE = 6000
 
 
 @dataclass(frozen=True)
 class WelcomeMessage:
     content: str
     image: str | None = None
+
+
+@dataclass(frozen=True)
+class _PreparedWelcomeEmbed:
+    embed: discord.Embed
+    image_path: Path | None = None
+    filename: str | None = None
 
 
 def load_welcome_messages(
@@ -107,38 +117,107 @@ async def send_welcome_messages(
             for config_key in WELCOME_CHANNEL_PLACEHOLDERS.values()
         }
 
-    data_root = Path(data_directory).resolve()
-    for message in messages:
-        content = format_welcome_content(message.content, channel_ids)
-        embed = discord.Embed(description=content or None)
-        if not message.image:
-            await user.send(embed=embed)
-            continue
+    prepared_embeds = _prepare_welcome_embeds(
+        messages, channel_ids, Path(data_directory).resolve()
+    )
+    batches: list[list[_PreparedWelcomeEmbed]] = []
+    current_batch: list[_PreparedWelcomeEmbed] = []
+    current_character_count = 0
+    for prepared in prepared_embeds:
+        description_length = len(prepared.embed.description or "")
+        if current_batch and (
+            len(current_batch) >= MAX_EMBEDS_PER_MESSAGE
+            or current_character_count + description_length
+            > MAX_EMBED_CHARACTERS_PER_MESSAGE
+        ):
+            batches.append(current_batch)
+            current_batch = []
+            current_character_count = 0
 
-        if _is_url(message.image):
-            embed.set_image(url=message.image)
-            await user.send(embed=embed)
-            continue
+        current_batch.append(prepared)
+        current_character_count += description_length
 
-        image_path = (data_root / message.image).resolve()
+    if current_batch:
+        batches.append(current_batch)
+
+    for batch in batches:
+        image_files: list[discord.File] = []
         try:
-            image_path.relative_to(data_root)
-        except ValueError as error:
-            raise ValueError(
-                "Welcome image path resolves outside the data directory"
-            ) from error
-        if not image_path.is_file():
-            raise FileNotFoundError(f"Welcome image file not found: {image_path}")
+            for prepared in batch:
+                if prepared.image_path:
+                    image_files.append(
+                        discord.File(
+                            str(prepared.image_path), filename=prepared.filename
+                        )
+                    )
 
-        embed.set_image(url=f"attachment://{image_path.name}")
-        image_file = discord.File(str(image_path), filename=image_path.name)
-        try:
-            await user.send(
-                embed=embed,
-                file=image_file,
-            )
+            embeds = [prepared.embed for prepared in batch]
+            if image_files:
+                await user.send(embeds=embeds, files=image_files)
+            else:
+                await user.send(embeds=embeds)
         finally:
-            image_file.close()
+            for image_file in image_files:
+                image_file.close()
+
+
+def _prepare_welcome_embeds(
+    messages: list[WelcomeMessage], channel_ids: dict[str, int], data_root: Path
+) -> list[_PreparedWelcomeEmbed]:
+    prepared_embeds: list[_PreparedWelcomeEmbed] = []
+    for message_index, message in enumerate(messages):
+        content = format_welcome_content(message.content, channel_ids)
+        image_path = None
+        filename = None
+        if message.image and not _is_url(message.image):
+            image_path = (data_root / message.image).resolve()
+            try:
+                image_path.relative_to(data_root)
+            except ValueError as error:
+                raise ValueError(
+                    "Welcome image path resolves outside the data directory"
+                ) from error
+            if not image_path.is_file():
+                raise FileNotFoundError(f"Welcome image file not found: {image_path}")
+            filename = f"welcome_{message_index}_{image_path.name}"
+
+        content_chunks = _split_welcome_content(content)
+        for chunk_index, content_chunk in enumerate(content_chunks):
+            embed = discord.Embed(description=content_chunk or None)
+            prepared_image_path = None
+            prepared_filename = None
+            if chunk_index == 0 and message.image:
+                if image_path:
+                    embed.set_image(url=f"attachment://{filename}")
+                    prepared_image_path = image_path
+                    prepared_filename = filename
+                else:
+                    embed.set_image(url=message.image)
+
+            prepared_embeds.append(
+                _PreparedWelcomeEmbed(
+                    embed=embed,
+                    image_path=prepared_image_path,
+                    filename=prepared_filename,
+                )
+            )
+
+    return prepared_embeds
+
+
+def _split_welcome_content(content: str) -> list[str]:
+    if not content:
+        return [""]
+
+    chunks: list[str] = []
+    while len(content) > MAX_EMBED_DESCRIPTION_LENGTH:
+        split_at = content.rfind("\n", 0, MAX_EMBED_DESCRIPTION_LENGTH)
+        if split_at <= 0:
+            split_at = MAX_EMBED_DESCRIPTION_LENGTH
+        chunks.append(content[:split_at])
+        content = content[split_at:]
+    chunks.append(content)
+    return chunks
 
 
 def _is_url(value: str) -> bool:

@@ -155,7 +155,7 @@ class IronForgedCommands:
         self._tree.add_command(
             discord.app_commands.Command(
                 name="welcome",
-                description="Send the welcome messages to your DMs.",
+                description="Send the welcome message to your DMs.",
                 callback=cmd_welcome,
             )
         )
