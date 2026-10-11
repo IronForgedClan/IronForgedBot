@@ -334,3 +334,36 @@ class TestBackroomsOutcome(unittest.IsolatedAsyncioTestCase):
         interaction.response.send_message.assert_awaited_once_with(
             "These aren't your backrooms!", ephemeral=True
         )
+
+    async def test_door_resolution_failure_preserves_pot_and_allows_cash_out(self):
+        handler = create_test_trick_or_treat_handler()
+        view = BackroomsView(
+            handler,
+            self.test_user.id,
+            self.door_outcomes,
+            self.door_labels,
+            room_number=2,
+            pot=29,
+            interaction=self.interaction,
+        )
+        view.message = AsyncMock()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.backrooms.asyncio.sleep",
+            new_callable=AsyncMock,
+        ), patch(
+            "ironforgedbot.commands.trickortreat.outcomes.backrooms.process_door_choice",
+            side_effect=RuntimeError("invalid outcome configuration"),
+        ):
+            await view.children[0].callback(self.interaction)
+
+        self.assertFalse(view.processing)
+        self.assertFalse(view.has_interacted)
+        self.assertEqual(view.phase, "cash_out")
+        self.assertEqual(view.pot, 29)
+        self.assertEqual(len(view.children), 1)
+        self.assertEqual(view.children[0].custom_id, "backrooms_cash_out")
+        embed = view.message.edit.call_args.kwargs["embed"]
+        fields = {field.name: field.value for field in embed.fields}
+        self.assertEqual(fields["Still unbanked"], "🪙29")
+        self.assertIn("resolving this corridor", embed.description.lower())

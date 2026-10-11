@@ -147,6 +147,36 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(ValueError, "non-empty"):
             handler._get_random_from_list([], deque())
 
+    def test_content_validation_rejects_bargain_without_escape_weight(self):
+        content = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        content["backrooms"]["room_outcome_weights"]["3"] = {
+            "treasure": 0.87,
+            "bargain": 0.13,
+        }
+
+        with self.assertRaisesRegex(ValueError, "bargain.*treasure and escape"):
+            handler_module.TrickOrTreatHandler._validate_content_data(
+                content, "test-content.json"
+            )
+
+    def test_content_validation_rejects_bargain_before_start_room(self):
+        content = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        content["backrooms"]["room_outcome_weights"]["2"] = {
+            "treasure": 0.38,
+            "fatal_monster": 0.07,
+            "escapable_monster": 0.19,
+            "escape": 0.26,
+            "bargain": 0.10,
+        }
+
+        with patch.object(
+            handler_module, "BACKROOMS_BARGAIN_START_ROOM", 3, create=True
+        ):
+            with self.assertRaisesRegex(ValueError, "bargain before room"):
+                handler_module.TrickOrTreatHandler._validate_content_data(
+                    content, "test-content.json"
+                )
+
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
