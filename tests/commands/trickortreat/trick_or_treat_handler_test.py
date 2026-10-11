@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import unittest
 from collections import deque
 from typing import Counter
@@ -8,9 +9,19 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import aiohttp
 
-from ironforgedbot.commands.trickortreat.trick_or_treat_constants import CONTENT_FILE
+from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    BACKROOMS_DOOR_COUNT,
+    CONTENT_FILE,
+    TrickOrTreat,
+)
+from ironforgedbot.commands.trickortreat import trick_or_treat_handler as handler_module
 from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
     TrickOrTreatHandler,
+)
+from ironforgedbot.commands.trickortreat.types import (
+    IngotAdjustment,
+    IngotAdjustmentFailure,
+    QUIZ_OPTION_COUNT,
 )
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
@@ -41,14 +52,152 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         self.assertIn("gif", handler.history)
         self.assertIn("thumbnail", handler.history)
         self.assertIn("backrooms_thumbnail", handler.history)
+        self.assertIn("backrooms_messages", handler.history)
         self.assertIn("positive_message", handler.history)
         self.assertIn("negative_message", handler.history)
         self.assertIn("quiz_question", handler.history)
         self.assertIn("joke", handler.history)
+        self.assertIn("content_messages", handler.history)
 
         for key, history_deque in handler.history.items():
-            self.assertIsInstance(history_deque, deque)
-            self.assertEqual(len(history_deque), 0)
+            if key in {"backrooms_messages", "content_messages"}:
+                for category_history in history_deque.values():
+                    self.assertIsInstance(category_history, deque)
+                    if key == "backrooms_messages":
+                        self.assertEqual(len(category_history), 0)
+            else:
+                self.assertIsInstance(history_deque, deque)
+                self.assertEqual(len(history_deque), 0)
+
+    def test_content_message_pool_avoids_recent_variants(self):
+        handler = create_test_trick_or_treat_handler()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choice",
+            side_effect=lambda choices: choices[0],
+        ):
+            messages = [
+                handler._get_content_message(
+                    "jackpot.claimed_message", ["first", "second"]
+                )
+                for _ in range(3)
+            ]
+
+        self.assertEqual(messages, ["first", "second", "first"])
+        self.assertEqual(
+            handler._get_content_message("jackpot.success_prefix", "legacy string"),
+            "legacy string",
+        )
+
+    def test_backrooms_message_history_avoids_repeats_until_pool_exhausted(self):
+        handler = create_test_trick_or_treat_handler()
+        messages = ["first", "second", "third"]
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choice",
+            side_effect=lambda choices: choices[0],
+        ):
+            first_intro = handler._get_backrooms_message("intro", messages)
+            first_escape = handler._get_backrooms_message("escape", messages)
+            later_intro = [
+                handler._get_backrooms_message("intro", messages) for _ in range(3)
+            ]
+
+        self.assertEqual(first_intro, "first")
+        self.assertEqual(first_escape, "first")
+        self.assertEqual(later_intro, ["second", "third", "first"])
+
+    async def test_random_result_dispatches_every_outcome(self):
+        handler = create_test_trick_or_treat_handler()
+        outcome_handlers = {
+            TrickOrTreat.JACKPOT_INGOTS: "jackpot.result_jackpot",
+            TrickOrTreat.REMOVE_ALL_INGOTS_TRICK: "trick.result_remove_all_ingots_trick",
+            TrickOrTreat.DOUBLE_OR_NOTHING: "double_or_nothing.result_double_or_nothing",
+            TrickOrTreat.STEAL: "steal.result_steal",
+            TrickOrTreat.QUIZ_MASTER: "quiz_master.result_quiz_master",
+            TrickOrTreat.BACKROOMS: "backrooms.result_backrooms",
+            TrickOrTreat.REMOVE_INGOTS_HIGH: "ingot_changes.result_remove_high",
+            TrickOrTreat.ADD_INGOTS_HIGH: "ingot_changes.result_add_high",
+            TrickOrTreat.REMOVE_INGOTS_LOW: "ingot_changes.result_remove_low",
+            TrickOrTreat.ADD_INGOTS_LOW: "ingot_changes.result_add_low",
+            TrickOrTreat.JOKE: "joke.result_joke",
+            TrickOrTreat.GIF: "gif.result_gif",
+        }
+
+        self.assertEqual(set(outcome_handlers), set(TrickOrTreat))
+        for outcome, handler_path in outcome_handlers.items():
+            with self.subTest(outcome=outcome):
+                with patch(
+                    f"ironforgedbot.commands.trickortreat.outcomes.{handler_path}",
+                    new_callable=AsyncMock,
+                ) as mock_outcome:
+                    with patch(
+                        "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choices",
+                        return_value=[outcome],
+                    ):
+                        await handler.random_result(self.interaction)
+
+                mock_outcome.assert_awaited_once_with(handler, self.interaction)
+
+    def test_get_handler_returns_cached_instance(self):
+        with patch.object(handler_module, "_handler_instance", None):
+            with patch.object(handler_module, "TrickOrTreatHandler") as handler_class:
+                first = handler_module.get_handler()
+                second = handler_module.get_handler()
+
+        self.assertIs(first, second)
+        handler_class.assert_called_once_with()
+
+    def test_get_random_from_list_avoids_recent_items_and_resets_history(self):
+        handler = create_test_trick_or_treat_handler()
+        history = deque(maxlen=5)
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.trick_or_treat_handler.random.choice",
+            side_effect=lambda available: available[0],
+        ):
+            results = [
+                handler._get_random_from_list(["A", "B"], history) for _ in range(3)
+            ]
+
+        self.assertEqual(results, ["A", "B", "A"])
+        self.assertEqual(list(history), [0])
+
+    def test_get_random_from_list_rejects_empty_items(self):
+        handler = create_test_trick_or_treat_handler()
+
+        with self.assertRaisesRegex(ValueError, "non-empty"):
+            handler._get_random_from_list([], deque())
+
+    def test_content_validation_rejects_bargain_without_escape_weight(self):
+        content = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        content["backrooms"]["room_outcome_weights"]["3"] = {
+            "treasure": 0.87,
+            "bargain": 0.13,
+        }
+
+        with self.assertRaisesRegex(ValueError, "bargain.*treasure and escape"):
+            handler_module.TrickOrTreatHandler._validate_content_data(
+                content, "test-content.json"
+            )
+
+    def test_content_validation_rejects_bargain_before_start_room(self):
+        content = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        content["backrooms"]["room_outcome_weights"]["2"] = {
+            "treasure": 0.38,
+            "fatal_monster": 0.07,
+            "escapable_monster": 0.19,
+            "escape": 0.26,
+            "bargain": 0.10,
+        }
+
+        with patch.object(
+            handler_module, "BACKROOMS_BARGAIN_START_ROOM", 3, create=True
+        ):
+            with self.assertRaisesRegex(ValueError, "bargain before room"):
+                handler_module.TrickOrTreatHandler._validate_content_data(
+                    content, "test-content.json"
+                )
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
@@ -72,7 +221,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, 500, self.test_user)
 
-        self.assertEqual(result, 1500)
+        self.assertEqual(result.new_total, 1500)
+        self.assertEqual(result.applied_quantity, 500)
         mock_ingot_service.try_add_ingots.assert_called_once_with(
             self.test_user.id, 500, None, "Trick or treat: win"
         )
@@ -109,7 +259,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
 
-        self.assertEqual(result, 500)
+        self.assertEqual(result.new_total, 500)
+        self.assertEqual(result.applied_quantity, -500)
         mock_ingot_service.try_remove_ingots.assert_called_once()
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
@@ -144,7 +295,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
 
         result = await handler._adjust_ingots(self.interaction, -500, self.test_user)
 
-        self.assertIsNone(result)
+        self.assertEqual(result.failure, IngotAdjustmentFailure.NO_INGOTS)
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
@@ -181,7 +332,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
         mock_ingot_service.try_remove_ingots.assert_called_once_with(
             self.test_user.id, -100, None, "Trick or treat: loss"
         )
-        self.assertEqual(result, 0)
+        self.assertEqual(result.new_total, 0)
+        self.assertEqual(result.applied_quantity, -100)
 
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
     @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.IngotService")
@@ -206,7 +358,7 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=1500)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(1500, 500))
 
         await handler._handle_ingot_result(self.interaction, 500, is_positive=True)
 
@@ -237,11 +389,43 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=None)
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, IngotAdjustmentFailure.NO_INGOTS)
+        )
 
         await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
 
         self.interaction.followup.send.assert_called_once()
+
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
+    async def test_handle_ingot_result_displays_capped_loss(
+        self, mock_member_service_class, mock_db
+    ):
+        handler = create_test_trick_or_treat_handler()
+        setup_database_service_mocks(mock_db, mock_member_service_class)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(0, -100))
+
+        await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
+
+        embed = self.interaction.followup.send.call_args.kwargs["embed"]
+        self.assertIn("-100", embed.description)
+        self.assertNotIn("-500", embed.description)
+
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.db")
+    @patch("ironforgedbot.commands.trickortreat.trick_or_treat_handler.MemberService")
+    async def test_handle_ingot_result_does_not_duplicate_adjustment_error(
+        self, mock_member_service_class, mock_db
+    ):
+        handler = create_test_trick_or_treat_handler()
+        setup_database_service_mocks(mock_db, mock_member_service_class)
+        handler._adjust_ingots = AsyncMock(
+            return_value=IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
+        )
+
+        await handler._handle_ingot_result(self.interaction, -500, is_positive=False)
+
+        self.interaction.followup.send.assert_not_called()
 
     # Media validation tests
     async def test_unique_gifs(self):
@@ -358,8 +542,8 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             options = question["options"]
             assert isinstance(options, list), f"Question {i} 'options' must be a list"
             assert (
-                len(options) >= 2
-            ), f"Question {i} must have at least 2 options, got {len(options)}"
+                len(options) == QUIZ_OPTION_COUNT
+            ), f"Question {i} must have exactly {QUIZ_OPTION_COUNT} options, got {len(options)}"
 
             for j, option in enumerate(options):
                 assert isinstance(
@@ -453,22 +637,34 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             assert isinstance(msg, str), f"Treasure message {i} must be a string"
             assert len(msg) > 0, f"Treasure message {i} cannot be empty"
             assert (
-                "{ingots}" in msg
-            ), f"Treasure message {i} missing {{ingots}} placeholder"
+                "{ingots}" not in msg
+            ), f"Treasure message {i} duplicates structured reward amount"
 
-    async def test_backrooms_monster_messages_valid(self):
-        """Test that backrooms monster messages array is valid."""
+    async def test_backrooms_escapable_monster_messages_valid(self):
+        """Test monster messages leave haul totals to embed fields."""
         with open(CONTENT_FILE) as f:
             data = json.load(f)
             MESSAGES = data["backrooms"]["monster_messages"]
 
-        assert len(MESSAGES) > 0, "Must have at least one monster message"
+        assert len(MESSAGES) > 0, "Must have at least one escapable monster message"
         for i, msg in enumerate(MESSAGES):
-            assert isinstance(msg, str), f"Monster message {i} must be a string"
-            assert len(msg) > 0, f"Monster message {i} cannot be empty"
-            assert (
-                "{ingots}" in msg
-            ), f"Monster message {i} missing {{ingots}} placeholder"
+            assert isinstance(
+                msg, str
+            ), f"Escapable monster message {i} must be a string"
+            assert len(msg) > 0, f"Escapable monster message {i} cannot be empty"
+            assert "{lost}" not in msg
+            assert "{pot}" not in msg
+
+    async def test_backrooms_fatal_monster_messages_valid(self):
+        """Test fatal monster messages leave losses to embed fields."""
+        with open(CONTENT_FILE) as f:
+            data = json.load(f)
+            messages = data["backrooms"]["fatal_monster_messages"]
+
+        assert messages, "Must have at least one fatal monster message"
+        for i, msg in enumerate(messages):
+            assert isinstance(msg, str), f"Fatal monster message {i} must be a string"
+            assert "{ingots}" not in msg
 
     async def test_backrooms_escape_messages_valid(self):
         """Test that backrooms escape messages array is valid."""
@@ -481,16 +677,67 @@ class TestTrickOrTreatHandler(unittest.IsolatedAsyncioTestCase):
             assert isinstance(msg, str), f"Escape message {i} must be a string"
             assert len(msg) > 0, f"Escape message {i} cannot be empty"
 
-    async def test_backrooms_lucky_escape_messages_valid(self):
-        """Test that backrooms lucky escape messages array is valid."""
+    async def test_backrooms_bargain_message_has_no_run_placeholders(self):
+        """Test bargain message leaves values and progression to embed fields."""
         with open(CONTENT_FILE) as f:
             data = json.load(f)
-            MESSAGES = data["backrooms"]["lucky_escape_messages"]
+            messages = data["backrooms"]["bargain_messages"]
 
-        assert len(MESSAGES) > 0, "Must have at least one lucky escape message"
-        for i, msg in enumerate(MESSAGES):
-            assert isinstance(msg, str), f"Lucky escape message {i} must be a string"
-            assert len(msg) > 0, f"Lucky escape message {i} cannot be empty"
+        for message in messages:
+            for placeholder in ("{room}", "{lost}", "{bonus}", "{pot}"):
+                assert placeholder not in message
+
+    async def test_backrooms_content_pools_meet_variety_targets(self):
+        targets = {
+            "intro_messages": 5,
+            "continue_intro_messages": 8,
+            "door_labels": 24,
+            "treasure_messages": 24,
+            "fatal_monster_messages": 12,
+            "monster_messages": 18,
+            "escape_messages": 24,
+            "bargain_messages": 10,
+            "opening_door_messages": 10,
+            "expired_messages": 5,
+        }
+        with open(CONTENT_FILE) as f:
+            content_data = json.load(f)
+            backrooms_data = content_data["backrooms"]
+
+        for key, minimum_count in targets.items():
+            with self.subTest(content_pool=key):
+                messages = backrooms_data[key]
+                self.assertGreaterEqual(len(messages), minimum_count)
+                self.assertEqual(len(set(messages)), len(messages))
+        TrickOrTreatHandler._validate_content_data(content_data, CONTENT_FILE)
+
+    async def test_backrooms_copy_has_no_room_numbers_or_unexpected_placeholders(self):
+        message_pools = (
+            "intro_messages",
+            "continue_intro_messages",
+            "door_labels",
+            "treasure_messages",
+            "fatal_monster_messages",
+            "monster_messages",
+            "escape_messages",
+            "bargain_messages",
+            "opening_door_messages",
+            "expired_messages",
+        )
+        with open(CONTENT_FILE) as f:
+            backrooms_data = json.load(f)["backrooms"]
+
+        for pool_name in message_pools:
+            for message in backrooms_data[pool_name]:
+                with self.subTest(content_pool=pool_name, message=message):
+                    self.assertNotRegex(
+                        message,
+                        r"(?i)\broom\s+(?:one|two|three|four|five|\d+)\b",
+                    )
+                    if pool_name == "opening_door_messages":
+                        message.format(door="Test Door")
+                    else:
+                        message.format()
 
     async def test_joke_messages_valid(self):
         """Test that joke messages array is valid."""
@@ -517,6 +764,27 @@ class TestLoadContentFile(unittest.TestCase):
 
         self.assertEqual(result, valid_data)
         mock_file.assert_called_once_with("test_path.json")
+
+    def test_load_content_file_accepts_message_variants(self):
+        valid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        valid_data["jackpot"]["claimed_message"] = ["Already claimed", "Too slow"]
+        mock_file = mock_open(read_data=json.dumps(valid_data))
+
+        with patch("builtins.open", mock_file):
+            result = TrickOrTreatHandler._load_content_file("test_path.json")
+
+        self.assertEqual(
+            result["jackpot"]["claimed_message"], ["Already claimed", "Too slow"]
+        )
+
+    def test_load_content_file_rejects_empty_message_variants(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["jackpot"]["claimed_message"] = []
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "non-empty message"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
 
     def test_load_content_file_not_found(self):
         """Test that FileNotFoundError is raised when file doesn't exist."""
@@ -550,6 +818,78 @@ class TestLoadContentFile(unittest.TestCase):
         self.assertIn("Missing required keys", error_msg)
         self.assertIn("double_or_nothing", error_msg)
         self.assertIn("steal", error_msg)
+
+    def test_load_content_file_rejects_quiz_with_fewer_than_four_options(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["quiz_master"]["questions"][0]["options"] = [
+            {"text": "A"},
+            {"text": "B"},
+            {"text": "C"},
+        ]
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "exactly 4 options"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_too_few_backrooms_door_labels(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["door_labels"] = [
+            "Door" for _ in range(BACKROOMS_DOOR_COUNT - 1)
+        ]
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "at least"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_backrooms_weights_that_do_not_sum_to_one(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["2"]["treasure"] = 0.5
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "sum to 1"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_unknown_backrooms_outcomes(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["2"]["jackpot"] = 0.0
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "outcome"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_missing_backrooms_room_weights(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        del invalid_data["backrooms"]["room_outcome_weights"]["3"]
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "missing"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_rejects_negative_backrooms_weights(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["2"]["treasure"] = -0.1
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "probability"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
+
+    def test_load_content_file_preserves_safe_first_room_weight(self):
+        invalid_data = json.loads(MOCK_TRICK_OR_TREAT_DATA)
+        invalid_data["backrooms"]["room_outcome_weights"]["1"] = {
+            "treasure": 0.5,
+            "escape": 0.5,
+        }
+        mock_file = mock_open(read_data=json.dumps(invalid_data))
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaisesRegex(ValueError, "first room"):
+                TrickOrTreatHandler._load_content_file("invalid.json")
 
     def test_load_content_file_unexpected_error(self):
         """Test that RuntimeError is raised for unexpected errors."""

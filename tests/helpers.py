@@ -527,19 +527,56 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "walk_away": "Walked away",
         "expired": "Time's up",
         "no_targets": "No targets",
-        "target_no_ingots": "{target_mention} has no ingots",
+        "target_no_ingots": "{target_mention} is no longer an eligible target. No ingots were taken.",
         "user_no_ingots": "Need {ingot_icon}{penalty:,}"
     },
     "backrooms": {
-        "intro": "Backrooms test intro {expires}",
-        "door_labels": ["Test Door 1", "Test Door 2", "Test Door 3"],
-        "treasure_messages": ["Test treasure {ingots}"],
-        "monster_messages": ["Test monster {ingots}"],
+        "intro_messages": ["Every corridor leads to a supply cache."],
+        "continue_intro_messages": ["You press deeper into the backrooms."],
+        "door_labels": [
+            "Test Door A",
+            "Test Door B",
+            "Test Door C",
+            "Test Door D"
+        ],
+        "room_outcome_weights": {
+            "1": {"treasure": 1.0},
+            "2": {
+                "treasure": 0.48,
+                "fatal_monster": 0.07,
+                "escapable_monster": 0.19,
+                "escape": 0.26
+            },
+            "3": {
+                "treasure": 0.37,
+                "fatal_monster": 0.11,
+                "escapable_monster": 0.21,
+                "escape": 0.18,
+                "bargain": 0.13
+            },
+            "4": {
+                "treasure": 0.39,
+                "fatal_monster": 0.18,
+                "escapable_monster": 0.21,
+                "escape": 0.12,
+                "bargain": 0.10
+            },
+            "5": {
+                "treasure": 0.12,
+                "fatal_monster": 0.34,
+                "escapable_monster": 0.23,
+                "escape": 0.18,
+                "bargain": 0.13
+            }
+        },
+        "treasure_messages": ["Test treasure found."],
+        "fatal_monster_messages": ["Fatal monster encounter."],
+        "monster_messages": ["You escape the monster, but it takes some loot."],
         "escape_messages": ["Test escape"],
-        "lucky_escape_messages": ["Test lucky escape"],
-        "opening_door": "Opening {door}",
+        "bargain_messages": ["A stranger offers a bargain."],
+        "opening_door_messages": ["Opening {door}"],
         "suspense_thumbnail": "http://test.com/door-opening.gif",
-        "expired": "Test expired",
+        "expired_messages": ["Test expired"],
         "thumbnails": ["http://test.com/backrooms.png"]
     },
     "joke": {
@@ -565,7 +602,7 @@ MOCK_TRICK_OR_TREAT_DATA = """
         "expired_message": "Expired"
     },
     "media": {
-        "gifs": [],
+        "gifs": ["http://test.com/test.gif"],
         "thumbnails": ["http://test.com/img.png"]
     }
 }

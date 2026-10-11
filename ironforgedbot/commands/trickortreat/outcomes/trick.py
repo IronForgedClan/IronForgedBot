@@ -35,9 +35,9 @@ async def result_remove_all_ingots_trick(
         if member.ingots < 1:
             embed = handler._build_no_ingots_error_response(member.nickname)
         else:
-            message = handler.trick["message"].format(
-                ingot_icon=handler.ingot_icon, amount=member.ingots
-            )
+            message = handler._get_content_message(
+                "remove_all_trick.message", handler.trick["message"]
+            ).format(ingot_icon=handler.ingot_icon, amount=member.ingots)
             embed = handler._build_embed(
                 message + handler._get_balance_message(member.nickname, 0)
             )

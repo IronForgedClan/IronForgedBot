@@ -4,6 +4,7 @@ from unittest.mock import mock_open, patch
 import yaml
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    BACKROOMS_MAX_ROOMS,
     _load_values_file,
     _load_weights_file,
 )
@@ -23,11 +24,20 @@ class TestLoadValuesFile(unittest.TestCase):
             },
             "jackpot_value": 10000,
             "backrooms": {
-                "door_count": 3,
-                "treasure_min": 500,
-                "treasure_max": 1500,
-                "monster_min": 300,
-                "monster_max": 800,
+                "door_count": 4,
+                "max_rooms": BACKROOMS_MAX_ROOMS,
+                "max_payout": 48_317,
+                "bargain_start_room": 3,
+                "bargain_pot_loss_percent": 37,
+                "escapable_monster_pot_loss_percent": 63,
+                **{
+                    field: value
+                    for room_number in range(1, BACKROOMS_MAX_ROOMS + 1)
+                    for field, value in (
+                        (f"treasure_room_{room_number}_min", 100 + room_number * 100),
+                        (f"treasure_room_{room_number}_max", 150 + room_number * 100),
+                    )
+                },
             },
             "quiz_master": {
                 "correct_min": 200,
@@ -131,6 +141,37 @@ class TestLoadValuesFile(unittest.TestCase):
 
         self.assertIn("must be <", str(context.exception))
 
+    def test_load_values_file_invalid_backrooms_room_range(self):
+        invalid_data = self.valid_values.copy()
+        invalid_data["backrooms"] = self.valid_values["backrooms"].copy()
+        room_number = max(1, BACKROOMS_MAX_ROOMS // 2)
+        minimum_field = f"treasure_room_{room_number}_min"
+        maximum_field = f"treasure_room_{room_number}_max"
+        invalid_data["backrooms"][minimum_field] = invalid_data["backrooms"][
+            maximum_field
+        ]
+        yaml_content = yaml.dump(invalid_data)
+        mock_file = mock_open(read_data=yaml_content)
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaises(ValueError) as context:
+                _load_values_file("invalid.yaml")
+
+        self.assertIn(minimum_field, str(context.exception))
+
+    def test_load_values_file_invalid_backrooms_percent(self):
+        invalid_data = self.valid_values.copy()
+        invalid_data["backrooms"] = self.valid_values["backrooms"].copy()
+        invalid_data["backrooms"]["bargain_pot_loss_percent"] = 101
+        yaml_content = yaml.dump(invalid_data)
+        mock_file = mock_open(read_data=yaml_content)
+
+        with patch("builtins.open", mock_file):
+            with self.assertRaises(ValueError) as context:
+                _load_values_file("invalid.yaml")
+
+        self.assertIn("between 1 and 100", str(context.exception))
+
     def test_load_values_file_unexpected_error(self):
         """Test that RuntimeError is raised for unexpected errors."""
         with patch("builtins.open", side_effect=PermissionError("Access denied")):
@@ -148,18 +189,18 @@ class TestLoadWeightsFile(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.valid_weights = {
-            "GIF": 331,
-            "REMOVE_INGOTS_LOW": 115,
-            "REMOVE_INGOTS_HIGH": 113,
-            "ADD_INGOTS_LOW": 109,
-            "ADD_INGOTS_HIGH": 104,
-            "QUIZ_MASTER": 87,
-            "DOUBLE_OR_NOTHING": 53,
-            "STEAL": 33,
-            "JOKE": 27,
-            "BACKROOMS": 13,
-            "REMOVE_ALL_INGOTS_TRICK": 12,
-            "JACKPOT_INGOTS": 3,
+            "GIF": 270,
+            "REMOVE_INGOTS_LOW": 120,
+            "REMOVE_INGOTS_HIGH": 110,
+            "ADD_INGOTS_LOW": 105,
+            "ADD_INGOTS_HIGH": 100,
+            "QUIZ_MASTER": 95,
+            "DOUBLE_OR_NOTHING": 75,
+            "STEAL": 55,
+            "JOKE": 40,
+            "BACKROOMS": 15,
+            "REMOVE_ALL_INGOTS_TRICK": 10,
+            "JACKPOT_INGOTS": 5,
         }
 
     def test_load_weights_file_success(self):
@@ -247,20 +288,8 @@ class TestLoadWeightsFile(unittest.TestCase):
 
     def test_load_weights_file_wrong_total(self):
         """Test that ValueError is raised when total weight is not 1000."""
-        invalid_weights = {
-            "GIF": 331,
-            "REMOVE_INGOTS_LOW": 115,
-            "REMOVE_INGOTS_HIGH": 113,
-            "ADD_INGOTS_LOW": 109,
-            "ADD_INGOTS_HIGH": 104,
-            "QUIZ_MASTER": 87,
-            "DOUBLE_OR_NOTHING": 53,
-            "STEAL": 33,
-            "JOKE": 27,
-            "BACKROOMS": 13,
-            "REMOVE_ALL_INGOTS_TRICK": 12,
-            "JACKPOT_INGOTS": 100,
-        }
+        invalid_weights = self.valid_weights.copy()
+        invalid_weights["JACKPOT_INGOTS"] += 1
         yaml_content = yaml.dump(invalid_weights)
         mock_file = mock_open(read_data=yaml_content)
 
@@ -270,7 +299,7 @@ class TestLoadWeightsFile(unittest.TestCase):
 
         error_msg = str(context.exception)
         self.assertIn("Total weight must be 1000", error_msg)
-        self.assertIn("but got 1097", error_msg)
+        self.assertIn("but got 1001", error_msg)
 
     def test_load_weights_file_unexpected_error(self):
         """Test that RuntimeError is raised for unexpected errors."""
