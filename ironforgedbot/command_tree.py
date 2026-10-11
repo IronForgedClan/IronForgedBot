@@ -17,6 +17,7 @@ from ironforgedbot.commands.leaderboard.cmd_leaderboard import cmd_leaderboard
 from ironforgedbot.commands.hiscore.cmd_point_progress import cmd_point_progress
 from ironforgedbot.commands.hiscore.cmd_score import cmd_score
 from ironforgedbot.commands.trickortreat.cmd_trick_or_treat import cmd_trick_or_treat
+from ironforgedbot.commands.welcome.cmd_welcome import cmd_welcome
 from ironforgedbot.commands.ingots.cmd_add_remove_ingots import cmd_add_remove_ingots
 from ironforgedbot.commands.ingots.cmd_view_ingots import cmd_view_ingots
 from ironforgedbot.commands.lookup.cmd_whois import cmd_whois
@@ -149,6 +150,13 @@ class IronForgedCommands:
                 name="help",
                 description="Show all available commands and what they do.",
                 callback=cmd_help,
+            )
+        )
+        self._tree.add_command(
+            discord.app_commands.Command(
+                name="welcome",
+                description="Send the welcome messages to your DMs.",
+                callback=cmd_welcome,
             )
         )
         self._tree.add_command(

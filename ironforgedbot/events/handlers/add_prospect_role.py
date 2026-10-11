@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import find_emoji, get_discord_role
+from ironforgedbot.common.welcome import send_welcome_messages
 from ironforgedcore.common.roles import ROLE
 from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
 from ironforgedbot.common.roles_discord import check_member_has_role
@@ -78,6 +79,17 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
 
         report_content = f"{prospect_emoji} {member.mention} is now a **Prospect**."
         await context.report_channel.send(report_content)
+
+        try:
+            await send_welcome_messages(member)
+        except Exception as error:
+            logger.exception(
+                f"Unable to send welcome messages to Prospect {member.display_name}"
+            )
+            await context.report_channel.send(
+                f":warning: Unable to DM welcome messages to {member.mention}. "
+                f"Error: {error}"
+            )
 
         return None
 
