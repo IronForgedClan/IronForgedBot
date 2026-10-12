@@ -5,7 +5,10 @@ import discord
 
 from ironforgedcore.common.roles import ROLE
 from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
-from ironforgedbot.events.handlers.add_prospect_role import AddProspectRoleHandler
+from ironforgedbot.events.handlers.add_prospect_role import (
+    AddProspectRoleHandler,
+    _InMemoryCooldown,
+)
 from ironforgedbot.events.member_events import MemberUpdateContext
 from tests.helpers import create_test_db_member, create_test_member
 
@@ -68,6 +71,12 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         )
         self.mock_send_welcome = self.mock_send_welcome_patcher.start()
         self.addCleanup(self.mock_send_welcome_patcher.stop)
+        self.mock_cooldown_patcher = patch(
+            "ironforgedbot.events.handlers.add_prospect_role._PROSPECT_WELCOME_COOLDOWN"
+        )
+        self.mock_cooldown = self.mock_cooldown_patcher.start()
+        self.mock_cooldown.claim.return_value = True
+        self.addCleanup(self.mock_cooldown_patcher.stop)
 
     def _create_context(self, before_roles=None, after_roles=None):
         before_roles = before_roles or [ROLE.MEMBER]
@@ -264,6 +273,23 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
             context.report_channel.send.await_args_list[1].args[0],
         )
 
+    @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
+    @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
+    async def test_execute_skips_welcome_during_cooldown(
+        self, mock_check_role, mock_get_role
+    ):
+        mock_check_role.return_value = False
+        mock_get_role.return_value = Mock(spec=discord.Role)
+        self.mock_service.get_member_by_discord_id = AsyncMock(return_value=None)
+        self.mock_cooldown.claim.return_value = False
+        context = self._create_context()
+
+        await self.handler._execute(context, self.mock_session, self.mock_service)
+
+        self.mock_cooldown.claim.assert_called_once_with(context.discord_id)
+        self.mock_send_welcome.assert_not_awaited()
+        context.report_channel.send.assert_awaited_once()
+
 
 class TestAddProspectRoleHandlerPriority(unittest.TestCase):
     def test_priority_is_20(self):
@@ -275,3 +301,19 @@ class TestAddProspectRoleHandlerPriority(unittest.TestCase):
         """Handler name is AddProspectRole."""
         handler = AddProspectRoleHandler()
         self.assertEqual(handler.name, "AddProspectRole")
+
+
+class TestInMemoryCooldown(unittest.TestCase):
+    def test_claim_suppresses_same_user_until_expiry(self):
+        now = [100.0]
+        cooldown = _InMemoryCooldown(600, clock=lambda: now[0])
+
+        self.assertTrue(cooldown.claim(1))
+        self.assertFalse(cooldown.claim(1))
+        self.assertTrue(cooldown.claim(2))
+
+        now[0] += 599
+        self.assertFalse(cooldown.claim(1))
+
+        now[0] += 1
+        self.assertTrue(cooldown.claim(1))
