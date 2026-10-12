@@ -66,7 +66,7 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         self.mock_session = AsyncMock()
         self.mock_service = AsyncMock()
         self.mock_send_welcome_patcher = patch(
-            "ironforgedbot.events.handlers.add_prospect_role.send_welcome_messages",
+            "ironforgedbot.events.handlers.add_prospect_role.send_welcome_messages_with_report",
             new_callable=AsyncMock,
         )
         self.mock_send_welcome = self.mock_send_welcome_patcher.start()
@@ -236,7 +236,9 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
         self.mock_service.update_member_flags.assert_not_called()
         self.assertIsNone(result)
 
-    @patch("ironforgedbot.events.handlers.add_prospect_role.send_welcome_messages")
+    @patch(
+        "ironforgedbot.events.handlers.add_prospect_role.send_welcome_messages_with_report"
+    )
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")
     async def test_execute_sends_welcome_to_new_prospect(
@@ -249,10 +251,13 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         await self.handler._execute(context, self.mock_session, self.mock_service)
 
-        mock_send_welcome.assert_awaited_once_with(context.after)
+        mock_send_welcome.assert_awaited_once_with(
+            context.after, context.report_channel
+        )
+        context.report_channel.send.assert_awaited_once()
 
     @patch(
-        "ironforgedbot.events.handlers.add_prospect_role.send_welcome_messages",
+        "ironforgedbot.events.handlers.add_prospect_role.send_welcome_messages_with_report",
         side_effect=discord.Forbidden(AsyncMock(), "DMs disabled"),
     )
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
@@ -267,11 +272,10 @@ class TestAddProspectRoleHandlerExecute(unittest.IsolatedAsyncioTestCase):
 
         await self.handler._execute(context, self.mock_session, self.mock_service)
 
-        self.assertEqual(context.report_channel.send.await_count, 2)
-        self.assertIn(
-            "Unable to DM welcome messages",
-            context.report_channel.send.await_args_list[1].args[0],
+        mock_send_welcome.assert_awaited_once_with(
+            context.after, context.report_channel
         )
+        context.report_channel.send.assert_awaited_once()
 
     @patch("ironforgedbot.events.handlers.add_prospect_role.get_discord_role")
     @patch("ironforgedbot.events.handlers.add_prospect_role.check_member_has_role")

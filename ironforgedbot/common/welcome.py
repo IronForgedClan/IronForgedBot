@@ -1,10 +1,13 @@
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
 import discord
+
+logger = logging.getLogger(__name__)
 
 WELCOME_DATA_FILE = "data/welcome.json"
 WELCOME_DATA_DIRECTORY = Path(WELCOME_DATA_FILE).parent
@@ -181,6 +184,44 @@ async def send_welcome_messages(
         finally:
             for image_file in image_files:
                 image_file.close()
+
+
+async def send_welcome_messages_with_report(
+    user: discord.User | discord.Member,
+    report_channel: discord.abc.Messageable | None,
+) -> None:
+    try:
+        await send_welcome_messages(user)
+    except Exception as error:
+        await _report_welcome_result(report_channel, user, error)
+        raise
+
+    await _report_welcome_result(report_channel, user)
+
+
+async def _report_welcome_result(
+    report_channel: discord.abc.Messageable | None,
+    user: discord.User | discord.Member,
+    error: Exception | None = None,
+) -> None:
+    if report_channel is None:
+        logger.error("Unable to report welcome result: report channel not found")
+        return
+
+    if error:
+        report = (
+            f"❌ Unable to send welcome messages to {user.mention}.\n"
+            f"Reason: {type(error).__name__}: {error}"[:500]
+        )
+    else:
+        report = f"✅ Welcome messages sent to {user.mention}."
+
+    try:
+        await report_channel.send(
+            report, allowed_mentions=discord.AllowedMentions.none()
+        )
+    except Exception:
+        logger.exception(f"Unable to report welcome result for {user}")
 
 
 def _prepare_welcome_embeds(
