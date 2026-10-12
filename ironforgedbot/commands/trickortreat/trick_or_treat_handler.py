@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import random
 from collections import deque
 from typing import List, Optional, TypeVar
@@ -7,19 +8,28 @@ from typing import List, Optional, TypeVar
 import discord
 
 from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
+    BACKROOMS_BARGAIN_START_ROOM,
+    BACKROOMS_DOOR_COUNT,
+    BACKROOMS_MAX_ROOMS,
     CONTENT_FILE,
     TrickOrTreat,
 )
 from ironforgedbot.commands.trickortreat.types import (
     BackroomsData,
+    BackroomsMessageCategory,
+    ContentMessage,
     DoubleOrNothingData,
     GeneralData,
     HistoryDict,
+    IngotAdjustment,
+    IngotAdjustmentFailure,
     JackpotData,
     JokeData,
     QuizData,
     StealData,
     TrickData,
+    TrickOrTreatContent,
+    QUIZ_OPTION_COUNT,
 )
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed, send_error_response
@@ -47,10 +57,22 @@ class TrickOrTreatHandler:
             "gif": deque(maxlen=150),
             "thumbnail": deque(maxlen=30),
             "backrooms_thumbnail": deque(maxlen=30),
+            "backrooms_messages": {
+                "intro": deque(maxlen=20),
+                "continue_intro": deque(maxlen=20),
+                "opening_door": deque(maxlen=20),
+                "expired": deque(maxlen=20),
+                "treasure": deque(maxlen=20),
+                "fatal_monster": deque(maxlen=20),
+                "monster": deque(maxlen=20),
+                "escape": deque(maxlen=20),
+                "bargain": deque(maxlen=20),
+            },
             "positive_message": deque(maxlen=20),
             "negative_message": deque(maxlen=20),
             "quiz_question": deque(maxlen=20),
             "joke": deque(maxlen=20),
+            "content_messages": {},
         }
 
         data = self._load_content_file()
@@ -70,7 +92,7 @@ class TrickOrTreatHandler:
         self.negative_messages: List[str] = self.general["negative_messages"]
 
     @staticmethod
-    def _load_content_file(file_path: str = CONTENT_FILE) -> dict:
+    def _load_content_file(file_path: str = CONTENT_FILE) -> TrickOrTreatContent:
         """Load and parse the trick-or-treat content JSON file.
 
         Args:
@@ -103,6 +125,9 @@ class TrickOrTreatHandler:
                 f"Unexpected error loading trick-or-treat content: {e}"
             ) from e
 
+        if not isinstance(data, dict):
+            raise ValueError(f"Content file must contain a JSON object: {file_path}")
+
         required_keys = [
             "jackpot",
             "double_or_nothing",
@@ -121,7 +146,253 @@ class TrickOrTreatHandler:
                 f"File: {file_path}"
             )
 
+        TrickOrTreatHandler._validate_content_data(data, file_path)
         return data
+
+    @staticmethod
+    def _validate_content_data(data: dict, file_path: str) -> None:
+        """Validate nested content required by outcome handlers."""
+        section_fields = {
+            "jackpot": ("success_prefix", "claimed_message"),
+            "double_or_nothing": ("offer", "win", "lose", "keep", "expired"),
+            "steal": (
+                "offer",
+                "success",
+                "failure",
+                "walk_away",
+                "expired",
+                "no_targets",
+                "target_no_ingots",
+                "user_no_ingots",
+            ),
+            "backrooms": (
+                "intro_messages",
+                "continue_intro_messages",
+                "door_labels",
+                "room_outcome_weights",
+                "treasure_messages",
+                "fatal_monster_messages",
+                "monster_messages",
+                "escape_messages",
+                "bargain_messages",
+                "opening_door_messages",
+                "expired_messages",
+                "thumbnails",
+                "suspense_thumbnail",
+            ),
+            "quiz_master": (
+                "intro",
+                "questions",
+                "correct_message",
+                "wrong_lucky_message",
+                "wrong_penalty_message",
+                "expired_message",
+            ),
+            "joke": ("messages",),
+            "remove_all_trick": ("message",),
+            "media": ("gifs", "thumbnails"),
+            "general": ("positive_messages", "negative_messages", "no_ingots_message"),
+        }
+        list_fields = {
+            ("backrooms", "door_labels"),
+            ("backrooms", "intro_messages"),
+            ("backrooms", "continue_intro_messages"),
+            ("backrooms", "treasure_messages"),
+            ("backrooms", "fatal_monster_messages"),
+            ("backrooms", "monster_messages"),
+            ("backrooms", "escape_messages"),
+            ("backrooms", "bargain_messages"),
+            ("backrooms", "opening_door_messages"),
+            ("backrooms", "expired_messages"),
+            ("backrooms", "thumbnails"),
+            ("quiz_master", "questions"),
+            ("joke", "messages"),
+            ("media", "gifs"),
+            ("media", "thumbnails"),
+            ("general", "positive_messages"),
+            ("general", "negative_messages"),
+        }
+        message_fields = {
+            ("jackpot", "success_prefix"),
+            ("jackpot", "claimed_message"),
+            ("double_or_nothing", "offer"),
+            ("double_or_nothing", "win"),
+            ("double_or_nothing", "lose"),
+            ("double_or_nothing", "keep"),
+            ("double_or_nothing", "expired"),
+            ("steal", "offer"),
+            ("steal", "success"),
+            ("steal", "failure"),
+            ("steal", "walk_away"),
+            ("steal", "expired"),
+            ("steal", "no_targets"),
+            ("steal", "target_no_ingots"),
+            ("steal", "user_no_ingots"),
+            ("quiz_master", "intro"),
+            ("quiz_master", "correct_message"),
+            ("quiz_master", "wrong_lucky_message"),
+            ("quiz_master", "wrong_penalty_message"),
+            ("quiz_master", "expired_message"),
+            ("remove_all_trick", "message"),
+            ("general", "no_ingots_message"),
+        }
+
+        for section, fields in section_fields.items():
+            section_data = data[section]
+            if not isinstance(section_data, dict):
+                raise ValueError(
+                    f"Content section '{section}' must be an object in {file_path}"
+                )
+
+            missing_fields = [field for field in fields if field not in section_data]
+            if missing_fields:
+                raise KeyError(
+                    f"Missing fields in content section '{section}': "
+                    f"{missing_fields}. File: {file_path}"
+                )
+
+            for field in fields:
+                value = section_data[field]
+                if (section, field) in list_fields:
+                    if not isinstance(value, list) or not value:
+                        raise ValueError(
+                            f"Content field '{section}.{field}' must be a non-empty "
+                            f"list in {file_path}"
+                        )
+                    if (section, field) != ("quiz_master", "questions") and any(
+                        not isinstance(item, str) or not item.strip() for item in value
+                    ):
+                        raise ValueError(
+                            f"Content field '{section}.{field}' must contain "
+                            f"non-empty strings in {file_path}"
+                        )
+                elif (section, field) in message_fields:
+                    messages = value if isinstance(value, list) else [value]
+                    if not messages or any(
+                        not isinstance(message, str) or not message.strip()
+                        for message in messages
+                    ):
+                        raise ValueError(
+                            f"Content field '{section}.{field}' must contain a "
+                            f"non-empty message string or list in {file_path}"
+                        )
+                elif (section, field) == ("backrooms", "room_outcome_weights"):
+                    if not isinstance(value, dict):
+                        raise ValueError(
+                            "Content field 'backrooms.room_outcome_weights' must be "
+                            f"an object in {file_path}"
+                        )
+                elif not isinstance(value, str) or not value.strip():
+                    raise ValueError(
+                        f"Content field '{section}.{field}' must be a non-empty "
+                        f"string in {file_path}"
+                    )
+
+        room_outcome_weights = data["backrooms"]["room_outcome_weights"]
+        expected_room_keys = {
+            str(room_number) for room_number in range(1, BACKROOMS_MAX_ROOMS + 1)
+        }
+        actual_room_keys = set(room_outcome_weights)
+        missing_rooms = expected_room_keys - actual_room_keys
+        unknown_rooms = actual_room_keys - expected_room_keys
+        if missing_rooms or unknown_rooms:
+            raise ValueError(
+                "Content field 'backrooms.room_outcome_weights' must define rooms "
+                f"{sorted(expected_room_keys)}; missing {sorted(missing_rooms)}, "
+                f"unknown {sorted(unknown_rooms)}"
+            )
+
+        if room_outcome_weights["1"] != {"treasure": 1.0}:
+            raise ValueError(
+                "Content field 'backrooms.room_outcome_weights.1' must guarantee "
+                "treasure in the first room"
+            )
+
+        valid_outcomes = {
+            "treasure",
+            "fatal_monster",
+            "escapable_monster",
+            "escape",
+            "bargain",
+        }
+        for room_number, weights in room_outcome_weights.items():
+            if not isinstance(weights, dict) or not weights:
+                raise ValueError(
+                    "Content field 'backrooms.room_outcome_weights."
+                    f"{room_number}' must be a non-empty object"
+                )
+
+            unknown_outcomes = set(weights) - valid_outcomes
+            if unknown_outcomes:
+                raise ValueError(
+                    "Content field 'backrooms.room_outcome_weights."
+                    f"{room_number}' has unknown outcomes: {sorted(unknown_outcomes)}"
+                )
+
+            if "bargain" in weights:
+                if int(room_number) < BACKROOMS_BARGAIN_START_ROOM:
+                    raise ValueError(
+                        "Content field 'backrooms.room_outcome_weights."
+                        f"{room_number}' has bargain before room "
+                        f"{BACKROOMS_BARGAIN_START_ROOM}"
+                    )
+                if not {"treasure", "escape"}.issubset(weights):
+                    raise ValueError(
+                        "Content field 'backrooms.room_outcome_weights."
+                        f"{room_number}' bargain weights require treasure and escape"
+                    )
+
+            for outcome, weight in weights.items():
+                if (
+                    isinstance(weight, bool)
+                    or not isinstance(weight, (int, float))
+                    or not 0 <= weight <= 1
+                    or (isinstance(weight, float) and not math.isfinite(weight))
+                ):
+                    raise ValueError(
+                        "Content field 'backrooms.room_outcome_weights."
+                        f"{room_number}.{outcome}' must be a finite probability "
+                        "between 0 and 1"
+                    )
+
+            if not math.isclose(sum(weights.values()), 1.0, rel_tol=0, abs_tol=1e-9):
+                raise ValueError(
+                    "Content field 'backrooms.room_outcome_weights."
+                    f"{room_number}' weights must sum to 1"
+                )
+
+        for index, question in enumerate(data["quiz_master"]["questions"]):
+            if not isinstance(question, dict):
+                raise ValueError(f"Quiz question {index} must be an object")
+
+            question_text = question.get("question")
+            if not isinstance(question_text, str) or not question_text.strip():
+                raise ValueError(f"Quiz question {index} needs non-empty question text")
+
+            options = question.get("options")
+            if not isinstance(options, list) or len(options) != QUIZ_OPTION_COUNT:
+                raise ValueError(
+                    f"Quiz question {index} must have exactly {QUIZ_OPTION_COUNT} options"
+                )
+
+            correct_index = question.get("correct_index")
+            if type(correct_index) is not int or not 0 <= correct_index < len(options):
+                raise ValueError(f"Quiz question {index} has invalid correct_index")
+
+            if any(
+                not isinstance(option, dict)
+                or not isinstance(option.get("text"), str)
+                or not option["text"].strip()
+                for option in options
+            ):
+                raise ValueError(f"Quiz question {index} options need non-empty text")
+
+        door_labels = data["backrooms"]["door_labels"]
+        if len(door_labels) < BACKROOMS_DOOR_COUNT:
+            raise ValueError(
+                "Backrooms needs at least "
+                f"{BACKROOMS_DOOR_COUNT} door labels in {file_path}"
+            )
 
     def _get_random_from_list(self, items: List[T], history: deque[int]) -> T:
         """Get a random item from a list, avoiding recently used items.
@@ -133,6 +404,9 @@ class TrickOrTreatHandler:
         Returns:
             A randomly chosen item that hasn't been used recently.
         """
+        if not items:
+            raise ValueError("items must be a non-empty list")
+
         available_indices = [i for i in range(len(items)) if i not in history]
 
         if not available_indices:
@@ -142,6 +416,20 @@ class TrickOrTreatHandler:
         chosen_idx = random.choice(available_indices)
         history.append(chosen_idx)
         return items[chosen_idx]
+
+    def _get_backrooms_message(
+        self, category: BackroomsMessageCategory, messages: list[str]
+    ) -> str:
+        return self._get_random_from_list(
+            messages, self.history["backrooms_messages"][category]
+        )
+
+    def _get_content_message(self, key: str, messages: ContentMessage) -> str:
+        if isinstance(messages, str):
+            return messages
+
+        history = self.history["content_messages"].setdefault(key, deque(maxlen=20))
+        return self._get_random_from_list(messages, history)
 
     def _get_balance_message(self, username: str, balance: int) -> str:
         """Generate a formatted message showing the user's new ingot balance.
@@ -199,22 +487,11 @@ class TrickOrTreatHandler:
             A Discord embed with a humorous error message.
         """
         return self._build_embed(
-            self.general["no_ingots_message"] + self._get_balance_message(username, 0)
+            self._get_content_message(
+                "general.no_ingots_message", self.general["no_ingots_message"]
+            )
+            + self._get_balance_message(username, 0)
         )
-
-    def _add_to_history(
-        self, item: str, history_list: List[str], limit: int = 5
-    ) -> None:
-        """Add an item to a history list, removing oldest if limit exceeded.
-
-        Args:
-            item: The item to add to history.
-            history_list: The history list to modify.
-            limit: Maximum number of items to keep in history.
-        """
-        history_list.append(item)
-        if len(history_list) > limit:
-            history_list.pop(0)
 
     async def _get_user_info(self, user_id: int) -> tuple[str, int]:
         """Get user nickname and ingot total from database.
@@ -238,8 +515,8 @@ class TrickOrTreatHandler:
         quantity: int,
         discord_member: Optional[discord.Member],
         reason: Optional[str] = None,
-    ) -> Optional[int]:
-        """Add or remove ingots from a player's account.
+    ) -> IngotAdjustment:
+        """Adjust balance and report resulting total and applied quantity.
 
         Args:
             interaction: The Discord interaction context.
@@ -248,8 +525,7 @@ class TrickOrTreatHandler:
             reason: Optional changelog reason. Defaults to "Trick or treat win/loss".
 
         Returns:
-            The new ingot total if successful, or None if an error occurred
-            or if the user has insufficient ingots.
+            Adjustment totals and failure category, when adjustment fails.
         """
         if not discord_member:
             raise Exception("error no user found")
@@ -271,11 +547,11 @@ class TrickOrTreatHandler:
                 if not member:
                     logger.error("Member not found in database")
                     await send_error_response(interaction, "Error updating ingots.")
-                    return None
+                    return IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
 
                 if member.ingots == 0:
                     # User has no ingots to lose
-                    return None
+                    return IngotAdjustment(None, 0, IngotAdjustmentFailure.NO_INGOTS)
 
                 # Adjust quantity if it would make balance negative
                 if member.ingots + quantity < 0:
@@ -289,14 +565,13 @@ class TrickOrTreatHandler:
             if not result:
                 logger.error("Error adjusting ingots")
                 await send_error_response(interaction, "Error updating ingots.")
-                return None
+                return IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
 
             if not result.status:
                 await send_error_response(interaction, result.message)
-                return None
+                return IngotAdjustment(None, 0, IngotAdjustmentFailure.ERROR)
 
-            return result.new_total
-        return None
+            return IngotAdjustment(result.new_total, quantity)
 
     async def _handle_ingot_result(
         self,
@@ -319,12 +594,15 @@ class TrickOrTreatHandler:
         else:
             reason = "Trick or treat: loss"
 
-        ingot_total = await self._adjust_ingots(
+        adjustment = await self._adjust_ingots(
             interaction,
             quantity,
             interaction.guild.get_member(interaction.user.id),
             reason=reason,
         )
+
+        if adjustment.failure is IngotAdjustmentFailure.ERROR:
+            return
 
         # Get member nickname from database
         async with db.get_session() as session:
@@ -334,11 +612,15 @@ class TrickOrTreatHandler:
             )
             user_nickname = user_member.nickname if user_member else "User"
 
-        if ingot_total is None:
+        if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
             await interaction.followup.send(
                 embed=self._build_no_ingots_error_response(user_nickname)
             )
             return
+
+        assert adjustment.new_total is not None
+        ingot_total = adjustment.new_total
+        actual_quantity = adjustment.applied_quantity
 
         if is_positive:
             message_text = self._get_random_from_list(
@@ -350,7 +632,11 @@ class TrickOrTreatHandler:
             )
 
         prefix = "**🎃 Treat!**\n\n" if is_positive else "**💀 Trick!**\n\n"
-        formatted_quantity = f"-{abs(quantity):,}" if quantity < 0 else f"{quantity:,}"
+        formatted_quantity = (
+            f"-{abs(actual_quantity):,}"
+            if actual_quantity < 0
+            else f"{actual_quantity:,}"
+        )
         message = message_text.format(ingots=f"{self.ingot_icon}{formatted_quantity}")
 
         embed = self._build_embed(
@@ -376,6 +662,8 @@ class TrickOrTreatHandler:
             steal,
             trick,
         )
+
+        # return await backrooms.result_backrooms(self, interaction)
 
         match random.choices(
             list(TrickOrTreat), weights=[item.value for item in TrickOrTreat]

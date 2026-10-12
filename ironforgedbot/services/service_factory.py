@@ -25,6 +25,7 @@ from ironforgedcore.services.service_factory import (
 from ironforgedcore.services.score_service import ScoreService, get_score_service
 from ironforgedcore.services.wom_service import WomService
 from ironforgedbot.services.absent_service import AbsentMemberService
+from ironforgedbot.services.trick_or_treat_service import TrickOrTreatService
 
 __all__ = [
     "ServiceFactory",
@@ -34,6 +35,7 @@ __all__ = [
     "create_score_history_service",
     "create_changelog_service",
     "create_absent_service",
+    "create_trick_or_treat_service",
     "get_score_service",
     "get_wom_service",
 ]
@@ -77,6 +79,10 @@ class ServiceFactory:
         return AbsentMemberService(session)
 
     @staticmethod
+    def create_trick_or_treat_service(session: AsyncSession) -> TrickOrTreatService:
+        return TrickOrTreatService(session)
+
+    @staticmethod
     def get_wom_service() -> WomService:
         return get_wom_service()
 
@@ -84,3 +90,8 @@ class ServiceFactory:
 def create_absent_service(session: AsyncSession) -> AbsentMemberService:
     """Create AbsentMemberService instance (bot-only — uses Google Sheets)."""
     return AbsentMemberService(session)
+
+
+def create_trick_or_treat_service(session: AsyncSession) -> TrickOrTreatService:
+    """Create TrickOrTreatService instance for event-specific operations."""
+    return TrickOrTreatService(session)

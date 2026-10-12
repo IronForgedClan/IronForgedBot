@@ -14,6 +14,8 @@ from ironforgedbot.commands.trickortreat.trick_or_treat_constants import (
 )
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.commands.trickortreat.types import IngotAdjustmentFailure
+from ironforgedbot.commands.trickortreat.types import QUIZ_OPTION_COUNT
 
 if TYPE_CHECKING:
     from ironforgedbot.commands.trickortreat.trick_or_treat_handler import (
@@ -83,7 +85,7 @@ class QuizMasterView(discord.ui.View):
         self.has_interacted = False
         self.message: Optional[discord.Message] = None
 
-        for i in range(4):
+        for i in range(QUIZ_OPTION_COUNT):
             option = question["options"][i]
             text = option["text"]
             emoji_name = option.get("emoji")
@@ -132,22 +134,32 @@ class QuizMasterView(discord.ui.View):
 
             self.has_interacted = True
 
-            await interaction.response.defer()
+            message_updated = False
+            try:
+                await interaction.response.defer()
 
-            self.clear_items()
+                self.clear_items()
 
-            embed = await process_quiz_answer(
-                self.handler,
-                interaction,
-                option_index,
-                self.question["correct_index"],
-            )
+                embed = await process_quiz_answer(
+                    self.handler,
+                    interaction,
+                    option_index,
+                    self.question["correct_index"],
+                )
 
-            if self.message:
-                await self.message.edit(embed=embed, view=self)
+                if self.message:
+                    await self.message.edit(embed=embed, view=self)
+                    message_updated = True
+            finally:
+                if not message_updated and self.message:
+                    self.clear_items()
+                    try:
+                        await self.message.edit(view=None)
+                    except discord.HTTPException:
+                        pass
 
-            self.stop()
-            self._cleanup()
+                self.stop()
+                self._cleanup()
 
         return callback
 
@@ -161,7 +173,9 @@ class QuizMasterView(discord.ui.View):
 
         user_nickname, ingot_total = await self.handler._get_user_info(self.user_id)
 
-        message = self.handler.quiz["expired_message"]
+        message = self.handler._get_content_message(
+            "quiz_master.expired_message", self.handler.quiz["expired_message"]
+        )
         if ingot_total is not None:
             message += self.handler._get_balance_message(user_nickname, ingot_total)
 
@@ -213,7 +227,9 @@ async def result_quiz_master(
     expire_timestamp = int(time.time() + QUIZ_TIMEOUT_SECONDS)
     expires_formatted = f"<t:{expire_timestamp}:R>"
 
-    intro_message = handler.quiz["intro"].format(expires=expires_formatted)
+    intro_message = handler._get_content_message(
+        "quiz_master.intro", handler.quiz["intro"]
+    ).format(expires=expires_formatted)
 
     intro_embed = handler._build_embed(
         intro_message,
@@ -243,7 +259,7 @@ async def _handle_correct_answer(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
     user_nickname: str,
-) -> Optional[str]:
+) -> Optional[str] | IngotAdjustmentFailure:
     """Handle a correct quiz answer by awarding ingots.
 
     Args:
@@ -257,26 +273,31 @@ async def _handle_correct_answer(
     assert interaction.guild
 
     amount = random.randrange(QUIZ_CORRECT_MIN, QUIZ_CORRECT_MAX, 1)
-    ingot_total = await handler._adjust_ingots(
+    adjustment = await handler._adjust_ingots(
         interaction,
         amount,
         interaction.guild.get_member(interaction.user.id),
         reason="Trick or treat: quiz master correct answer",
     )
 
-    if ingot_total is None:
+    if adjustment.failure is IngotAdjustmentFailure.ERROR:
+        return IngotAdjustmentFailure.ERROR
+
+    if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
         return None
 
-    message = handler.quiz["correct_message"].format(
-        ingot_icon=handler.ingot_icon, amount=amount
-    )
-    return message + handler._get_balance_message(user_nickname, ingot_total)
+    assert adjustment.new_total is not None
+
+    message = handler._get_content_message(
+        "quiz_master.correct_message", handler.quiz["correct_message"]
+    ).format(ingot_icon=handler.ingot_icon, amount=amount)
+    return message + handler._get_balance_message(user_nickname, adjustment.new_total)
 
 
 async def _handle_wrong_answer(
     handler: "TrickOrTreatHandler",
     interaction: discord.Interaction,
-) -> str:
+) -> str | IngotAdjustmentFailure:
     """Handle a wrong quiz answer with potential penalty.
 
     Args:
@@ -292,31 +313,45 @@ async def _handle_wrong_answer(
 
     if take_penalty:
         penalty = random.randrange(QUIZ_WRONG_PENALTY_MIN, QUIZ_WRONG_PENALTY_MAX, 1)
-        ingot_total = await handler._adjust_ingots(
+        adjustment = await handler._adjust_ingots(
             interaction,
             -penalty,
             interaction.guild.get_member(interaction.user.id),
             reason="Trick or treat: quiz master wrong answer penalty",
         )
 
-        if ingot_total is None:
+        if adjustment.failure is IngotAdjustmentFailure.ERROR:
+            return IngotAdjustmentFailure.ERROR
+
+        if adjustment.failure is IngotAdjustmentFailure.NO_INGOTS:
             # User has no ingots - lucky escape from penalty
-            user_nickname, ingot_total = await handler._get_user_info(
+            user_nickname, current_total = await handler._get_user_info(
                 interaction.user.id
             )
-            message = handler.quiz["wrong_lucky_message"]
-            return message + handler._get_balance_message(user_nickname, ingot_total)
+            message = handler._get_content_message(
+                "quiz_master.wrong_lucky_message",
+                handler.quiz["wrong_lucky_message"],
+            )
+            return message + handler._get_balance_message(user_nickname, current_total)
 
+        assert adjustment.new_total is not None
         user_nickname, _ = await handler._get_user_info(interaction.user.id)
-        formatted_penalty = f"-{penalty:,}"
-        message = handler.quiz["wrong_penalty_message"].format(
+        formatted_penalty = f"{adjustment.applied_quantity:,}"
+        message = handler._get_content_message(
+            "quiz_master.wrong_penalty_message",
+            handler.quiz["wrong_penalty_message"],
+        ).format(
             ingot_icon=handler.ingot_icon,
             penalty=formatted_penalty,
         )
-        return message + handler._get_balance_message(user_nickname, ingot_total)
+        return message + handler._get_balance_message(
+            user_nickname, adjustment.new_total
+        )
 
     user_nickname, ingot_total = await handler._get_user_info(interaction.user.id)
-    message = handler.quiz["wrong_lucky_message"]
+    message = handler._get_content_message(
+        "quiz_master.wrong_lucky_message", handler.quiz["wrong_lucky_message"]
+    )
     return message + handler._get_balance_message(user_nickname, ingot_total)
 
 
@@ -348,11 +383,15 @@ async def process_quiz_answer(
     if chosen_index == correct_index:
         message = await _handle_correct_answer(handler, interaction, user_nickname)
         thumbnail = "https://oldschool.runescape.wiki/images/Mystery_box_detail.png"
+        if message is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the answer.")
         if message is None:
             return handler._build_no_ingots_error_response(
                 interaction.user.display_name
             )
     else:
         message = await _handle_wrong_answer(handler, interaction)
+        if message is IngotAdjustmentFailure.ERROR:
+            return handler._build_embed("An error occurred processing the answer.")
 
     return handler._build_embed(message, [thumbnail])

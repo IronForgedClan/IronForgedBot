@@ -7,6 +7,7 @@ from ironforgedbot.commands.trickortreat.outcomes import double_or_nothing
 from ironforgedbot.commands.trickortreat.outcomes.double_or_nothing import (
     DoubleOrNothingView,
 )
+from ironforgedbot.commands.trickortreat.types import IngotAdjustment
 from ironforgedcore.common.ranks import RANK
 from ironforgedcore.common.roles import ROLE
 from tests.helpers import (
@@ -53,7 +54,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=2000)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(2000, 500))
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1500))
 
         await double_or_nothing.result_double_or_nothing(handler, self.interaction)
@@ -90,7 +91,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=3000)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(3000, 500))
         handler._get_user_info = AsyncMock(return_value=("TestUser", 2500))
 
         with patch(
@@ -128,7 +129,7 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
             return_value=test_member
         )
 
-        handler._adjust_ingots = AsyncMock(return_value=500)
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(500, -500))
         handler._get_user_info = AsyncMock(return_value=("TestUser", 1000))
 
         with patch(
@@ -143,6 +144,22 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, discord.Embed)
         self.assertIn("lost", result.description.lower())
+
+    @patch(
+        "ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.random.random"
+    )
+    async def test_loss_message_reports_actual_capped_loss(self, mock_random):
+        mock_random.return_value = 0.7
+        handler = create_test_trick_or_treat_handler()
+        handler._adjust_ingots = AsyncMock(return_value=IngotAdjustment(0, -100))
+        handler._get_user_info = AsyncMock(return_value=("TestUser", 100))
+
+        result = await double_or_nothing.process_double_or_nothing(
+            handler, self.interaction, 500
+        )
+
+        self.assertIn("-100", result.description)
+        self.assertNotIn("-500", result.description)
 
     @patch("ironforgedcore.database.db")
     @patch("ironforgedcore.services.member_service.MemberService")
@@ -212,3 +229,18 @@ class TestDoubleOrNothingOutcome(unittest.IsolatedAsyncioTestCase):
         view.message.edit.assert_called_once()
         embed = view.message.edit.call_args.kwargs["embed"]
         self.assertIn("expired", embed.description.lower())
+
+    async def test_double_callback_disables_controls_when_processing_fails(self):
+        handler = create_test_trick_or_treat_handler()
+        view = DoubleOrNothingView(handler, self.test_user.id, 500)
+        view.message = AsyncMock()
+
+        with patch(
+            "ironforgedbot.commands.trickortreat.outcomes.double_or_nothing.process_double_or_nothing",
+            side_effect=RuntimeError("database unavailable"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "database unavailable"):
+                await view._double_callback(self.interaction)
+
+        self.assertIsNone(view.handler)
+        view.message.edit.assert_awaited_with(view=None)
