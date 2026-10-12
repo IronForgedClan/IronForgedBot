@@ -1,9 +1,13 @@
 import logging
+import threading
+import time
+from collections.abc import Callable
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ironforgedbot.common.helpers import find_emoji, get_discord_role
+from ironforgedbot.common.welcome import send_welcome_messages_with_report
 from ironforgedcore.common.roles import ROLE
 from ironforgedcore.common.role_names import PROSPECT_ROLE_NAME
 from ironforgedbot.common.roles_discord import check_member_has_role
@@ -13,6 +17,34 @@ from ironforgedbot.events.member_update_emitter import member_update_emitter
 from ironforgedcore.services.member_service import MemberService
 
 logger = logging.getLogger(__name__)
+PROSPECT_WELCOME_COOLDOWN_SECONDS = 10 * 60
+
+
+class _InMemoryCooldown:
+    def __init__(
+        self, cooldown_seconds: int, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        self._cooldown_seconds = cooldown_seconds
+        self._clock = clock
+        self._expires_at: dict[int, float] = {}
+        self._lock = threading.Lock()
+
+    def claim(self, discord_id: int) -> bool:
+        now = self._clock()
+        with self._lock:
+            self._expires_at = {
+                user_id: expires_at
+                for user_id, expires_at in self._expires_at.items()
+                if expires_at > now
+            }
+            if discord_id in self._expires_at:
+                return False
+
+            self._expires_at[discord_id] = now + self._cooldown_seconds
+            return True
+
+
+_PROSPECT_WELCOME_COOLDOWN = _InMemoryCooldown(PROSPECT_WELCOME_COOLDOWN_SECONDS)
 
 
 class AddProspectRoleHandler(BaseMemberUpdateHandler):
@@ -78,6 +110,20 @@ class AddProspectRoleHandler(BaseMemberUpdateHandler):
 
         report_content = f"{prospect_emoji} {member.mention} is now a **Prospect**."
         await context.report_channel.send(report_content)
+
+        if not _PROSPECT_WELCOME_COOLDOWN.claim(member.id):
+            logger.info(
+                f"Skipping duplicate Prospect welcome for {member.display_name} "
+                f"(ID: {member.id}) within cooldown"
+            )
+            return None
+
+        try:
+            await send_welcome_messages_with_report(member, context.report_channel)
+        except Exception:
+            logger.exception(
+                f"Unable to send welcome messages to Prospect {member.display_name}"
+            )
 
         return None
 
