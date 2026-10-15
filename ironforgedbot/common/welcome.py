@@ -20,6 +20,7 @@ WELCOME_CHANNEL_PLACEHOLDERS = {
     "{{RAFFLE_CHANNEL}}": "RAFFLE_CHANNEL_ID",
 }
 WELCOME_EMOJI_PATTERN = re.compile(r"\{\{EMOJI:([A-Za-z0-9_]+)\}\}")
+WELCOME_COLOR_PATTERN = re.compile(r"#[0-9A-Fa-f]{6}")
 MAX_EMBEDS_PER_MESSAGE = 10
 MAX_EMBED_DESCRIPTION_LENGTH = 4096
 MAX_EMBED_CHARACTERS_PER_MESSAGE = 6000
@@ -29,6 +30,7 @@ MAX_EMBED_CHARACTERS_PER_MESSAGE = 6000
 class WelcomeMessage:
     content: str
     image: str | None = None
+    color: str | None = None
 
 
 @dataclass(frozen=True)
@@ -54,10 +56,17 @@ def load_welcome_messages(
 
         content = item.get("content", "")
         image = item.get("image")
+        color = item.get("color")
         if not isinstance(content, str):
             raise ValueError(f"Welcome message {index} content must be a string")
         if image is not None and not isinstance(image, str):
             raise ValueError(f"Welcome message {index} image must be a string")
+        if color is not None and (
+            not isinstance(color, str) or not WELCOME_COLOR_PATTERN.fullmatch(color)
+        ):
+            raise ValueError(
+                f"Welcome message {index} color must be a hex color in #RRGGBB format"
+            )
         if not content.strip() and not image:
             raise ValueError(
                 f"Welcome message {index} must contain content or an image"
@@ -68,7 +77,7 @@ def load_welcome_messages(
             if parsed_image.scheme not in {"http", "https"} or not parsed_image.netloc:
                 raise ValueError(f"Welcome message {index} image URL is invalid")
 
-        messages.append(WelcomeMessage(content=content, image=image))
+        messages.append(WelcomeMessage(content=content, image=image, color=color))
 
     if not messages:
         raise ValueError("Welcome data must contain at least one message")
@@ -249,7 +258,12 @@ def _prepare_welcome_embeds(
 
         content_chunks = _split_welcome_content(content)
         for chunk_index, content_chunk in enumerate(content_chunks):
-            embed = discord.Embed(description=content_chunk or None)
+            embed = discord.Embed(
+                description=content_chunk or None,
+                color=(
+                    discord.Color(int(message.color[1:], 16)) if message.color else None
+                ),
+            )
             prepared_image_path = None
             prepared_filename = None
             if chunk_index == 0 and message.image:

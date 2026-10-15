@@ -47,6 +47,31 @@ class TestLoadWelcomeMessages(unittest.TestCase):
             ],
         )
 
+    def test_loads_hex_color(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            data_path = Path(temp_dir) / "welcome.json"
+            data_path.write_text(
+                json.dumps({"messages": [{"content": "Welcome", "color": "#12aBcF"}]})
+            )
+
+            messages = load_welcome_messages(str(data_path))
+
+        self.assertEqual(messages, [WelcomeMessage(content="Welcome", color="#12aBcF")])
+
+    def test_rejects_invalid_color(self):
+        for color in ("#123", "#GGGGGG", 123):
+            with self.subTest(color=color):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    data_path = Path(temp_dir) / "welcome.json"
+                    data_path.write_text(
+                        json.dumps(
+                            {"messages": [{"content": "Welcome", "color": color}]}
+                        )
+                    )
+
+                    with self.assertRaisesRegex(ValueError, "color"):
+                        load_welcome_messages(str(data_path))
+
     def test_rejects_empty_messages(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             data_path = Path(temp_dir) / "welcome.json"
@@ -157,6 +182,19 @@ class TestSendWelcomeMessages(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second_embed.description, "Second")
         self.assertEqual(embeds[2].description, "Third")
         self.assertIsNone(embeds[2].image.url)
+
+    async def test_applies_message_color_to_all_split_embeds(self):
+        user = AsyncMock()
+        messages = [
+            WelcomeMessage("A" * 5000, color="#123ABC"),
+            WelcomeMessage("Default color"),
+        ]
+
+        await send_welcome_messages(user, messages)
+
+        embeds = user.send.await_args.kwargs["embeds"]
+        self.assertEqual([embed.color.value for embed in embeds[:2]], [0x123ABC] * 2)
+        self.assertIsNone(embeds[2].color)
 
     async def test_batches_at_embed_limit(self):
         user = AsyncMock()
