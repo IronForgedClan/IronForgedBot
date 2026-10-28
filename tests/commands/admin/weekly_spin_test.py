@@ -277,6 +277,106 @@ class TestBuildPendingContent(unittest.TestCase):
             _build_pending_content("weekly", [], TEST_START_TS, TEST_END_TS)
 
 
+class TestWeeklySpinContentLimit(unittest.TestCase):
+    def test_post_content_keeps_latest_history_under_discord_limit(self):
+        history = [f"reroll {index} " + ("x" * 100) for index in range(40)]
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.find_emoji", return_value=""
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.data",
+            ) as mock_data:
+                mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
+                content = _build_post_content(
+                    "sotw", "Agility", history, TEST_START_TS, TEST_END_TS
+                )
+
+        self.assertLessEqual(len(content), 2000)
+        self.assertIn("earlier rerolls omitted", content)
+        self.assertIn("reroll 39", content)
+        self.assertNotIn("reroll 0", content)
+
+    def test_pending_content_truncates_unbounded_history(self):
+        history = [f"reroll {index} " + ("x" * 100) for index in range(40)]
+
+        content = _build_pending_content("sotw", history, TEST_START_TS, TEST_END_TS)
+
+        self.assertLessEqual(len(content), 2000)
+        self.assertIn("earlier rerolls omitted", content)
+        self.assertIn("reroll 39", content)
+
+    def test_history_storage_is_compacted_before_snapshot(self):
+        message = MagicMock(spec=discord.Message)
+        message.id = 123
+        message.channel = MagicMock(spec=discord.TextChannel)
+        message.channel.id = 456
+        view = WeeklySpinView(
+            options=["Agility", "Mining", "Runecraft"],
+            kind="sotw",
+            target_message=message,
+        )
+
+        for index in range(40):
+            view._append_history_line(f"reroll {index} " + ("x" * 100))
+
+        snapshot = view.to_persistent_state()
+
+        self.assertLessEqual(sum(map(len, snapshot["history_lines"])), 1200)
+        self.assertGreater(snapshot["history_omitted_count"], 0)
+        self.assertIn("reroll 39", snapshot["history_lines"][-1])
+
+    def test_lock_window_and_locked_content_fit_discord_limit(self):
+        history = [f"reroll {index} " + ("x" * 100) for index in range(40)]
+        view = WeeklySpinView(
+            options=["Agility", "Mining", "Runecraft"],
+            kind="sotw",
+            target_message=None,
+        )
+        view.current_winner = "Mining"
+        view._start_ts = TEST_START_TS
+        view._end_ts = TEST_END_TS
+        view._locked_at = TEST_START_TS
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.find_emoji", return_value=""
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.data",
+            ) as mock_data:
+                mock_data.SKILLS = [{"name": "Mining", "emoji_key": "mining"}]
+                lock_content = weekly_spin._build_lock_window_content(
+                    "sotw",
+                    "Mining",
+                    history,
+                    "<@123>",
+                    TEST_END_TS,
+                    TEST_START_TS,
+                    TEST_END_TS,
+                )
+                locked_content = weekly_spin._build_locked_content(view, history)
+
+        self.assertLessEqual(len(lock_content), 2000)
+        self.assertLessEqual(len(locked_content), 2000)
+        self.assertIn("reroll 39", lock_content)
+        self.assertIn("reroll 39", locked_content)
+
+    def test_extremely_long_winner_still_fits_discord_limit(self):
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.find_emoji", return_value=""
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.data",
+            ) as mock_data:
+                mock_data.SKILLS = [{"name": "x" * 3000, "emoji_key": ""}]
+                content = _build_post_content(
+                    "sotw", "x" * 3000, [], TEST_START_TS, TEST_END_TS
+                )
+
+        self.assertEqual(len(content), 2000)
+        self.assertTrue(content.endswith("…"))
+
+
 class TestBuildConsolidatedHistoryLine(unittest.TestCase):
     def test_format_locked(self):
         self.assertEqual(
@@ -3016,6 +3116,7 @@ class TestWeeklySpinPersistence(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot["history_lines"], view.history_lines)
         self.assertEqual(snapshot["pending_reroll"]["winner"], "Agility")
         self.assertTrue(snapshot["lock_window_active"])
+        self.assertEqual(snapshot["history_omitted_count"], 0)
 
     async def test_restore_rebuilds_view_and_resumes_lock_window(self):
         message = self._make_message()
@@ -3030,6 +3131,7 @@ class TestWeeklySpinPersistence(unittest.IsolatedAsyncioTestCase):
             "options": ["Agility", "Mining", "Runecraft"],
             "current_winner": "Mining",
             "history_lines": [],
+            "history_omitted_count": 4,
             "created_at": time.time(),
             "start_ts": TEST_START_TS,
             "end_ts": TEST_END_TS,
@@ -3058,6 +3160,7 @@ class TestWeeklySpinPersistence(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(restored_view, WeeklySpinView)
         self.assertTrue(restored_view._lock_window_active)
         self.assertEqual(restored_view._lock_window_user_id, 789)
+        self.assertEqual(restored_view._history_omitted_count, 4)
         self.assertEqual(len(restored_view.children), 3)
         restored_view._deadline_task.cancel()
         restored_view._lock_window_task.cancel()

@@ -30,6 +30,8 @@ LOCK_PAYMENT_TITLE = "\U0001f4b0 Lock Weekly Spin"
 LOCK_EMOJI = "\U0001f512"
 UNLOCK_EMOJI = "\U0001f513"
 NO_MENTIONS = discord.AllowedMentions.none()
+MAX_WEEKLY_SPIN_CONTENT_LENGTH = 2000
+MAX_WEEKLY_SPIN_HISTORY_CHARS = 1200
 
 
 @dataclass(frozen=True)
@@ -130,10 +132,64 @@ def _build_spin_headings(kind: WeeklySpinKind, winner: str | None) -> list[str]:
     return [title, winner_heading]
 
 
-def _build_history_section(history_lines: list[str]) -> list[str]:
-    if not history_lines:
+def _history_section_for_count(
+    history_lines: list[str], omitted_count: int, visible_count: int
+) -> list[str]:
+    omitted = omitted_count + len(history_lines) - visible_count
+    if not history_lines and omitted == 0:
         return []
-    return ["### History", *(f"-# {line}" for line in history_lines)]
+
+    section = ["### History"]
+    if omitted:
+        section.append(f"-# _{omitted} earlier rerolls omitted_")
+    if visible_count:
+        section.extend(f"-# {line}" for line in history_lines[-visible_count:])
+    return section
+
+
+def _compact_history_lines(
+    history_lines: list[str], omitted_count: int
+) -> tuple[list[str], int]:
+    for visible_count in range(len(history_lines), -1, -1):
+        section = _history_section_for_count(
+            history_lines, omitted_count, visible_count
+        )
+        if len("\n".join(section)) <= MAX_WEEKLY_SPIN_HISTORY_CHARS:
+            return (
+                history_lines[-visible_count:] if visible_count else [],
+                omitted_count + len(history_lines) - visible_count,
+            )
+    return [], omitted_count + len(history_lines)
+
+
+def _truncate_content(content: str) -> str:
+    if len(content) <= MAX_WEEKLY_SPIN_CONTENT_LENGTH:
+        return content
+    return content[: MAX_WEEKLY_SPIN_CONTENT_LENGTH - 1].rstrip() + "…"
+
+
+def _build_content_with_history(
+    prefix_lines: list[str],
+    history_lines: list[str],
+    *,
+    omitted_count: int = 0,
+    suffix_lines: list[str] | None = None,
+    empty_suffix_lines: list[str] | None = None,
+) -> str:
+    suffix_lines = suffix_lines or []
+    empty_suffix_lines = empty_suffix_lines or []
+    for visible_count in range(len(history_lines), -1, -1):
+        section = _history_section_for_count(
+            history_lines, omitted_count, visible_count
+        )
+        if section:
+            content = "\n".join([*prefix_lines, *section, *suffix_lines])
+        else:
+            content = "\n".join([*prefix_lines, *empty_suffix_lines])
+        if len(content) <= MAX_WEEKLY_SPIN_CONTENT_LENGTH:
+            return content
+
+    return _truncate_content("\n".join([*prefix_lines, *empty_suffix_lines]))
 
 
 def _build_post_content(
@@ -143,23 +199,25 @@ def _build_post_content(
     start_ts: int,
     end_ts: int,
     reroll_close_ts: int | None = None,
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose revealed post content with the winner in a padded spoiler heading."""
     headings = _build_spin_headings(kind, winner)
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [
+    content_prefix = [
         *headings,
         "",
         event_schedule_paragraph,
         "",
-        *history_section,
     ]
-    if not history_section:
-        content_lines.append("")
-    return "\n".join(content_lines)
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+        empty_suffix_lines=[""],
+    )
 
 
 def _build_pending_content(
@@ -168,6 +226,7 @@ def _build_pending_content(
     start_ts: int,
     end_ts: int,
     reroll_close_ts: int | None = None,
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose post content while the result is still pending reveal.
 
@@ -178,17 +237,18 @@ def _build_pending_content(
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [
+    content_prefix = [
         *headings,
         "",
         event_schedule_paragraph,
         "",
-        *history_section,
     ]
-    if not history_section:
-        content_lines.append("")
-    return "\n".join(content_lines)
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+        empty_suffix_lines=[""],
+    )
 
 
 def _build_lock_window_content(
@@ -200,6 +260,7 @@ def _build_lock_window_content(
     start_ts: int,
     end_ts: int,
     reroll_close_ts: int | None = None,
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose post content during the 60s lock-decision window.
 
@@ -213,17 +274,20 @@ def _build_lock_window_content(
         f":warning: {user_mention} has rerolled and must decide whether to lock "
         f"the result before the opportunity expires <t:{lock_close_ts}:R>."
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [*headings, "", event_schedule_paragraph, "", *history_section]
-    if history_section:
-        content_lines.append("")
-    content_lines.append(lock_decision_sentence)
-    return "\n".join(content_lines)
+    content_prefix = [*headings, "", event_schedule_paragraph, ""]
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+        suffix_lines=["", lock_decision_sentence],
+        empty_suffix_lines=[lock_decision_sentence],
+    )
 
 
 def _build_locked_content(
     self,
     history_lines: list[str],
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose post content for the terminal locked state.
 
@@ -245,10 +309,19 @@ def _build_locked_content(
         if locked_at
         else f"{LOCK_EMOJI} The reroll window is now closed."
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [*headings, "", event_schedule_paragraph, "", locked_sentence, ""]
-    content_lines.extend(history_section)
-    return "\n".join(content_lines)
+    content_prefix = [
+        *headings,
+        "",
+        event_schedule_paragraph,
+        "",
+        locked_sentence,
+        "",
+    ]
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+    )
 
 
 def _check_reroll_rate_limit(
@@ -411,6 +484,7 @@ async def _reveal_winner_after_delay(
             view._start_ts,
             view._end_ts,
             reroll_close_ts=reroll_close_ts,
+            history_omitted_count=view._history_omitted_count,
         )
     else:
         content = _build_post_content(
@@ -420,6 +494,7 @@ async def _reveal_winner_after_delay(
             view._start_ts,
             view._end_ts,
             reroll_close_ts=reroll_close_ts,
+            history_omitted_count=view._history_omitted_count,
         )
     try:
         await message.edit(
@@ -599,6 +674,7 @@ class WeeklySpinView(View):
         # decision so the consolidated history line can be emitted once at
         # decision time. None when no decision is pending.
         self._pending_reroll: PendingReroll | None = None
+        self._history_omitted_count: int = 0
         self._payment_in_progress: bool = False
         self._persist_enabled: bool = False
 
@@ -665,6 +741,7 @@ class WeeklySpinView(View):
             "options": self.options,
             "current_winner": self.current_winner,
             "history_lines": self.history_lines,
+            "history_omitted_count": self._history_omitted_count,
             "created_at": self.created_at,
             "start_ts": self._start_ts,
             "end_ts": self._end_ts,
@@ -688,6 +765,12 @@ class WeeklySpinView(View):
             await STATE.remove_weekly_spin(self.target_message.id)
             return
         await STATE.save_weekly_spin(self.to_persistent_state())
+
+    def _append_history_line(self, line: str) -> None:
+        self.history_lines.append(line)
+        self.history_lines, self._history_omitted_count = _compact_history_lines(
+            self.history_lines, self._history_omitted_count
+        )
 
     def _apply_button_state(self) -> None:
         """Sync the Re-roll button's ``disabled`` flag from the current gates.
@@ -800,7 +883,7 @@ class WeeklySpinView(View):
             if self.current_winner is not None:
                 self._is_locked = True
                 if self._pending_reroll is not None:
-                    self.history_lines.append(
+                    self._append_history_line(
                         _build_consolidated_history_line(
                             self._pending_reroll.emoji,
                             self._pending_reroll.winner,
@@ -824,7 +907,9 @@ class WeeklySpinView(View):
             if self.target_message is not None:
                 if self._is_locked:
                     edit_kwargs = {
-                        "content": _build_locked_content(self, self.history_lines),
+                        "content": _build_locked_content(
+                            self, self.history_lines, self._history_omitted_count
+                        ),
                         "view": None,
                         "allowed_mentions": NO_MENTIONS,
                     }
@@ -836,6 +921,7 @@ class WeeklySpinView(View):
                             self.history_lines,
                             self._start_ts,
                             self._end_ts,
+                            history_omitted_count=self._history_omitted_count,
                         ),
                         "view": None,
                         "allowed_mentions": NO_MENTIONS,
@@ -922,6 +1008,7 @@ class WeeklySpinView(View):
                 self._start_ts,
                 self._end_ts,
                 _reroll_close_ts(self),
+                self._history_omitted_count,
             )
             try:
                 await message.edit(
@@ -958,7 +1045,7 @@ class WeeklySpinView(View):
         self._locked_at = int(time.time())
 
         if self._pending_reroll is not None:
-            self.history_lines.append(
+            self._append_history_line(
                 _build_consolidated_history_line(
                     self._pending_reroll.emoji,
                     self._pending_reroll.winner,
@@ -979,7 +1066,9 @@ class WeeklySpinView(View):
 
         message = self.target_message
         if message is not None:
-            content = _build_locked_content(self, self.history_lines)
+            content = _build_locked_content(
+                self, self.history_lines, self._history_omitted_count
+            )
             try:
                 await message.edit(
                     content=content,
@@ -1039,7 +1128,7 @@ class WeeklySpinView(View):
         self._reroll_unlocked = True
 
         if self._pending_reroll is not None:
-            self.history_lines.append(
+            self._append_history_line(
                 _build_consolidated_history_line(
                     self._pending_reroll.emoji,
                     self._pending_reroll.winner,
@@ -1063,6 +1152,7 @@ class WeeklySpinView(View):
                 self._start_ts,
                 self._end_ts,
                 reroll_close_ts=_reroll_close_ts(self),
+                history_omitted_count=self._history_omitted_count,
             )
             try:
                 await message.edit(
@@ -1523,6 +1613,7 @@ class RerollPaymentView(View):
                 parent._start_ts,
                 parent._end_ts,
                 reroll_close_ts=_reroll_close_ts(parent),
+                history_omitted_count=parent._history_omitted_count,
             )
             try:
                 await parent.target_message.edit(
@@ -1620,6 +1711,7 @@ def _view_from_persistent_state(
     view.created_at = float(snapshot["created_at"])
     view.current_winner = snapshot.get("current_winner")
     view.history_lines = list(snapshot.get("history_lines", []))
+    view._history_omitted_count = int(snapshot.get("history_omitted_count", 0))
     view._start_ts = int(snapshot.get("start_ts", 0))
     view._end_ts = int(snapshot.get("end_ts", 0))
     view._reroll_unlocked = bool(snapshot.get("reroll_unlocked", False))
@@ -1676,7 +1768,9 @@ async def restore_weekly_spins(client: discord.Client) -> None:
 
             if view._is_locked:
                 await message.edit(
-                    content=_build_locked_content(view, view.history_lines),
+                    content=_build_locked_content(
+                        view, view.history_lines, view._history_omitted_count
+                    ),
                     view=None,
                     allowed_mentions=NO_MENTIONS,
                 )
@@ -1699,6 +1793,7 @@ async def restore_weekly_spins(client: discord.Client) -> None:
                     view._start_ts,
                     view._end_ts,
                     _reroll_close_ts(view),
+                    view._history_omitted_count,
                 )
             elif view._reroll_unlocked and view.current_winner is not None:
                 content = _build_post_content(
@@ -1708,6 +1803,7 @@ async def restore_weekly_spins(client: discord.Client) -> None:
                     view._start_ts,
                     view._end_ts,
                     reroll_close_ts=_reroll_close_ts(view),
+                    history_omitted_count=view._history_omitted_count,
                 )
             else:
                 content = _build_pending_content(
@@ -1716,6 +1812,7 @@ async def restore_weekly_spins(client: discord.Client) -> None:
                     view._start_ts,
                     view._end_ts,
                     reroll_close_ts=_reroll_close_ts(view),
+                    history_omitted_count=view._history_omitted_count,
                 )
 
             await message.edit(
