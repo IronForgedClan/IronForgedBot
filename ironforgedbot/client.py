@@ -6,6 +6,7 @@ import sys
 import discord
 
 from ironforgedbot.automations import IronForgedAutomations
+from ironforgedbot.commands.admin.weekly_spin import restore_weekly_spins
 from ironforgedbot.common.helpers import get_text_channel, populate_emoji_cache
 from ironforgedbot.config import CONFIG
 from ironforgedcore.config import ENVIRONMENT
@@ -59,6 +60,7 @@ class DiscordClient(discord.Client):
         self.loop = None  # bound in setup_hook
         self._emoji_cache_loaded = False
         self._setup_complete = False
+        self._weekly_spin_restored_ids: set[int] = set()
 
     @property
     def tree(self):
@@ -186,6 +188,8 @@ class DiscordClient(discord.Client):
                 type=discord.ActivityType.listening, name="Sea Shanty 2"
             )
         )
+
+        await restore_weekly_spins(self)
 
         # Only create automations once
         if not self.automations:
