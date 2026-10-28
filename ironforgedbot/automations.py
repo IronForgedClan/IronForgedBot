@@ -259,8 +259,6 @@ class IronForgedAutomations:
             self._job_wrapper(
                 job_check_activity,
                 self.report_channel,
-                CONFIG.WOM_API_KEY,
-                CONFIG.WOM_GROUP_ID,
             ),
             CronTrigger.from_crontab(
                 CONFIG.CRON_CHECK_ACTIVITY, timezone=datetime.timezone.utc
