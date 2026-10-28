@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import random
 import time
 from dataclasses import dataclass
@@ -10,7 +11,7 @@ from discord.ui import View
 
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.payment_embed import build_payment_embed, load_flavor_text
-from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.common.responses import build_response_embed, send_ephemeral_error
 from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.config import CONFIG
@@ -45,7 +46,7 @@ class PendingReroll:
 THUMBS_UP = "\U0001f44d"
 THUMBS_DOWN = "\U0001f44e"
 
-_recent_rerolls: dict[tuple[int, str], list[float]] = {}
+_recent_rerolls: dict[int, float] = {}
 
 
 def _validate_kind(kind: WeeklySpinKind) -> None:
@@ -326,41 +327,29 @@ def _build_locked_content(
 
 def _check_reroll_rate_limit(
     user_id: int,
-    kind: WeeklySpinKind,
     *,
-    limit: int | None = None,
     window_seconds: int | None = None,
     now: float | None = None,
 ) -> tuple[bool, int]:
-    """Record a reroll attempt; return (allowed, seconds_until_next_slot).
+    """Record a reroll attempt; return (allowed, seconds until next attempt).
 
-    Per-kind, per-user sliding-window counter. Old timestamps are pruned
-    on every call so memory stays bounded.
+    One attempt per user across both weekly spin types. Old timestamps are
+    pruned on every call so memory stays bounded.
     """
     if now is None:
         now = time.time()
-    if limit is None:
-        limit = CONFIG.WEEKLY_SPIN_REROLL_HOURLY_LIMIT
     if window_seconds is None:
         window_seconds = CONFIG.WEEKLY_SPIN_REROLL_WINDOW_SECONDS
-    for existing_key, timestamps in tuple(_recent_rerolls.items()):
-        active_timestamps = [
-            timestamp for timestamp in timestamps if now - timestamp < window_seconds
-        ]
-        if active_timestamps:
-            _recent_rerolls[existing_key] = active_timestamps
-        else:
-            del _recent_rerolls[existing_key]
+    for existing_user_id, timestamp in tuple(_recent_rerolls.items()):
+        if now - timestamp >= window_seconds:
+            del _recent_rerolls[existing_user_id]
 
-    key = (user_id, kind)
-    recent = _recent_rerolls.get(key, [])
-    if len(recent) >= limit:
-        oldest = min(recent)
-        wait = int(window_seconds - (now - oldest)) + 1
-        _recent_rerolls[key] = recent
+    last_reroll = _recent_rerolls.get(user_id)
+    if last_reroll is not None:
+        wait = math.ceil(window_seconds - (now - last_reroll))
         return False, max(wait, 1)
-    recent.append(now)
-    _recent_rerolls[key] = recent
+
+    _recent_rerolls[user_id] = now
     return True, 0
 
 
@@ -1192,23 +1181,20 @@ class WeeklySpinView(View):
         # instead of racing through defer / DB lookup / embed build.
         self.reroll_locked = True
         self._apply_button_state()
+        user_id = interaction.user.id
         try:
-            # ACK immediately so the interaction token doesn't expire during the
-            # slow balance lookup below.
-            await interaction.response.defer(ephemeral=True)
-
-            allowed, wait = _check_reroll_rate_limit(interaction.user.id, self.kind)
+            allowed, wait = _check_reroll_rate_limit(user_id)
             if not allowed:
-                minutes = (wait + 59) // 60
-                await interaction.followup.send(
-                    content=(
-                        f"Reroll cap reached ({CONFIG.WEEKLY_SPIN_REROLL_HOURLY_LIMIT}/hour). "
-                        f"Try again in ~{minutes} minute(s)."
-                    ),
-                    ephemeral=True,
+                retry_at = int(time.time() + wait)
+                await send_ephemeral_error(
+                    interaction,
+                    f"Weekly re-roll limit reached. Try again <t:{retry_at}:R>.",
                 )
                 await self._release_concurrent_lock()
                 return
+
+            # ACK immediately before the slow balance lookup below.
+            await interaction.response.defer(ephemeral=True)
 
             async with db.get_session() as session:
                 member_service = MemberService(session)

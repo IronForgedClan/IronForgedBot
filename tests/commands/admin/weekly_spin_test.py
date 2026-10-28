@@ -63,63 +63,47 @@ def _invoke_callback(view, callback_name: str, interaction, button):
 class TestCheckRerollRateLimit(unittest.TestCase):
     def setUp(self):
         weekly_spin._recent_rerolls.clear()
+        self.window_patch = patch.object(
+            CONFIG, "WEEKLY_SPIN_REROLL_WINDOW_SECONDS", 900
+        )
+        self.window_patch.start()
+        self.addCleanup(self.window_patch.stop)
 
-    def test_uses_configured_limit_and_window(self):
-        with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_HOURLY_LIMIT", 1):
+    def test_uses_configured_window_but_always_allows_one_reroll(self):
+        with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_HOURLY_LIMIT", 5, create=True):
             with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_WINDOW_SECONDS", 10):
-                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1000.0)
-                self.assertTrue(allowed)
-                self.assertEqual(wait, 0)
-
-                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1001.0)
+                self.assertEqual(_check_reroll_rate_limit(1, now=1000.0), (True, 0))
+                allowed, wait = _check_reroll_rate_limit(1, now=1001.0)
                 self.assertFalse(allowed)
-                self.assertGreater(wait, 0)
+                self.assertEqual(wait, 9)
+                self.assertEqual(_check_reroll_rate_limit(1, now=1010.0), (True, 0))
 
-                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1010.0)
-                self.assertTrue(allowed)
-                self.assertEqual(wait, 0)
-
-    def test_allows_under_limit(self):
-        for _ in range(9):
-            allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1000.0)
-            self.assertTrue(allowed)
-            self.assertEqual(wait, 0)
-
-    def test_denies_at_limit(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1001.0)
-        self.assertFalse(allowed)
-        self.assertGreater(wait, 0)
-
-    def test_recovers_after_window(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        allowed, _ = _check_reroll_rate_limit(1, "sotw", now=1000.0 + 3601.0)
+    def test_allows_one_reroll_per_user_every_fifteen_minutes(self):
+        allowed, wait = _check_reroll_rate_limit(1, now=1000.0)
         self.assertTrue(allowed)
+        self.assertEqual(wait, 0)
 
-    def test_separates_per_kind(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        sotw_blocked, _ = _check_reroll_rate_limit(1, "sotw", now=1001.0)
-        self.assertFalse(sotw_blocked)
-        botw_allowed, _ = _check_reroll_rate_limit(1, "botw", now=1001.0)
-        self.assertTrue(botw_allowed)
+        allowed, wait = _check_reroll_rate_limit(1, now=1001.0)
+        self.assertFalse(allowed)
+        self.assertEqual(wait, 899)
+
+        allowed, wait = _check_reroll_rate_limit(1, now=1900.0)
+        self.assertTrue(allowed)
+        self.assertEqual(wait, 0)
 
     def test_separates_per_user(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        blocked, _ = _check_reroll_rate_limit(1, "sotw", now=1001.0)
+        _check_reroll_rate_limit(1, now=1000.0)
+        blocked, _ = _check_reroll_rate_limit(1, now=1001.0)
         self.assertFalse(blocked)
-        allowed, _ = _check_reroll_rate_limit(2, "sotw", now=1001.0)
+        allowed, _ = _check_reroll_rate_limit(2, now=1001.0)
         self.assertTrue(allowed)
 
     def test_prunes_inactive_users(self):
-        _check_reroll_rate_limit(1, "sotw", now=1000.0)
+        _check_reroll_rate_limit(1, now=1000.0)
 
-        _check_reroll_rate_limit(2, "botw", now=4600.0)
+        _check_reroll_rate_limit(2, now=1900.0)
 
-        self.assertEqual(weekly_spin._recent_rerolls, {(2, "botw"): [4600.0]})
+        self.assertEqual(weekly_spin._recent_rerolls, {2: 1900.0})
 
 
 class TestLookupEmoji(unittest.TestCase):
@@ -763,26 +747,38 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.target_message.edit.assert_awaited_once()
         self.assertIsNone(self.target_message.edit.call_args.kwargs["view"])
 
-    @patch("ironforgedbot.commands.admin.weekly_spin._check_reroll_rate_limit")
-    async def test_reroll_at_cap_denied(self, mock_rate_limit):
-        mock_rate_limit.return_value = (False, 1800)
+    async def test_reroll_at_limit_uses_error_embed_and_relative_retry_time(self):
         interaction = _make_interaction(role_names=["Member"])
-        interaction.followup.send = AsyncMock(
-            return_value=MagicMock(spec=discord.Message)
-        )
         button = MagicMock(spec=discord.ui.Button)
+        self.view.created_at = 1_700_000_000
+        interaction.response.is_done = MagicMock(return_value=False)
 
-        await _invoke_callback(self.view, "reroll_button", interaction, button)
+        async def mark_response_done(*args, **kwargs):
+            interaction.response.is_done.return_value = True
 
-        interaction.response.defer.assert_called_once_with(ephemeral=True)
-        interaction.response.send_message.assert_not_called()
+        interaction.response.defer.side_effect = mark_response_done
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin._check_reroll_rate_limit",
+            return_value=(False, 900),
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.time.time",
+                return_value=1_700_000_000,
+            ):
+                await _invoke_callback(self.view, "reroll_button", interaction, button)
+
+        interaction.response.defer.assert_not_awaited()
         interaction.edit_original_response.assert_not_called()
-        interaction.followup.send.assert_called_once()
-        followup_kwargs = interaction.followup.send.call_args.kwargs
-        self.assertTrue(followup_kwargs["ephemeral"])
-        content = followup_kwargs.get("content", "")
-        self.assertIn("cap reached", content.lower())
-        self.assertIn("30", content)
+        interaction.response.send_message.assert_awaited_once()
+        error_embed = interaction.response.send_message.call_args.kwargs["embed"]
+        self.assertTrue(interaction.response.send_message.call_args.kwargs["ephemeral"])
+        self.assertEqual(
+            error_embed.description,
+            "Weekly re-roll limit reached. Try again <t:1700000900:R>.",
+        )
+        interaction.delete_original_response.assert_not_awaited()
+        interaction.followup.send.assert_not_awaited()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
