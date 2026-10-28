@@ -21,6 +21,7 @@ from ironforgedbot.commands.admin.weekly_spin import (
     _check_reroll_rate_limit,
     _lookup_emoji,
     post_weekly_spin_result,
+    restore_weekly_spins,
 )
 
 TEST_START_TS = 1700000000
@@ -326,10 +327,18 @@ class TestPostWeeklySpinResult(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.target = AsyncMock(spec=discord.TextChannel)
         self.sent_message = MagicMock(spec=discord.Message)
+        self.sent_message.id = 123
+        self.sent_message.channel = MagicMock(spec=discord.TextChannel)
+        self.sent_message.channel.id = 456
         self.sent_message.add_reaction = AsyncMock()
         self.target.send = AsyncMock(return_value=self.sent_message)
         self.file = MagicMock(spec=discord.File)
         self.options = ["opt1", "opt2", "opt3"]
+        state_patcher = patch("ironforgedbot.commands.admin.weekly_spin.STATE")
+        self.mock_state = state_patcher.start()
+        self.addCleanup(state_patcher.stop)
+        self.mock_state.save_weekly_spin = AsyncMock()
+        self.mock_state.remove_weekly_spin = AsyncMock()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -2965,3 +2974,127 @@ class TestRerollPaymentDoubleCharge(unittest.IsolatedAsyncioTestCase):
 
         mock_service.try_remove_ingots.assert_called_once()
         mock_build_spin_gif.assert_called_once()
+
+
+class TestWeeklySpinPersistence(unittest.IsolatedAsyncioTestCase):
+    def _make_message(self):
+        message = MagicMock(spec=discord.Message)
+        message.id = 123
+        message.channel = MagicMock(spec=discord.TextChannel)
+        message.channel.id = 456
+        message.edit = AsyncMock()
+        return message
+
+    def test_snapshot_captures_recoverable_spin_state(self):
+        message = self._make_message()
+        view = WeeklySpinView(
+            options=["Agility", "Mining", "Runecraft"],
+            kind="sotw",
+            target_message=message,
+        )
+        view.current_winner = "Mining"
+        view.history_lines = ["~~Agility~~ rerolled by <@789>"]
+        view._start_ts = TEST_START_TS
+        view._end_ts = TEST_END_TS
+        view._reroll_unlocked = True
+        view._lock_window_active = True
+        view._lock_window_end_ts = int(time.time()) + 30
+        view._lock_window_user_id = 789
+        view._pending_reroll = PendingReroll(
+            winner="Agility",
+            emoji="⛏️",
+            mention="<@789>",
+            timestamp=TEST_START_TS,
+        )
+
+        snapshot = view.to_persistent_state()
+
+        self.assertEqual(snapshot["message_id"], 123)
+        self.assertEqual(snapshot["channel_id"], 456)
+        self.assertEqual(snapshot["kind"], "sotw")
+        self.assertEqual(snapshot["current_winner"], "Mining")
+        self.assertEqual(snapshot["history_lines"], view.history_lines)
+        self.assertEqual(snapshot["pending_reroll"]["winner"], "Agility")
+        self.assertTrue(snapshot["lock_window_active"])
+
+    async def test_restore_rebuilds_view_and_resumes_lock_window(self):
+        message = self._make_message()
+        channel = message.channel
+        channel.fetch_message = AsyncMock(return_value=message)
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+            "kind": "sotw",
+            "options": ["Agility", "Mining", "Runecraft"],
+            "current_winner": "Mining",
+            "history_lines": [],
+            "created_at": time.time(),
+            "start_ts": TEST_START_TS,
+            "end_ts": TEST_END_TS,
+            "reroll_unlocked": True,
+            "lock_window_active": True,
+            "lock_window_end_ts": int(time.time()) + 30,
+            "lock_window_user_id": 789,
+            "is_locked": False,
+            "locked_at": 0,
+            "pending_reroll": None,
+            "reveal_due_at": 0,
+            "payment_in_progress": False,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.save_weekly_spin = AsyncMock()
+            state.remove_weekly_spin = AsyncMock()
+
+            with patch("ironforgedbot.commands.admin.weekly_spin.data") as data:
+                data.SKILLS = [{"name": "Mining", "emoji_key": "mining"}]
+                await restore_weekly_spins(client)
+
+        channel.fetch_message.assert_awaited_once_with(123)
+        restored_view = message.edit.await_args.kwargs["view"]
+        self.assertIsInstance(restored_view, WeeklySpinView)
+        self.assertTrue(restored_view._lock_window_active)
+        self.assertEqual(restored_view._lock_window_user_id, 789)
+        self.assertEqual(len(restored_view.children), 3)
+        restored_view._deadline_task.cancel()
+        restored_view._lock_window_task.cancel()
+
+    async def test_restore_does_not_resume_interrupted_payment(self):
+        message = self._make_message()
+        channel = message.channel
+        channel.fetch_message = AsyncMock(return_value=message)
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+            "kind": "sotw",
+            "options": ["Agility", "Mining", "Runecraft"],
+            "current_winner": "Mining",
+            "history_lines": [],
+            "created_at": time.time(),
+            "start_ts": TEST_START_TS,
+            "end_ts": TEST_END_TS,
+            "reroll_unlocked": True,
+            "lock_window_active": False,
+            "lock_window_end_ts": 0,
+            "lock_window_user_id": None,
+            "is_locked": False,
+            "locked_at": 0,
+            "pending_reroll": None,
+            "reveal_due_at": 0,
+            "payment_in_progress": True,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.save_weekly_spin = AsyncMock()
+            state.remove_weekly_spin = AsyncMock()
+
+            await restore_weekly_spins(client)
+
+        message.edit.assert_awaited_once_with(view=None)
+        state.remove_weekly_spin.assert_awaited_once_with(123)

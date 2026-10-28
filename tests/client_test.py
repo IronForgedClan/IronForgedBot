@@ -231,9 +231,13 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
             mock_automations_instance = Mock()
             mock_automations_class.return_value = mock_automations_instance
 
-            await self.client.on_ready()
+            with patch(
+                "ironforgedbot.client.restore_weekly_spins", new=AsyncMock()
+            ) as mock_restore:
+                await self.client.on_ready()
 
             self.client.change_presence.assert_called_once()
+            mock_restore.assert_awaited_once_with(self.client)
             call_args = self.client.change_presence.call_args[1]
             self.assertEqual(call_args["activity"].type, discord.ActivityType.listening)
             self.assertEqual(call_args["activity"].name, "Sea Shanty 2")
