@@ -74,6 +74,13 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
+        if len({option.casefold() for option in options}) < 2:
+            await send_error_response(
+                interaction,
+                "At least two distinct options are required to spin again.",
+            )
+            return
+
         raw_date = self.start_date_input.value.strip()
         try:
             start_date = datetime.strptime(raw_date, "%Y-%m-%d").replace(

@@ -561,6 +561,56 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
         on_result.assert_not_called()
 
+    async def test_duplicate_only_options_are_rejected(self):
+        on_result = AsyncMock()
+        modal = await self._make_modal(
+            on_result, "Mining, mining, MINING", "2026-08-01"
+        )
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=AsyncMock(),
+        ) as mock_build_gif, patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        on_result.assert_not_awaited()
+        mock_build_gif.assert_not_awaited()
+        mock_send_error.assert_awaited_once_with(
+            interaction,
+            "At least two distinct options are required to spin again.",
+        )
+
+    async def test_weighted_duplicate_options_are_preserved(self):
+        on_result = AsyncMock()
+        options = ["Mining", "Mining", "Agility"]
+        modal = await self._make_modal(on_result, ", ".join(options), "2026-08-01")
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+        generating_msg = Mock()
+        generating_msg.delete = AsyncMock()
+        interaction.followup.send.return_value = generating_msg
+        build_gif = AsyncMock(return_value=(Mock(spec=discord.File), "Mining"))
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=build_gif,
+        ), patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        build_gif.assert_awaited_once_with(options)
+        self.assertEqual(on_result.await_args.args[5], options)
+        mock_send_error.assert_not_awaited()
+
     async def test_callback_failure_reports_error_and_deletes_progress_message(self):
         on_result = AsyncMock(side_effect=RuntimeError("channel send failed"))
         modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
