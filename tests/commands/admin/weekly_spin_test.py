@@ -3201,3 +3201,64 @@ class TestWeeklySpinPersistence(unittest.IsolatedAsyncioTestCase):
 
         message.edit.assert_awaited_once_with(view=None)
         state.remove_weekly_spin.assert_awaited_once_with(123)
+
+    async def test_restore_finalizes_expired_spin(self):
+        message = self._make_message()
+        channel = message.channel
+        channel.fetch_message = AsyncMock(return_value=message)
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+            "kind": "sotw",
+            "options": ["Agility", "Mining", "Runecraft"],
+            "current_winner": "Mining",
+            "history_lines": [],
+            "created_at": time.time() - CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS - 1,
+            "start_ts": TEST_START_TS,
+            "end_ts": TEST_END_TS,
+            "reroll_unlocked": True,
+            "lock_window_active": False,
+            "lock_window_end_ts": 0,
+            "lock_window_user_id": None,
+            "is_locked": False,
+            "locked_at": 0,
+            "pending_reroll": None,
+            "reveal_due_at": 0,
+            "payment_in_progress": False,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.remove_weekly_spin = AsyncMock()
+
+            with patch("ironforgedbot.commands.admin.weekly_spin.data") as data:
+                data.SKILLS = [{"name": "Mining", "emoji_key": "mining"}]
+                await restore_weekly_spins(client)
+
+        message.edit.assert_awaited_once()
+        edit_kwargs = message.edit.await_args.kwargs
+        self.assertIsNone(edit_kwargs["view"])
+        self.assertIn("reroll window is now closed", edit_kwargs["content"].lower())
+        state.remove_weekly_spin.assert_awaited_once_with(123)
+
+    async def test_restore_removes_missing_message_state(self):
+        channel = MagicMock(spec=discord.TextChannel)
+        channel.fetch_message = AsyncMock(
+            side_effect=discord.NotFound(MagicMock(), "message missing")
+        )
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.remove_weekly_spin = AsyncMock()
+
+            await restore_weekly_spins(client)
+
+        state.remove_weekly_spin.assert_awaited_once_with(123)
