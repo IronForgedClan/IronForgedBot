@@ -21,6 +21,7 @@ from ironforgedbot.commands.admin.weekly_spin import (
     _check_reroll_rate_limit,
     _lookup_emoji,
     post_weekly_spin_result,
+    restore_weekly_spins,
 )
 
 TEST_START_TS = 1700000000
@@ -62,63 +63,47 @@ def _invoke_callback(view, callback_name: str, interaction, button):
 class TestCheckRerollRateLimit(unittest.TestCase):
     def setUp(self):
         weekly_spin._recent_rerolls.clear()
+        self.window_patch = patch.object(
+            CONFIG, "WEEKLY_SPIN_REROLL_WINDOW_SECONDS", 900
+        )
+        self.window_patch.start()
+        self.addCleanup(self.window_patch.stop)
 
-    def test_uses_configured_limit_and_window(self):
-        with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_HOURLY_LIMIT", 1):
+    def test_uses_configured_window_but_always_allows_one_reroll(self):
+        with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_HOURLY_LIMIT", 5, create=True):
             with patch.object(CONFIG, "WEEKLY_SPIN_REROLL_WINDOW_SECONDS", 10):
-                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1000.0)
-                self.assertTrue(allowed)
-                self.assertEqual(wait, 0)
-
-                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1001.0)
+                self.assertEqual(_check_reroll_rate_limit(1, now=1000.0), (True, 0))
+                allowed, wait = _check_reroll_rate_limit(1, now=1001.0)
                 self.assertFalse(allowed)
-                self.assertGreater(wait, 0)
+                self.assertEqual(wait, 9)
+                self.assertEqual(_check_reroll_rate_limit(1, now=1010.0), (True, 0))
 
-                allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1010.0)
-                self.assertTrue(allowed)
-                self.assertEqual(wait, 0)
-
-    def test_allows_under_limit(self):
-        for _ in range(9):
-            allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1000.0)
-            self.assertTrue(allowed)
-            self.assertEqual(wait, 0)
-
-    def test_denies_at_limit(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        allowed, wait = _check_reroll_rate_limit(1, "sotw", now=1001.0)
-        self.assertFalse(allowed)
-        self.assertGreater(wait, 0)
-
-    def test_recovers_after_window(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        allowed, _ = _check_reroll_rate_limit(1, "sotw", now=1000.0 + 3601.0)
+    def test_allows_one_reroll_per_user_every_fifteen_minutes(self):
+        allowed, wait = _check_reroll_rate_limit(1, now=1000.0)
         self.assertTrue(allowed)
+        self.assertEqual(wait, 0)
 
-    def test_separates_per_kind(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        sotw_blocked, _ = _check_reroll_rate_limit(1, "sotw", now=1001.0)
-        self.assertFalse(sotw_blocked)
-        botw_allowed, _ = _check_reroll_rate_limit(1, "botw", now=1001.0)
-        self.assertTrue(botw_allowed)
+        allowed, wait = _check_reroll_rate_limit(1, now=1001.0)
+        self.assertFalse(allowed)
+        self.assertEqual(wait, 899)
+
+        allowed, wait = _check_reroll_rate_limit(1, now=1900.0)
+        self.assertTrue(allowed)
+        self.assertEqual(wait, 0)
 
     def test_separates_per_user(self):
-        for _ in range(10):
-            _check_reroll_rate_limit(1, "sotw", now=1000.0)
-        blocked, _ = _check_reroll_rate_limit(1, "sotw", now=1001.0)
+        _check_reroll_rate_limit(1, now=1000.0)
+        blocked, _ = _check_reroll_rate_limit(1, now=1001.0)
         self.assertFalse(blocked)
-        allowed, _ = _check_reroll_rate_limit(2, "sotw", now=1001.0)
+        allowed, _ = _check_reroll_rate_limit(2, now=1001.0)
         self.assertTrue(allowed)
 
     def test_prunes_inactive_users(self):
-        _check_reroll_rate_limit(1, "sotw", now=1000.0)
+        _check_reroll_rate_limit(1, now=1000.0)
 
-        _check_reroll_rate_limit(2, "botw", now=4600.0)
+        _check_reroll_rate_limit(2, now=1900.0)
 
-        self.assertEqual(weekly_spin._recent_rerolls, {(2, "botw"): [4600.0]})
+        self.assertEqual(weekly_spin._recent_rerolls, {2: 1900.0})
 
 
 class TestLookupEmoji(unittest.TestCase):
@@ -276,6 +261,106 @@ class TestBuildPendingContent(unittest.TestCase):
             _build_pending_content("weekly", [], TEST_START_TS, TEST_END_TS)
 
 
+class TestWeeklySpinContentLimit(unittest.TestCase):
+    def test_post_content_keeps_latest_history_under_discord_limit(self):
+        history = [f"reroll {index} " + ("x" * 100) for index in range(40)]
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.find_emoji", return_value=""
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.data",
+            ) as mock_data:
+                mock_data.SKILLS = [{"name": "Agility", "emoji_key": "agility"}]
+                content = _build_post_content(
+                    "sotw", "Agility", history, TEST_START_TS, TEST_END_TS
+                )
+
+        self.assertLessEqual(len(content), 2000)
+        self.assertIn("earlier rerolls omitted", content)
+        self.assertIn("reroll 39", content)
+        self.assertNotIn("reroll 0", content)
+
+    def test_pending_content_truncates_unbounded_history(self):
+        history = [f"reroll {index} " + ("x" * 100) for index in range(40)]
+
+        content = _build_pending_content("sotw", history, TEST_START_TS, TEST_END_TS)
+
+        self.assertLessEqual(len(content), 2000)
+        self.assertIn("earlier rerolls omitted", content)
+        self.assertIn("reroll 39", content)
+
+    def test_history_storage_is_compacted_before_snapshot(self):
+        message = MagicMock(spec=discord.Message)
+        message.id = 123
+        message.channel = MagicMock(spec=discord.TextChannel)
+        message.channel.id = 456
+        view = WeeklySpinView(
+            options=["Agility", "Mining", "Runecraft"],
+            kind="sotw",
+            target_message=message,
+        )
+
+        for index in range(40):
+            view._append_history_line(f"reroll {index} " + ("x" * 100))
+
+        snapshot = view.to_persistent_state()
+
+        self.assertLessEqual(sum(map(len, snapshot["history_lines"])), 1200)
+        self.assertGreater(snapshot["history_omitted_count"], 0)
+        self.assertIn("reroll 39", snapshot["history_lines"][-1])
+
+    def test_lock_window_and_locked_content_fit_discord_limit(self):
+        history = [f"reroll {index} " + ("x" * 100) for index in range(40)]
+        view = WeeklySpinView(
+            options=["Agility", "Mining", "Runecraft"],
+            kind="sotw",
+            target_message=None,
+        )
+        view.current_winner = "Mining"
+        view._start_ts = TEST_START_TS
+        view._end_ts = TEST_END_TS
+        view._locked_at = TEST_START_TS
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.find_emoji", return_value=""
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.data",
+            ) as mock_data:
+                mock_data.SKILLS = [{"name": "Mining", "emoji_key": "mining"}]
+                lock_content = weekly_spin._build_lock_window_content(
+                    "sotw",
+                    "Mining",
+                    history,
+                    "<@123>",
+                    TEST_END_TS,
+                    TEST_START_TS,
+                    TEST_END_TS,
+                )
+                locked_content = weekly_spin._build_locked_content(view, history)
+
+        self.assertLessEqual(len(lock_content), 2000)
+        self.assertLessEqual(len(locked_content), 2000)
+        self.assertIn("reroll 39", lock_content)
+        self.assertIn("reroll 39", locked_content)
+
+    def test_extremely_long_winner_still_fits_discord_limit(self):
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin.find_emoji", return_value=""
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.data",
+            ) as mock_data:
+                mock_data.SKILLS = [{"name": "x" * 3000, "emoji_key": ""}]
+                content = _build_post_content(
+                    "sotw", "x" * 3000, [], TEST_START_TS, TEST_END_TS
+                )
+
+        self.assertEqual(len(content), 2000)
+        self.assertTrue(content.endswith("…"))
+
+
 class TestBuildConsolidatedHistoryLine(unittest.TestCase):
     def test_format_locked(self):
         self.assertEqual(
@@ -326,10 +411,18 @@ class TestPostWeeklySpinResult(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.target = AsyncMock(spec=discord.TextChannel)
         self.sent_message = MagicMock(spec=discord.Message)
+        self.sent_message.id = 123
+        self.sent_message.channel = MagicMock(spec=discord.TextChannel)
+        self.sent_message.channel.id = 456
         self.sent_message.add_reaction = AsyncMock()
         self.target.send = AsyncMock(return_value=self.sent_message)
         self.file = MagicMock(spec=discord.File)
         self.options = ["opt1", "opt2", "opt3"]
+        state_patcher = patch("ironforgedbot.commands.admin.weekly_spin.STATE")
+        self.mock_state = state_patcher.start()
+        self.addCleanup(state_patcher.stop)
+        self.mock_state.save_weekly_spin = AsyncMock()
+        self.mock_state.remove_weekly_spin = AsyncMock()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -654,26 +747,38 @@ class TestWeeklySpinView(unittest.IsolatedAsyncioTestCase):
         self.target_message.edit.assert_awaited_once()
         self.assertIsNone(self.target_message.edit.call_args.kwargs["view"])
 
-    @patch("ironforgedbot.commands.admin.weekly_spin._check_reroll_rate_limit")
-    async def test_reroll_at_cap_denied(self, mock_rate_limit):
-        mock_rate_limit.return_value = (False, 1800)
+    async def test_reroll_at_limit_uses_error_embed_and_relative_retry_time(self):
         interaction = _make_interaction(role_names=["Member"])
-        interaction.followup.send = AsyncMock(
-            return_value=MagicMock(spec=discord.Message)
-        )
         button = MagicMock(spec=discord.ui.Button)
+        self.view.created_at = 1_700_000_000
+        interaction.response.is_done = MagicMock(return_value=False)
 
-        await _invoke_callback(self.view, "reroll_button", interaction, button)
+        async def mark_response_done(*args, **kwargs):
+            interaction.response.is_done.return_value = True
 
-        interaction.response.defer.assert_called_once_with(ephemeral=True)
-        interaction.response.send_message.assert_not_called()
+        interaction.response.defer.side_effect = mark_response_done
+
+        with patch(
+            "ironforgedbot.commands.admin.weekly_spin._check_reroll_rate_limit",
+            return_value=(False, 900),
+        ):
+            with patch(
+                "ironforgedbot.commands.admin.weekly_spin.time.time",
+                return_value=1_700_000_000,
+            ):
+                await _invoke_callback(self.view, "reroll_button", interaction, button)
+
+        interaction.response.defer.assert_not_awaited()
         interaction.edit_original_response.assert_not_called()
-        interaction.followup.send.assert_called_once()
-        followup_kwargs = interaction.followup.send.call_args.kwargs
-        self.assertTrue(followup_kwargs["ephemeral"])
-        content = followup_kwargs.get("content", "")
-        self.assertIn("cap reached", content.lower())
-        self.assertIn("30", content)
+        interaction.response.send_message.assert_awaited_once()
+        error_embed = interaction.response.send_message.call_args.kwargs["embed"]
+        self.assertTrue(interaction.response.send_message.call_args.kwargs["ephemeral"])
+        self.assertEqual(
+            error_embed.description,
+            "Weekly re-roll limit reached. Try again <t:1700000900:R>.",
+        )
+        interaction.delete_original_response.assert_not_awaited()
+        interaction.followup.send.assert_not_awaited()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.find_emoji")
     @patch("ironforgedbot.commands.admin.weekly_spin.data")
@@ -2965,3 +3070,191 @@ class TestRerollPaymentDoubleCharge(unittest.IsolatedAsyncioTestCase):
 
         mock_service.try_remove_ingots.assert_called_once()
         mock_build_spin_gif.assert_called_once()
+
+
+class TestWeeklySpinPersistence(unittest.IsolatedAsyncioTestCase):
+    def _make_message(self):
+        message = MagicMock(spec=discord.Message)
+        message.id = 123
+        message.channel = MagicMock(spec=discord.TextChannel)
+        message.channel.id = 456
+        message.edit = AsyncMock()
+        return message
+
+    def test_snapshot_captures_recoverable_spin_state(self):
+        message = self._make_message()
+        view = WeeklySpinView(
+            options=["Agility", "Mining", "Runecraft"],
+            kind="sotw",
+            target_message=message,
+        )
+        view.current_winner = "Mining"
+        view.history_lines = ["~~Agility~~ rerolled by <@789>"]
+        view._start_ts = TEST_START_TS
+        view._end_ts = TEST_END_TS
+        view._reroll_unlocked = True
+        view._lock_window_active = True
+        view._lock_window_end_ts = int(time.time()) + 30
+        view._lock_window_user_id = 789
+        view._pending_reroll = PendingReroll(
+            winner="Agility",
+            emoji="⛏️",
+            mention="<@789>",
+            timestamp=TEST_START_TS,
+        )
+
+        snapshot = view.to_persistent_state()
+
+        self.assertEqual(snapshot["message_id"], 123)
+        self.assertEqual(snapshot["channel_id"], 456)
+        self.assertEqual(snapshot["kind"], "sotw")
+        self.assertEqual(snapshot["current_winner"], "Mining")
+        self.assertEqual(snapshot["history_lines"], view.history_lines)
+        self.assertEqual(snapshot["pending_reroll"]["winner"], "Agility")
+        self.assertTrue(snapshot["lock_window_active"])
+        self.assertEqual(snapshot["history_omitted_count"], 0)
+
+    async def test_restore_rebuilds_view_and_resumes_lock_window(self):
+        message = self._make_message()
+        channel = message.channel
+        channel.fetch_message = AsyncMock(return_value=message)
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+            "kind": "sotw",
+            "options": ["Agility", "Mining", "Runecraft"],
+            "current_winner": "Mining",
+            "history_lines": [],
+            "history_omitted_count": 4,
+            "created_at": time.time(),
+            "start_ts": TEST_START_TS,
+            "end_ts": TEST_END_TS,
+            "reroll_unlocked": True,
+            "lock_window_active": True,
+            "lock_window_end_ts": int(time.time()) + 30,
+            "lock_window_user_id": 789,
+            "is_locked": False,
+            "locked_at": 0,
+            "pending_reroll": None,
+            "reveal_due_at": 0,
+            "payment_in_progress": False,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.save_weekly_spin = AsyncMock()
+            state.remove_weekly_spin = AsyncMock()
+
+            with patch("ironforgedbot.commands.admin.weekly_spin.data") as data:
+                data.SKILLS = [{"name": "Mining", "emoji_key": "mining"}]
+                await restore_weekly_spins(client)
+
+        channel.fetch_message.assert_awaited_once_with(123)
+        restored_view = message.edit.await_args.kwargs["view"]
+        self.assertIsInstance(restored_view, WeeklySpinView)
+        self.assertTrue(restored_view._lock_window_active)
+        self.assertEqual(restored_view._lock_window_user_id, 789)
+        self.assertEqual(restored_view._history_omitted_count, 4)
+        self.assertEqual(len(restored_view.children), 3)
+        restored_view._deadline_task.cancel()
+        restored_view._lock_window_task.cancel()
+
+    async def test_restore_does_not_resume_interrupted_payment(self):
+        message = self._make_message()
+        channel = message.channel
+        channel.fetch_message = AsyncMock(return_value=message)
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+            "kind": "sotw",
+            "options": ["Agility", "Mining", "Runecraft"],
+            "current_winner": "Mining",
+            "history_lines": [],
+            "created_at": time.time(),
+            "start_ts": TEST_START_TS,
+            "end_ts": TEST_END_TS,
+            "reroll_unlocked": True,
+            "lock_window_active": False,
+            "lock_window_end_ts": 0,
+            "lock_window_user_id": None,
+            "is_locked": False,
+            "locked_at": 0,
+            "pending_reroll": None,
+            "reveal_due_at": 0,
+            "payment_in_progress": True,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.save_weekly_spin = AsyncMock()
+            state.remove_weekly_spin = AsyncMock()
+
+            await restore_weekly_spins(client)
+
+        message.edit.assert_awaited_once_with(view=None)
+        state.remove_weekly_spin.assert_awaited_once_with(123)
+
+    async def test_restore_finalizes_expired_spin(self):
+        message = self._make_message()
+        channel = message.channel
+        channel.fetch_message = AsyncMock(return_value=message)
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+            "kind": "sotw",
+            "options": ["Agility", "Mining", "Runecraft"],
+            "current_winner": "Mining",
+            "history_lines": [],
+            "created_at": time.time() - CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS - 1,
+            "start_ts": TEST_START_TS,
+            "end_ts": TEST_END_TS,
+            "reroll_unlocked": True,
+            "lock_window_active": False,
+            "lock_window_end_ts": 0,
+            "lock_window_user_id": None,
+            "is_locked": False,
+            "locked_at": 0,
+            "pending_reroll": None,
+            "reveal_due_at": 0,
+            "payment_in_progress": False,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.remove_weekly_spin = AsyncMock()
+
+            with patch("ironforgedbot.commands.admin.weekly_spin.data") as data:
+                data.SKILLS = [{"name": "Mining", "emoji_key": "mining"}]
+                await restore_weekly_spins(client)
+
+        message.edit.assert_awaited_once()
+        edit_kwargs = message.edit.await_args.kwargs
+        self.assertIsNone(edit_kwargs["view"])
+        self.assertIn("reroll window is now closed", edit_kwargs["content"].lower())
+        state.remove_weekly_spin.assert_awaited_once_with(123)
+
+    async def test_restore_removes_missing_message_state(self):
+        channel = MagicMock(spec=discord.TextChannel)
+        channel.fetch_message = AsyncMock(
+            side_effect=discord.NotFound(MagicMock(), "message missing")
+        )
+        client = MagicMock()
+        client.get_channel.return_value = channel
+        snapshot = {
+            "message_id": 123,
+            "channel_id": 456,
+        }
+
+        with patch("ironforgedbot.commands.admin.weekly_spin.STATE") as state:
+            state.state = {"weekly_spins": {"123": snapshot}}
+            state.remove_weekly_spin = AsyncMock()
+
+            await restore_weekly_spins(client)
+
+        state.remove_weekly_spin.assert_awaited_once_with(123)

@@ -561,6 +561,122 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
         on_result.assert_not_called()
 
+    async def test_duplicate_only_options_are_rejected(self):
+        on_result = AsyncMock()
+        modal = await self._make_modal(
+            on_result, "Mining, mining, MINING", "2026-08-01"
+        )
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=AsyncMock(),
+        ) as mock_build_gif, patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        on_result.assert_not_awaited()
+        mock_build_gif.assert_not_awaited()
+        mock_send_error.assert_awaited_once_with(
+            interaction,
+            "At least two distinct options are required to spin again.",
+        )
+
+    async def test_weighted_duplicate_options_are_preserved(self):
+        on_result = AsyncMock()
+        options = ["Mining", "Mining", "Agility"]
+        modal = await self._make_modal(on_result, ", ".join(options), "2026-08-01")
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+        generating_msg = Mock()
+        generating_msg.delete = AsyncMock()
+        interaction.followup.send.return_value = generating_msg
+        build_gif = AsyncMock(return_value=(Mock(spec=discord.File), "Mining"))
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=build_gif,
+        ), patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        build_gif.assert_awaited_once_with(options)
+        self.assertEqual(on_result.await_args.args[5], options)
+        mock_send_error.assert_not_awaited()
+
+    async def test_callback_failure_reports_error_and_deletes_progress_message(self):
+        on_result = AsyncMock(side_effect=RuntimeError("channel send failed"))
+        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+        generating_msg = Mock()
+        generating_msg.delete = AsyncMock()
+        interaction.followup.send.return_value = generating_msg
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=AsyncMock(return_value=(Mock(spec=discord.File), "a")),
+        ), patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        mock_send_error.assert_awaited_once_with(
+            interaction,
+            "Failed to post spin result. Check the channel before trying again.",
+        )
+        generating_msg.delete.assert_awaited_once()
+
+    async def test_gif_failure_deletes_progress_message(self):
+        on_result = AsyncMock()
+        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+        generating_msg = Mock()
+        generating_msg.delete = AsyncMock()
+        interaction.followup.send.return_value = generating_msg
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=AsyncMock(side_effect=RuntimeError("gif failed")),
+        ), patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ):
+            await modal.on_submit(interaction)
+
+        on_result.assert_not_awaited()
+        generating_msg.delete.assert_awaited_once()
+
+    async def test_progress_cleanup_failure_does_not_fail_submission(self):
+        on_result = AsyncMock()
+        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+        generating_msg = Mock()
+        generating_msg.delete = AsyncMock(side_effect=RuntimeError("delete failed"))
+        interaction.followup.send.return_value = generating_msg
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
+            new=AsyncMock(return_value=(Mock(spec=discord.File), "a")),
+        ):
+            await modal.on_submit(interaction)
+
+        on_result.assert_awaited_once()
+        generating_msg.delete.assert_awaited_once()
+
     @patch("ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file")
     async def test_valid_date_calls_on_result_with_options_and_timestamps(
         self, mock_build_spin_gif
@@ -573,6 +689,9 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
         )
+        generating_msg = Mock()
+        generating_msg.delete = AsyncMock()
+        interaction.followup.send.return_value = generating_msg
 
         await modal.on_submit(interaction)
 
@@ -587,3 +706,4 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
             int(datetime(2026, 8, 1, tzinfo=timezone.utc).timestamp()),
         )
         self.assertEqual(end_ts, start_ts + 7 * 86400)
+        generating_msg.delete.assert_awaited_once()

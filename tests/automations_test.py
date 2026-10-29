@@ -78,7 +78,12 @@ class TestIronForgedAutomations(unittest.IsolatedAsyncioTestCase):
             mock_task.cancelled.return_value = False
             mock_task.exception.return_value = None
             mock_task.result.return_value = None
-            mock_create_task.return_value = mock_task
+
+            def mock_create_task_func(coroutine: Coroutine) -> Mock:
+                coroutine.close()
+                return mock_task
+
+            mock_create_task.side_effect = mock_create_task_func
 
             async def mock_job_sync_func(*args, **kwargs):
                 pass
