@@ -49,11 +49,8 @@ class Config(BaseConfig):
         self.WEEKLY_SPIN_REROLL_COST: int = int(
             os.getenv("WEEKLY_SPIN_REROLL_COST") or 2500
         )
-        self.WEEKLY_SPIN_REROLL_HOURLY_LIMIT: int = int(
-            os.getenv("WEEKLY_SPIN_REROLL_HOURLY_LIMIT") or 10
-        )
         self.WEEKLY_SPIN_REROLL_WINDOW_SECONDS: int = int(
-            os.getenv("WEEKLY_SPIN_REROLL_WINDOW_SECONDS") or 3600
+            os.getenv("WEEKLY_SPIN_REROLL_WINDOW_SECONDS") or 900
         )
         self.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS: int = int(
             os.getenv("WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS") or 64800

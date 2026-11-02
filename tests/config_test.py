@@ -38,8 +38,7 @@ class ConfigTest(unittest.TestCase):
         result = Config()
 
         self.assertEqual(result.WEEKLY_SPIN_REROLL_COST, 2500)
-        self.assertEqual(result.WEEKLY_SPIN_REROLL_HOURLY_LIMIT, 10)
-        self.assertEqual(result.WEEKLY_SPIN_REROLL_WINDOW_SECONDS, 3600)
+        self.assertEqual(result.WEEKLY_SPIN_REROLL_WINDOW_SECONDS, 900)
         self.assertEqual(result.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 64800)
         self.assertEqual(result.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS, 30)
         self.assertEqual(result.WEEKLY_SPIN_REVEAL_DELAY_SECONDS, 10.5)
@@ -51,7 +50,6 @@ class ConfigTest(unittest.TestCase):
         {
             **VALID_CONFIG,
             "WEEKLY_SPIN_REROLL_COST": "3000",
-            "WEEKLY_SPIN_REROLL_HOURLY_LIMIT": "8",
             "WEEKLY_SPIN_REROLL_WINDOW_SECONDS": "1800",
             "WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS": "3600",
             "WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS": "45",
@@ -66,7 +64,6 @@ class ConfigTest(unittest.TestCase):
         result = Config()
 
         self.assertEqual(result.WEEKLY_SPIN_REROLL_COST, 3000)
-        self.assertEqual(result.WEEKLY_SPIN_REROLL_HOURLY_LIMIT, 8)
         self.assertEqual(result.WEEKLY_SPIN_REROLL_WINDOW_SECONDS, 1800)
         self.assertEqual(result.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS, 3600)
         self.assertEqual(result.WEEKLY_SPIN_REROLL_PAYMENT_TIMEOUT_SECONDS, 45)

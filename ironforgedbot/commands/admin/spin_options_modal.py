@@ -74,6 +74,13 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
+        if len({option.casefold() for option in options}) < 2:
+            await send_error_response(
+                interaction,
+                "At least two distinct options are required to spin again.",
+            )
+            return
+
         raw_date = self.start_date_input.value.strip()
         try:
             start_date = datetime.strptime(raw_date, "%Y-%m-%d").replace(
@@ -96,18 +103,36 @@ class SpinOptionsModal(discord.ui.Modal):
         )
 
         try:
-            file, winner = await build_spin_gif_file(options)
-        except Exception as e:
-            logger.error(f"Error generating spin GIF: {e}")
-            await send_error_response(
-                interaction,
-                "Failed to generate spin animation. Please try again later.",
-            )
-            return
+            try:
+                file, winner = await build_spin_gif_file(options)
+            except Exception:
+                logger.exception("Error generating spin GIF")
+                await self._send_failure_response(
+                    interaction,
+                    "Failed to generate spin animation. Please try again later.",
+                )
+                return
 
-        await self.on_result(interaction, file, winner, start_ts, end_ts, options)
+            try:
+                await self.on_result(
+                    interaction, file, winner, start_ts, end_ts, options
+                )
+            except Exception:
+                logger.exception("Failed to post spin result")
+                await self._send_failure_response(
+                    interaction,
+                    "Failed to post spin result. Check the channel before trying again.",
+                )
+        finally:
+            try:
+                await generating_msg.delete()
+            except Exception as e:
+                logger.warning(f"Failed to delete spin progress message: {e}")
 
+    async def _send_failure_response(
+        self, interaction: discord.Interaction, message: str
+    ) -> None:
         try:
-            await generating_msg.delete()
-        except discord.HTTPException:
-            pass
+            await send_error_response(interaction, message)
+        except Exception:
+            logger.exception("Failed to send spin modal error response")

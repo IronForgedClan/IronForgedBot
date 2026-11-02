@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import random
 import time
 from dataclasses import dataclass
@@ -10,11 +11,12 @@ from discord.ui import View
 
 from ironforgedbot.common.helpers import find_emoji
 from ironforgedbot.common.payment_embed import build_payment_embed, load_flavor_text
-from ironforgedbot.common.responses import build_response_embed
+from ironforgedbot.common.responses import build_response_embed, send_ephemeral_error
 from ironforgedbot.common.text_formatting import pad_winner_text
 from ironforgedbot.commands.spin.build_spin_gif import build_spin_gif_file
 from ironforgedbot.config import CONFIG
 from ironforgedbot.services.service_factory import create_ingot_service
+from ironforgedbot.state import STATE
 from ironforgedcore.common.roles import ROLE
 from ironforgedcore.database import db
 from ironforgedcore.services.member_service import MemberService
@@ -29,6 +31,8 @@ LOCK_PAYMENT_TITLE = "\U0001f4b0 Lock Weekly Spin"
 LOCK_EMOJI = "\U0001f512"
 UNLOCK_EMOJI = "\U0001f513"
 NO_MENTIONS = discord.AllowedMentions.none()
+MAX_WEEKLY_SPIN_CONTENT_LENGTH = 2000
+MAX_WEEKLY_SPIN_HISTORY_CHARS = 1200
 
 
 @dataclass(frozen=True)
@@ -42,7 +46,7 @@ class PendingReroll:
 THUMBS_UP = "\U0001f44d"
 THUMBS_DOWN = "\U0001f44e"
 
-_recent_rerolls: dict[tuple[int, str], list[float]] = {}
+_recent_rerolls: dict[int, float] = {}
 
 
 def _validate_kind(kind: WeeklySpinKind) -> None:
@@ -129,10 +133,64 @@ def _build_spin_headings(kind: WeeklySpinKind, winner: str | None) -> list[str]:
     return [title, winner_heading]
 
 
-def _build_history_section(history_lines: list[str]) -> list[str]:
-    if not history_lines:
+def _history_section_for_count(
+    history_lines: list[str], omitted_count: int, visible_count: int
+) -> list[str]:
+    omitted = omitted_count + len(history_lines) - visible_count
+    if not history_lines and omitted == 0:
         return []
-    return ["### History", *(f"-# {line}" for line in history_lines)]
+
+    section = ["### History"]
+    if omitted:
+        section.append(f"-# _{omitted} earlier rerolls omitted_")
+    if visible_count:
+        section.extend(f"-# {line}" for line in history_lines[-visible_count:])
+    return section
+
+
+def _compact_history_lines(
+    history_lines: list[str], omitted_count: int
+) -> tuple[list[str], int]:
+    for visible_count in range(len(history_lines), -1, -1):
+        section = _history_section_for_count(
+            history_lines, omitted_count, visible_count
+        )
+        if len("\n".join(section)) <= MAX_WEEKLY_SPIN_HISTORY_CHARS:
+            return (
+                history_lines[-visible_count:] if visible_count else [],
+                omitted_count + len(history_lines) - visible_count,
+            )
+    return [], omitted_count + len(history_lines)
+
+
+def _truncate_content(content: str) -> str:
+    if len(content) <= MAX_WEEKLY_SPIN_CONTENT_LENGTH:
+        return content
+    return content[: MAX_WEEKLY_SPIN_CONTENT_LENGTH - 1].rstrip() + "…"
+
+
+def _build_content_with_history(
+    prefix_lines: list[str],
+    history_lines: list[str],
+    *,
+    omitted_count: int = 0,
+    suffix_lines: list[str] | None = None,
+    empty_suffix_lines: list[str] | None = None,
+) -> str:
+    suffix_lines = suffix_lines or []
+    empty_suffix_lines = empty_suffix_lines or []
+    for visible_count in range(len(history_lines), -1, -1):
+        section = _history_section_for_count(
+            history_lines, omitted_count, visible_count
+        )
+        if section:
+            content = "\n".join([*prefix_lines, *section, *suffix_lines])
+        else:
+            content = "\n".join([*prefix_lines, *empty_suffix_lines])
+        if len(content) <= MAX_WEEKLY_SPIN_CONTENT_LENGTH:
+            return content
+
+    return _truncate_content("\n".join([*prefix_lines, *empty_suffix_lines]))
 
 
 def _build_post_content(
@@ -142,23 +200,25 @@ def _build_post_content(
     start_ts: int,
     end_ts: int,
     reroll_close_ts: int | None = None,
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose revealed post content with the winner in a padded spoiler heading."""
     headings = _build_spin_headings(kind, winner)
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [
+    content_prefix = [
         *headings,
         "",
         event_schedule_paragraph,
         "",
-        *history_section,
     ]
-    if not history_section:
-        content_lines.append("")
-    return "\n".join(content_lines)
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+        empty_suffix_lines=[""],
+    )
 
 
 def _build_pending_content(
@@ -167,6 +227,7 @@ def _build_pending_content(
     start_ts: int,
     end_ts: int,
     reroll_close_ts: int | None = None,
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose post content while the result is still pending reveal.
 
@@ -177,17 +238,18 @@ def _build_pending_content(
     event_schedule_paragraph = _build_event_schedule_paragraph(
         start_ts, end_ts, reroll_close_ts
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [
+    content_prefix = [
         *headings,
         "",
         event_schedule_paragraph,
         "",
-        *history_section,
     ]
-    if not history_section:
-        content_lines.append("")
-    return "\n".join(content_lines)
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+        empty_suffix_lines=[""],
+    )
 
 
 def _build_lock_window_content(
@@ -199,6 +261,7 @@ def _build_lock_window_content(
     start_ts: int,
     end_ts: int,
     reroll_close_ts: int | None = None,
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose post content during the 60s lock-decision window.
 
@@ -212,17 +275,20 @@ def _build_lock_window_content(
         f":warning: {user_mention} has rerolled and must decide whether to lock "
         f"the result before the opportunity expires <t:{lock_close_ts}:R>."
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [*headings, "", event_schedule_paragraph, "", *history_section]
-    if history_section:
-        content_lines.append("")
-    content_lines.append(lock_decision_sentence)
-    return "\n".join(content_lines)
+    content_prefix = [*headings, "", event_schedule_paragraph, ""]
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+        suffix_lines=["", lock_decision_sentence],
+        empty_suffix_lines=[lock_decision_sentence],
+    )
 
 
 def _build_locked_content(
     self,
     history_lines: list[str],
+    history_omitted_count: int = 0,
 ) -> str:
     """Compose post content for the terminal locked state.
 
@@ -244,49 +310,46 @@ def _build_locked_content(
         if locked_at
         else f"{LOCK_EMOJI} The reroll window is now closed."
     )
-    history_section = _build_history_section(history_lines)
-    content_lines = [*headings, "", event_schedule_paragraph, "", locked_sentence, ""]
-    content_lines.extend(history_section)
-    return "\n".join(content_lines)
+    content_prefix = [
+        *headings,
+        "",
+        event_schedule_paragraph,
+        "",
+        locked_sentence,
+        "",
+    ]
+    return _build_content_with_history(
+        content_prefix,
+        history_lines,
+        omitted_count=history_omitted_count,
+    )
 
 
 def _check_reroll_rate_limit(
     user_id: int,
-    kind: WeeklySpinKind,
     *,
-    limit: int | None = None,
     window_seconds: int | None = None,
     now: float | None = None,
 ) -> tuple[bool, int]:
-    """Record a reroll attempt; return (allowed, seconds_until_next_slot).
+    """Record a reroll attempt; return (allowed, seconds until next attempt).
 
-    Per-kind, per-user sliding-window counter. Old timestamps are pruned
-    on every call so memory stays bounded.
+    One attempt per user across both weekly spin types. Old timestamps are
+    pruned on every call so memory stays bounded.
     """
     if now is None:
         now = time.time()
-    if limit is None:
-        limit = CONFIG.WEEKLY_SPIN_REROLL_HOURLY_LIMIT
     if window_seconds is None:
         window_seconds = CONFIG.WEEKLY_SPIN_REROLL_WINDOW_SECONDS
-    for existing_key, timestamps in tuple(_recent_rerolls.items()):
-        active_timestamps = [
-            timestamp for timestamp in timestamps if now - timestamp < window_seconds
-        ]
-        if active_timestamps:
-            _recent_rerolls[existing_key] = active_timestamps
-        else:
-            del _recent_rerolls[existing_key]
+    for existing_user_id, timestamp in tuple(_recent_rerolls.items()):
+        if now - timestamp >= window_seconds:
+            del _recent_rerolls[existing_user_id]
 
-    key = (user_id, kind)
-    recent = _recent_rerolls.get(key, [])
-    if len(recent) >= limit:
-        oldest = min(recent)
-        wait = int(window_seconds - (now - oldest)) + 1
-        _recent_rerolls[key] = recent
+    last_reroll = _recent_rerolls.get(user_id)
+    if last_reroll is not None:
+        wait = math.ceil(window_seconds - (now - last_reroll))
         return False, max(wait, 1)
-    recent.append(now)
-    _recent_rerolls[key] = recent
+
+    _recent_rerolls[user_id] = now
     return True, 0
 
 
@@ -363,6 +426,7 @@ async def _reveal_winner_after_delay(
     winner: str,
     history_lines: list[str],
     reroll_close_ts: int,
+    delay: float | None = None,
 ) -> None:
     """Background task: wait configured reveal delay, then reveal winner in H2.
 
@@ -374,7 +438,9 @@ async def _reveal_winner_after_delay(
     with the standard ``Re-roll window closes`` footer.
     """
     try:
-        await asyncio.sleep(CONFIG.WEEKLY_SPIN_REVEAL_DELAY_SECONDS)
+        await asyncio.sleep(
+            CONFIG.WEEKLY_SPIN_REVEAL_DELAY_SECONDS if delay is None else delay
+        )
     except asyncio.CancelledError:
         logger.info(f"Spin reveal cancelled for message {message.id}")
         raise
@@ -394,6 +460,7 @@ async def _reveal_winner_after_delay(
         return
 
     view._reroll_unlocked = True
+    view._reveal_due_at = 0
     view._apply_button_state()
 
     if view._lock_window_active and view._lock_window_user_id is not None:
@@ -406,6 +473,7 @@ async def _reveal_winner_after_delay(
             view._start_ts,
             view._end_ts,
             reroll_close_ts=reroll_close_ts,
+            history_omitted_count=view._history_omitted_count,
         )
     else:
         content = _build_post_content(
@@ -415,6 +483,7 @@ async def _reveal_winner_after_delay(
             view._start_ts,
             view._end_ts,
             reroll_close_ts=reroll_close_ts,
+            history_omitted_count=view._history_omitted_count,
         )
     try:
         await message.edit(
@@ -428,6 +497,7 @@ async def _reveal_winner_after_delay(
         )
     except discord.HTTPException as e:
         logger.warning(f"Failed to reveal spin result for message {message.id}: {e}")
+    await view._persist_state()
 
 
 async def _lock_window_timer(
@@ -442,7 +512,7 @@ async def _lock_window_timer(
     active so payment cannot race the timeout.
     """
     try:
-        await asyncio.sleep(CONFIG.WEEKLY_SPIN_LOCK_WINDOW_SECONDS)
+        await asyncio.sleep(max(0, view._lock_window_end_ts - time.time()))
         while view._lock_completed and view._lock_window_active:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
@@ -465,13 +535,18 @@ def _schedule_reveal(
     winner: str,
     history_lines: list[str],
     reroll_close_ts: int,
+    delay: float | None = None,
 ) -> None:
     """Cancel any prior reveal task on the view and schedule a new one."""
     if view._reveal_task is not None and not view._reveal_task.done():
         view._reveal_task.cancel()
+    reveal_delay = (
+        CONFIG.WEEKLY_SPIN_REVEAL_DELAY_SECONDS if delay is None else max(0, delay)
+    )
+    view._reveal_due_at = time.time() + reveal_delay
     view._reveal_task = asyncio.create_task(
         _reveal_winner_after_delay(
-            message, view, kind, winner, history_lines, reroll_close_ts
+            message, view, kind, winner, history_lines, reroll_close_ts, reveal_delay
         ),
         name=f"spin_reveal_{message.id}",
     )
@@ -510,6 +585,7 @@ async def post_weekly_spin_result(
         allowed_mentions=NO_MENTIONS,
     )
     placeholder_view.target_message = msg
+    placeholder_view._persist_enabled = True
     deadline_delay = max(
         0,
         placeholder_view.created_at
@@ -524,6 +600,7 @@ async def post_weekly_spin_result(
     await _add_default_reactions(msg)
 
     _schedule_reveal(placeholder_view, msg, kind, winner, [], close_ts)
+    await placeholder_view._persist_state()
 
     logger.debug(f"Posted {kind.upper()} weekly spin (pending reveal): {winner}")
     return msg
@@ -564,8 +641,10 @@ class WeeklySpinView(View):
         self.current_winner: str | None = None
         self.created_at: float = time.time()
         self._reveal_task: asyncio.Task | None = None
+        self._reveal_due_at: float = 0
         self._timed_out: bool = False
         self._timeout_finalized: bool = False
+        self._terminal_edit_succeeded: bool = False
         self._timeout_lock = asyncio.Lock()
         self._deadline_task: asyncio.Task | None = None
         self._reroll_confirmation_task: asyncio.Task | None = None
@@ -584,6 +663,9 @@ class WeeklySpinView(View):
         # decision so the consolidated history line can be emitted once at
         # decision time. None when no decision is pending.
         self._pending_reroll: PendingReroll | None = None
+        self._history_omitted_count: int = 0
+        self._payment_in_progress: bool = False
+        self._persist_enabled: bool = False
 
         # Spin window dates (UTC midnight timestamps). Set by
         # ``post_weekly_spin_result`` right after construction; default 0
@@ -627,6 +709,57 @@ class WeeklySpinView(View):
         self._dont_lock_button.callback = self._on_dont_lock
 
         self._apply_button_state()
+
+    def to_persistent_state(self) -> dict:
+        if self.target_message is None:
+            raise ValueError("Cannot persist weekly spin without a target message")
+
+        pending_reroll = None
+        if self._pending_reroll is not None:
+            pending_reroll = {
+                "winner": self._pending_reroll.winner,
+                "emoji": self._pending_reroll.emoji,
+                "mention": self._pending_reroll.mention,
+                "timestamp": self._pending_reroll.timestamp,
+            }
+
+        return {
+            "message_id": self.target_message.id,
+            "channel_id": self.target_message.channel.id,
+            "kind": self.kind,
+            "options": self.options,
+            "current_winner": self.current_winner,
+            "history_lines": self.history_lines,
+            "history_omitted_count": self._history_omitted_count,
+            "created_at": self.created_at,
+            "start_ts": self._start_ts,
+            "end_ts": self._end_ts,
+            "reroll_unlocked": self._reroll_unlocked,
+            "lock_window_active": self._lock_window_active,
+            "lock_window_end_ts": self._lock_window_end_ts,
+            "lock_window_user_id": self._lock_window_user_id,
+            "is_locked": self._is_locked,
+            "locked_at": self._locked_at,
+            "pending_reroll": pending_reroll,
+            "reveal_due_at": self._reveal_due_at,
+            "payment_in_progress": self._payment_in_progress,
+        }
+
+    async def _persist_state(self) -> None:
+        if not self._persist_enabled or self.target_message is None:
+            return
+        if (
+            self._is_locked or self._timeout_finalized
+        ) and self._terminal_edit_succeeded:
+            await STATE.remove_weekly_spin(self.target_message.id)
+            return
+        await STATE.save_weekly_spin(self.to_persistent_state())
+
+    def _append_history_line(self, line: str) -> None:
+        self.history_lines.append(line)
+        self.history_lines, self._history_omitted_count = _compact_history_lines(
+            self.history_lines, self._history_omitted_count
+        )
 
     def _apply_button_state(self) -> None:
         """Sync the Re-roll button's ``disabled`` flag from the current gates.
@@ -739,7 +872,7 @@ class WeeklySpinView(View):
             if self.current_winner is not None:
                 self._is_locked = True
                 if self._pending_reroll is not None:
-                    self.history_lines.append(
+                    self._append_history_line(
                         _build_consolidated_history_line(
                             self._pending_reroll.emoji,
                             self._pending_reroll.winner,
@@ -763,7 +896,9 @@ class WeeklySpinView(View):
             if self.target_message is not None:
                 if self._is_locked:
                     edit_kwargs = {
-                        "content": _build_locked_content(self, self.history_lines),
+                        "content": _build_locked_content(
+                            self, self.history_lines, self._history_omitted_count
+                        ),
                         "view": None,
                         "allowed_mentions": NO_MENTIONS,
                     }
@@ -775,6 +910,7 @@ class WeeklySpinView(View):
                             self.history_lines,
                             self._start_ts,
                             self._end_ts,
+                            history_omitted_count=self._history_omitted_count,
                         ),
                         "view": None,
                         "allowed_mentions": NO_MENTIONS,
@@ -783,8 +919,10 @@ class WeeklySpinView(View):
                     edit_kwargs = {"view": None}
                 try:
                     await self.target_message.edit(**edit_kwargs)
+                    self._terminal_edit_succeeded = True
                 except discord.HTTPException:
                     pass
+            await self._persist_state()
 
     async def on_timeout(self) -> None:
         await self._timeout_at_deadline()
@@ -859,6 +997,7 @@ class WeeklySpinView(View):
                 self._start_ts,
                 self._end_ts,
                 _reroll_close_ts(self),
+                self._history_omitted_count,
             )
             try:
                 await message.edit(
@@ -873,6 +1012,7 @@ class WeeklySpinView(View):
             _lock_window_timer(self, message),
             name=f"spin_lock_window_{message.id if message is not None else 0}",
         )
+        await self._persist_state()
 
     async def _close_lock_window_as_locked(self) -> None:
         """Terminal locked state: user paid, event is over.
@@ -894,7 +1034,7 @@ class WeeklySpinView(View):
         self._locked_at = int(time.time())
 
         if self._pending_reroll is not None:
-            self.history_lines.append(
+            self._append_history_line(
                 _build_consolidated_history_line(
                     self._pending_reroll.emoji,
                     self._pending_reroll.winner,
@@ -915,16 +1055,20 @@ class WeeklySpinView(View):
 
         message = self.target_message
         if message is not None:
-            content = _build_locked_content(self, self.history_lines)
+            content = _build_locked_content(
+                self, self.history_lines, self._history_omitted_count
+            )
             try:
                 await message.edit(
                     content=content,
                     view=None,
                     allowed_mentions=NO_MENTIONS,
                 )
+                self._terminal_edit_succeeded = True
             except discord.HTTPException as e:
                 logger.warning(f"Failed to lock spin post: {e}")
         self._lock_completed = False
+        await self._persist_state()
 
     async def _close_lock_window_as_open(
         self,
@@ -973,7 +1117,7 @@ class WeeklySpinView(View):
         self._reroll_unlocked = True
 
         if self._pending_reroll is not None:
-            self.history_lines.append(
+            self._append_history_line(
                 _build_consolidated_history_line(
                     self._pending_reroll.emoji,
                     self._pending_reroll.winner,
@@ -997,6 +1141,7 @@ class WeeklySpinView(View):
                 self._start_ts,
                 self._end_ts,
                 reroll_close_ts=_reroll_close_ts(self),
+                history_omitted_count=self._history_omitted_count,
             )
             try:
                 await message.edit(
@@ -1007,6 +1152,7 @@ class WeeklySpinView(View):
             except discord.HTTPException as e:
                 logger.warning(f"Failed to close lock window: {e}")
         self._lock_completed = False
+        await self._persist_state()
 
     # Discord's persistent-view machinery calls ``item.callback(interaction)``
     # with a single argument; our real handlers also need the Button instance
@@ -1035,23 +1181,20 @@ class WeeklySpinView(View):
         # instead of racing through defer / DB lookup / embed build.
         self.reroll_locked = True
         self._apply_button_state()
+        user_id = interaction.user.id
         try:
-            # ACK immediately so the interaction token doesn't expire during the
-            # slow balance lookup below.
-            await interaction.response.defer(ephemeral=True)
-
-            allowed, wait = _check_reroll_rate_limit(interaction.user.id, self.kind)
+            allowed, wait = _check_reroll_rate_limit(user_id)
             if not allowed:
-                minutes = (wait + 59) // 60
-                await interaction.followup.send(
-                    content=(
-                        f"Reroll cap reached ({CONFIG.WEEKLY_SPIN_REROLL_HOURLY_LIMIT}/hour). "
-                        f"Try again in ~{minutes} minute(s)."
-                    ),
-                    ephemeral=True,
+                retry_at = int(time.time() + wait)
+                await send_ephemeral_error(
+                    interaction,
+                    f"Weekly re-roll limit reached. Try again <t:{retry_at}:R>.",
                 )
                 await self._release_concurrent_lock()
                 return
+
+            # ACK immediately before the slow balance lookup below.
+            await interaction.response.defer(ephemeral=True)
 
             async with db.get_session() as session:
                 member_service = MemberService(session)
@@ -1257,6 +1400,8 @@ class LockPaymentView(View):
                 )
                 return
 
+            parent._payment_in_progress = True
+            await parent._persist_state()
             await interaction.response.defer(ephemeral=True)
             self.message = await interaction.original_response()
 
@@ -1297,7 +1442,9 @@ class LockPaymentView(View):
             await self._delete_self(interaction)
             await parent._close_lock_window_as_locked()
         finally:
+            parent._payment_in_progress = False
             await parent._release_lock_payment(self.lock_window_generation)
+            await parent._persist_state()
 
     @discord.ui.button(
         label="Cancel",
@@ -1388,6 +1535,8 @@ class RerollPaymentView(View):
                 )
                 return
 
+            parent._payment_in_progress = True
+            await parent._persist_state()
             await interaction.response.defer(ephemeral=True)
             self.message = await interaction.original_response()
 
@@ -1450,6 +1599,7 @@ class RerollPaymentView(View):
                 parent._start_ts,
                 parent._end_ts,
                 reroll_close_ts=_reroll_close_ts(parent),
+                history_omitted_count=parent._history_omitted_count,
             )
             try:
                 await parent.target_message.edit(
@@ -1488,6 +1638,7 @@ class RerollPaymentView(View):
                 _reroll_close_ts(parent),
             )
 
+            await parent._persist_state()
             await _reset_reactions(parent.target_message)
             await parent._open_lock_window(user_id=interaction.user.id)
             logger.debug(
@@ -1496,7 +1647,9 @@ class RerollPaymentView(View):
         finally:
             if parent._reroll_confirmation_task is current_task:
                 parent._reroll_confirmation_task = None
+            parent._payment_in_progress = False
             await parent._release_concurrent_lock()
+            await parent._persist_state()
 
     async def _refund_failed_reroll(
         self,
@@ -1529,3 +1682,161 @@ class RerollPaymentView(View):
         await interaction.response.defer(ephemeral=True)
         await self.parent_view._release_concurrent_lock()
         await self._delete_self(interaction)
+
+
+def _view_from_persistent_state(
+    snapshot: dict, message: discord.Message
+) -> WeeklySpinView:
+    kind = snapshot["kind"]
+    _validate_kind(kind)
+    view = WeeklySpinView(
+        options=list(snapshot["options"]),
+        kind=kind,
+        target_message=message,
+    )
+    view.created_at = float(snapshot["created_at"])
+    view.current_winner = snapshot.get("current_winner")
+    view.history_lines = list(snapshot.get("history_lines", []))
+    view._history_omitted_count = int(snapshot.get("history_omitted_count", 0))
+    view._start_ts = int(snapshot.get("start_ts", 0))
+    view._end_ts = int(snapshot.get("end_ts", 0))
+    view._reroll_unlocked = bool(snapshot.get("reroll_unlocked", False))
+    view._lock_window_active = bool(snapshot.get("lock_window_active", False))
+    view._lock_window_end_ts = int(snapshot.get("lock_window_end_ts", 0))
+    view._lock_window_user_id = snapshot.get("lock_window_user_id")
+    view._is_locked = bool(snapshot.get("is_locked", False))
+    view._locked_at = int(snapshot.get("locked_at", 0))
+    view._reveal_due_at = float(snapshot.get("reveal_due_at", 0))
+    view._payment_in_progress = bool(snapshot.get("payment_in_progress", False))
+
+    pending_reroll = snapshot.get("pending_reroll")
+    if pending_reroll is not None:
+        view._pending_reroll = PendingReroll(**pending_reroll)
+
+    remaining = view.created_at + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS - time.time()
+    view.timeout = max(1, remaining)
+    if view._lock_window_active:
+        view.add_item(view._lock_button)
+        view.add_item(view._dont_lock_button)
+    view._apply_button_state()
+    view._persist_enabled = True
+    return view
+
+
+async def restore_weekly_spins(client: discord.Client) -> None:
+    """Reattach active spin views and resume their remaining timers."""
+    restored_ids = getattr(client, "_weekly_spin_restored_ids", None)
+    if not isinstance(restored_ids, set):
+        restored_ids = set()
+        client._weekly_spin_restored_ids = restored_ids
+
+    snapshots = STATE.state.get("weekly_spins", {})
+    for key, snapshot in list(snapshots.items()):
+        try:
+            message_id = int(snapshot.get("message_id", key))
+            if message_id in restored_ids:
+                continue
+            channel_id = int(snapshot["channel_id"])
+            channel = client.get_channel(channel_id)
+            if channel is None:
+                channel = await client.fetch_channel(channel_id)
+            message = await channel.fetch_message(message_id)
+            view = _view_from_persistent_state(snapshot, message)
+
+            if view._payment_in_progress:
+                await message.edit(view=None)
+                await STATE.remove_weekly_spin(message_id)
+                restored_ids.add(message_id)
+                logger.warning(
+                    f"Closed weekly spin {message_id} after interrupted payment"
+                )
+                continue
+
+            if view._is_locked:
+                await message.edit(
+                    content=_build_locked_content(
+                        view, view.history_lines, view._history_omitted_count
+                    ),
+                    view=None,
+                    allowed_mentions=NO_MENTIONS,
+                )
+                await STATE.remove_weekly_spin(message_id)
+                restored_ids.add(message_id)
+                continue
+
+            if _reroll_deadline_reached(view):
+                await view._timeout_at_deadline()
+                restored_ids.add(message_id)
+                continue
+
+            if view._lock_window_active and view._lock_window_user_id is not None:
+                content = _build_lock_window_content(
+                    view.kind,
+                    view.current_winner or "",
+                    view.history_lines,
+                    f"<@{view._lock_window_user_id}>",
+                    view._lock_window_end_ts,
+                    view._start_ts,
+                    view._end_ts,
+                    _reroll_close_ts(view),
+                    view._history_omitted_count,
+                )
+            elif view._reroll_unlocked and view.current_winner is not None:
+                content = _build_post_content(
+                    view.kind,
+                    view.current_winner,
+                    view.history_lines,
+                    view._start_ts,
+                    view._end_ts,
+                    reroll_close_ts=_reroll_close_ts(view),
+                    history_omitted_count=view._history_omitted_count,
+                )
+            else:
+                content = _build_pending_content(
+                    view.kind,
+                    view.history_lines,
+                    view._start_ts,
+                    view._end_ts,
+                    reroll_close_ts=_reroll_close_ts(view),
+                    history_omitted_count=view._history_omitted_count,
+                )
+
+            await message.edit(
+                content=content,
+                view=view,
+                allowed_mentions=NO_MENTIONS,
+            )
+            deadline_delay = max(
+                0,
+                view.created_at + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS - time.time(),
+            )
+            view._deadline_task = asyncio.create_task(
+                _expire_weekly_spin_after_delay(view, deadline_delay),
+                name=f"spin_deadline_{message_id}",
+            )
+
+            if not view._reroll_unlocked:
+                reveal_delay = max(0, view._reveal_due_at - time.time())
+                _schedule_reveal(
+                    view,
+                    message,
+                    view.kind,
+                    view.current_winner or "",
+                    view.history_lines,
+                    _reroll_close_ts(view),
+                    delay=reveal_delay,
+                )
+            if view._lock_window_active:
+                view._lock_window_task = asyncio.create_task(
+                    _lock_window_timer(view, message),
+                    name=f"spin_lock_window_{message_id}",
+                )
+
+            await view._persist_state()
+            restored_ids.add(message_id)
+            logger.info(f"Restored weekly spin {message_id}")
+        except discord.NotFound:
+            await STATE.remove_weekly_spin(int(snapshot.get("message_id", key)))
+            restored_ids.add(int(snapshot.get("message_id", key)))
+        except Exception:
+            logger.exception(f"Failed to restore weekly spin {key}")

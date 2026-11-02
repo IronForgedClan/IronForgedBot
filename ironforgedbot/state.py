@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -20,6 +21,7 @@ class BotStateDict(TypedDict):
     double_or_nothing_offers: dict
     raffle_on: bool
     raffle_price: int
+    weekly_spins: dict[str, dict]
 
 
 class BotState:
@@ -40,20 +42,37 @@ class BotState:
             "double_or_nothing_offers": dict(),
             "raffle_on": False,
             "raffle_price": 5_000,
+            "weekly_spins": {},
         }
+        self._save_lock = asyncio.Lock()
 
         event_emitter.on("shutdown", self._save_state, priority=90)
 
     async def _save_state(self):
         try:
-            async with aiofiles.open(self._file_path, "w") as file:
-                # reset shut down flag so we don't get stuck
-                self.state["is_shutting_down"] = False
-                await file.write(json.dumps(self.state))
+            if not hasattr(self, "_save_lock"):
+                self._save_lock = asyncio.Lock()
+            async with self._save_lock:
+                async with aiofiles.open(self._file_path, "w") as file:
+                    # reset shut down flag so we don't get stuck
+                    self.state["is_shutting_down"] = False
+                    await file.write(json.dumps(self.state))
 
             logger.debug(f"State saved to {self._file_path}")
         except Exception as e:
             logger.critical(f"Error saving state: {e}")
+
+    async def save_weekly_spin(self, snapshot: dict) -> None:
+        message_id = snapshot.get("message_id")
+        if not isinstance(message_id, int):
+            raise ValueError("Weekly spin snapshot must include an integer message_id")
+
+        self.state["weekly_spins"][str(message_id)] = snapshot
+        await self._save_state()
+
+    async def remove_weekly_spin(self, message_id: int) -> None:
+        self.state["weekly_spins"].pop(str(message_id), None)
+        await self._save_state()
 
     async def load_state(self):
         if os.path.exists(self._file_path):
@@ -67,6 +86,11 @@ class BotState:
 
                     loaded_state = self.state.copy()
                     loaded_state.update(content)
+                    if not isinstance(loaded_state.get("weekly_spins"), dict):
+                        logger.warning(
+                            "Invalid weekly spin state, starting with no active spins"
+                        )
+                        loaded_state["weekly_spins"] = {}
 
                     current_year = datetime.now(timezone.utc).year
                     saved_year = content.get("trick_or_treat_jackpot_year")
