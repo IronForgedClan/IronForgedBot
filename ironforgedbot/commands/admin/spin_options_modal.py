@@ -12,15 +12,19 @@ from ironforgedbot.common.responses import send_error_response
 logger = logging.getLogger(__name__)
 
 
-def _default_next_monday_str() -> str:
-    """Return today UTC as `YYYY-MM-DD`, snapped to the next Monday.
-
-    If today is already Monday, returns today.
-    """
+def _default_weekly_spin_dates() -> tuple[str, str]:
     today_utc = datetime.now(timezone.utc).date()
     days_ahead = (0 - today_utc.weekday()) % 7
-    default_start = today_utc + timedelta(days=days_ahead)
-    return default_start.strftime("%Y-%m-%d")
+    next_monday = today_utc + timedelta(days=days_ahead)
+    start_date = datetime(
+        next_monday.year,
+        next_monday.month,
+        next_monday.day,
+        tzinfo=timezone.utc,
+    )
+    end_date = start_date + timedelta(days=7)
+    date_format = "%Y-%m-%d %H:%M"
+    return start_date.strftime(date_format), end_date.strftime(date_format)
 
 
 class SpinOptionsModal(discord.ui.Modal):
@@ -38,6 +42,7 @@ class SpinOptionsModal(discord.ui.Modal):
         super().__init__(title=title)
 
         self.on_result = on_result
+        default_start_date, default_end_date = _default_weekly_spin_dates()
 
         self.options_input = discord.ui.TextInput(
             label="Options (comma-separated)",
@@ -48,14 +53,24 @@ class SpinOptionsModal(discord.ui.Modal):
         self.add_item(self.options_input)
 
         self.start_date_input = discord.ui.TextInput(
-            label="Start date (YYYY-MM-DD, UTC)",
-            placeholder="YYYY-MM-DD",
+            label="Start date (YYYY-MM-DD HH:MM, UTC)",
+            placeholder="YYYY-MM-DD HH:MM",
             required=True,
-            max_length=10,
+            max_length=16,
             style=discord.TextStyle.short,
-            default=_default_next_monday_str(),
+            default=default_start_date,
         )
         self.add_item(self.start_date_input)
+
+        self.end_date_input = discord.ui.TextInput(
+            label="End date (YYYY-MM-DD HH:MM, UTC)",
+            placeholder="YYYY-MM-DD HH:MM",
+            required=True,
+            max_length=16,
+            style=discord.TextStyle.short,
+            default=default_end_date,
+        )
+        self.add_item(self.end_date_input)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -81,20 +96,34 @@ class SpinOptionsModal(discord.ui.Modal):
             )
             return
 
-        raw_date = self.start_date_input.value.strip()
+        raw_start_date = self.start_date_input.value.strip()
+        raw_end_date = self.end_date_input.value.strip()
+        date_format = "%Y-%m-%d %H:%M"
         try:
-            start_date = datetime.strptime(raw_date, "%Y-%m-%d").replace(
+            start_date = datetime.strptime(raw_start_date, date_format).replace(
                 tzinfo=timezone.utc
             )
-            end_date = start_date + timedelta(days=7)
-            start_ts = int(start_date.timestamp())
-            end_ts = int(end_date.timestamp())
+            end_date = datetime.strptime(raw_end_date, date_format).replace(
+                tzinfo=timezone.utc
+            )
+            if (
+                start_date.strftime(date_format) != raw_start_date
+                or end_date.strftime(date_format) != raw_end_date
+            ):
+                raise ValueError("Date format must be exact")
         except ValueError:
             await send_error_response(
                 interaction,
-                f"`{raw_date}` is not a valid date. Use `YYYY-MM-DD`.",
+                "Both dates must use `YYYY-MM-DD HH:MM` in UTC.",
             )
             return
+
+        if end_date <= start_date:
+            await send_error_response(interaction, "End date must be after start date.")
+            return
+
+        start_ts = int(start_date.timestamp())
+        end_ts = int(end_date.timestamp())
 
         generating_msg = await interaction.followup.send(
             "Generating GIF...",

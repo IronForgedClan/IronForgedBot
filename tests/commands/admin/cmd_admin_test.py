@@ -465,65 +465,36 @@ class TestAdminMenuView(unittest.IsolatedAsyncioTestCase):
 
 
 class TestSpinOptionsModalDate(unittest.TestCase):
-    def test_default_next_monday_str_returns_today_when_monday(self):
-        """On a Monday, ``_default_next_monday_str`` returns today's date."""
-        from ironforgedbot.commands.admin.spin_options_modal import (
-            _default_next_monday_str,
-        )
-
-        # Mock ``datetime`` to return a known Monday.
-        with patch(
-            "ironforgedbot.commands.admin.spin_options_modal.datetime"
-        ) as mock_dt:
-            monday = datetime(2026, 8, 3, 12, 0, 0, tzinfo=timezone.utc)
-            mock_dt.now.return_value = monday
-            mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
-            self.assertEqual(_default_next_monday_str(), "2026-08-03")
-
-    def test_default_next_monday_str_snaps_forward_to_monday(self):
-        """On Tue/Wed/.../Sun, snaps forward to that day's next Monday."""
-        from ironforgedbot.commands.admin.spin_options_modal import (
-            _default_next_monday_str,
-        )
-
-        cases = [
-            ((2026, 8, 4), "2026-08-10"),  # Tue → Mon (+6)
-            ((2026, 8, 5), "2026-08-10"),  # Wed → Mon (+5)
-            ((2026, 8, 6), "2026-08-10"),  # Thu → Mon (+4)
-            ((2026, 8, 7), "2026-08-10"),  # Fri → Mon (+3)
-            ((2026, 8, 8), "2026-08-10"),  # Sat → Mon (+2)
-            ((2026, 8, 9), "2026-08-10"),  # Sun → Mon (+1)
-        ]
-        for (y, m, d), expected in cases:
-            with self.subTest(start=f"{y}-{m:02d}-{d:02d}"):
-                with patch(
-                    "ironforgedbot.commands.admin.spin_options_modal.datetime"
-                ) as mock_dt:
-                    not_monday = datetime(y, m, d, 12, 0, 0, tzinfo=timezone.utc)
-                    mock_dt.now.return_value = not_monday
-                    mock_dt.side_effect = lambda *args, **kwargs: datetime(
-                        *args, **kwargs
-                    )
-                    self.assertEqual(_default_next_monday_str(), expected)
-
-    def test_modal_default_start_date_input_is_next_monday(self):
-        """The modal's ``start_date_input`` defaults to the next Monday."""
+    def test_modal_defaults_start_and_end_to_next_monday_and_following_week(self):
         from ironforgedbot.commands.admin.spin_options_modal import SpinOptionsModal
 
-        modal = SpinOptionsModal("Test", ["a", "b", "c"], AsyncMock())
-        self.assertEqual(modal.start_date_input.label, "Start date (YYYY-MM-DD, UTC)")
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = datetime(
+                2026, 8, 9, 12, tzinfo=timezone.utc
+            )
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+            modal = SpinOptionsModal("Test", ["a", "b", "c"], AsyncMock())
+
+        self.assertEqual(
+            modal.start_date_input.label, "Start date (YYYY-MM-DD HH:MM, UTC)"
+        )
         self.assertEqual(modal.start_date_input.style, discord.TextStyle.short)
         self.assertTrue(modal.start_date_input.required)
-        self.assertEqual(modal.start_date_input.max_length, 10)
-        from ironforgedbot.commands.admin.spin_options_modal import (
-            _default_next_monday_str,
-        )
-
-        self.assertEqual(modal.start_date_input.default, _default_next_monday_str())
+        self.assertEqual(modal.start_date_input.max_length, 16)
+        self.assertEqual(modal.start_date_input.default, "2026-08-10 00:00")
+        self.assertEqual(modal.end_date_input.label, "End date (YYYY-MM-DD HH:MM, UTC)")
+        self.assertEqual(modal.end_date_input.style, discord.TextStyle.short)
+        self.assertTrue(modal.end_date_input.required)
+        self.assertEqual(modal.end_date_input.max_length, 16)
+        self.assertEqual(modal.end_date_input.default, "2026-08-17 00:00")
 
 
 class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
-    async def _make_modal(self, on_result, options_value, date_value):
+    async def _make_modal(self, on_result, options_value, start_date, end_date):
         """Build a real modal but swap its TextInputs for MagicMocks so we
         can set ``.value`` directly (the real TextInput exposes it as a
         read-only property populated from form data)."""
@@ -533,12 +504,16 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         modal.options_input = Mock()
         modal.options_input.value = options_value
         modal.start_date_input = Mock()
-        modal.start_date_input.value = date_value
+        modal.start_date_input.value = start_date
+        modal.end_date_input = Mock()
+        modal.end_date_input.value = end_date
         return modal
 
     async def test_invalid_date_string_skips_on_result(self):
         on_result = AsyncMock()
-        modal = await self._make_modal(on_result, "a, b, c", "13/40/2026")
+        modal = await self._make_modal(
+            on_result, "a, b, c", "13/40/2026 00:00", "2026-08-08 00:00"
+        )
 
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
@@ -551,7 +526,7 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
     async def test_empty_date_skips_on_result(self):
         on_result = AsyncMock()
-        modal = await self._make_modal(on_result, "a, b, c", "")
+        modal = await self._make_modal(on_result, "a, b, c", "", "2026-08-08 00:00")
 
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
@@ -561,10 +536,33 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
         on_result.assert_not_called()
 
+    async def test_invalid_end_date_format_skips_on_result(self):
+        on_result = AsyncMock()
+        modal = await self._make_modal(
+            on_result, "a, b, c", "2026-08-01 00:00", "2026-8-08 00:00"
+        )
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        on_result.assert_not_awaited()
+        mock_send_error.assert_awaited_once_with(
+            interaction, "Both dates must use `YYYY-MM-DD HH:MM` in UTC."
+        )
+
     async def test_duplicate_only_options_are_rejected(self):
         on_result = AsyncMock()
         modal = await self._make_modal(
-            on_result, "Mining, mining, MINING", "2026-08-01"
+            on_result,
+            "Mining, mining, MINING",
+            "2026-08-01 00:00",
+            "2026-08-08 00:00",
         )
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
@@ -589,7 +587,12 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
     async def test_weighted_duplicate_options_are_preserved(self):
         on_result = AsyncMock()
         options = ["Mining", "Mining", "Agility"]
-        modal = await self._make_modal(on_result, ", ".join(options), "2026-08-01")
+        modal = await self._make_modal(
+            on_result,
+            ", ".join(options),
+            "2026-08-01 00:00",
+            "2026-08-08 00:00",
+        )
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
         )
@@ -613,7 +616,9 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
     async def test_callback_failure_reports_error_and_deletes_progress_message(self):
         on_result = AsyncMock(side_effect=RuntimeError("channel send failed"))
-        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        modal = await self._make_modal(
+            on_result, "a, b, c", "2026-08-01 00:00", "2026-08-08 00:00"
+        )
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
         )
@@ -638,7 +643,9 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
     async def test_gif_failure_deletes_progress_message(self):
         on_result = AsyncMock()
-        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        modal = await self._make_modal(
+            on_result, "a, b, c", "2026-08-01 00:00", "2026-08-08 00:00"
+        )
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
         )
@@ -660,7 +667,9 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
 
     async def test_progress_cleanup_failure_does_not_fail_submission(self):
         on_result = AsyncMock()
-        modal = await self._make_modal(on_result, "a, b, c", "2026-08-01")
+        modal = await self._make_modal(
+            on_result, "a, b, c", "2026-08-01 00:00", "2026-08-08 00:00"
+        )
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
         )
@@ -684,7 +693,12 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         on_result = AsyncMock()
         options = ["custom-a", "custom-b", "custom-c"]
         mock_build_spin_gif.return_value = (Mock(spec=discord.File), options[0])
-        modal = await self._make_modal(on_result, ", ".join(options), "2026-08-01")
+        modal = await self._make_modal(
+            on_result,
+            ", ".join(options),
+            "2026-08-01 13:45",
+            "2026-08-08 09:15",
+        )
 
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
@@ -703,7 +717,30 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         end_ts = call_args.args[4]
         self.assertEqual(
             start_ts,
-            int(datetime(2026, 8, 1, tzinfo=timezone.utc).timestamp()),
+            int(datetime(2026, 8, 1, 13, 45, tzinfo=timezone.utc).timestamp()),
         )
-        self.assertEqual(end_ts, start_ts + 7 * 86400)
+        self.assertEqual(
+            end_ts,
+            int(datetime(2026, 8, 8, 9, 15, tzinfo=timezone.utc).timestamp()),
+        )
         generating_msg.delete.assert_awaited_once()
+
+    async def test_end_date_not_after_start_date_skips_on_result(self):
+        on_result = AsyncMock()
+        modal = await self._make_modal(
+            on_result, "a, b, c", "2026-08-08 09:15", "2026-08-08 09:15"
+        )
+        interaction = create_mock_discord_interaction(
+            user=create_test_member("Admin", [ROLE.LEADERSHIP])
+        )
+
+        with patch(
+            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            new=AsyncMock(),
+        ) as mock_send_error:
+            await modal.on_submit(interaction)
+
+        on_result.assert_not_awaited()
+        mock_send_error.assert_awaited_once_with(
+            interaction, "End date must be after start date."
+        )
