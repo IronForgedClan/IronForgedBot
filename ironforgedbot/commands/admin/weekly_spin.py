@@ -112,7 +112,7 @@ def _build_event_schedule_paragraph(
 ) -> str:
     paragraph = f"This event will start on <t:{start_ts}:F> and end on <t:{end_ts}:F>."
     if reroll_close_ts is not None:
-        paragraph += f" The active option will automatically be locked <t:{reroll_close_ts}:R>, unless a member locks their reroll."
+        paragraph += f" The active option will be automatically locked <t:{reroll_close_ts}:R>, unless a member chooses to lock their roll first."
         ingot_icon = find_emoji("Ingot") or ":Ingot:"
         paragraph += (
             f" Re-rolling costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
@@ -1188,7 +1188,7 @@ class WeeklySpinView(View):
                 retry_at = int(time.time() + wait)
                 await send_ephemeral_error(
                     interaction,
-                    f"Weekly re-roll limit reached. Try again <t:{retry_at}:R>.",
+                    f"Reroll limit reached. Try again <t:{retry_at}:R>.",
                 )
                 await self._release_concurrent_lock()
                 return
