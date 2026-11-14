@@ -1,5 +1,5 @@
 # Target character width for spoiler tags (makes all spoiler bars roughly same length)
-SPOILER_WIDTH = 100
+SPOILER_WIDTH = 20
 
 # These characters render narrower in Discord's font
 NARROW_CHARS = set("ilIjtfr'")
