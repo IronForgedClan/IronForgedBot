@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 WeeklySpinKind = Literal["sotw", "botw"]
 
-REROLL_PAYMENT_TITLE = "\U0001f4b0 Re-roll Weekly Spin"
+REROLL_PAYMENT_TITLE = "\U0001f4b0 Reroll Weekly Spin"
 LOCK_PAYMENT_TITLE = "\U0001f4b0 Lock Weekly Spin"
 LOCK_EMOJI = "\U0001f512"
 UNLOCK_EMOJI = "\U0001f513"
@@ -115,7 +115,7 @@ def _build_event_schedule_paragraph(
         paragraph += f" The active option will be automatically locked <t:{reroll_close_ts}:R>, unless a member chooses to lock their roll first."
         ingot_icon = find_emoji("Ingot") or ":Ingot:"
         paragraph += (
-            f" Re-rolling costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
+            f" Rerolling costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}** ingots and "
             f"locking costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_LOCK_COST:,}** ingots."
         )
     return paragraph
@@ -354,7 +354,7 @@ def _check_reroll_rate_limit(
 
 
 def _reroll_close_ts(view: "WeeklySpinView") -> int:
-    """Unix timestamp at which the view's re-roll window expires."""
+    """Unix timestamp at which the view's reroll window expires."""
     return int(view.created_at + CONFIG.WEEKLY_SPIN_VIEW_TIMEOUT_SECONDS)
 
 
@@ -435,7 +435,7 @@ async def _reveal_winner_after_delay(
     If a lock-decision window is active when the reveal fires (the rigger's
     60s timer started at the same moment as the reroll, so they typically
     overlap), the lock-window footer is preserved instead of being replaced
-    with the standard ``Re-roll window closes`` footer.
+    with the standard ``Reroll window closes`` footer.
     """
     try:
         await asyncio.sleep(
@@ -566,7 +566,7 @@ async def post_weekly_spin_result(
     The initial post shows only the "Next X is..." header — the winner is
     revealed after the configured reveal delay via a background task that edits the
     message. Two thumb reactions (👍 / 👎) are added immediately so members
-    can vote without typing. A `WeeklySpinView` with a Re-roll button is
+    can vote without typing. A `WeeklySpinView` with a Reroll button is
     attached so members can pay to spin again.
     """
     placeholder_view = WeeklySpinView(options=options, kind=kind, target_message=None)
@@ -607,16 +607,16 @@ async def post_weekly_spin_result(
 
 
 class WeeklySpinView(View):
-    """View attached to the spin post. Member-only re-roll trigger.
+    """View attached to the spin post. Member-only reroll trigger.
 
     State machine
     -------------
-    The Re-roll button's enabled-ness is the conjunction of three gates:
+    The Reroll button's enabled-ness is the conjunction of three gates:
 
     - ``reroll_locked``: True while a single user is in the payment flow
       (prevents concurrent rerolls on the same post).
     - ``_reroll_unlocked``: False while the result is still pending reveal
-      (prevents re-rolls before the winner is visible). Flipped to True by
+      (prevents rerolls before the winner is visible). Flipped to True by
       the background reveal task after the configured reveal delay.
     - ``_lock_window_active``: True for the configured lock window after a reroll
       while the rigger decides whether to lock the result. Disabled
@@ -677,7 +677,7 @@ class WeeklySpinView(View):
         self._locked_at: int = 0
 
         self._reroll_button = discord.ui.Button(
-            label="Re-roll",
+            label="Reroll",
             style=discord.ButtonStyle.blurple,
             custom_id="weekly_spin_reroll",
             emoji="\U0001f504",
@@ -762,7 +762,7 @@ class WeeklySpinView(View):
         )
 
     def _apply_button_state(self) -> None:
-        """Sync the Re-roll button's ``disabled`` flag from the current gates.
+        """Sync the Reroll button's ``disabled`` flag from the current gates.
 
         Lock/Don't-Lock buttons are added/removed from the view dynamically;
         their visibility is not driven by ``disabled`` alone.
@@ -805,7 +805,7 @@ class WeeklySpinView(View):
             return False
         if self.reroll_locked:
             await interaction.response.send_message(
-                "A re-roll is already in progress.", ephemeral=True
+                "A reroll is already in progress.", ephemeral=True
             )
             return False
         # The rigger already knows what they rerolled to, so they get to
@@ -1078,7 +1078,7 @@ class WeeklySpinView(View):
     ) -> None:
         """Reopen state: user clicked Don't Lock or the timer timed out.
 
-                Re-enables the Re-roll button immediately (no waiting on the reveal
+                Re-enables the Reroll button immediately (no waiting on the reveal
                 animation), removes the lock buttons, restores the standard footer,
                 and appends the consolidated history line for the pending reroll
                 capped with ``history_icon``. Both production callers (Don't Lock
@@ -1566,7 +1566,7 @@ class RerollPaymentView(View):
                 error_embed = build_response_embed(
                     title="\u274c Insufficient Funds",
                     description=(
-                        f"Re-roll costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}**."
+                        f"Reroll costs {ingot_icon} **{CONFIG.WEEKLY_SPIN_REROLL_COST:,}**."
                     ),
                     color=discord.Colour.red(),
                 )
@@ -1585,7 +1585,7 @@ class RerollPaymentView(View):
                 new_file, new_winner = await build_spin_gif_file(reroll_options)
             except Exception:
                 logger.exception(
-                    f"Re-roll GIF generation failed for user {interaction.user.id}"
+                    f"Reroll GIF generation failed for user {interaction.user.id}"
                 )
                 await self._refund_failed_reroll(
                     interaction,
