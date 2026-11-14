@@ -1570,7 +1570,7 @@ class RerollPaymentView(View):
                     ),
                     color=discord.Colour.red(),
                 )
-                await interaction.followup.send(embed=error_embed)
+                await interaction.followup.send(embed=error_embed, ephemeral=True)
                 await self._delete_self(interaction)
                 return
 

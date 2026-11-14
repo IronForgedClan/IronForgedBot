@@ -2595,6 +2595,8 @@ class TestRerollPaymentView(unittest.IsolatedAsyncioTestCase):
         for call in self.target_message.edit.call_args_list:
             self.assertNotIn("content", call.kwargs)
             self.assertNotIn("attachments", call.kwargs)
+        interaction.followup.send.assert_awaited_once()
+        self.assertTrue(interaction.followup.send.call_args.kwargs["ephemeral"])
         interaction.delete_original_response.assert_called_once()
 
     @patch("ironforgedbot.commands.admin.weekly_spin.create_ingot_service")
