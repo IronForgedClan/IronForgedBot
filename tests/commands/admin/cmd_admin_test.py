@@ -509,7 +509,7 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         modal.end_date_input.value = end_date
         return modal
 
-    async def test_invalid_date_string_skips_on_result(self):
+    async def test_invalid_date_is_ephemeral_and_does_not_report(self):
         on_result = AsyncMock()
         modal = await self._make_modal(
             on_result, "a, b, c", "13/40/2026 00:00", "2026-08-08 00:00"
@@ -518,11 +518,18 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         interaction = create_mock_discord_interaction(
             user=create_test_member("Admin", [ROLE.LEADERSHIP])
         )
+        interaction.response.is_done.return_value = True
 
-        await modal.on_submit(interaction)
+        with patch(
+            "ironforgedbot.common.responses._send_error_report", new=AsyncMock()
+        ) as mock_send_error_report:
+            await modal.on_submit(interaction)
 
         on_result.assert_not_called()
-        self.assertTrue(interaction.followup.send.await_count >= 1)
+        interaction.delete_original_response.assert_awaited_once()
+        interaction.followup.send.assert_awaited_once()
+        self.assertTrue(interaction.followup.send.call_args.kwargs["ephemeral"])
+        mock_send_error_report.assert_not_awaited()
 
     async def test_empty_date_skips_on_result(self):
         on_result = AsyncMock()
@@ -546,7 +553,7 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         )
 
         with patch(
-            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            "ironforgedbot.commands.admin.spin_options_modal.send_ephemeral_error",
             new=AsyncMock(),
         ) as mock_send_error:
             await modal.on_submit(interaction)
@@ -572,7 +579,7 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
             new=AsyncMock(),
         ) as mock_build_gif, patch(
-            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            "ironforgedbot.commands.admin.spin_options_modal.send_ephemeral_error",
             new=AsyncMock(),
         ) as mock_send_error:
             await modal.on_submit(interaction)
@@ -605,7 +612,7 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
             "ironforgedbot.commands.admin.spin_options_modal.build_spin_gif_file",
             new=build_gif,
         ), patch(
-            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            "ironforgedbot.commands.admin.spin_options_modal.send_ephemeral_error",
             new=AsyncMock(),
         ) as mock_send_error:
             await modal.on_submit(interaction)
@@ -735,7 +742,7 @@ class TestSpinOptionsModalDateValidation(unittest.IsolatedAsyncioTestCase):
         )
 
         with patch(
-            "ironforgedbot.commands.admin.spin_options_modal.send_error_response",
+            "ironforgedbot.commands.admin.spin_options_modal.send_ephemeral_error",
             new=AsyncMock(),
         ) as mock_send_error:
             await modal.on_submit(interaction)
